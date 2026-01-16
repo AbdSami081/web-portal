@@ -10,7 +10,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { toast } from "sonner";
-import { getQuotationDocument, getSalesReturnDocument } from "@/api+/sap/quotation/salesService";
+import { getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument } from "@/api+/sap/quotation/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 
 const statusMap: Record<string, string> = {
@@ -30,7 +30,7 @@ export function DocumentHeader() {
   const [modalOpen, setModalOpen] = useState(false);
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { customer, setCustomer, loadFromDocument, clearLines, reset } = useSalesDocument();
+  const { customer, setCustomer, loadFromDocument, clearLines, reset, setDocDate, setDocDueDate, setTaxDate } = useSalesDocument();
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const docEntry = watch("DocEntry");
   const config = useSalesDocConfig();
@@ -42,7 +42,7 @@ export function DocumentHeader() {
 
   useEffect(() => {
     if (!watchedStatus && !isLoadedDocument) {
-      setValue("DocStatus", "bost_Open"); 
+      setValue("DocStatus", "bost_Open");
     }
   }, [watchedStatus, isLoadedDocument, setValue]);
 
@@ -67,72 +67,72 @@ export function DocumentHeader() {
   const handleSelectBP = (bp: BusinessPartner) => {
     setCustomer(bp);
     setValue("listNum", bp.PriceListNum);
-    
+
     setModalOpen(false);
   };
 
   const fetchDocument = async (docNum: string) => {
-      var documentData;
-      clearLines();
-      const docNumInt = parseInt(docNum);
-      
-      if (isNaN(docNumInt)) {
-        toast.error("Invalid Document Number entered.");
-        return;
+    var documentData;
+    clearLines();
+    const docNumInt = parseInt(docNum);
+
+    if (isNaN(docNumInt)) {
+      toast.error("Invalid Document Number entered.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      if (config.type === DocumentType.Quotation) {
+        documentData = await getQuotationDocument(docNumInt);
+      }
+      else if (config.type === DocumentType.Order) {
+        documentData = await getSalesOrderDocument(docNumInt);
+      }
+      else if (config.type === DocumentType.Delivery) {
+        documentData = await getSalesDeliveryDocument(docNumInt);
       }
 
-      setIsLoading(true);
-
-      try {
-        if (config.type === DocumentType.Quotation) 
-        {
-          documentData = await getQuotationDocument(docNumInt);
-        }
-        else if (config.type === DocumentType.SalesReturn) 
-        {
-          documentData = await getSalesReturnDocument(docNumInt);
-        }
-
-        
-        if (!documentData?.DocEntry) {
-          toast.info(`Document number ${docNumInt} not found.`);
-        } else {
-          loadFromDocument(documentData)
-          console.log("Fetched Document Data:", documentData);
-          setValue("DocDate", documentData.DocDate?.split("T")[0]);
-          setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
-          setValue("CardCode", documentData.CardCode);
-          setValue("CardName", documentData.CardName);
-          setValue("DocStatus", documentData.DocumentStatus);
-          setValue("Address2", documentData.Address2);
-          setValue("Address", documentData.Address);
-          setValue("DocEntry", documentData.DocEntry);
-        }
-      } catch (error) {
-        toast.error("An error occurred while fetching the document.");
-        console.error(error);
-      } finally {
-        setIsLoading(false);
+      if (!documentData?.DocEntry) {
+        toast.info(`Document number ${docNumInt} not found.`);
+      } else {
+        loadFromDocument(documentData)
+        console.log("Fetched Document Data:", documentData);
+        setValue("DocDate", documentData.DocDate?.split("T")[0]);
+        setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
+        setValue("CardCode", documentData.CardCode);
+        setValue("CardName", documentData.CardName);
+        setValue("DocStatus", documentData.DocumentStatus);
+        setValue("Address2", documentData.Address2);
+        setValue("Address", documentData.Address);
+        setValue("DocEntry", documentData.DocEntry);
       }
+    } catch (error) {
+      toast.error("An error occurred while fetching the document.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
 
-  const getDateLabel = (type:number) => {
-  switch (type) {
-    case 17:
-      return 'Delivery Date';
-    case 23:
-      return 'Valid Until';
-    case 13:
-      return 'Due Date';
-    case 15:
-      return 'Delivery Date';
-    case 16:
-      return 'Due Date';
-    default:
-      return 'Date'; 
-  }
-};
+  const getDateLabel = (type: number) => {
+    switch (type) {
+      case 17:
+        return 'Delivery Date';
+      case 23:
+        return 'Valid Until';
+      case 13:
+        return 'Due Date';
+      case 15:
+        return 'Delivery Date';
+      case 16:
+        return 'Due Date';
+      default:
+        return 'Date';
+    }
+  };
 
 
   return (
@@ -170,11 +170,11 @@ export function DocumentHeader() {
             placeholder="Search document..."
             className="h-8 w-38"
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)} 
+            onChange={(e) => setSearchValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                fetchDocument(searchValue); 
+                fetchDocument(searchValue);
               }
             }}
           />
@@ -183,12 +183,12 @@ export function DocumentHeader() {
             variant="outline"
             size="icon"
             className="h-8 w-8 cursor-pointer"
-            onClick={() => fetchDocument(searchValue)} 
+            onClick={() => fetchDocument(searchValue)}
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Search className="h-5 w-5" /> 
+              <Search className="h-5 w-5" />
             )}
           </Button>
         </div>
@@ -209,49 +209,58 @@ export function DocumentHeader() {
         </div>
 
         <div className="flex flex-col gap-4 w-full lg:w-1/2">
-        <div className="flex justify-between items-center w-full">
-          <Label className="text-xs w-28">Status</Label>
-          <Select
-            value={watchedStatus}
-            onValueChange={(val) => setValue("DocStatus", val)}
-            disabled={isHeaderDisabled}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
+          <div className="flex justify-between items-center w-full">
+            <Label className="text-xs w-28">Status</Label>
+            <Select
+              value={watchedStatus}
+              onValueChange={(val) => setValue("DocStatus", val)}
+              disabled={isHeaderDisabled}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
 
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Select Status</SelectLabel>
-                {Object.entries(statusMap).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-                
-        <div className="flex justify-between items-center w-full">
-          <Label className="text-sm w-28">Posting Date</Label>
-          <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled} />
-        </div>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Select Status</SelectLabel>
+                  {Object.entries(statusMap).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="flex justify-between items-center w-full">
-          <Label className="text-sm w-28">
-            {getDateLabel(config.type)}
+          <div className="flex justify-between items-center w-full">
+            <Label className="text-sm w-28">Posting Date</Label>
+            <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
+              register("DocDate").onChange(e);
+              setDocDate(e.target.value);
+            }} />
+          </div>
+
+          <div className="flex justify-between items-center w-full">
+            <Label className="text-sm w-28">
+              {getDateLabel(config.type)}
             </Label>
-          <Input type="date" {...register("DocDueDate")} className="h-8 w-48" disabled={isHeaderDisabled} />
+            <Input type="date" {...register("DocDueDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
+              register("DocDueDate").onChange(e);
+              setDocDueDate(e.target.value);
+            }} />
+          </div>
+
+          <div className="flex justify-between items-center w-full">
+            <Label className="text-sm w-28">Document Date</Label>
+            <Input type="date" {...register("TaxDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
+              register("TaxDate").onChange(e);
+              setTaxDate(e.target.value);
+            }} />
+          </div>
         </div>
 
-        <div className="flex justify-between items-center w-full">
-          <Label className="text-sm w-28">Document Date</Label>
-          <Input type="date" {...register("TaxDate")}  className="h-8 w-48" disabled={isHeaderDisabled} />
-        </div>
-      </div>
-
-      {/* <GenericModal<BusinessPartner>
+        {/* <GenericModal<BusinessPartner>
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSelect={handleSelectBP}
@@ -260,15 +269,15 @@ export function DocumentHeader() {
         title="Select Business Partner"
         getSelectValue={(item) => item}
       /> */}
-      <BusinessPartnerSelectorDialog
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSelect={(bp) => {
-          handleSelectBP(bp); 
-          setModalOpen(false); 
-        }}
-      />
-    </div>
+        <BusinessPartnerSelectorDialog
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSelect={(bp) => {
+            handleSelectBP(bp);
+            setModalOpen(false);
+          }}
+        />
+      </div>
     </div>
   );
 }

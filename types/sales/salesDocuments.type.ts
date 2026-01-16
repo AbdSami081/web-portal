@@ -115,7 +115,9 @@ export interface SalesDocumentLine {
   Freight3TaxGroup?: string;
   Freight3TaxRate?: number;
   Freight3TaxAmount?: number;
-  
+  BaseType?: number;
+  BaseEntry?: number;
+  BaseLine?: number;
 }
 
 export interface SalesQuotation extends BaseSalesDocument {

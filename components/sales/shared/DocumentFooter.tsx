@@ -10,6 +10,7 @@ import { GenericModal } from "@/modals/GenericModal";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 export default function DocumentFooter() {
   const { watch } = useFormContext();
@@ -93,6 +94,7 @@ export default function DocumentFooter() {
     setFreight(freightSum);
 
   }, [lines, freight, rounding, discountPercent]);
+
 
   return (
     <>

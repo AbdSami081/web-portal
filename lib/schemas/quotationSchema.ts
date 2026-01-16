@@ -15,6 +15,9 @@ export const quotationSchema = z.object({
       WarehouseCode: z.string().optional(),
       TaxCode: z.string().optional(),
       LineTotal: z.number().optional(),
+      BaseType: z.number().optional(),
+      BaseEntry: z.number().optional(),
+      BaseLine: z.number().optional(),
     })
   ),
   Freight: z.number().optional(),
