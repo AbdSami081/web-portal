@@ -4,28 +4,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings } from "lucide-react";
-import { GenericModal } from "@/modals/GenericModal";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 export default function DocumentFooter() {
   const { watch } = useFormContext();
   const {
-    DocTotal,
-    comments,
+    lines,
     freight = 0,
     rounding = 0,
     discountPercent = 0,
-    lines,
-    setComments,
     setFreight,
     setRounding,
     setDiscountPercent,
-    setTaxTotal
+    setTaxTotal,
+    setComments
   } = useSalesDocument();
 
   const [totals, setTotals] = useState({
@@ -47,10 +41,9 @@ export default function DocumentFooter() {
   const config = useSalesDocConfig();
   const docStatus = watch("DocStatus");
   const docEntry = watch("DocEntry");
-
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isFooterDisabled = isLoadedDocument && docStatus === "bost_Close";
- const [freightTotal, setFreightTotal] = useState(0);
+  const [freightTotal, setFreightTotal] = useState(0);
 
   useEffect(() => {
     const totalBeforeDiscount = lines.reduce((sum, l) => {
@@ -59,7 +52,7 @@ export default function DocumentFooter() {
       return sum + qty * price;
     }, 0);
 
-   const freightSum = lines.reduce((sum, l) => {
+    const freightSum = lines.reduce((sum, l) => {
       return (
         sum +
         (l.Freight1Amount || 0) +
@@ -68,9 +61,9 @@ export default function DocumentFooter() {
       );
     }, 0);
     setFreightTotal(freightSum);
-    setFreight(freightSum); 
+    setFreight(freightSum);
 
-    const appliedDiscount = Math.min(discountPercent, 100); 
+    const appliedDiscount = Math.min(discountPercent, 100);
 
     const subtotalAfterDiscount = totalBeforeDiscount * (1 - appliedDiscount / 100);
 
@@ -79,10 +72,10 @@ export default function DocumentFooter() {
     setTaxTotal(taxTotal);
 
     const docTotal =
-    subtotalAfterDiscount +
-    taxTotal +     
-    freightSum +
-    rounding;
+      subtotalAfterDiscount +
+      taxTotal +
+      freightSum +
+      rounding;
 
 
     setTotals({
@@ -139,12 +132,15 @@ export default function DocumentFooter() {
 
       <div className="grid grid-cols-2 gap-20">
         <div>
-          <Label htmlFor="comments">Remarks</Label>
+          <Label htmlFor="Comments">Remarks</Label>
           <Textarea
-            id="comments"
+            id="Comments"
             className="h-24 mt-4 max-w-95"
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
+            {...useFormContext().register("Comments")}
+            onChange={(e) => {
+              useFormContext().setValue("Comments", e.target.value);
+              setComments(e.target.value);
+            }}
             placeholder="Enter remarks or comments..."
             disabled={isFooterDisabled}
           />
@@ -178,7 +174,7 @@ export default function DocumentFooter() {
               type="number"
               className="h-6 text-right"
               value={discountPercent}
-               onChange={(e) => {
+              onChange={(e) => {
                 const value = Number(e.target.value);
 
                 if (value > 100) {
