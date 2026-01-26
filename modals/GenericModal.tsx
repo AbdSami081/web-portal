@@ -91,7 +91,7 @@ export function GenericModal<T>({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg w-full">
+      <DialogContent className="max-w-4xl w-full">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -106,42 +106,41 @@ export function GenericModal<T>({
         <div className="max-h-60 overflow-y-auto border rounded">
           <Table>
             <TableHeader>
-                <TableRow>
-                    {columns.map((col) => (
-                    <TableHead
-                        key={col.key}
-                        className="cursor-pointer select-none"
-                        onClick={() => handleSort(col.key)}
-                    >
-                        <div className="flex items-center justify-between">
-                        <span>{col.label}</span>
-                        <span className="ml-1">
-                            {sortKey === col.key ? (
-                            sortDirection === "asc" ? (
-                                <ChevronUp className="w-3 h-3" />
-                            ) : sortDirection === "desc" ? (
-                                <ChevronDown className="w-3 h-3" />
-                            ) : (
-                                <ArrowUpDown className="w-3 h-3 opacity-30" />
-                            )
-                            ) : (
+              <TableRow>
+                {columns.map((col) => (
+                  <TableHead
+                    key={col.key}
+                    className="cursor-pointer select-none"
+                    onClick={() => handleSort(col.key)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{col.label}</span>
+                      <span className="ml-1">
+                        {sortKey === col.key ? (
+                          sortDirection === "asc" ? (
+                            <ChevronUp className="w-3 h-3" />
+                          ) : sortDirection === "desc" ? (
+                            <ChevronDown className="w-3 h-3" />
+                          ) : (
                             <ArrowUpDown className="w-3 h-3 opacity-30" />
-                            )}
-                        </span>
-                        </div>
-                    </TableHead>
-                    ))}
-                </TableRow>
-                </TableHeader>
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-30" />
+                        )}
+                      </span>
+                    </div>
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
 
 
             <TableBody>
               {filteredData.map((item, index) => (
                 <TableRow
                   key={index}
-                  className={`cursor-pointer ${
-                    selected === item ? "bg-blue-100" : ""
-                  }`}
+                  className={`cursor-pointer ${selected === item ? "bg-blue-100" : ""
+                    }`}
                   onClick={() => setSelected(item)}
                   onDoubleClick={handleChoose}
                 >
@@ -154,9 +153,9 @@ export function GenericModal<T>({
           </Table>
           {hasMore && (
             <div className="p-2 text-center border-t">
-              <Button 
-                variant="ghost" 
-                className="w-full text-blue-600 h-8 text-xs" 
+              <Button
+                variant="ghost"
+                className="w-full text-blue-600 h-8 text-xs"
                 onClick={onLoadMore}
                 disabled={isLoading}
               >
