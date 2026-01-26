@@ -254,6 +254,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           BaseType: line.BaseType,
           BaseEntry: line.BaseEntry,
           BaseLine: line.BaseLine,
+          Comments: line.Comments,
         };
       });
 
@@ -272,7 +273,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         docDate: (doc.DocDate || doc.docDate || new Date().toISOString()).split("T")[0],
         docDueDate: (doc.DocDueDate || doc.docDueDate || new Date().toISOString()).split("T")[0],
         taxDate: (doc.TaxDate || doc.taxDate || new Date().toISOString()).split("T")[0],
-        comments: doc.Comments || doc.comments || `Based on Quotation #${doc.DocNum || ''}`,
+        comments: (doc.Comments !== undefined && doc.Comments !== null) ? doc.Comments : (doc.comments !== undefined && doc.comments !== null ? doc.comments : ""),
         freight: doc.Freight || doc.freight || 0,
         rounding: doc.Rounding || doc.rounding || 0,
         currency: doc.DocCurrency || doc.Currency || "USD",
