@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { GenericModal } from "@/modals/GenericModal";
+import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotationDocument, getSalesOrderDocument, getSalesDeliveryDocument } from "@/api+/sap/quotation/salesService";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -60,6 +62,65 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [selectedCopyTo, setSelectedCopyTo] = useState<string>("");
 
   const { isCopying, setIsCopying } = useSalesDocument();
+
+  const [copyFromOpen, setCopyFromOpen] = useState(false);
+  const [copyFromType, setCopyFromType] = useState<DocumentType | null>(null);
+  const [copyFromData, setCopyFromData] = useState<any[]>([]);
+  const [isLoadingCopyFrom, setIsLoadingCopyFrom] = useState(false);
+  const [selectedCopyFrom, setSelectedCopyFrom] = useState<string>("");
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false);
+
+  const copyFromOptions = (() => {
+    if (docType === DocumentType.Order) return [DocumentType.Quotation];
+    if (docType === DocumentType.Delivery) return [DocumentType.Order, DocumentType.Quotation];
+    if (docType === DocumentType.ARInvoice) return [DocumentType.Delivery, DocumentType.Order, DocumentType.Quotation];
+    return [];
+  })();
+
+  const fetchCopyFromData = async (type: DocumentType) => {
+    if (!customer?.CardCode) return;
+    setIsLoadingCopyFrom(true);
+    try {
+
+      let data: any[] | null = [];
+      if (type === DocumentType.Quotation) {
+        data = await getQuotationByBP(customer.CardCode);
+      } else if (type === DocumentType.Order) {
+        data = await getSalesOrderByBP(customer.CardCode);
+      } else if (type === DocumentType.Delivery) {
+        data = await getSalesDeliveryByBP(customer.CardCode);
+      }
+      setCopyFromData(data || []);
+      setCopyFromOpen(true);
+    } catch (err) {
+      toast.error("Failed to fetch documents");
+    } finally {
+      setIsLoadingCopyFrom(false);
+    }
+  };
+
+  const handleCopyFromSelect = async (docNum: any) => {
+    setIsLoadingDocument(true);
+    try {
+      let doc: any = null;
+      if (copyFromType === DocumentType.Quotation) {
+        doc = await getQuotationDocument(docNum);
+      } else if (copyFromType === DocumentType.Order) {
+        doc = await getSalesOrderDocument(docNum);
+      } else if (copyFromType === DocumentType.Delivery) {
+        doc = await getSalesDeliveryDocument(docNum);
+      }
+
+      if (doc) {
+        loadFromDocument(doc);
+        toast.success(`Copied from ${copyFromType === DocumentType.Quotation ? 'Quotation' : copyFromType === DocumentType.Order ? 'Order' : 'Delivery'} #${docNum}`);
+      }
+    } catch (err) {
+      toast.error("Failed to load document");
+    } finally {
+      setIsLoadingDocument(false);
+    }
+  };
 
   useEffect(() => {
     if (isCopying) {
@@ -152,19 +213,45 @@ export function SalesDocumentLayout<T extends FieldValues>({
           {!shouldHideSubmit && (
             <div className="border-t px-6 py-4 flex justify-end bg-white shadow-md">
 
-              <div className="flex items-center gap-3 mt-6">
-                <Label className="text-sm">Copy To :</Label>
+              <div className="flex items-center gap-3">
+                <Select
+                  value={selectedCopyFrom}
+                  disabled={!customer?.CardCode || copyFromOptions.length === 0 || isLoadingDocument}
+                  onValueChange={(value) => {
+                    const type = parseInt(value) as DocumentType;
+                    setCopyFromType(type);
+                    fetchCopyFromData(type);
+                    setTimeout(() => setSelectedCopyFrom(""), 0);
+                  }}
+                >
+                  <SelectTrigger className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0">
+                    <SelectValue placeholder="Copy From" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {copyFromOptions.map((type) => (
+                        <SelectItem key={type} value={type.toString()}>
+                          {type === DocumentType.Quotation ? "Sales Quotation" :
+                            type === DocumentType.Order ? "Sales Order" :
+                              type === DocumentType.Delivery ? "Delivery" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
 
+              <div className="flex items-center gap-3">
                 <Select
                   value={selectedCopyTo}
+                  disabled={copyToOptions.length === 0 || isLoadingDocument}
                   onValueChange={(value) => {
                     setSelectedCopyTo(value);
                     handleCopyClick(value);
                   }}
-                  className="w-[180px] h-9 border border-black focus:ring-0"
                 >
-                  <SelectTrigger className="w-full h-9">
-                    <SelectValue placeholder="Select" />
+                  <SelectTrigger className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0">
+                    <SelectValue placeholder="Copy To" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -186,13 +273,28 @@ export function SalesDocumentLayout<T extends FieldValues>({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <Button type="submit" disabled={isSubmitting}>
-                  {getSubmitButtonText()}
+                <Button type="submit" disabled={isSubmitting || isLoadingDocument}>
+                  {isLoadingDocument ? "Loading..." : getSubmitButtonText()}
                 </Button>
               </div>
 
             </div>
           )}
+          <GenericModal
+            title={`Select ${copyFromType === DocumentType.Quotation ? 'Quotation' : copyFromType === DocumentType.Order ? 'Order' : 'Delivery'}`}
+            open={copyFromOpen}
+            onClose={() => setCopyFromOpen(false)}
+            onSelect={handleCopyFromSelect}
+            data={copyFromData}
+            columns={[
+              { key: "DocNum", label: "Doc Num" },
+              { key: "RefDate", label: "Date" },
+              { key: "DueDate", label: "Due Date" },
+              { key: "CardName", label: "Customer Name" },
+            ]}
+            getSelectValue={(item) => item.DocNum}
+            isLoading={isLoadingCopyFrom}
+          />
         </form>
       </FormProvider>
     </SalesDocContext.Provider>
