@@ -107,6 +107,7 @@ export function DocumentHeader() {
         setValue("Address2", documentData.Address2);
         setValue("Address", documentData.Address);
         setValue("DocEntry", documentData.DocEntry);
+        setValue("Comments", documentData.Comments);
       }
     } catch (error) {
       toast.error("An error occurred while fetching the document.");
