@@ -11,7 +11,7 @@ import {
 } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
-import { postDelivery } from "@/api+/sap/quotation/salesService";
+import { postDelivery, patchDeliveryNote } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
 
 export default function DeliveryPage() {
@@ -35,6 +35,25 @@ export default function DeliveryPage() {
 
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, reset: resetStore } = useSalesDocument.getState();
+
+    if (DocEntry && Number(DocEntry) > 0) {
+      // Update logic
+      const payload = {
+        Comments: data.Comments
+      };
+
+      try {
+        console.log("Updating Delivery Note Payload:", payload);
+        const response = await patchDeliveryNote(Number(DocEntry), payload);
+        toast.success(`Delivery Note #${DocEntry} updated successfully`);
+      } catch (error) {
+        console.error("Error while updating Delivery Note:", error);
+        toast.error("Failed to update Delivery Note");
+      }
+      return;
+    }
+
+    // Create logic
     const payload = {
       ...data,
       DocumentLines: lines.map((line) => ({

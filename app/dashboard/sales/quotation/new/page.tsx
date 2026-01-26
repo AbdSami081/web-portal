@@ -6,7 +6,7 @@ import { DocumentItems } from "@/components/sales/shared/DocumentItems";
 import { SalesDocumentLayout } from "@/components/sales/shared/SalesDocumentLayout";
 import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { postQuotation } from "@/api+/sap/quotation/salesService";
+import { postQuotation, patchQuotation } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
 
 export default function NewQuotationPage() {
@@ -72,8 +72,26 @@ export default function NewQuotationPage() {
   //   }
   // };
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocTotal, freight, TaxTotal, additionalExpenses } = useSalesDocument.getState();
+    const { lines, DocTotal, freight, TaxTotal, additionalExpenses, DocEntry } = useSalesDocument.getState();
 
+    if (DocEntry && Number(DocEntry) > 0) {
+      // Update logic
+      const payload = {
+        Comments: data.Comments
+      };
+
+      try {
+        console.log("Updating Quotation Payload:", payload);
+        const documentData = await patchQuotation(Number(DocEntry), payload);
+        toast.success(`Quotation #${DocEntry} updated successfully`);
+      } catch (error) {
+        console.error("Error while updating quotation:", error);
+        toast.error("Failed to update quotation");
+      }
+      return;
+    }
+
+    // Create logic
     const { DocDate, DocDueDate, TaxDate, ...restData } = data;
 
     const payload = {

@@ -12,7 +12,7 @@ import {
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useEffect, useState } from "react";
-import { postSalesOrder } from "@/api+/sap/quotation/salesService";
+import { postSalesOrder, patchSalesOrder } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
 
 export default function NewQuotationPage() {
@@ -36,6 +36,25 @@ export default function NewQuotationPage() {
 
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, reset: resetStore } = useSalesDocument.getState();
+
+    if (DocEntry && Number(DocEntry) > 0) {
+      // Update logic
+      const payload = {
+        Comments: data.Comments
+      };
+
+      try {
+        console.log("Updating Sales Order Payload:", payload);
+        const response = await patchSalesOrder(Number(DocEntry), payload);
+        toast.success(`Sales Order #${DocEntry} updated successfully`);
+      } catch (error) {
+        console.error("Error while updating Sales Order:", error);
+        toast.error("Failed to update Sales Order");
+      }
+      return;
+    }
+
+    // Create logic
     const payload = {
       ...data,
       DocumentLines: lines.map((line) => ({

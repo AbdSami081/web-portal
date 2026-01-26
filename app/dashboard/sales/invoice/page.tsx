@@ -11,7 +11,7 @@ import {
 } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
-import { postARInvoice } from "@/api+/sap/quotation/salesService";
+import { postARInvoice, patchARInvoice } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
 
 export default function InvoicePage() {
@@ -35,6 +35,25 @@ export default function InvoicePage() {
 
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, reset: resetStore } = useSalesDocument.getState();
+
+    if (DocEntry && Number(DocEntry) > 0) {
+      // Update logic
+      const payload = {
+        Comments: data.Comments
+      };
+
+      try {
+        console.log("Updating AR Invoice Payload:", payload);
+        const response = await patchARInvoice(Number(DocEntry), payload);
+        toast.success(`AR Invoice #${DocEntry} updated successfully`);
+      } catch (error) {
+        console.error("Error while updating AR Invoice:", error);
+        toast.error("Failed to update AR Invoice");
+      }
+      return;
+    }
+
+    // Create logic
     const payload = {
       ...data,
       DocumentLines: lines.map((line) => ({
