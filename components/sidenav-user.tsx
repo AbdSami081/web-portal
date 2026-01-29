@@ -42,25 +42,32 @@ export function NavUser() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton>
-              <User2 /> {user?.userName}
-              <ChevronUp className="ml-auto" />
+            <SidebarMenuButton
+              size="lg"
+              className="w-full h-12 rounded-lg bg-white/5 hover:bg-white/10 transition-all flex items-center px-3"
+            >
+              <div className="size-8 rounded-md bg-white text-black flex items-center justify-center font-bold text-xs shrink-0">
+                {user?.userName?.charAt(0).toUpperCase() || "U"}
+              </div>
+              <div className="flex flex-col text-left text-sm leading-tight ml-3 flex-1 overflow-hidden">
+                <span className="truncate font-bold text-white">{user?.userName || "User"}</span>
+                <span className="truncate text-[10px] text-slate-500 font-medium uppercase tracking-widest">Active</span>
+              </div>
+              <ChevronsUpDown className="ml-auto size-4 text-slate-500 shrink-0" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            side="top"
-            className="w-[--radix-popper-anchor-width]"
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-48 rounded-lg shadow-xl bg-black border border-white/10 text-white p-1"
+            side="right"
+            align="end"
+            sideOffset={10}
           >
-            <DropdownMenuItem>
-              <span>Account</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <span>Billing</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Button onClick={logout} className="w-full text-left">
-                Sign out
-              </Button>
+            <DropdownMenuItem
+              onClick={logout}
+              className="focus:bg-white focus:text-black rounded-md cursor-pointer py-2 px-3 flex items-center gap-2 font-bold text-sm"
+            >
+              <LogOut className="size-4" />
+              <span>Log Out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
