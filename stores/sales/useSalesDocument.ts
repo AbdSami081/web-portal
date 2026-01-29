@@ -18,6 +18,7 @@ interface SalesDocumentStore {
   DocEntry: number;
   TotalBeforeDiscount: number;
   TaxTotal: number;
+  discSum: number;
   DocTotal: number;
   additionalExpenses: {
     ExpenseCode: number;
@@ -81,6 +82,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
 
     TotalBeforeDiscount: 0,
     TaxTotal: 0,
+    discSum: 0,
     DocTotal: 0,
     DocEntry: 0,
     additionalExpenses: [],
@@ -160,10 +162,14 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         const discountAmount = (lineSubtotal * discount) / 100;
         const taxed = (lineSubtotal - discountAmount) * (taxRate / 100);
 
-        totalBeforeDiscount += lineSubtotal - discountAmount; // discount included
+        totalBeforeDiscount += lineSubtotal - discountAmount;
         totalTax += taxed;
 
-        return { ...line, LineTotal: lineSubtotal - discountAmount + taxed };
+        return {
+          ...line,
+          LineTotal: Number((lineSubtotal - discountAmount + taxed).toFixed(2)),
+          TaxAmount: Number(taxed.toFixed(2))
+        };
       });
 
       const expensesTotal = get().additionalExpenses.reduce(
@@ -171,10 +177,13 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         0
       );
 
+      const docDiscountFactor = 1 - (discountPercent / 100);
+      const finalBeforeDiscount = totalBeforeDiscount * docDiscountFactor;
+      // const finalTax = totalTax * docDiscountFactor; // User wants tax to be zero
 
       const docTotal =
-        totalBeforeDiscount +
-        totalTax +
+        finalBeforeDiscount +
+        0 + // Tax is zero per user request
         Number(freight) +
         Number(rounding) +
         expensesTotal;
@@ -182,7 +191,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       set({
         lines: discountedLines,
         TotalBeforeDiscount: parseFloat(totalBeforeDiscount.toFixed(2)),
-        TaxTotal: parseFloat(totalTax.toFixed(2)),
+        TaxTotal: 0,
         DocTotal: parseFloat(docTotal.toFixed(2)),
       });
     },
@@ -201,6 +210,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         discountPercent: 0,
         TotalBeforeDiscount: 0,
         TaxTotal: 0,
+        discSum: 0,
         DocTotal: 0,
         DocEntry: 0,
         currency: "USD",
@@ -230,13 +240,13 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         }
 
         const qty = Number(line.Quantity);
-        const price = Number(line.Price || line.UnitPrice);
+        const price = Number(line.UnitPrice || line.Price || 0); // Prefer UnitPrice (base price)
         const discount = Number(line.DiscountPercent || 0);
-        const taxRate = Number(line.TaxPercentagePerRow || 0);
+        const taxRate = Number(line.TaxPercentagePerRow || line.VatPrcnt || 0);
 
         const lineSubtotal = qty * price;
         const discountAmount = (lineSubtotal * discount) / 100;
-        const taxed = (lineSubtotal - discountAmount) * (taxRate / 100);
+        const calculatedTax = (lineSubtotal - discountAmount) * (taxRate / 100);
 
         return {
           LineNum: line.LineNum !== undefined ? line.LineNum : index,
@@ -246,9 +256,9 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           Price: price,
           DiscountPercent: discount,
           TaxRate: taxRate,
-          LineTotal: lineSubtotal - discountAmount + taxed,
+          LineTotal: line.LineTotal ?? (lineSubtotal - discountAmount + calculatedTax),
           WarehouseCode: line.WarehouseCode || "",
-          TaxAmount: taxed,
+          TaxAmount: line.TaxTotal ?? line.TaxSum ?? calculatedTax,
           UoMCode: line.UoMCode,
           TaxCode: line.VatGroup || line.TaxCode,
           BaseType: line.BaseType,
@@ -276,12 +286,15 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         comments: (doc.Comments !== undefined && doc.Comments !== null) ? doc.Comments : (doc.comments !== undefined && doc.comments !== null ? doc.comments : ""),
         freight: doc.Freight || doc.freight || 0,
         rounding: doc.Rounding || doc.rounding || 0,
+        discountPercent: doc.DiscountPercent || doc.discountPercent || 0,
         currency: doc.DocCurrency || doc.Currency || "USD",
         DocEntry: doc.DocEntry || null,
-        additionalExpenses: doc.DocumentLineAdditionalExpenses || doc.additionalExpenses || []
+        DocTotal: doc.DocTotal || doc.docTotal || 0,
+        TaxTotal: 0,
+        discSum: doc.DiscSum || doc.discSum || 0,
+        TotalBeforeDiscount: doc.TotalBeforeDiscount || doc.SumBeforeDiscount || 0,
+        additionalExpenses: doc.DocumentAdditionalExpenses || doc.DocumentLineAdditionalExpenses || doc.additionalExpenses || []
       });
-
-      get().calculateTotals();
     },
     setAdditionalExpenses: (exp) => set({ additionalExpenses: exp }),
   }))
