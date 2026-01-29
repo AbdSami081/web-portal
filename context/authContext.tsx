@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { login as apiLogin, saveTokens, clearTokens, getAccessToken } from "../api+/sap/auth/authService";
 
 interface User {
@@ -20,18 +20,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getAccessToken();
-    if (token) 
-    {
+    if (token) {
       setAccessToken(token);
-      router.push("/dashboard") 
+      // Only redirect to dashboard if currently on the login page or root
+      if (pathname === "/") {
+        router.push("/dashboard");
+      }
+    } else {
+      // Only redirect to login if not already there
+      if (pathname !== "/") {
+        router.push("/");
+      }
     }
-    else router.push("/"); 
-  }, []);
+  }, [pathname]); // Depend on pathname to handle navigation
 
   const login = async (userName: string, password: string) => {
     try {
