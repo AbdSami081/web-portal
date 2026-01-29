@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { login as apiLogin, saveTokens, clearTokens, getAccessToken } from "../api+/sap/auth/authService";
+import { login as apiLogin, saveTokens, clearTokens, getAccessToken, LoginPayload } from "../api+/sap/auth/authService";
 
 interface User {
   empId: string;
@@ -12,7 +12,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   accessToken: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (userName: string, password: string, dbParams?: Partial<LoginPayload>) => Promise<void>;
   logout: () => void;
 }
 
@@ -40,9 +40,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [pathname]); // Depend on pathname to handle navigation
 
-  const login = async (userName: string, password: string) => {
+  const login = async (userName: string, password: string, dbParams?: Partial<LoginPayload>) => {
     try {
-      const data = await apiLogin({ userName, password });
+      const data = await apiLogin({
+        userName,
+        password,
+        ...dbParams,
+        CompanyDB: dbParams?.dbName || dbParams?.CompanyDB,
+        BaseUrl: dbParams?.BaseUrl,
+        SqlConnection: dbParams?.SqlConnection
+      });
       setUser(data.user);
       setAccessToken(data.accessToken);
       saveTokens(data.accessToken, data.refreshToken);
