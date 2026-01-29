@@ -4,6 +4,13 @@ import axios from "axios";
 export interface LoginPayload {
   userName: string;
   password: string;
+  serverName?: string;
+  dbName?: string;
+  dbPassword?: string;
+  dbUserId?: string;
+  CompanyDB?: string;
+  BaseUrl?: string;
+  SqlConnection?: string;
 }
 
 export interface LoginResponse {
