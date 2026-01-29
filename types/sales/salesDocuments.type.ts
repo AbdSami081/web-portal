@@ -15,27 +15,28 @@ export enum DocumentType {
 export interface BaseSalesDocument {
   DocEntry?: number;
   DocNum?: number;
-  DocType?: string; 
+  DocType?: string;
   DocumentStatus?: "bost_Open" | "bost_Close" | "bost_Cancel";
   DocObjectCode?: string;
   DocDate: string;
   DocDueDate: string;
-  TaxDate?: string | null; 
+  TaxDate?: string | null;
   CardCode: string;
   CardName?: string;
   NumAtCard?: string;
   Comments?: string;
+  DiscSum?: number;
   DocTotal?: number;
-  DocTotalFc?: number; 
-  DocTotalSys?: number; 
-  DocCurrency?: string; 
-  DocRate?: number; 
+  DocTotalFc?: number;
+  DocTotalSys?: number;
+  DocCurrency?: string;
+  DocRate?: number;
   Reference1?: string;
-  Reference2?: string; 
+  Reference2?: string;
   Address: string;
   Address2?: string;
-  SalesPersonCode?: number; 
-  ContactPersonCode?: number; 
+  SalesPersonCode?: number;
+  ContactPersonCode?: number;
   DocumentLines: SalesDocumentLine[];
   DocumentLineAdditionalExpenses?: {
     ExpenseCode: number;
@@ -77,7 +78,7 @@ export interface SalesDocumentLine {
   CommittedQty?: number;
   OrderedQty?: number;
   IsClosed?: string; // "tYES" | "tNO"
-  
+
   InvQty?: number;
   TotalDoc?: number;
   PackageQuantity?: number;
