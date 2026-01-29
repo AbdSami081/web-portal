@@ -51,8 +51,8 @@ export function NavMain({
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>MENUS</SidebarGroupLabel>
-      <SidebarMenu>
+      <SidebarGroupLabel className="text-slate-500 font-bold tracking-widest text-[10px] uppercase mb-4 px-4">Core Modules</SidebarGroupLabel>
+      <SidebarMenu className="gap-1 px-2">
         {items.map((item) => {
           const hasChildren = item.items && item.items.length > 0;
           const isOpen = openParent === item.title;
@@ -66,39 +66,62 @@ export function NavMain({
               <SidebarMenuItem>
                 {hasChildren ? (
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton>
-                      <item.icon className="mr-2" />
-                      {item.title}
+                    <SidebarMenuButton className={`
+                      h-10 rounded-lg transition-all duration-200 group/btn flex items-center
+                      ${isOpen ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}
+                    `}>
+                      <item.icon size={18} className={`
+                        transition-colors shrink-0
+                        ${isOpen ? "text-white" : "text-slate-400 group-hover/btn:text-slate-200"}
+                      `} />
+                      <span className="font-medium ml-3 truncate transition-colors">{item.title}</span>
 
-                      {isOpen ? (
-                        <Minus className="ml-auto" size={16} />
-                      ) : (
-                        <Plus className="ml-auto" size={16} />
-                      )}
+                      <div className="ml-auto transition-transform duration-200 shrink-0">
+                        {isOpen ? (
+                          <Minus className="text-white/70" size={14} />
+                        ) : (
+                          <Plus className="opacity-40 group-hover/btn:opacity-100" size={14} />
+                        )}
+                      </div>
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                 ) : (
-                  <SidebarMenuButton asChild>
-                    <Link href={item.url}>
-                      <item.icon className="mr-2" />
-                      {item.title}
+                  <SidebarMenuButton asChild className={`
+                    h-10 rounded-lg transition-all duration-200 flex items-center
+                    ${currentPath === item.url ? "bg-white text-black shadow-lg shadow-white/10" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}
+                  `}>
+                    <Link href={item.url} className="flex items-center w-full">
+                      <item.icon size={18} className="shrink-0" />
+                      <span className="font-medium ml-3 truncate">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 )}
 
                 {hasChildren && (
-                  <CollapsibleContent className="mt-1">
-                    <SidebarMenuSub>
-                      {item.items?.map((child) => (
-                        <SidebarMenuSubItem key={child.title}>
-                          <SidebarMenuSubButton
-                            asChild
-                            isActive={currentPath === child.url}
-                          >
-                            <Link href={child.url}>{child.title}</Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
+                  <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                    <SidebarMenuSub className="ml-4 mt-1 border-l border-white/10 pl-2 gap-1 flex flex-col">
+                      {item.items?.map((child) => {
+                        const isSubActive = currentPath === child.url;
+                        return (
+                          <SidebarMenuSubItem key={child.title}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={isSubActive}
+                              className={`
+                                h-9 rounded-md transition-all text-sm flex items-center
+                                ${isSubActive
+                                  ? "text-white font-semibold bg-white/10"
+                                  : "text-slate-500 hover:text-slate-300 hover:bg-white/5"}
+                              `}
+                            >
+                              <Link href={child.url} className="flex items-center gap-3 w-full">
+                                <div className={`size-1 rounded-full shrink-0 ${isSubActive ? "bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" : "bg-slate-700"}`} />
+                                <span className="truncate">{child.title}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        );
+                      })}
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 )}
