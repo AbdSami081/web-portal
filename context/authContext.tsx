@@ -2,11 +2,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { login as apiLogin, saveTokens, clearTokens, getAccessToken, LoginPayload } from "../api+/sap/auth/authService";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 interface User {
   empId: string;
   userName: string;
   role: string;
+  allowedModules?: string[];
 }
 
 interface AuthContextType {
@@ -18,6 +20,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const parseJwt = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -25,37 +40,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
+    const checkToken = () => {
+      const token = getAccessToken();
+      if (!token && pathname !== "/") {
+        useAuthStore.getState().setSessionExpired(true);
+      }
+    };
+
     const token = getAccessToken();
     if (token) {
       setAccessToken(token);
-      // Only redirect to dashboard if currently on the login page or root
+      useAuthStore.getState().startExpiryTimer(token);
+      const decoded = parseJwt(token);
+      if (decoded) {
+        setUser({
+          empId: decoded.sub || decoded.nameid,
+          userName: decoded.unique_name || decoded.name,
+          role: decoded.role,
+          allowedModules: decoded.AllowedModules
+            ? decoded.AllowedModules.split(',').map((m: string) => m.trim())
+            : []
+        });
+      }
+
       if (pathname === "/") {
         router.push("/dashboard");
       }
     } else {
-      // Only redirect to login if not already there
       if (pathname !== "/") {
         router.push("/");
       }
     }
-  }, [pathname]); // Depend on pathname to handle navigation
+
+    // Periodic presence check for "real-time" responsiveness for Cookies
+    const interval = setInterval(checkToken, 2000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [pathname, router]);
 
   const login = async (userName: string, password: string, dbParams?: Partial<LoginPayload>) => {
     try {
       const data = await apiLogin({
         userName,
         password,
-        ...dbParams,
-        CompanyDB: dbParams?.dbName || dbParams?.CompanyDB,
-        BaseUrl: dbParams?.BaseUrl,
-        SqlConnection: dbParams?.SqlConnection
+        ...dbParams
       });
-      setUser(data.user);
+      const decoded = parseJwt(data.accessToken);
+      const userWithModules = {
+        ...data.user,
+        allowedModules: decoded?.AllowedModules
+          ? decoded.AllowedModules.split(',').map((m: string) => m.trim())
+          : []
+      };
+
+      setUser(userWithModules);
       setAccessToken(data.accessToken);
+      useAuthStore.getState().startExpiryTimer(data.accessToken);
       saveTokens(data.accessToken, data.refreshToken);
       router.push("/dashboard");
     } catch (error: any) {
-      throw new Error(error?.response?.data?.message || "Login failed");
+      throw new Error(error?.response?.data?.detail || error?.response?.data?.message || "Login failed");
     }
   };
 
@@ -63,6 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setAccessToken(null);
     clearTokens();
+    useAuthStore.getState().resetSession();
     router.push("/");
   };
 
