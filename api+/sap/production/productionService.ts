@@ -1,17 +1,16 @@
 import { BaseProductionDocument } from "@/types/production/PRDDoc.type";
-import axios from "axios";
-import { API_URL } from "@/types/config";
+import apiClient from "@/lib/apiClient";
 
 export const getPRDOrder = async (baseRef: number): Promise<BaseProductionDocument | null> => {
   try {
-    const res = await axios.get(`${API_URL}ProductionOrders(${baseRef})`);
+    const res = await apiClient.get(`ProductionOrders(${baseRef})`);
 
     if (!res.data) return null;
 
-     const doc: BaseProductionDocument = {
-      ...res.data, 
+    const doc: BaseProductionDocument = {
+      ...res.data,
       PRDOrderLines: (res.data.ProductionOrderLines || []).map((line: any) => ({
-        ...line, 
+        ...line,
       })),
     };
 
