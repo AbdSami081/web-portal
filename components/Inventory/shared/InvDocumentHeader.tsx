@@ -12,20 +12,14 @@ import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { useInvDocConfig } from "./InvDocumentLayout";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
+import { Warehouse } from "@/types/warehouse/warehouse";
+import { getwarehouses } from "@/api+/sap/master-data/warehouses";
+import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
+import { getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
   bost_Close: "Closed",
-};
-
-
-const mockSelectOptions = {
-  series: ["100", "200", "External"],
-  shipTo: ["Main Address", "Warehouse 1", "Office 2"],
-  contactPersons: ["John Doe", "Jane Smith", "Alex Brown"],
-  priceLists: [{ num: 1, name: "Base Price" }, { num: 2, name: "Discount Purchase Price" }],
-  warehouses: ["01", "02", "03"],
-  binLocations: ["A-01", "B-02"],
 };
 
 export function InvDocumentHeader() {
@@ -39,22 +33,47 @@ export function InvDocumentHeader() {
   const [modalOpen, setModalOpen] = useState(false);
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { customer, setCustomer, loadFromDocument } = useSalesDocument();
+  const { customer, setCustomer, loadFromDocument, warehouses: globalWarehouses, setWarehouses } = useInventoryDocument();
+  const [warehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
+
   const docEntry = watch("DocEntry");
   const [docNumSearch, setDocNumSearch] = useState("");
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const config = useInvDocConfig();
 
   useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        const res = await getwarehouses();
+        setLocalWarehouses(res);
+        setWarehouses(res);
+      } catch (error) {
+        console.error("Failed to fetch warehouses", error);
+      }
+    };
+    fetchWarehouses();
+  }, [setWarehouses]);
+
+  useEffect(() => {
+    // Set default warehouses when warehouses are loaded
+    if (warehouses.length > 0) {
+      const currentFromWhs = watch("FromWarehouse");
+      const currentToWhs = watch("ToWarehouse");
+
+      if (!currentFromWhs) {
+        setValue("FromWarehouse", warehouses[0].WhsCode, { shouldDirty: true });
+      }
+      if (!currentToWhs) {
+        setValue("ToWarehouse", warehouses[0].WhsCode, { shouldDirty: true });
+      }
+    }
+  }, [warehouses, setValue, watch]);
+
+  useEffect(() => {
     if (docEntry) {
       setDocNumSearch(docEntry.toString());
     }
-    if (!watch("ShipToCode")) setValue("ShipToCode", mockSelectOptions.shipTo[0]);
-    if (!watch("PriceListNum")) setValue("PriceListNum", mockSelectOptions.priceLists[1].num.toString());
-    if (!watch("Series")) setValue("Series", mockSelectOptions.series[0]);
-    if (!watch("FromWarehouse")) setValue("FromWarehouse", mockSelectOptions.warehouses[0]);
-    if (!watch("ToWarehouse")) setValue("ToWarehouse", mockSelectOptions.warehouses[0]);
-  }, [docEntry, setValue, watch]);
+  }, [docEntry, setValue, watch, warehouses]);
 
   useEffect(() => {
     if (customer) {
@@ -91,9 +110,32 @@ export function InvDocumentHeader() {
 
     try {
       let documentData;
-      // toast.success(`Document ${documentData.DocEntry} loaded successfully. (Mock Doc 1000 loaded)`);
-    } catch (error) {
-      toast.error("An error occurred while fetching the document.");
+      if (config.type === DocumentType.InvTransferReq) {
+        documentData = await getInventoryTransferRequest(docNumInt);
+      } else if (config.type === DocumentType.InvTransfer) {
+        documentData = await getInventoryTransfer(docNumInt);
+      }
+
+      if (documentData) {
+        // Map document data to form fields
+        setValue("DocEntry", documentData.DocEntry);
+        setValue("DocNum", documentData.DocNum);
+        setValue("TaxDate", documentData.TaxDate ? documentData.TaxDate.split("T")[0] : "");
+        setValue("CardCode", documentData.CardCode);
+        setValue("CardName", documentData.CardName);
+        setValue("Comments", documentData.Comments);
+        setValue("FromWarehouse", documentData.FromWarehouse);
+        setValue("ToWarehouse", documentData.ToWarehouse);
+        setValue("JournalMemo", documentData.JournalMemo);
+        setValue("DocStatus", documentData.DocumentStatus);
+
+        loadFromDocument(documentData);
+        toast.success(`Document ${documentData.DocNum} loaded successfully.`);
+      } else {
+        toast.error("Document not found.");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred while fetching the document.");
       console.error("Document fetch error:", error);
     } finally {
       setIsLoading(false);
@@ -104,7 +146,7 @@ export function InvDocumentHeader() {
     <div className="flex flex-col lg:flex-row gap-8">
       <div className="flex flex-col gap-4 w-full lg:w-1/2">
         <div className="flex items-center gap-1">
-          <Label className="w-24">Customer</Label>
+          <Label className="w-32">Customer</Label>
           <div className="flex items-center gap-2">
             <Input
               type="text"
@@ -129,7 +171,7 @@ export function InvDocumentHeader() {
         </div>
 
         <div className="flex items-center gap-1 w-full">
-          <Label className="w-24">Name</Label>
+          <Label className="w-32">Name</Label>
           <Input
             type="text"
             {...register("CardName")}
@@ -139,20 +181,45 @@ export function InvDocumentHeader() {
           />
         </div>
 
+        {/* From Warehouse */}
         <div className="flex items-center gap-1 w-full">
-          <Label className="w-24">Price List</Label>
+          <Label className="w-32">From Warehouse</Label>
+          <Input type="hidden" {...register("FromWarehouse")} />
           <Select
-            onValueChange={(val) => setValue("PriceListNum", val)}
-            value={watch("PriceListNum") || mockSelectOptions.priceLists[1].num.toString()}
+            onValueChange={(val) => setValue("FromWarehouse", val, { shouldDirty: true })}
+            value={watch("FromWarehouse") || warehouses[0]?.WhsCode || ""}
           >
             <SelectTrigger className="h-8 w-56">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                {mockSelectOptions.priceLists.map((list) => (
-                  <SelectItem key={list.num} value={list.num.toString()}>
-                    {list.name}
+                {warehouses.map((wh) => (
+                  <SelectItem key={wh.WhsCode} value={wh.WhsCode}>
+                    {wh.WhsName}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* To Warehouse */}
+        <div className="flex items-center gap-1 w-full">
+          <Label className="w-32">To Warehouse</Label>
+          <Input type="hidden" {...register("ToWarehouse")} />
+          <Select
+            onValueChange={(val) => setValue("ToWarehouse", val, { shouldDirty: true })}
+            value={watch("ToWarehouse") || warehouses[0]?.WhsCode || ""}
+          >
+            <SelectTrigger className="h-8 w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {warehouses.map((wh) => (
+                  <SelectItem key={wh.WhsCode} value={wh.WhsCode}>
+                    {wh.WhsName}
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -192,67 +259,8 @@ export function InvDocumentHeader() {
           </div>
         </div>
 
-      {config.type !== DocumentType.InvTransfer &&(
         <div className="flex justify-between items-center gap-1 w-full">
-          <Label className="text-xs w-28">Status</Label>
-          <Select
-            value={watchedStatus}
-            onValueChange={(val) => setValue("DocStatus", val)}
-          >
-            <SelectTrigger className="w-56">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Select Status</SelectLabel>
-                {Object.entries(statusMap).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {config.type == DocumentType.InvTransfer &&(
-        <div className="flex justify-between items-center gap-1 w-full">
-          <Label className="w-24">Series</Label>
-          <Select
-            onValueChange={(val) => setValue("Series", val)}
-            value={watch("Series") || mockSelectOptions.series[0]}
-          >
-            <SelectTrigger className="h-8 w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {mockSelectOptions.series.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-        
-        {config.type !== DocumentType.InvTransfer &&(
-          <div className="flex justify-between items-center gap-1 w-full">
-            <Label className="w-24">Due Date</Label>
-            <Input
-              type="date"
-              {...register("DocDueDate")}
-              className="h-8 w-56"
-            />
-          </div>
-        )} 
-        
-        <div className="flex justify-between items-center gap-1 w-full">
-          <Label className="w-24">Document Date</Label>
+          <Label className="w-32">Document Date</Label>
           <Input
             type="date"
             {...register("TaxDate")}
@@ -261,21 +269,12 @@ export function InvDocumentHeader() {
         </div>
       </div>
 
-      {/* <GenericModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSelect={handleSelectBP}
-        data={businessPartners}
-        columns={[{ key: "CardCode", label: "Code" }, { key: "CardName", label: "Name" }]}
-        title="Select Business Partner"
-        getSelectValue={(item) => item}
-      /> */}
       <BusinessPartnerSelectorDialog
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSelect={(bp) => {
-          handleSelectBP(bp); 
-          setModalOpen(false); 
+          handleSelectBP(bp);
+          setModalOpen(false);
         }}
       />
     </div>
