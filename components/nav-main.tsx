@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Minus, Plus, type LucideIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/context/authContext";
 
 import {
   Collapsible,
@@ -26,20 +27,61 @@ export function NavMain({
   items,
 }: {
   items: {
+    id: string;
     title: string;
     url: string;
     icon: LucideIcon;
     items?: {
+      id?: string;
       title: string;
       url: string;
     }[];
   }[];
 }) {
+  const { user } = useAuth();
   const currentPath = usePathname();
   const [openParent, setOpenParent] = useState<string | null>(null);
 
+  const filteredItems = useMemo(() => {
+    console.log('[NAV-MAIN] User allowedModules:', user?.allowedModules);
+    if (!user?.allowedModules) return [];
+
+    // 1. If "all", show everything
+    if (user.allowedModules.some(m => m.toLowerCase() === "all")) {
+      console.log('[NAV-MAIN] Showing all modules (allowedModules contains "all")');
+      return items;
+    }
+
+    // 2. Filter items recursively
+    const allowed = user.allowedModules.map(m => m.toLowerCase());
+
+    const deepFiltered = items.map(item => {
+      // Clone item to safeguard constants
+      const newItem = { ...item };
+
+      if (newItem.items && newItem.items.length > 0) {
+        newItem.items = newItem.items.filter(child =>
+          child.id && allowed.includes(child.id.toLowerCase())
+        );
+      }
+      return newItem;
+    }).filter(item => {
+      // Keep if:
+      // 1. Explicitly Allowed (e.g. Dashboard)
+      if (allowed.includes(item.id.toLowerCase())) return true;
+
+      // 2. OR Has allowed children (e.g. Sales with only Delivery allowed)
+      if (item.items && item.items.length > 0) return true;
+
+      return false;
+    });
+
+    console.log('[NAV-MAIN] Filtered items:', deepFiltered.map(i => i.id));
+    return deepFiltered;
+  }, [items, user?.allowedModules]);
+
   useEffect(() => {
-    const activeParent = items.find(
+    const activeParent = filteredItems.find(
       (item) =>
         item.items &&
         item.items.some((sub) => currentPath.startsWith(sub.url))
@@ -47,13 +89,13 @@ export function NavMain({
 
     if (activeParent) setOpenParent(activeParent);
 
-  }, [currentPath, items]);
+  }, [currentPath, filteredItems]);
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel className="text-slate-500 font-bold tracking-widest text-[10px] uppercase mb-4 px-4">Core Modules</SidebarGroupLabel>
       <SidebarMenu className="gap-1 px-2">
-        {items.map((item) => {
+        {filteredItems.map((item) => {
           const hasChildren = item.items && item.items.length > 0;
           const isOpen = openParent === item.title;
 
