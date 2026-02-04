@@ -107,6 +107,7 @@ export function DocumentHeader() {
         setValue("Address", documentData.Address);
         setValue("DocEntry", documentData.DocEntry);
         setValue("Comments", documentData.Comments);
+        toast.success(`Document ${documentData.DocNum} loaded successfully.`);
       }
     } catch (error) {
       toast.error("An error occurred while fetching the document.");
