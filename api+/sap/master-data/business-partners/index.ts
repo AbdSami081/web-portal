@@ -24,18 +24,17 @@
 //     return json({ businessPartners: [] }); // Return an empty array on error
 //   }
 // }
+import apiClient from "@/lib/apiClient";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
-import axios from "axios";
-import { API_URL } from "@/types/config";
 
 export const getCustomers = async (search = "", skip = 0, top = 10): Promise<BusinessPartner[]> => {
   try {
-    const res = await axios.get(`${API_URL}GetCustomers`, {
+    const res = await apiClient.get(`api/Sales/GetCustomers`, {
       params: {
         search: search,
         skip: skip,
         top: top
-      }
+      },
     });
 
     return Array.isArray(res.data) ? res.data : [];
