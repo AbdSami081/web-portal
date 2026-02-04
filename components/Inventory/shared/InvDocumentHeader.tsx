@@ -55,7 +55,6 @@ export function InvDocumentHeader() {
   }, [setWarehouses]);
 
   useEffect(() => {
-    // Set default warehouses when warehouses are loaded
     if (warehouses.length > 0) {
       const currentFromWhs = watch("FromWarehouse");
       const currentToWhs = watch("ToWarehouse");
@@ -117,7 +116,6 @@ export function InvDocumentHeader() {
       }
 
       if (documentData) {
-        // Map document data to form fields
         setValue("DocEntry", documentData.DocEntry);
         setValue("DocNum", documentData.DocNum);
         setValue("TaxDate", documentData.TaxDate ? documentData.TaxDate.split("T")[0] : "");
@@ -136,7 +134,6 @@ export function InvDocumentHeader() {
       }
     } catch (error: any) {
       toast.error(error.message || "An error occurred while fetching the document.");
-      console.error("Document fetch error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -181,7 +178,6 @@ export function InvDocumentHeader() {
           />
         </div>
 
-        {/* From Warehouse */}
         <div className="flex items-center gap-1 w-full">
           <Label className="w-32">From Warehouse</Label>
           <Input type="hidden" {...register("FromWarehouse")} />
@@ -204,7 +200,6 @@ export function InvDocumentHeader() {
           </Select>
         </div>
 
-        {/* To Warehouse */}
         <div className="flex items-center gap-1 w-full">
           <Label className="w-32">To Warehouse</Label>
           <Input type="hidden" {...register("ToWarehouse")} />
@@ -239,6 +234,7 @@ export function InvDocumentHeader() {
               onChange={(e) => setDocNumSearch(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
+                  e.preventDefault();
                   fetchDocument();
                 }
               }}
