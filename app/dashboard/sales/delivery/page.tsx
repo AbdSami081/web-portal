@@ -34,16 +34,17 @@ export default function DeliveryPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, reset: resetStore } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, reset: resetStore } = useSalesDocument.getState();
 
-    if (DocEntry && Number(DocEntry) > 0) {
+    // If we have a DocEntry and the loaded type is DELIVERY (15), then it's an UPDATE.
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Delivery) {
       // Update logic
       const payload = {
         Comments: data.Comments
       };
 
       try {
-        console.log("Updating Delivery Note Payload:", payload);
+        console.log("PATCH Delivery Note Payload:", payload);
         const response = await patchDeliveryNote(Number(DocEntry), payload);
         toast.success(`Delivery Note #${DocEntry} updated successfully`);
       } catch (error) {
@@ -53,18 +54,29 @@ export default function DeliveryPage() {
       return;
     }
 
-    // Create logic
+    // Create logic (Manual or Copy From)
     const payload = {
       ...data,
-      DocumentLines: lines.map((line) => ({
-        ...line,
-        BaseType: DocumentType.Order,
-        BaseEntry: DocEntry || 0,
-        BaseLine: line.LineNum,
-      })),
+      DocumentLines: lines.map((line) => {
+        const lineData: any = { ...line };
+
+        // CHECK MAPPING: If we have a source DocEntry (Order or Quotation)
+        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Delivery) {
+          lineData.BaseType = lastLoadedDocType;
+          lineData.BaseEntry = DocEntry;
+          lineData.BaseLine = line.LineNum;
+        } else {
+          // DEFAULT VALUES
+          lineData.BaseType = -1;
+          lineData.BaseEntry = null;
+          lineData.BaseLine = null;
+        }
+        return lineData;
+      }),
     };
 
     try {
+      console.log("POST DELIVERY NOTE PAYLOAD (CHECK BASE FIELDS):", JSON.stringify(payload, null, 2));
       const response = await postDelivery(payload);
 
       if (response?.DocEntry) {
