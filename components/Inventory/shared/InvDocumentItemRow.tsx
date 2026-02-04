@@ -2,9 +2,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash } from "lucide-react";
+import { Search, Trash } from "lucide-react";
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
+import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
+import { Warehouse } from "@/types/warehouse/warehouse";
 
 interface Props {
   index: number;
@@ -14,17 +16,30 @@ interface Props {
 export function InvDocumentLineRow({ index, line }: Props) {
   const { updateLine, removeLine } = useInventoryDocument();
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
+  const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
+  const [whsMode, setWhsMode] = useState<"from" | "to">("from");
 
   useEffect(() => {
     setDraftLine(line);
   }, [line]);
 
-  const saveRow = () => {
-    updateLine(line.ItemCode, draftLine);
+  const saveRow = (updatedLine = draftLine) => {
+    updateLine(line.ItemCode, updatedLine);
+  };
+
+  const handleWhsSelect = (wh: Warehouse) => {
+    let updated;
+    if (whsMode === "from") {
+      updated = { ...draftLine, FromWhsCode: wh.WhsCode };
+    } else {
+      updated = { ...draftLine, WhsCode: wh.WhsCode };
+    }
+    setDraftLine(updated);
+    saveRow(updated);
   };
 
   return (
-    <> 
+    <>
       {/* Item Code */}
       <td className="py-2 px-4">
         <span className="font-medium">{line.ItemCode}</span>
@@ -33,239 +48,106 @@ export function InvDocumentLineRow({ index, line }: Props) {
       {/* Description */}
       <td className="py-2 px-4">
         <Input
-          className="h-6 w-32"
+          className="h-6 w-full"
           value={draftLine.Dscription || ""}
           onChange={(e) => setDraftLine({ ...draftLine, Dscription: e.target.value })}
-          onBlur={saveRow}
+          onBlur={() => saveRow()}
         />
       </td>
 
       {/* From Warehouse */}
       <td className="py-2 px-4">
-        <Input
-          className="h-6 w-24"
-          value={draftLine.FromWhsCode || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, FromWhsCode: e.target.value })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* From Bin */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-24"
-          value={draftLine.FromBinLoc || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, FromBinLoc: e.target.value })}
-          onBlur={saveRow}
-        />
+        <div className="flex items-center gap-1 w-full">
+          <Input
+            className="h-6 w-full"
+            value={draftLine.FromWhsCode || ""}
+            onChange={(e) => setDraftLine({ ...draftLine, FromWhsCode: e.target.value })}
+            onBlur={() => saveRow()}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={() => {
+              setWhsMode("from");
+              setIsWhsModalOpen(true);
+            }}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        </div>
       </td>
 
       {/* To Warehouse */}
       <td className="py-2 px-4">
-        <Input
-          className="h-6 w-24"
-          value={draftLine.WhsCode || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, WhsCode: e.target.value })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* To Bin */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-24"
-          value={draftLine.ToBinLoc || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, ToBinLoc: e.target.value })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* First To Bin */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-24"
-          value={draftLine.FisrtBin || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, FisrtBin: e.target.value })}
-          onBlur={saveRow}
-        />
+        <div className="flex items-center gap-1 w-full">
+          <Input
+            className="h-6 w-full"
+            value={draftLine.WhsCode || ""}
+            onChange={(e) => setDraftLine({ ...draftLine, WhsCode: e.target.value })}
+            onBlur={() => saveRow()}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={() => {
+              setWhsMode("to");
+              setIsWhsModalOpen(true);
+            }}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        </div>
       </td>
 
       {/* Quantity */}
       <td className="py-2 px-4">
         <Input
-          className="h-6 w-20 text-right"
+          className="h-6 w-full text-right"
           type="number"
           value={draftLine.Quantity}
           onChange={(e) => setDraftLine({ ...draftLine, Quantity: Number(e.target.value) })}
-          onBlur={saveRow}
+          onBlur={() => saveRow()}
         />
       </td>
 
-      {/* Item Cost */}
+      {/* Unit Price */}
       <td className="py-2 px-4">
         <Input
-          className="h-6 w-20 text-right"
+          className="h-6 w-full text-right"
           type="number"
+          step="0.01"
           value={draftLine.ItemCost || 0}
           onChange={(e) => setDraftLine({ ...draftLine, ItemCost: Number(e.target.value) })}
-          onBlur={saveRow}
+          onBlur={() => saveRow()}
         />
       </td>
 
       {/* UoM Code */}
       <td className="py-2 px-4">
         <Input
-          className="h-6 w-20"
+          className="h-6 w-full bg-slate-50 cursor-not-allowed"
           value={draftLine.UomCode || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, UomCode: e.target.value })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* Unit Measure */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20"
-          value={draftLine.unitMsr || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, unitMsr: e.target.value })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* COGS Fields */}
-      <td className="py-2 px-4">
-        <div className="relative">
-          <Input
-            className="h-6 w-20"
-            value={draftLine.OcrCode2 || ""}
-            onChange={(e) => setDraftLine({ ...draftLine, OcrCode2: e.target.value })}
-            onBlur={saveRow}
-          />
-        </div>
-      </td>
-
-      <td className="py-2 px-4">
-        <div className="relative">
-          <Input
-            className="h-6 w-20"
-            value={draftLine.OcrCode3 || ""}
-            onChange={(e) => setDraftLine({ ...draftLine, OcrCode3: e.target.value })}
-            onBlur={saveRow}
-          />
-        </div>
-      </td>
-
-      <td className="py-2 px-4">
-        <div className="relative">
-          <Input
-            className="h-6 w-20"
-            value={draftLine.OcrCode4 || ""}
-            onChange={(e) => setDraftLine({ ...draftLine, OcrCode4: e.target.value })}
-            onBlur={saveRow}
-          />
-        </div>
-      </td>
-
-      {/* Recycled Plastic Weight */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20 text-right"
-          type="number"
-          value={draftLine.PlPaWght || 0}
-          onChange={(e) => setDraftLine({ ...draftLine, PlPaWght: Number(e.target.value) })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* Last Price */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20 text-right"
-          type="number"
-          value={draftLine.U_LastPrice || 0}
-          onChange={(e) => setDraftLine({ ...draftLine, U_LastPrice: Number(e.target.value) })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* Plastic Tax Reason */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20"
-          value={draftLine.PPTaxExRe || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, PPTaxExRe: e.target.value })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* QC Document */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20"
-          value={draftLine.U_OQCR || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, U_OQCR: e.target.value })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* QC Document */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20"
-          value={draftLine.U_OQDC || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, U_OQDC: e.target.value })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* Last Price */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20 text-right"
-          type="number"
-          value={draftLine.U_LPP2 || 0}
-          onChange={(e) => setDraftLine({ ...draftLine, U_LPP2: Number(e.target.value) })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* FBR Qty */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20 text-right"
-          type="number"
-          value={draftLine.U_FBRQty || 0}
-          onChange={(e) => setDraftLine({ ...draftLine, U_FBRQty: Number(e.target.value) })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* Sale Type */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20"
-          value={draftLine.U_SaleType || ""}
-          onChange={(e) => setDraftLine({ ...draftLine, U_SaleType: e.target.value })}
-          onBlur={saveRow}
-        />
-      </td>
-
-      {/* Further Tax */}
-      <td className="py-2 px-4">
-        <Input
-          className="h-6 w-20"
-          value={draftLine.U_FurtherTax || 0}
-          onChange={(e) => setDraftLine({ ...draftLine, U_FurtherTax: Number(e.target.value) })}
-          onBlur={saveRow}
+          disabled
+          readOnly
         />
       </td>
 
       {/* Delete button */}
-        <td>
-            <Button type="button" variant="ghost" className="h-6 w-6 p-0" onClick={() => removeLine(line.ItemCode)}>
-            <Trash className="h-5 w-5 text-red-500" />
-            </Button>
-        </td>
+      <td>
+        <Button type="button" variant="ghost" className="h-6 w-6 p-0" onClick={() => removeLine(line.ItemCode)}>
+          <Trash className="h-5 w-5 text-red-500" />
+        </Button>
+      </td>
+
+      <WarehouseSelectorDialog
+        open={isWhsModalOpen}
+        onClose={() => setIsWhsModalOpen(false)}
+        onSelect={handleWhsSelect}
+      />
     </>
   );
 }
