@@ -34,18 +34,19 @@ export default function InvoicePage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, reset: resetStore } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, reset: resetStore } = useSalesDocument.getState();
 
-    if (DocEntry && Number(DocEntry) > 0) {
+    // If we have a DocEntry and the loaded type is INVOICE (13), then it's an UPDATE.
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.ARInvoice) {
       // Update logic
       const payload = {
         Comments: data.Comments
       };
 
       try {
-        console.log("Updating AR Invoice Payload:", payload);
+        console.log("PATCH AR Invoice Payload:", payload);
         const response = await patchARInvoice(Number(DocEntry), payload);
-        toast.success(`AR Invoice #${DocEntry} updated successfully`);
+        toast.success(`A/R Invoice #${DocEntry} updated successfully`);
       } catch (error) {
         console.error("Error while updating AR Invoice:", error);
         toast.error("Failed to update AR Invoice");
@@ -53,22 +54,33 @@ export default function InvoicePage() {
       return;
     }
 
-    // Create logic
+    // Create logic (Manual or Copy From)
     const payload = {
       ...data,
-      DocumentLines: lines.map((line) => ({
-        ...line,
-        BaseType: DocumentType.Delivery,
-        BaseEntry: DocEntry || 0,
-        BaseLine: line.LineNum,
-      })),
+      DocumentLines: lines.map((line) => {
+        const lineData: any = { ...line };
+
+        // CHECK MAPPING
+        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.ARInvoice) {
+          lineData.BaseType = lastLoadedDocType;
+          lineData.BaseEntry = DocEntry;
+          lineData.BaseLine = line.LineNum;
+        } else {
+          // DEFAULT VALUES
+          lineData.BaseType = -1;
+          lineData.BaseEntry = null;
+          lineData.BaseLine = null;
+        }
+        return lineData;
+      }),
     };
 
     try {
+      console.log("POST INVOICE PAYLOAD (CHECK BASE FIELDS):", JSON.stringify(payload, null, 2));
       const response = await postARInvoice(payload);
 
       if (response?.DocEntry) {
-        toast.success(`AR Invoice #${response.DocNum} created successfully!`);
+        toast.success(`A/R Invoice #${response.DocNum} created successfully!`);
         resetStore();
         router.push("/dashboard/sales/invoice");
       } else {
