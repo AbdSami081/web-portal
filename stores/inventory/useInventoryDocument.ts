@@ -8,12 +8,14 @@ interface IOPRDDocumentStore {
   docType: "InventoryTransfer" | "InventoryTransferRequest";
   customer: BusinessPartner | null;
   lines: InventoryDocumentLine[];
+  warehouses: any[];
 
   setCustomer: (customer: BusinessPartner) => void;
+  setWarehouses: (warehouses: any[]) => void;
   setDocType: (docType: "InventoryTransfer" | "InventoryTransferRequest") => void;
   addLine: (line: InventoryDocumentLine) => void;
   removeLine: (itemCode: string) => void;
-  loadFromDocument: (doc: BaseInventoryDocument) => void;
+  loadFromDocument: (doc: any) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
   reset: () => void;
 }
@@ -23,12 +25,13 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     docType: "InventoryTransfer",
     customer: null,
     lines: [],
+    warehouses: [],
 
-    setCustomer: (customer) => set({ customer }),
+    setCustomer: (customer: BusinessPartner) => set({ customer }),
+    setWarehouses: (warehouses: any[]) => set({ warehouses }),
+    setDocType: (docType: "InventoryTransfer" | "InventoryTransferRequest") => set({ docType }),
 
-    setDocType: (docType) => set({ docType }),
-
-   addLine: (line) => {
+    addLine: (line: InventoryDocumentLine) => {
       const existingLine = get().lines.find((l) => l.ItemCode === line.ItemCode);
       if (existingLine) {
         get().updateLine(existingLine.ItemCode, {
@@ -40,44 +43,32 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
       }
     },
 
-    removeLine: (itemCode) => {
+    removeLine: (itemCode: string) => {
       set((state) => ({
         lines: state.lines.filter((line) => line.ItemCode !== itemCode),
       }));
     },
 
-    loadFromDocument: (doc: BaseInventoryDocument) => {
-      const mappedLines: InventoryDocumentLine[] = doc.DocumentLines?.map((line: any) => ({
+    loadFromDocument: (doc: any) => {
+      const mappedLines: InventoryDocumentLine[] = (doc.DocumentLines || doc.StockTransferLines)?.map((line: any) => ({
         ItemCode: line.ItemCode,
-        Dscription: line.Dscription || "",
-        FromWhsCode: line.FromWhsCode || "",
-        FromBinLoc: line.FromBinLoc || "",
-        WhsCode: line.WhsCode || "",
-        ToBinLoc: line.ToBinLoc || "",
-        FisrtBin: line.FisrtBin || "",
+        Dscription: line.ItemDescription || line.Dscription || "",
+        FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || "",
+        WhsCode: line.WarehouseCode || line.WhsCode || "",
         Quantity: Number(line.Quantity) || 0,
-        ItemCost: Number(line.ItemCost) || 0,
-        UomCode: line.UomCode || "",
-        unitMsr: line.unitMsr || "",
-        OcrCode2: line.OcrCode2 || "",
-        OcrCode3: line.OcrCode3 || "",
-        OcrCode4: line.OcrCode4 || "",
-        PlPaWght: Number(line.PlPaWght) || 0,
-        U_LastPrice: Number(line.U_LastPrice) || 0,
-        PPTaxExRe: line.PPTaxExRe || "",
-        U_OQCR: line.U_OQCR || "",
-        U_OQDC: line.U_OQDC || "",
-        U_LPP2: Number(line.U_LPP2) || 0,
-        U_FBRQty: Number(line.U_FBRQty) || 0,
-        U_SaleType: line.U_SaleType || "",
-        U_FurtherTax: line.U_FurtherTax || "",
+        ItemCost: Number(line.UnitPrice || line.ItemCost || line.Price) || 0,
+        UomCode: line.UoMCode || line.UomCode || "",
+        LineNum: line.LineNum,
+        BaseType: line.BaseType,
+        BaseEntry: line.BaseEntry,
+        BaseLine: line.BaseLine,
       })) || [];
 
       set({
         customer: {
           CardCode: doc.CardCode,
           CardName: doc.CardName || "",
-          CardType: "cCustomer", 
+          CardType: "cCustomer",
           Balance: 0,
           Phone1: "",
           Email: "",
@@ -86,10 +77,19 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
       });
     },
 
+    updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => {
+      set((state) => ({
+        lines: state.lines.map((line) =>
+          line.ItemCode === itemCode ? { ...line, ...updated } : line
+        ),
+      }));
+    },
+
     reset: () =>
       set({
         customer: null,
         lines: [],
+        warehouses: [],
         docType: "InventoryTransfer",
       }),
   }))
