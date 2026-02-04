@@ -72,15 +72,9 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const dbConfig = databases.find((db: any) => db.name === selectedDb);
-      const dbParams = dbConfig ? {
-        serverName: dbConfig.server,
-        dbName: dbConfig.name,
-        dbPassword: dbConfig.password,
-        dbUserId: dbConfig.userId,
-        BaseUrl: dbConfig.baseUrl,
-        SqlConnection: dbConfig.sqlConnection
-      } : {};
+      const dbParams = {
+        companyDB: selectedDb,
+      };
 
       await login(username, password, dbParams);
       toast.success("Logged in successfully!");
@@ -180,12 +174,12 @@ export default function LoginPage() {
                   <SelectContent className="rounded-xl overflow-hidden border-slate-200">
                     {databases.length > 0 ? (
                       databases.map((db: any) => (
-                        <SelectItem key={db.name} value={db.name} className="py-2 focus:bg-slate-50 cursor-pointer">
+                        <SelectItem key={db.CompanyDB} value={db.CompanyDB} className="py-2 focus:bg-slate-50 cursor-pointer">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-slate-100 rounded-lg group-data-[highlighted]:bg-white transition-colors">
                               <Database className="w-5 h-5 text-slate-600" />
                             </div>
-                            <span className="text-base font-semibold text-slate-700">{db.name}</span>
+                            <span className="text-base font-semibold text-slate-700">{db.CompanyName}</span>
                           </div>
                         </SelectItem>
                       ))
