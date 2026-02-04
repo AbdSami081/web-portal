@@ -8,11 +8,10 @@ import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchem
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { postQuotation, patchQuotation } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 export default function NewQuotationPage() {
   const loadFromDocument = useSalesDocument((state) => state.loadFromDocument);
-
-  // const {loadFromDocument} = useSalesDocument();
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -30,51 +29,11 @@ export default function NewQuotationPage() {
     DocumentLines: [],
   };
 
-  // const handleSubmit = async (data: QuotationFormData) => {
-  //   const { lines, DocTotal } = useSalesDocument.getState();
-  //   const payload = {
-  //     ...data,
-  //     DocumentLines: lines,
-  //   };
-
-  //   console.log("Submitting Quotation Payload:", payload);
-  //   console.log("Doc Total:", DocTotal);
-  //   console.log("Lines Data:", lines);
-  //   console.log("Quotation Form Data:", data);
-
-  //   try {
-  //     const res = {
-  //       status: 201,
-  //       data: {
-  //         data: {
-  //           DocEntry: Math.floor(Math.random() * 10000),
-  //           DocNum: Math.floor(Math.random() * 1000000),
-  //           CardCode: payload.CardCode,
-  //           CardName: payload.CardName,
-  //           DocDate: payload.DocDate || new Date().toISOString().split("T")[0],
-  //           DocTotal: payload.DocTotal,
-  //           DocumentLines: lines || [],
-  //         },
-  //       },
-  //     };
-
-  //     if (res.status !== 201) {
-  //       throw new Error("Failed to create quotation");
-  //     }
-
-  //     const doc = res.data?.data;
-  //     if (!doc?.DocEntry) throw new Error("Missing DocEntry from response");
-
-  //     console.log("Quotation Created (Dummy):", doc);
-
-  //   } catch (error) {
-  //     console.error("Error while creating quotation:", error);
-  //   }
-  // };
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocTotal, freight, TaxTotal, additionalExpenses, DocEntry } = useSalesDocument.getState();
+    const { lines, DocTotal, freight, TaxTotal, additionalExpenses, DocEntry, lastLoadedDocType } = useSalesDocument.getState();
 
-    if (DocEntry && Number(DocEntry) > 0) {
+    // If we have a DocEntry and it's a QUOTATION, perform an UPDATE.
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Quotation) {
       // Update logic
       const payload = {
         Comments: data.Comments
@@ -91,13 +50,24 @@ export default function NewQuotationPage() {
       return;
     }
 
-    // Create logic
-    const { DocDate, DocDueDate, TaxDate, ...restData } = data;
-
+    // Create logic (Manual creation - Quotations usually don't have base docs in this UI)
     const payload = {
-      ...restData,
+      ...data,
       DocTotal,
-      DocumentLines: lines,
+      DocumentLines: lines.map(line => {
+        const lineData: any = { ...line };
+        // Even if copied from another quotation (unlikely here), we ensure mapping logic is consistent
+        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Quotation) {
+          lineData.BaseType = lastLoadedDocType;
+          lineData.BaseEntry = DocEntry;
+          lineData.BaseLine = line.LineNum;
+        } else {
+          delete lineData.BaseType;
+          delete lineData.BaseEntry;
+          delete lineData.BaseLine;
+        }
+        return lineData;
+      }),
       Freight: freight,
       TaxTotal: TaxTotal,
       DocumentLineAdditionalExpenses: additionalExpenses
@@ -113,11 +83,12 @@ export default function NewQuotationPage() {
       }
 
       console.log("Quotation Created:", documentData);
-      loadFromDocument(documentData);
+      loadFromDocument(documentData, DocumentType.Quotation);
 
       toast.success(`Quotation #${documentData.DocNum} created successfully`);
     } catch (error) {
       console.error("Error while creating quotation:", error);
+      toast.error("Failed to create quotation. Please try again.");
     }
   };
 
