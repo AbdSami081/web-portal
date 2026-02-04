@@ -3,16 +3,44 @@ import Link from "next/link";
 import Image from "next/image";
 import logoImage from "@/public/assets/logo.png";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "./ui/sidebar";
-import { Command } from "cmdk";
-import { Company, MENUS, UserInfo } from "@/Constants";
+import { Company, UserInfo } from "@/Constants";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./sidenav-user"
-import { NavProjects } from "./nav-projects";
-import { NavSecondary } from "./nav-secondary";
 import { useAuth } from "@/context/authContext";
+import { useEffect, useState } from "react";
+import { getFilteredMenu } from "@/actions/menu";
+import { BadgeDollarSign, Factory, LayoutDashboardIcon, Package, LucideIcon } from "lucide-react";
+
+// Map for string icons to components
+const ICON_MAP: Record<string, LucideIcon> = {
+  "LayoutDashboardIcon": LayoutDashboardIcon,
+  "BadgeDollarSign": BadgeDollarSign,
+  "Package": Package,
+  "Factory": Factory
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuth();
+  const { accessToken } = useAuth();
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadMenu() {
+      if (accessToken) {
+        try {
+          const filtered = await getFilteredMenu(accessToken);
+          // Map icons back to components
+          const mapped = filtered.map(item => ({
+            ...item,
+            icon: item.iconName ? ICON_MAP[item.iconName] : undefined
+          }));
+          setMenuItems(mapped);
+        } catch (error) {
+          console.error("Failed to load menu", error);
+        }
+      }
+    }
+    loadMenu();
+  }, [accessToken]);
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props} className="bg-black">
@@ -41,9 +69,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={MENUS} />
-        {/* <NavProjects projects={data.projects} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
+        <NavMain items={menuItems} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
