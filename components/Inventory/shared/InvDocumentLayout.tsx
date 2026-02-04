@@ -43,12 +43,14 @@ export function InvDocumentLayout<T extends FieldValues>({
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, watch, formState: { isSubmitting } } = methods;
+  const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty } } = methods;
   const { reset: lineReset } = useInventoryDocument();
 
   useEffect(() => {
-    reset(defaultValues as DefaultValues<T>);
-  }, [defaultValues]);
+    if (!isDirty) {
+      reset(defaultValues as DefaultValues<T>);
+    }
+  }, [defaultValues, reset, isDirty]);
 
   const ResetForm = () => {
     reset(defaultValues as DefaultValues<T>);
@@ -63,12 +65,12 @@ export function InvDocumentLayout<T extends FieldValues>({
   return (
     <InvDocContext.Provider value={config}>
       <FormProvider {...methods}>
-       
+
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-screen bg-background">
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
             <h1 className="text-xl font-semibold">{config.title}</h1>
-            
+
             {actions && <div>{actions}</div>}
           </div>
 
@@ -82,7 +84,7 @@ export function InvDocumentLayout<T extends FieldValues>({
             </Button>
           </div>
         </form>
-      
+
       </FormProvider>
     </InvDocContext.Provider>
   );
