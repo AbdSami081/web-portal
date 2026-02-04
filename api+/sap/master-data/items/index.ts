@@ -38,18 +38,17 @@
 //   return json({ items });
 // }
 
-import axios from "axios";
-import { API_URL } from "@/types/config";
+import apiClient from "@/lib/apiClient";
 import { Item } from "@/types/sales/Item.type";
 
 export const getItemsList = async (search = "", skip = 0, top = 10): Promise<Item[]> => {
   try {
-    const res = await axios.get(`${API_URL}GetItems`, {
+    const res = await apiClient.get(`api/Sales/GetItems`, {
       params: {
         search: search,
         skip: skip,
         top: top
-      }
+      },
     });
 
     return Array.isArray(res.data) ? res.data : [];
