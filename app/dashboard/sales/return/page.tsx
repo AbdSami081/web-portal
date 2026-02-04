@@ -1,21 +1,21 @@
 "use client"
-
-import { postSalesReturn } from "@/api+/sap/quotation/salesService";
 import DocumentFooter from "@/components/sales/shared/DocumentFooter";
 import { DocumentHeader } from "@/components/sales/shared/DocumentHeader";
 import { DocumentItems } from "@/components/sales/shared/DocumentItems";
 import { SalesDocumentLayout } from "@/components/sales/shared/SalesDocumentLayout";
 
+import { useRouter } from "next/navigation";
 import {
   QuotationFormData,
   quotationSchema,
 } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { postSalesReturn, patchSalesOrder } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
 
-export default function SalesReturnPage() {
-    const loadFromDocument = useSalesDocument((state) => state.loadFromDocument);
-    // const {loadFromDocument} = useSalesDocument();
+export default function ReturnPage() {
+  const router = useRouter();
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -29,48 +29,50 @@ export default function SalesReturnPage() {
     TotalBeforeDiscount: 0,
     TaxTotal: 0,
     DocTotal: 0,
-    TaxDate:"",
+    TaxDate: "",
     DocumentLines: [],
   };
 
- const handleSubmit = async (data: QuotationFormData) => {
-     const { lines, DocTotal } = useSalesDocument.getState();
- 
-     // Destructure the data and exclude extra fields 
-    // const { CardName, DocDate, DocDueDate, TaxDate, ...restData } = data;
-    
-    
-    const payload = {
-       ...data,
-       DocTotal,
-       DocumentLines: lines,
-     };
+  const handleSubmit = async (data: QuotationFormData) => {
+    const { lines, DocEntry, lastLoadedDocType, reset: resetStore } = useSalesDocument.getState();
 
-    console.log("Submitting Sales Return Payload:", payload);
-     try {
-       const documentData = await postSalesReturn(payload); 
- 
-       if (!documentData?.DocEntry) {
-         throw new Error("Failed to create return");
-       }
-       
-       loadFromDocument(documentData)
-       // setValue("DocDate", documentData.DocDate?.split("T")[0]);
-       // setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
-       // setValue("CardCode", documentData.CardCode);
-       // setValue("CardName", documentData.CardName);
-       // setValue("DocStatus", documentData.DocumentStatus);
-       // setValue("Address2", documentData.Address2);
-       // setValue("Address", documentData.Address);
-       // setValue("DocEntry", documentData.DocEntry);
- 
-       toast.success(`Return #${documentData.DocNum} created successfully`);
- 
-     } catch (error) {
-       console.error("Error while creating return:", error);
-     }
-   };
- 
+    // Create logic (Primarily used for linking Return to Delivery/Invoice)
+    const payload = {
+      ...data,
+      DocumentLines: lines.map((line) => {
+        const lineData: any = { ...line };
+
+        // CHECK MAPPING
+        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.SalesReturn) {
+          lineData.BaseType = lastLoadedDocType;
+          lineData.BaseEntry = DocEntry;
+          lineData.BaseLine = line.LineNum;
+        } else {
+          // DEFAULT VALUES
+          lineData.BaseType = -1;
+          lineData.BaseEntry = null;
+          lineData.BaseLine = null;
+        }
+        return lineData;
+      }),
+    };
+
+    try {
+      console.log("POST SALES RETURN PAYLOAD (CHECK BASE FIELDS):", JSON.stringify(payload, null, 2));
+      const response = await postSalesReturn(payload);
+
+      if (response?.DocEntry) {
+        toast.success(`Sales Return #${response.DocNum} created successfully!`);
+        resetStore();
+        router.push("/dashboard/sales/return");
+      } else {
+        throw new Error("Failed to create Sales Return");
+      }
+    } catch (error) {
+      console.error("Error while creating Sales Return:", error);
+      toast.error("Failed to create Sales Return. Please try again.");
+    }
+  };
 
   return (
     <SalesDocumentLayout
@@ -85,8 +87,3 @@ export default function SalesReturnPage() {
     </SalesDocumentLayout>
   );
 }
-
-
-
-
-
