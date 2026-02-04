@@ -97,7 +97,7 @@ export function DocumentHeader() {
       if (!documentData?.DocEntry) {
         toast.info(`Document number ${docNumInt} not found.`);
       } else {
-        loadFromDocument(documentData)
+        loadFromDocument(documentData, config.type);
         console.log("Fetched Document Data:", documentData);
         setValue("DocDate", documentData.DocDate?.split("T")[0]);
         setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
