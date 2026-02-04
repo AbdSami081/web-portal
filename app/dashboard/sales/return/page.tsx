@@ -11,7 +11,7 @@ import {
 } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
-import { postSalesReturn, patchSalesOrder } from "@/api+/sap/quotation/salesService";
+import { postSalesReturn } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
 
 export default function ReturnPage() {
@@ -36,19 +36,16 @@ export default function ReturnPage() {
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, lastLoadedDocType, reset: resetStore } = useSalesDocument.getState();
 
-    // Create logic (Primarily used for linking Return to Delivery/Invoice)
     const payload = {
       ...data,
       DocumentLines: lines.map((line) => {
         const lineData: any = { ...line };
 
-        // CHECK MAPPING
         if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.SalesReturn) {
           lineData.BaseType = lastLoadedDocType;
           lineData.BaseEntry = DocEntry;
           lineData.BaseLine = line.LineNum;
         } else {
-          // DEFAULT VALUES
           lineData.BaseType = -1;
           lineData.BaseEntry = null;
           lineData.BaseLine = null;
@@ -58,9 +55,7 @@ export default function ReturnPage() {
     };
 
     try {
-      console.log("POST SALES RETURN PAYLOAD (CHECK BASE FIELDS):", JSON.stringify(payload, null, 2));
       const response = await postSalesReturn(payload);
-
       if (response?.DocEntry) {
         toast.success(`Sales Return #${response.DocNum} created successfully!`);
         resetStore();
@@ -69,7 +64,6 @@ export default function ReturnPage() {
         throw new Error("Failed to create Sales Return");
       }
     } catch (error) {
-      console.error("Error while creating Sales Return:", error);
       toast.error("Failed to create Sales Return. Please try again.");
     }
   };

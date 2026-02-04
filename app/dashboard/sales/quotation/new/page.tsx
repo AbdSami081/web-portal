@@ -32,39 +32,33 @@ export default function NewQuotationPage() {
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocTotal, freight, TaxTotal, additionalExpenses, DocEntry, lastLoadedDocType } = useSalesDocument.getState();
 
-    // If we have a DocEntry and it's a QUOTATION, perform an UPDATE.
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Quotation) {
-      // Update logic
       const payload = {
         Comments: data.Comments
       };
 
       try {
-        console.log("Updating Quotation Payload:", payload);
-        const documentData = await patchQuotation(Number(DocEntry), payload);
+        await patchQuotation(Number(DocEntry), payload);
         toast.success(`Quotation #${DocEntry} updated successfully`);
       } catch (error) {
-        console.error("Error while updating quotation:", error);
         toast.error("Failed to update quotation");
       }
       return;
     }
 
-    // Create logic (Manual creation - Quotations usually don't have base docs in this UI)
     const payload = {
       ...data,
       DocTotal,
       DocumentLines: lines.map(line => {
         const lineData: any = { ...line };
-        // Even if copied from another quotation (unlikely here), we ensure mapping logic is consistent
         if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Quotation) {
           lineData.BaseType = lastLoadedDocType;
           lineData.BaseEntry = DocEntry;
           lineData.BaseLine = line.LineNum;
         } else {
-          delete lineData.BaseType;
-          delete lineData.BaseEntry;
-          delete lineData.BaseLine;
+          lineData.BaseType = -1;
+          lineData.BaseEntry = null;
+          lineData.BaseLine = null;
         }
         return lineData;
       }),
@@ -74,24 +68,16 @@ export default function NewQuotationPage() {
     };
 
     try {
-      console.log("Quotation Created Payload:", payload);
-
       const documentData = await postQuotation(payload);
-
       if (!documentData?.DocEntry) {
         throw new Error("Failed to create quotation");
       }
-
-      console.log("Quotation Created:", documentData);
       loadFromDocument(documentData, DocumentType.Quotation);
-
       toast.success(`Quotation #${documentData.DocNum} created successfully`);
     } catch (error) {
-      console.error("Error while creating quotation:", error);
       toast.error("Failed to create quotation. Please try again.");
     }
   };
-
 
   return (
     <SalesDocumentLayout

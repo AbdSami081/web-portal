@@ -98,7 +98,6 @@ export function DocumentHeader() {
         toast.info(`Document number ${docNumInt} not found.`);
       } else {
         loadFromDocument(documentData, config.type);
-        console.log("Fetched Document Data:", documentData);
         setValue("DocDate", documentData.DocDate?.split("T")[0]);
         setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
         setValue("CardCode", documentData.CardCode);
@@ -111,7 +110,6 @@ export function DocumentHeader() {
       }
     } catch (error) {
       toast.error("An error occurred while fetching the document.");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -260,16 +258,6 @@ export function DocumentHeader() {
             }} />
           </div>
         </div>
-
-        {/* <GenericModal<BusinessPartner>
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSelect={handleSelectBP}
-        data={businessPartners}
-        columns={[{ key: "CardCode", label: "Code" }, { key: "CardName", label: "Name" }]}
-        title="Select Business Partner"
-        getSelectValue={(item) => item}
-      /> */}
         <BusinessPartnerSelectorDialog
           open={modalOpen}
           onClose={() => setModalOpen(false)}
