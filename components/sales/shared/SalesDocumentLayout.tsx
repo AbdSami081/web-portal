@@ -111,8 +111,8 @@ export function SalesDocumentLayout<T extends FieldValues>({
         doc = await getSalesDeliveryDocument(docNum);
       }
 
-      if (doc) {
-        loadFromDocument(doc);
+      if (doc && copyFromType) {
+        loadFromDocument(doc, copyFromType);
         toast.success(`Copied from ${copyFromType === DocumentType.Quotation ? 'Quotation' : copyFromType === DocumentType.Order ? 'Order' : 'Delivery'} #${docNum}`);
       }
     } catch (err) {
@@ -123,8 +123,11 @@ export function SalesDocumentLayout<T extends FieldValues>({
   };
 
   useEffect(() => {
+    // Only run this logic on initial mount or when defaultValues changes meaningfully
+    const state = useSalesDocument.getState();
+
+    // If we are currently copying (redirected from another page)
     if (isCopying) {
-      const state = useSalesDocument.getState();
       reset({
         ...defaultValues,
         CardCode: state.customer?.CardCode || "",
@@ -137,9 +140,22 @@ export function SalesDocumentLayout<T extends FieldValues>({
         Freight: state.freight,
         Rounding: state.rounding,
       } as unknown as DefaultValues<T>);
+
+      // We set isCopying to false, but we DON'T reset the store
       setIsCopying(false);
     } else {
-      ResetForm();
+      // If we are NOT copying and NOT in Edit mode (DocEntry is 0/empty), then we reset
+      // This allows manual entry to start fresh but preserves "Copy" workflow data
+      const currentDocEntry = watch("DocEntry" as any);
+      if (!currentDocEntry || currentDocEntry === "0") {
+        // If the store ALREADY has lines/DocEntry but we aren't "copying", 
+        // we only reset if it's a fresh manual visit.
+        // This is a bit tricky, but basically we want to avoid ResetForm() 
+        // if we just loaded copy data.
+        if (state.DocEntry === 0) {
+          ResetForm();
+        }
+      }
     }
   }, [defaultValues]);
 
@@ -173,7 +189,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
     if (!DocEntry) {
       setSelectedCopyTo("");
-      toast.error("Please select a quotation first!");
+      toast.error("Please save or select a document first!");
       return;
     }
 
