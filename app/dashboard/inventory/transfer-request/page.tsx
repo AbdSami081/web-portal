@@ -61,7 +61,6 @@ export default function InvTransferRequestPage() {
             FromWarehouseCode: line.FromWhsCode || data.FromWarehouse || "",
           };
 
-          // Mapping logic
           if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.InvTransferReq) {
             lineData.BaseType = lastLoadedDocType;
             lineData.BaseEntry = DocEntry;
@@ -94,7 +93,7 @@ export default function InvTransferRequestPage() {
       schema={inventoryTransferSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={1250000001}
+      docType={DocumentType.InvTransferReq}
     >
       <InvDocumentHeader />
       <InvDocumentItems />

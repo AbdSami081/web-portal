@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "../../types/sales/businessPartner.type";
-import { BaseSalesDocument, DocCurrency, SalesDocumentLine } from "@/types/sales/salesDocuments.type";
+import { BaseSalesDocument, DocCurrency, SalesDocumentLine, DocumentType } from "@/types/sales/salesDocuments.type";
 
 interface SalesDocumentStore {
-  docType: "Quotation" | "Order" | "Delivery" | "ARInvoice";
+  docType: DocumentType;
   customer: BusinessPartner | null;
   lines: SalesDocumentLine[];
   docDate: string;
@@ -74,7 +74,7 @@ const parseSafe = (val: any): number => {
 
 export const useSalesDocument = create<SalesDocumentStore>()(
   devtools((set, get) => ({
-    docType: "Quotation",
+    docType: DocumentType.Quotation,
     customer: null,
     lines: [],
     docDate: new Date().toISOString().split("T")[0],
@@ -220,6 +220,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         discSum: 0,
         DocTotal: 0,
         DocEntry: 0,
+        docType: DocumentType.Quotation,
         lastLoadedDocType: null,
         currency: "USD",
         additionalExpenses: [],

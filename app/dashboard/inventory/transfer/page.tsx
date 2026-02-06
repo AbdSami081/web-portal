@@ -61,7 +61,6 @@ export default function InvTransferPage() {
             FromWarehouseCode: line.FromWhsCode || data.FromWarehouse || "",
           };
 
-          // Mapping logic: Check if we are copying from an Inventory Transfer Request (1250000001)
           if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType === DocumentType.InvTransferReq) {
             lineData.BaseType = DocumentType.InvTransferReq;
             lineData.BaseEntry = DocEntry;
@@ -94,7 +93,7 @@ export default function InvTransferPage() {
       schema={inventoryTransferSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={67}
+      docType={DocumentType.InvTransfer}
     >
       <InvDocumentHeader />
       <InvDocumentItems />

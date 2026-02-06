@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
-import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
+import { SalesDocumentLine, DocumentType } from "@/types/sales/salesDocuments.type";
 import { BaseInventoryDocument, InventoryDocumentLine } from "@/types/inventory/inventory.type";
 
 interface IOPRDDocumentStore {
-  docType: "InventoryTransfer" | "InventoryTransferRequest";
+  docType: DocumentType;
   customer: BusinessPartner | null;
   lines: InventoryDocumentLine[];
   warehouses: any[];
@@ -15,7 +15,7 @@ interface IOPRDDocumentStore {
 
   setCustomer: (customer: BusinessPartner) => void;
   setWarehouses: (warehouses: any[]) => void;
-  setDocType: (docType: "InventoryTransfer" | "InventoryTransferRequest") => void;
+  setDocType: (docType: DocumentType) => void;
   addLine: (line: InventoryDocumentLine) => void;
   removeLine: (itemCode: string) => void;
   loadFromDocument: (doc: any, type?: number) => void;
@@ -26,7 +26,7 @@ interface IOPRDDocumentStore {
 
 export const useInventoryDocument = create<IOPRDDocumentStore>()(
   devtools((set, get) => ({
-    docType: "InventoryTransfer",
+    docType: DocumentType.InvTransfer,
     customer: null,
     lines: [],
     warehouses: [],
@@ -36,7 +36,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
 
     setCustomer: (customer: BusinessPartner) => set({ customer }),
     setWarehouses: (warehouses: any[]) => set({ warehouses }),
-    setDocType: (docType: "InventoryTransfer" | "InventoryTransferRequest") => set({ docType }),
+    setDocType: (docType: DocumentType) => set({ docType }),
     setIsCopying: (isCopying: boolean) => set({ isCopying }),
 
     addLine: (line: InventoryDocumentLine) => {
@@ -100,7 +100,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         customer: null,
         lines: [],
         warehouses: [],
-        docType: "InventoryTransfer",
+        docType: DocumentType.InvTransfer,
         DocEntry: 0,
         isCopying: false,
         lastLoadedDocType: null,

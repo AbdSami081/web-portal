@@ -87,7 +87,7 @@ export default function InvoicePage() {
       schema={quotationSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={13}
+      docType={DocumentType.ARInvoice}
     >
       <DocumentHeader />
       <DocumentItems />

@@ -88,7 +88,7 @@ export default function OrderPage() {
       schema={quotationSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={17}
+      docType={DocumentType.Order}
     >
       <DocumentHeader />
       <DocumentItems />

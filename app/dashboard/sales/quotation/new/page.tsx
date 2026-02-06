@@ -84,7 +84,7 @@ export default function NewQuotationPage() {
       schema={quotationSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={23}
+      docType={DocumentType.Quotation}
     >
       <DocumentHeader />
       <DocumentItems />

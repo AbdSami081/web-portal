@@ -73,7 +73,7 @@ export default function ReturnPage() {
       schema={quotationSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={16}
+      docType={DocumentType.SalesReturn}
     >
       <DocumentHeader />
       <DocumentItems />

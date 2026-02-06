@@ -87,7 +87,7 @@ export default function DeliveryPage() {
       schema={quotationSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={15}
+      docType={DocumentType.Delivery}
     >
       <DocumentHeader />
       <DocumentItems />

@@ -5,6 +5,7 @@ import { PRDDocumentLayout } from "@/components/production/shared/PRDDocumentLay
 import { PRDDocumentHeader } from "@/components/production/shared/PRDDocumentHeader";
 import { PRDDocumentItems } from "@/components/production/shared/PRDDocumentItems";
 import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 export default function ReceiptFromProductionPage() {
   const defaultValues: QuotationFormData = {
@@ -25,7 +26,7 @@ export default function ReceiptFromProductionPage() {
 
   const handleSubmit = async (data: QuotationFormData) => {
     try {
-      
+
     } catch (error) {
       console.error("Error while creating quotation:", error);
     }
@@ -36,7 +37,7 @@ export default function ReceiptFromProductionPage() {
       schema={quotationSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={59}
+      docType={DocumentType.ReceiptFromProduction}
     >
       <PRDDocumentHeader />
       <PRDDocumentItems />

@@ -2,14 +2,15 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { BaseProductionDocument, PRDDocumentLine } from "@/types/production/PRDDoc.type";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 interface IFPRDDocumentStore {
-  docType: "IssueForProduction";
+  docType: DocumentType;
   customer: BusinessPartner | null;
   lines: PRDDocumentLine[];
 
   setCustomer: (customer: BusinessPartner) => void;
-  setDocType: (docType: "IssueForProduction") => void;
+  setDocType: (docType: DocumentType) => void;
   addLine: (line: PRDDocumentLine) => void;
   removeLine: (itemCode: string) => void;
   loadFromDocument: (doc: BaseProductionDocument) => void;
@@ -19,7 +20,7 @@ interface IFPRDDocumentStore {
 
 export const useIFPRDDocument = create<IFPRDDocumentStore>()(
   devtools((set, get) => ({
-    docType: "IssueForProduction",
+    docType: DocumentType.IssueForProduction,
     customer: null,
     lines: [],
 
@@ -27,7 +28,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
 
     setDocType: (docType) => set({ docType }),
 
-   addLine: (line) => {
+    addLine: (line) => {
       const existingLine = get().lines.find((l) => l.ItemNo === line.ItemNo);
 
       if (existingLine) {
@@ -57,17 +58,6 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
 
       }) || [];
       set({
-        // customer: {
-        //   CardCode: doc.CardCode,
-        //   CardName: doc.CardName,
-        //   CardType: "cCustomer",
-        //   Balance: 0,
-        //   Phone1: "",
-        //   Email: "",
-        //   Currency: doc.Currency || "USD",
-        //   DocumentStatus: doc.DocumentStatus,
-        // },
-        
         lines: mappedLines,
       });
     },
@@ -75,7 +65,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       set({
         customer: null,
         lines: [],
-        docType: "IssueForProduction",
+        docType: DocumentType.IssueForProduction,
       }),
   }))
 );
