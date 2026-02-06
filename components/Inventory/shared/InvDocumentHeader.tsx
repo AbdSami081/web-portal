@@ -127,7 +127,7 @@ export function InvDocumentHeader() {
         setValue("JournalMemo", documentData.JournalMemo);
         setValue("DocStatus", documentData.DocumentStatus);
 
-        loadFromDocument(documentData);
+        loadFromDocument(documentData, config.type);
         toast.success(`Document ${documentData.DocNum} loaded successfully.`);
       } else {
         toast.error("Document not found.");

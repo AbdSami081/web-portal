@@ -3,13 +3,15 @@
 import { toast } from "sonner";
 import { postInventoryTransfer, InventoryTransferPayload } from "@/api+/sap/inventory/inventoryService";
 import { z } from "zod";
-import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
+import { quotationSchema } from "@/lib/schemas/quotationSchema";
 import { InvDocumentLayout } from "@/components/Inventory/shared/InvDocumentLayout";
 import { InvDocumentHeader } from "@/components/Inventory/shared/InvDocumentHeader";
 import { InvDocumentItems } from "@/components/Inventory/shared/InvDocumentItems";
 import InvDocumentFooter from "@/components/Inventory/shared/InvDocumentFooter";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { useMemo } from "react";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { useRouter } from "next/navigation";
 
 const inventoryTransferSchema = quotationSchema.extend({
   JournalMemo: z.string().optional(),
@@ -20,7 +22,8 @@ const inventoryTransferSchema = quotationSchema.extend({
 type InventoryTransferFormData = z.infer<typeof inventoryTransferSchema>;
 
 export default function InvTransferPage() {
-  const { lines } = useInventoryDocument();
+  const router = useRouter();
+  const { lines, reset: resetStore, DocEntry, lastLoadedDocType } = useInventoryDocument();
 
   const defaultValues: InventoryTransferFormData = useMemo(() => ({
     CardCode: "",
@@ -43,31 +46,45 @@ export default function InvTransferPage() {
 
   const handleSubmit = async (data: InventoryTransferFormData) => {
     try {
-      const currentLines = lines.length > 0 ? lines : data.DocumentLines;
-
       const payload: InventoryTransferPayload = {
         CardCode: data.CardCode,
         Comments: data.Comments,
         JournalMemo: data.JournalMemo,
         FromWarehouse: data.FromWarehouse || "",
         ToWarehouse: data.ToWarehouse || "",
-        StockTransferLines: currentLines.map((line: any) => ({
-          ItemCode: line.ItemCode,
-          Quantity: line.Quantity,
-          UnitPrice: line.ItemCost || line.Price || 0,
-          WarehouseCode: line.WhsCode || data.ToWarehouse || "",
-          FromWarehouseCode: line.FromWhsCode || data.FromWarehouse || "",
-          BaseType: line.BaseType,
-          BaseEntry: line.BaseEntry,
-          BaseLine: line.BaseLine
-        }))
+        StockTransferLines: lines.map((line: any) => {
+          const lineData: any = {
+            ItemCode: line.ItemCode,
+            Quantity: line.Quantity,
+            UnitPrice: line.ItemCost || line.Price || 0,
+            WarehouseCode: line.WhsCode || data.ToWarehouse || "",
+            FromWarehouseCode: line.FromWhsCode || data.FromWarehouse || "",
+          };
+
+          // Mapping logic: Check if we are copying from an Inventory Transfer Request (1250000001)
+          if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType === DocumentType.InvTransferReq) {
+            lineData.BaseType = DocumentType.InvTransferReq;
+            lineData.BaseEntry = DocEntry;
+            lineData.BaseLine = line.LineNum;
+          } else {
+            lineData.BaseType = -1;
+            lineData.BaseEntry = null;
+            lineData.BaseLine = null;
+          }
+          return lineData;
+        })
       };
 
       const result = await postInventoryTransfer(payload);
-      toast.success(`Inventory Transfer created successfully! DocEntry: ${result.DocEntry}`);
+      if (result?.DocEntry) {
+        toast.success(`Inventory Transfer created successfully! DocEntry: ${result.DocEntry}`);
+        resetStore();
+        router.push("/dashboard/inventory/transfer");
+      } else {
+        throw new Error("Failed to create transfer");
+      }
 
     } catch (error: any) {
-      console.error("Error while creating inventory transfer:", error);
       toast.error(error.message || "Failed to create transfer");
     }
   };

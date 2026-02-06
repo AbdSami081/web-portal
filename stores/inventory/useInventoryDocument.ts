@@ -9,14 +9,18 @@ interface IOPRDDocumentStore {
   customer: BusinessPartner | null;
   lines: InventoryDocumentLine[];
   warehouses: any[];
+  DocEntry: number;
+  isCopying: boolean;
+  lastLoadedDocType: number | null;
 
   setCustomer: (customer: BusinessPartner) => void;
   setWarehouses: (warehouses: any[]) => void;
   setDocType: (docType: "InventoryTransfer" | "InventoryTransferRequest") => void;
   addLine: (line: InventoryDocumentLine) => void;
   removeLine: (itemCode: string) => void;
-  loadFromDocument: (doc: any) => void;
+  loadFromDocument: (doc: any, type?: number) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
+  setIsCopying: (isCopying: boolean) => void;
   reset: () => void;
 }
 
@@ -26,10 +30,14 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     customer: null,
     lines: [],
     warehouses: [],
+    DocEntry: 0,
+    isCopying: false,
+    lastLoadedDocType: null,
 
     setCustomer: (customer: BusinessPartner) => set({ customer }),
     setWarehouses: (warehouses: any[]) => set({ warehouses }),
     setDocType: (docType: "InventoryTransfer" | "InventoryTransferRequest") => set({ docType }),
+    setIsCopying: (isCopying: boolean) => set({ isCopying }),
 
     addLine: (line: InventoryDocumentLine) => {
       const existingLine = get().lines.find((l) => l.ItemCode === line.ItemCode);
@@ -49,7 +57,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
       }));
     },
 
-    loadFromDocument: (doc: any) => {
+    loadFromDocument: (doc: any, type?: number) => {
       const mappedLines: InventoryDocumentLine[] = (doc.DocumentLines || doc.StockTransferLines)?.map((line: any) => ({
         ItemCode: line.ItemCode,
         Dscription: line.ItemDescription || line.Dscription || "",
@@ -74,6 +82,8 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           Email: "",
         },
         lines: mappedLines,
+        DocEntry: doc.DocEntry || 0,
+        lastLoadedDocType: type || null,
       });
     },
 
@@ -91,6 +101,9 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         lines: [],
         warehouses: [],
         docType: "InventoryTransfer",
+        DocEntry: 0,
+        isCopying: false,
+        lastLoadedDocType: null,
       }),
   }))
 );
