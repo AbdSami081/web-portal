@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash } from "lucide-react";
+import { useFormContext } from "react-hook-form";
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function IFPRDDocumentLineRow({ index, line }: Props) {
+  const { watch } = useFormContext();
   const { updateLine, removeLine } = useIFPRDDocument();
   const [draftLine, setDraftLine] = useState<PRDDocumentLine>(line);
 
@@ -26,43 +28,49 @@ export function IFPRDDocumentLineRow({ index, line }: Props) {
   };
 
   return (
-    <> 
+    <>
 
-    {/* Item Type */}
-    <td className="py-2 px-4">
+      {/* Item Type */}
+      <td className="py-2 px-4">
         <span className="font-medium">{line.ItemType}</span>
-    </td>
+      </td>
 
-    {/* Item Code */}
-    <td className="py-2 px-4">
+      {/* Item Code */}
+      <td className="py-2 px-4">
         <span className="font-medium">{line.ItemNo}</span>
-    </td>
+      </td>
 
-    {/* Discription */}
-    <td className="py-2 px-4">
+      {/* Discription */}
+      <td className="py-2 px-4">
         <span className="font-medium">{line.ItemName}</span>
-    </td>
-      
-    {/* Quantity */}
-    <td className="py-2 px-4">
-    <Input type="number"
-        className="h-6 w-32"
-        value={draftLine.PlannedQuantity || ""}
-        onChange={(e) => setDraftLine({ ...draftLine, PlannedQuantity: Number(e.target.value) })}
-        onBlur={saveRow}
-    />
-    </td>
+      </td>
 
-    {/* WhseCode */}
-    <td className="py-2 px-4">
+      {/* Quantity */}
+      <td className="py-2 px-4">
+        <Input type="number"
+          className="h-6 w-32"
+          value={draftLine.PlannedQuantity || ""}
+          onChange={(e) => setDraftLine({ ...draftLine, PlannedQuantity: Number(e.target.value) })}
+          onBlur={saveRow}
+        />
+      </td>
+
+      {/* WhseCode */}
+      <td className="py-2 px-4">
         <span className="font-medium">{line.Warehouse}</span>
-    </td>
+      </td>
 
-     <td>
-      <Button type="button" variant="ghost" className="h-6 w-6 p-0" onClick={() => removeLine(line.ItemNo)}>
-        <Trash className="h-5 w-5 text-red-500" />
-      </Button>
-    </td>
+      <td>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-6 w-6 p-0"
+          onClick={() => removeLine(line.ItemNo)}
+          disabled={Boolean(watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0)}
+        >
+          <Trash className={`h-5 w-5 ${watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0 ? "text-gray-400" : "text-red-500"}`} />
+        </Button>
+      </td>
     </>
   );
 }

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Trash } from "lucide-react";
+import { useFormContext } from "react-hook-form";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
@@ -22,6 +23,7 @@ interface Record {
 }
 
 export function DocumentLineRow({ index, line }: Props) {
+  const { watch } = useFormContext();
   const { updateLine, removeLine, lines } = useSalesDocument();
   const { vatGroups } = useMasterDataStore();
 
@@ -32,51 +34,51 @@ export function DocumentLineRow({ index, line }: Props) {
   const [cogsData, setCogsData] = useState<Record[]>([]);
 
   useEffect(() => {
-  calculateAndUpdate(draftLine);
-}, [
-  draftLine.Quantity,
-  draftLine.Price,
-  draftLine.DiscountPercent,
-  draftLine.Freight1Amount,
-  draftLine.Freight1TaxGroup,
-  draftLine.Freight2Amount,
-  draftLine.Freight2TaxGroup,
-  draftLine.Freight3Amount,
-  draftLine.Freight3TaxGroup,
-]);
+    calculateAndUpdate(draftLine);
+  }, [
+    draftLine.Quantity,
+    draftLine.Price,
+    draftLine.DiscountPercent,
+    draftLine.Freight1Amount,
+    draftLine.Freight1TaxGroup,
+    draftLine.Freight2Amount,
+    draftLine.Freight2TaxGroup,
+    draftLine.Freight3Amount,
+    draftLine.Freight3TaxGroup,
+  ]);
 
   const calculateAndUpdate = (lineData: SalesDocumentLine) => {
-  const quantity = Number(lineData.Quantity) || 0;
-  const price = Number(lineData.Price) || 0;
-  const discount = Number(lineData.DiscountPercent) || 0;
+    const quantity = Number(lineData.Quantity) || 0;
+    const price = Number(lineData.Price) || 0;
+    const discount = Number(lineData.DiscountPercent) || 0;
 
-  const selectedTax = vatGroups.find(t => t.Code === lineData.TaxCode);
-  const itemTaxRate = Number(selectedTax?.VatGroups_Lines?.[0]?.Rate || 0);
+    const selectedTax = vatGroups.find(t => t.Code === lineData.TaxCode);
+    const itemTaxRate = Number(selectedTax?.VatGroups_Lines?.[0]?.Rate || 0);
 
-  const subtotal = quantity * price;
-  const discounted = subtotal * (1 - discount / 100);
-  const itemTax = (discounted * itemTaxRate) / 100;
+    const subtotal = quantity * price;
+    const discounted = subtotal * (1 - discount / 100);
+    const itemTax = (discounted * itemTaxRate) / 100;
 
-  const f1 = calculateFreightTax(Number(lineData.Freight1Amount || 0), lineData.Freight1TaxGroup || "S2");
-  const f2 = calculateFreightTax(Number(lineData.Freight2Amount || 0), lineData.Freight2TaxGroup || "S2");
-  const f3 = calculateFreightTax(Number(lineData.Freight3Amount || 0), lineData.Freight3TaxGroup || "S2");
+    const f1 = calculateFreightTax(Number(lineData.Freight1Amount || 0), lineData.Freight1TaxGroup || "S2");
+    const f2 = calculateFreightTax(Number(lineData.Freight2Amount || 0), lineData.Freight2TaxGroup || "S2");
+    const f3 = calculateFreightTax(Number(lineData.Freight3Amount || 0), lineData.Freight3TaxGroup || "S2");
 
-  const totalTax = itemTax + f1.taxAmount + f2.taxAmount + f3.taxAmount;
+    const totalTax = itemTax + f1.taxAmount + f2.taxAmount + f3.taxAmount;
 
-  const updatedLine = {
-    ...lineData,
-    Freight1TaxRate: f1.rate,
-    Freight1TaxAmount: f1.taxAmount,
-    Freight2TaxRate: f2.rate,
-    Freight2TaxAmount: f2.taxAmount,
-    Freight3TaxRate: f3.rate,
-    Freight3TaxAmount: f3.taxAmount,
-    TaxAmount: Number(totalTax.toFixed(2)),
-    LineTotal: Number((discounted + totalTax).toFixed(2)),
+    const updatedLine = {
+      ...lineData,
+      Freight1TaxRate: f1.rate,
+      Freight1TaxAmount: f1.taxAmount,
+      Freight2TaxRate: f2.rate,
+      Freight2TaxAmount: f2.taxAmount,
+      Freight3TaxRate: f3.rate,
+      Freight3TaxAmount: f3.taxAmount,
+      TaxAmount: Number(totalTax.toFixed(2)),
+      LineTotal: Number((discounted + totalTax).toFixed(2)),
+    };
+
+    updateLine(line.ItemCode, updatedLine);
   };
-
-  updateLine(line.ItemCode, updatedLine);
-};
 
 
   const openCogsModal = (field: "CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4") => {
@@ -85,8 +87,8 @@ export function DocumentLineRow({ index, line }: Props) {
       field === "CogsOcrCo2"
         ? distribtionLstOCRCO2
         : field === "CogsOcrCo3"
-        ? distribtionLstOCRCO3
-        : distribtionLstOCRCO4
+          ? distribtionLstOCRCO3
+          : distribtionLstOCRCO4
     );
     setCogsModalOpen(true);
   };
@@ -204,15 +206,15 @@ export function DocumentLineRow({ index, line }: Props) {
       </td>
 
       <td>
-    <Input
-      type="number"
-      value={draftLine.Freight1Amount || 0}
-      onChange={(e) => {
-        const value = Number(e.target.value);
-        setDraftLine(prev => ({ ...prev, Freight1Amount: value }));
-      }}
-      onBlur={() => calculateAndUpdate(draftLine)}
-    />
+        <Input
+          type="number"
+          value={draftLine.Freight1Amount || 0}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            setDraftLine(prev => ({ ...prev, Freight1Amount: value }));
+          }}
+          onBlur={() => calculateAndUpdate(draftLine)}
+        />
 
       </td>
 
@@ -266,14 +268,14 @@ export function DocumentLineRow({ index, line }: Props) {
 
       <td>
         <Input
-      type="number"
-      value={draftLine.Freight2Amount || 0}
-      onChange={(e) => {
-        const value = Number(e.target.value);
-        setDraftLine(prev => ({ ...prev, Freight2Amount: value }));
-      }}
-      onBlur={() => calculateAndUpdate(draftLine)}
-      />
+          type="number"
+          value={draftLine.Freight2Amount || 0}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            setDraftLine(prev => ({ ...prev, Freight2Amount: value }));
+          }}
+          onBlur={() => calculateAndUpdate(draftLine)}
+        />
 
       </td>
 
@@ -327,14 +329,14 @@ export function DocumentLineRow({ index, line }: Props) {
 
       <td>
         <Input
-      type="number"
-      value={draftLine.Freight3Amount || 0}
-      onChange={(e) => {
-        const value = Number(e.target.value);
-        setDraftLine(prev => ({ ...prev, Freight3Amount: value }));
-      }}
-      onBlur={() => calculateAndUpdate(draftLine)}
-      />
+          type="number"
+          value={draftLine.Freight3Amount || 0}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            setDraftLine(prev => ({ ...prev, Freight3Amount: value }));
+          }}
+          onBlur={() => calculateAndUpdate(draftLine)}
+        />
 
       </td>
 
@@ -369,8 +371,14 @@ export function DocumentLineRow({ index, line }: Props) {
       </td> */}
 
       <td>
-        <Button type="button" variant="ghost" className="h-6 w-6 p-0" onClick={() => removeLine(line.ItemCode)}>
-          <Trash className="h-5 w-5 text-red-500" />
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-6 w-6 p-0"
+          onClick={() => removeLine(line.ItemCode)}
+          disabled={Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)}
+        >
+          <Trash className={`h-5 w-5 ${watch("DocEntry") && Number(watch("DocEntry")) > 0 ? "text-gray-400" : "text-red-500"}`} />
         </Button>
       </td>
 

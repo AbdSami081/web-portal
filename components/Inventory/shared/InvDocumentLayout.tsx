@@ -140,9 +140,11 @@ export function InvDocumentLayout<T extends FieldValues>({
               </Select>
             )}
 
-            <Button type="submit" disabled={isSubmitting}>
-              {getSubmitButtonText()}
-            </Button>
+            {(!DocEntry || DocEntry === 0) && (
+              <Button type="submit" disabled={isSubmitting}>
+                {getSubmitButtonText()}
+              </Button>
+            )}
           </div>
         </form>
 

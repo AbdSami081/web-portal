@@ -42,35 +42,37 @@ export function InvDocumentItems() {
   // }, [lines]);
 
   const handleOnSelectItems = (items: any[]) => {
+    const headerFromWhs = watch("FromWarehouse");
+    const headerToWhs = watch("ToWarehouse");
     const firstWhs = warehouses.length > 0 ? warehouses[0].WhsCode : "";
 
     items.map((item: any) => {
       const price = item.price || 0.0;
-      const warehouseCode = item.defaultWhse || firstWhs;
-      const quantity = 1; // Default to 1 instead of 0 if not provided
+      const defaultWhsLine = item.defaultWhse || firstWhs;
+      const quantity = 1;
 
       addLine({
-        ItemCode: item.itemCode,                      // Item Code
-        Dscription: item.itemName ?? "",              // Item Description (was item.Dscription)
-        FromWhsCode: firstWhs || warehouseCode,       // Default From Whs to first whs as requested
-        FromBinLoc: "",                               // From Bin Location
-        ToBinLoc: "",                                 // To Bin Location
-        FisrtBin: "",                                 // First Bin Location
-        WhsCode: firstWhs || warehouseCode,           // Default To Whs to first whs as requested
-        Quantity: quantity,                           // Quantity
-        ItemCost: price,                              // Item Cost
-        UomCode: item.uoM || item.uom || item.UoM || "", // UomCode (handling multiple casing from SQL/API)
-        unitMsr: "",                                  // Unit of Measure Name
-        PlPaWght: 0,                                  // Placeholder weight
-        U_LastPrice: price,                           // Last Purchase Price
-        OcrCode2: "",                                 // COGS field 2
-        OcrCode3: "",                                 // COGS field 3
-        OcrCode4: "",                                 // COGS field 4
-        U_OQCR: "",                                   // QC Required field
-        U_OQDC: "",                                   // Quality Document Entry
-        U_FBRQty: 0,                                  // FBR Quantity
-        U_SaleType: "Retail",                         // Sale Type
-        U_FurtherTax: 0,                              // Further Tax
+        ItemCode: item.itemCode,
+        Dscription: item.itemName ?? "",
+        FromWhsCode: headerFromWhs || defaultWhsLine, // Use header whs as default
+        FromBinLoc: "",
+        ToBinLoc: "",
+        FisrtBin: "",
+        WhsCode: headerToWhs || defaultWhsLine,     // Use header whs as default
+        Quantity: quantity,
+        ItemCost: price,
+        UomCode: item.uoM || item.uom || item.UoM || "",
+        unitMsr: "",
+        PlPaWght: 0,
+        U_LastPrice: price,
+        OcrCode2: "",
+        OcrCode3: "",
+        OcrCode4: "",
+        U_OQCR: "",
+        U_OQDC: "",
+        U_FBRQty: 0,
+        U_SaleType: "Retail",
+        U_FurtherTax: 0,
       });
     });
   };

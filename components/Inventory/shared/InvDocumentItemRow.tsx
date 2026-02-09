@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Trash } from "lucide-react";
+import { useFormContext } from "react-hook-form";
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function InvDocumentLineRow({ index, line }: Props) {
+  const { watch } = useFormContext();
   const { updateLine, removeLine } = useInventoryDocument();
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
@@ -138,8 +140,14 @@ export function InvDocumentLineRow({ index, line }: Props) {
 
       {/* Delete button */}
       <td>
-        <Button type="button" variant="ghost" className="h-6 w-6 p-0" onClick={() => removeLine(line.ItemCode)}>
-          <Trash className="h-5 w-5 text-red-500" />
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-6 w-6 p-0"
+          onClick={() => removeLine(line.ItemCode)}
+          disabled={Boolean(watch("DocEntry") && watch("DocEntry") > 0)}
+        >
+          <Trash className={`h-5 w-5 ${watch("DocEntry") && watch("DocEntry") > 0 ? "text-gray-400" : "text-red-500"}`} />
         </Button>
       </td>
 

@@ -63,12 +63,12 @@ export function PRDDocumentLayout<T extends FieldValues>({
   return (
     <PRDDocContext.Provider value={config}>
       <FormProvider {...methods}>
-       
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-screen bg-background">
+
+        <form onSubmit={handleSubmit((data) => onSubmit(data as T))} className="flex flex-col min-h-screen bg-background">
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
             <h1 className="text-xl font-semibold">{config.title}</h1>
-            
+
             {actions && <div>{actions}</div>}
           </div>
 
@@ -77,12 +77,14 @@ export function PRDDocumentLayout<T extends FieldValues>({
           </div>
 
           <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
-            <Button type="submit" disabled={isSubmitting}>
-              {getSubmitButtonText()}
-            </Button>
+            {(!watch("AbsoluteEntry" as any) || watch("AbsoluteEntry" as any) === 0) && (
+              <Button type="submit" disabled={isSubmitting}>
+                {getSubmitButtonText()}
+              </Button>
+            )}
           </div>
         </form>
-      
+
       </FormProvider>
     </PRDDocContext.Provider>
   );
