@@ -6,8 +6,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GenericModal } from "@/modals/GenericModal";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { useInvDocConfig } from "./InvDocumentLayout";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
@@ -33,7 +32,7 @@ export function InvDocumentHeader() {
   const [modalOpen, setModalOpen] = useState(false);
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { customer, setCustomer, loadFromDocument, warehouses: globalWarehouses, setWarehouses } = useInventoryDocument();
+  const { customer, setCustomer, loadFromDocument, warehouses: globalWarehouses, setWarehouses, DocEntry } = useInventoryDocument();
   const [warehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
 
   const docEntry = watch("DocEntry");
@@ -116,19 +115,7 @@ export function InvDocumentHeader() {
       }
 
       if (documentData) {
-        setValue("DocEntry", documentData.DocEntry);
-        setValue("DocNum", documentData.DocNum);
-        setValue("TaxDate", documentData.TaxDate ? documentData.TaxDate.split("T")[0] : "");
-        setValue("CardCode", documentData.CardCode);
-        setValue("CardName", documentData.CardName);
-        setValue("Comments", documentData.Comments);
-        setValue("FromWarehouse", documentData.FromWarehouse);
-        setValue("ToWarehouse", documentData.ToWarehouse);
-        setValue("JournalMemo", documentData.JournalMemo);
-        setValue("DocStatus", documentData.DocumentStatus);
-
-        loadFromDocument(documentData, config.type);
-        toast.success(`Document ${documentData.DocNum} loaded successfully.`);
+        applyDocumentData(documentData, config.type);
       } else {
         toast.error("Document not found.");
       }
@@ -138,6 +125,22 @@ export function InvDocumentHeader() {
       setIsLoading(false);
     }
   };
+
+  const applyDocumentData = (documentData: any, type: number) => {
+    setValue("DocEntry", documentData.DocEntry || 0);
+    setValue("DocNum", documentData.DocNum || 0);
+    setValue("TaxDate", documentData.TaxDate ? documentData.TaxDate.split("T")[0] : "");
+    setValue("CardCode", documentData.CardCode);
+    setValue("CardName", documentData.CardName);
+    setValue("Comments", documentData.Comments);
+    setValue("FromWarehouse", documentData.FromWarehouse);
+    setValue("ToWarehouse", documentData.ToWarehouse);
+    setValue("JournalMemo", documentData.JournalMemo);
+    setValue("DocStatus", documentData.DocumentStatus);
+
+    loadFromDocument(documentData, type);
+    toast.success(`Document loaded successfully.`);
+  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-8">
@@ -157,6 +160,7 @@ export function InvDocumentHeader() {
               variant="outline"
               size="icon"
               className="ml-2 h-8 w-8 cursor-pointer"
+              disabled={DocEntry > 0}
               onClick={() => {
                 fetchBusinessPartners();
                 setModalOpen(true);
@@ -182,6 +186,7 @@ export function InvDocumentHeader() {
           <Label className="w-32">From Warehouse</Label>
           <Input type="hidden" {...register("FromWarehouse")} />
           <Select
+            disabled={DocEntry > 0}
             onValueChange={(val) => setValue("FromWarehouse", val, { shouldDirty: true })}
             value={watch("FromWarehouse") || warehouses[0]?.WhsCode || ""}
           >
@@ -204,6 +209,7 @@ export function InvDocumentHeader() {
           <Label className="w-32">To Warehouse</Label>
           <Input type="hidden" {...register("ToWarehouse")} />
           <Select
+            disabled={DocEntry > 0}
             onValueChange={(val) => setValue("ToWarehouse", val, { shouldDirty: true })}
             value={watch("ToWarehouse") || warehouses[0]?.WhsCode || ""}
           >
@@ -261,6 +267,7 @@ export function InvDocumentHeader() {
             type="date"
             {...register("TaxDate")}
             className="h-8 w-56"
+            disabled={DocEntry > 0}
           />
         </div>
       </div>
