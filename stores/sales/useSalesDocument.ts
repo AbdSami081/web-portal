@@ -50,7 +50,7 @@ interface SalesDocumentStore {
 
   calculateTotals: () => void;
   reset: () => void;
-  loadFromDocument: (doc: any, type?: number) => void;
+  loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   clearLines: () => void;
   setTaxTotal: (TaxTotal: number) => void;
 
@@ -240,7 +240,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       );
     },
 
-    loadFromDocument: (doc: any, type?: number) => {
+    loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
       const rawLines = doc.DocumentLines || doc.lines || [];
 
       const mappedLines = rawLines.map((line: any, index: number) => {
@@ -293,7 +293,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         rounding: parseSafe(doc.Rounding || doc.rounding),
         discountPercent: parseSafe(doc.DiscountPercent || doc.discountPercent),
         currency: doc.DocCurrency || doc.Currency || "USD",
-        DocEntry: parseSafe(doc.DocEntry),
+        DocEntry: isCopy ? 0 : parseSafe(doc.DocEntry),
         lastLoadedDocType: type || null,
         DocTotal: parseSafe(doc.DocTotal || doc.docTotal),
         TaxTotal: parseSafe(doc.TaxTotal || doc.taxTotal),
