@@ -57,3 +57,13 @@ export const getInventoryTransfer = async (docNum: number) => {
         throw new Error(error.response?.data?.Message || error.response?.data?.detail || "Failed to fetch inventory transfer");
     }
 };
+
+export const getInventoryTransferRequestList = async () => {
+    try {
+        const response = await apiClient.get(`api/Sales/InventoryTransferRequestList`);
+        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+        return data.value || [];
+    } catch (error: any) {
+        throw new Error(error.response?.data?.Message || error.response?.data?.detail || "Failed to fetch inventory transfer requests");
+    }
+};
