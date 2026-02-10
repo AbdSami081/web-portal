@@ -13,7 +13,7 @@ interface IFPRDDocumentStore {
   setDocType: (docType: DocumentType) => void;
   addLine: (line: PRDDocumentLine) => void;
   removeLine: (itemCode: string) => void;
-  loadFromDocument: (doc: BaseProductionDocument) => void;
+  loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   updateLine: (itemCode: string, updated: Partial<PRDDocumentLine>) => void;
   reset: () => void;
 }
@@ -46,7 +46,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         lines: state.lines.filter((line) => line.ItemNo !== itemCode),
       }));
     },
-    loadFromDocument: (doc: BaseProductionDocument) => {
+    loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
       const mappedLines = doc.ProductionOrderLines?.map((line: any) => {
         return {
           ItemNo: line.ItemNo,
