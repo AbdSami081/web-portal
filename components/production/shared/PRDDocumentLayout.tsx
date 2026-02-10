@@ -8,6 +8,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/production/documentConfig";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
+import { FilePlus2 } from "lucide-react";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
@@ -38,7 +39,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const config = getDocumentConfig(docType);
 
   const methods = useForm<T>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: defaultValues as DefaultValues<T>,
     mode: "onSubmit",
   });
@@ -51,7 +52,14 @@ export function PRDDocumentLayout<T extends FieldValues>({
   }, [defaultValues]);
 
   const ResetForm = () => {
-    reset(defaultValues as DefaultValues<T>);
+    reset({
+      ...defaultValues,
+      CardCode: "",
+      CardName: "",
+      Comments: "",
+      DocNum: 0,
+      DocEntry: 0,
+    } as any);
     lineReset();
   };
 
@@ -64,7 +72,20 @@ export function PRDDocumentLayout<T extends FieldValues>({
     <PRDDocContext.Provider value={config}>
       <FormProvider {...methods}>
 
-        <form onSubmit={handleSubmit((data) => onSubmit(data as T))} className="flex flex-col min-h-screen bg-background">
+        <form onSubmit={handleSubmit((data) => onSubmit(data as any))} className="flex flex-col min-h-screen bg-background">
+
+          <div className="flex px-6 py-2 border-b bg-white">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={ResetForm}
+              title="New Document"
+              className="hover:bg-zinc-200"
+            >
+              <FilePlus2 className="w-5 h-5 text-zinc-600" />
+            </Button>
+          </div>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
             <h1 className="text-xl font-semibold">{config.title}</h1>
