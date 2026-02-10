@@ -18,7 +18,7 @@ interface IOPRDDocumentStore {
   setDocType: (docType: DocumentType) => void;
   addLine: (line: InventoryDocumentLine) => void;
   removeLine: (itemCode: string) => void;
-  loadFromDocument: (doc: any, type?: number) => void;
+  loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
   setIsCopying: (isCopying: boolean) => void;
   reset: () => void;
@@ -57,8 +57,8 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
       }));
     },
 
-    loadFromDocument: (doc: any, type?: number) => {
-      const mappedLines: InventoryDocumentLine[] = (doc.DocumentLines || doc.StockTransferLines)?.map((line: any) => ({
+    loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
+      const mappedLines: InventoryDocumentLine[] = (doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [])?.map((line: any) => ({
         ItemCode: line.ItemCode,
         Dscription: line.ItemDescription || line.Dscription || "",
         FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || "",
@@ -70,19 +70,19 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         BaseType: line.BaseType,
         BaseEntry: line.BaseEntry,
         BaseLine: line.BaseLine,
-      })) || [];
+      }));
 
       set({
-        customer: {
+        customer: doc.CardCode ? {
           CardCode: doc.CardCode,
           CardName: doc.CardName || "",
           CardType: "cCustomer",
           Balance: 0,
           Phone1: "",
           Email: "",
-        },
+        } : null,
         lines: mappedLines,
-        DocEntry: doc.DocEntry || 0,
+        DocEntry: isCopy ? 0 : (doc.DocEntry || 0),
         lastLoadedDocType: type || null,
       });
     },
