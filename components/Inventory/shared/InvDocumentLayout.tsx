@@ -11,6 +11,9 @@ import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { GenericModal } from "@/modals/GenericModal";
+import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/api+/sap/inventory/inventoryService";
+import { FilePlus2 } from "lucide-react";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -42,15 +45,19 @@ export function InvDocumentLayout<T extends FieldValues>({
   const router = useRouter();
 
   const methods = useForm<T>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: defaultValues as DefaultValues<T>,
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty } } = methods;
-  const { reset: lineReset, DocEntry, isCopying, setIsCopying } = useInventoryDocument();
+  const { handleSubmit, reset, watch, setValue, formState: { isSubmitting, isDirty } } = methods;
+  const { reset: lineReset, DocEntry, isCopying, setIsCopying, loadFromDocument } = useInventoryDocument();
 
   const [selectedCopyTo] = useState<string>("");
+  const [selectedCopyFrom, setSelectedCopyFrom] = useState<string>("");
+  const [copyFromOpen, setCopyFromOpen] = useState(false);
+  const [itrData, setItrData] = useState<any[]>([]);
+  const [isLoadingCopyFrom, setIsLoadingCopyFrom] = useState(false);
 
   useEffect(() => {
     const state = useInventoryDocument.getState();
@@ -70,7 +77,17 @@ export function InvDocumentLayout<T extends FieldValues>({
   }, [defaultValues]);
 
   const ResetForm = () => {
-    reset(defaultValues as DefaultValues<T>);
+    reset({
+      ...defaultValues,
+      CardCode: "",
+      CardName: "",
+      Comments: "",
+      JournalMemo: "",
+      FromWarehouse: "",
+      ToWarehouse: "",
+      DocNum: 0,
+      DocEntry: 0,
+    } as any);
     lineReset();
   };
 
@@ -82,6 +99,12 @@ export function InvDocumentLayout<T extends FieldValues>({
   const copyToOptions = (() => {
     if (docType === DocumentType.InvTransferReq)
       return [DocumentType.InvTransfer];
+    return [];
+  })();
+
+  const copyFromOptions = (() => {
+    if (docType === DocumentType.InvTransfer)
+      return [DocumentType.InvTransferReq];
     return [];
   })();
 
@@ -99,11 +122,80 @@ export function InvDocumentLayout<T extends FieldValues>({
     }
   };
 
+  const handleCopyFromClick = async (type: string) => {
+    if (parseInt(type) === DocumentType.InvTransferReq) {
+      setIsLoadingCopyFrom(true);
+      try {
+        const data = await getInventoryTransferRequestList();
+        setItrData(data);
+        setCopyFromOpen(true);
+      } catch (err: any) {
+        toast.error(err.message || "Failed to fetch ITR list.");
+      } finally {
+        setIsLoadingCopyFrom(false);
+      }
+    }
+  };
+
+  const handleSelectITR = async (docNums: any) => {
+    const nums = Array.isArray(docNums) ? docNums : [docNums];
+    if (nums.length > 0) {
+      setIsLoadingCopyFrom(true);
+      try {
+        let mergedData: any = null;
+        let allLines: any[] = [];
+
+        for (const num of nums) {
+          const fullData = await getInventoryTransferRequest(num);
+          if (fullData) {
+            if (!mergedData) {
+              mergedData = { ...fullData };
+            }
+            const lines = fullData.DocumentLines || fullData.StockTransferLines || fullData.InventoryTransferLines || [];
+            allLines = [...allLines, ...lines];
+          }
+        }
+
+        if (mergedData) {
+          setValue("DocEntry" as any, 0 as any);
+          setValue("DocNum" as any, 0 as any);
+          setValue("TaxDate" as any, new Date().toISOString().split("T")[0] as any);
+          setValue("Comments" as any, mergedData.Comments as any);
+          setValue("FromWarehouse" as any, mergedData.FromWarehouse as any);
+          setValue("ToWarehouse" as any, mergedData.ToWarehouse as any);
+          setValue("JournalMemo" as any, mergedData.JournalMemo as any);
+          setValue("DocStatus" as any, "bost_Open" as any);
+
+          const finalDoc = { ...mergedData, DocumentLines: allLines, CardCode: "", CardName: "" };
+          loadFromDocument(finalDoc, DocumentType.InvTransferReq, true);
+          toast.success(`Copied from ${nums.length} ITR(s)`);
+        }
+      } catch (err: any) {
+        toast.error(err.message || "Failed to load ITR details.");
+      } finally {
+        setIsLoadingCopyFrom(false);
+      }
+    }
+  };
+
   return (
     <InvDocContext.Provider value={config}>
       <FormProvider {...methods}>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-screen bg-background">
+
+          <div className="flex px-6 py-2 border-b bg-white">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={ResetForm}
+              title="New Document"
+              className="hover:bg-zinc-200"
+            >
+              <FilePlus2 className="w-5 h-5 text-zinc-600" />
+            </Button>
+          </div>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
             <h1 className="text-xl font-semibold">{config.title}</h1>
@@ -116,6 +208,29 @@ export function InvDocumentLayout<T extends FieldValues>({
           </div>
 
           <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
+
+            {copyFromOptions.length > 0 && (!DocEntry || DocEntry === 0) && (
+              <Select
+                value={selectedCopyFrom}
+                onValueChange={(value) => {
+                  handleCopyFromClick(value);
+                  setTimeout(() => setSelectedCopyFrom(""), 0);
+                }}
+              >
+                <SelectTrigger className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0">
+                  <SelectValue placeholder="Copy From" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {copyFromOptions.map((type) => (
+                      <SelectItem key={type} value={type.toString()}>
+                        {type === DocumentType.InvTransferReq ? "Inventory Transfer Req" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            )}
 
             {copyToOptions.length > 0 && (
               <Select
@@ -146,6 +261,23 @@ export function InvDocumentLayout<T extends FieldValues>({
               </Button>
             )}
           </div>
+          <GenericModal
+            title="Select Inventory Transfer Request"
+            open={copyFromOpen}
+            multiple={true}
+            onClose={() => setCopyFromOpen(false)}
+            onSelect={handleSelectITR}
+            data={itrData}
+            columns={[
+              { key: "index", label: "#" },
+              { key: "DocDate", label: "Doc Date" },
+              { key: "FromWarehouse", label: "From Whse" },
+              { key: "ToWarehouse", label: "To Whse" },
+              { key: "Comments", label: "Comments" },
+            ]}
+            getSelectValue={(item: any) => item.DocNum}
+            isLoading={isLoadingCopyFrom}
+          />
         </form>
 
       </FormProvider>
