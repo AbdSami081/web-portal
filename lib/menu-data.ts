@@ -79,6 +79,11 @@ export const SERVER_MENUS: MenuItem[] = [
         isActive: true,
         items: [
             {
+                id: "0421fa1f-fd91-41e7-8444-bd2c35235911",
+                title: "Production Order",
+                url: "/dashboard/production/production-order",
+            },
+            {
                 id: "39dcf313-04a4-49df-943f-866483b30538",
                 title: "Issue For Production",
                 url: "/dashboard/production/issue-for-production",
