@@ -161,6 +161,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   }, [defaultValues]);
 
   const ResetForm = () => {
+    const today = new Date().toISOString().split("T")[0];
     reset({
       ...defaultValues,
       CardCode: "",
@@ -168,6 +169,9 @@ export function SalesDocumentLayout<T extends FieldValues>({
       Comments: "",
       DocNum: 0,
       DocEntry: 0,
+      DocDate: today,
+      DocDueDate: today,
+      TaxDate: today,
     } as any);
     lineReset();
   };
@@ -228,18 +232,21 @@ export function SalesDocumentLayout<T extends FieldValues>({
           <div className="flex px-6 py-2 border-b bg-white">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={ResetForm}
+              disabled={!DocEntry || DocEntry === 0}
               title="New Document"
-              className="hover:bg-zinc-200"
+              className="border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 w-8 disabled:opacity-50"
             >
-              <FilePlus2 className="w-5 h-5 text-zinc-600" />
+              <FilePlus2 className="w-4 h-4" />
             </Button>
           </div>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
-            <h1 className="text-xl font-semibold">{config.title}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold">{config.title}</h1>
+            </div>
             {actions && <div>{actions}</div>}
           </div>
 
