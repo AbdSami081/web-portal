@@ -15,6 +15,16 @@ import { Warehouse } from "@/types/warehouse/warehouse";
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -32,11 +42,17 @@ export function InvDocumentHeader() {
   const [modalOpen, setModalOpen] = useState(false);
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { customer, setCustomer, loadFromDocument, warehouses: globalWarehouses, setWarehouses, DocEntry } = useInventoryDocument();
+  const { lines, customer, setCustomer, loadFromDocument, warehouses: globalWarehouses, setWarehouses, DocEntry, updateAllLinesWarehouse } = useInventoryDocument();
   const [warehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
 
   const docEntry = watch("DocEntry");
   const [docNumSearch, setDocNumSearch] = useState("");
+  const [syncDialog, setSyncDialog] = useState<{
+    open: boolean;
+    type: "from" | "to" | null;
+    value: string;
+  }>({ open: false, type: null, value: "" });
+
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const config = useInvDocConfig();
 
@@ -53,19 +69,19 @@ export function InvDocumentHeader() {
     fetchWarehouses();
   }, [setWarehouses]);
 
+  const fromWhs = watch("FromWarehouse");
+  const toWhs = watch("ToWarehouse");
+
   useEffect(() => {
     if (warehouses.length > 0) {
-      const currentFromWhs = watch("FromWarehouse");
-      const currentToWhs = watch("ToWarehouse");
-
-      if (!currentFromWhs) {
+      if (!fromWhs) {
         setValue("FromWarehouse", warehouses[0].WhsCode, { shouldDirty: true });
       }
-      if (!currentToWhs) {
+      if (!toWhs) {
         setValue("ToWarehouse", warehouses[0].WhsCode, { shouldDirty: true });
       }
     }
-  }, [warehouses, setValue, watch]);
+  }, [warehouses, fromWhs, toWhs, setValue]);
 
   useEffect(() => {
     if (docEntry) {
@@ -187,11 +203,18 @@ export function InvDocumentHeader() {
           <Input type="hidden" {...register("FromWarehouse")} />
           <Select
             disabled={DocEntry > 0}
-            onValueChange={(val) => setValue("FromWarehouse", val, { shouldDirty: true })}
+            onValueChange={(val) => {
+              setValue("FromWarehouse", val, { shouldDirty: true });
+              if (lines.length > 0) {
+                setSyncDialog({ open: true, type: "from", value: val });
+              }
+            }}
             value={watch("FromWarehouse") || warehouses[0]?.WhsCode || ""}
           >
             <SelectTrigger className="h-8 w-56">
-              <SelectValue />
+              <SelectValue>
+                {watch("FromWarehouse")}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -210,11 +233,18 @@ export function InvDocumentHeader() {
           <Input type="hidden" {...register("ToWarehouse")} />
           <Select
             disabled={DocEntry > 0}
-            onValueChange={(val) => setValue("ToWarehouse", val, { shouldDirty: true })}
+            onValueChange={(val) => {
+              setValue("ToWarehouse", val, { shouldDirty: true });
+              if (lines.length > 0) {
+                setSyncDialog({ open: true, type: "to", value: val });
+              }
+            }}
             value={watch("ToWarehouse") || warehouses[0]?.WhsCode || ""}
           >
             <SelectTrigger className="h-8 w-56">
-              <SelectValue />
+              <SelectValue>
+                {watch("ToWarehouse")}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -280,6 +310,33 @@ export function InvDocumentHeader() {
           setModalOpen(false);
         }}
       />
+
+      <AlertDialog
+        open={syncDialog.open}
+        onOpenChange={(open) => !open && setSyncDialog((s) => ({ ...s, open: false }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Update Line Warehouses?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you want to update the <strong>{syncDialog.type === "from" ? "From Warehouse" : "To Warehouse"}</strong> for all existing lines to <strong>{syncDialog.value}</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, keep lines</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (syncDialog.type) {
+                  updateAllLinesWarehouse(syncDialog.value, syncDialog.type === "from");
+                }
+                setSyncDialog({ open: false, type: null, value: "" });
+              }}
+            >
+              Yes, update all
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
