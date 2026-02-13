@@ -21,6 +21,7 @@ interface IOPRDDocumentStore {
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
   setIsCopying: (isCopying: boolean) => void;
+  updateAllLinesWarehouse: (whs: string, isFrom: boolean) => void;
   reset: () => void;
 }
 
@@ -92,6 +93,14 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         lines: state.lines.map((line) =>
           line.ItemCode === itemCode ? { ...line, ...updated } : line
         ),
+      }));
+    },
+    updateAllLinesWarehouse: (whsCode: string, isFrom: boolean) => {
+      set((state) => ({
+        lines: state.lines.map((line) => ({
+          ...line,
+          [isFrom ? "FromWhsCode" : "WhsCode"]: whsCode,
+        })),
       }));
     },
 
