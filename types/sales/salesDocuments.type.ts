@@ -7,8 +7,9 @@ export enum DocumentType {
   ARInvoice = 13,
   InvTransfer = 67,
   InvTransferReq = 1250000001,
-  IssueForProduction = 202,
+  IssueForProduction = 60,
   ReceiptFromProduction = 59,
+  ProductionOrder = 202,
   SalesReturn = 16
 }
 
