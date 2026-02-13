@@ -288,7 +288,7 @@ export const buildODataQuery = ({
 };
 
 export const MasterDataService = {
-  async getItems({ top = 50, skip = 0, search = "" } = {}): Promise<Item[]> {
+  async getItems({ top = 50, skip = 0, search = "" } = {}): Promise<any> {
     const params = buildODataQuery({
       top,
       skip,
@@ -311,13 +311,13 @@ export const MasterDataService = {
     });
 
     const raw = await fetchData("/Items", params, "Items");
-    //console.log("raw items", raw);
-    const uniqueItems = Object.values(
-      raw.reduce((acc, item) => {
-        acc[item.ItemCode] = item;
-        return acc;
-      }, {} as Record<string, (typeof raw)[number]>)
-    );
+      //console.log("raw items", raw);
+      const uniqueItems = Object.values(
+        raw.reduce((acc:any, item:any) => {
+          acc[item.ItemCode] = item;
+          return acc;
+        }, {} as Record<string, (typeof raw)[number]>)
+      );
     // if uniqueItems.length > 0  then add them into Item[] Array
     // const itemArray :Item[] = uniqueItems.map((item: any) => ({
     //   ItemCode: item.ItemCode,

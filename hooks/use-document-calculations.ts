@@ -56,57 +56,57 @@
 //   }, [lines, taxCodeMap]);
 // }
 
-import { useEffect } from "react";
-import { useDebouncedCallback } from "./use-debounced-callback";
-import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
+// import { useEffect } from "react";
+// import { useDebouncedCallback } from "./use-debounced-callback";
+// import { useSalesDocument } from "@/stores/sales/useSalesDocument";
+// import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
 
-export function useDocumentCalculations() {
-  const {
-    lines,
-    setTotals,
-    freight = 0,
-    rounding = 0,
-    discountPercent = 0,
-  } = useSalesDocument((state) => ({
-    lines: state.lines,
-    freight: state.freight,
-    rounding: state.rounding,
-    discountPercent: state.discountPercent,
-    setTotals: state.setCalculatedTotals,
-  }));
+// export function useDocumentCalculations() {
+//   const {
+//     lines,
+//     setTotals,
+//     freight = 0,
+//     rounding = 0,
+//     discountPercent = 0,
+//   } = useSalesDocument((state) => ({
+//     lines: state.lines,
+//     freight: state.freight,
+//     rounding: state.rounding,
+//     discountPercent: state.discountPercent,
+//     setTotals: state.setCalculatedTotals,
+//   }));
 
-  const calculateTotals = () => {
-    let subtotal = 0;
-    let taxTotal = 0;
+//   const calculateTotals = () => {
+//     let subtotal = 0;
+//     let taxTotal = 0;
 
-    lines.forEach((line: SalesDocumentLine) => {
-      const qty = Number(line.Quantity) || 0;
-      const price = Number(line.Price) || 0;
-      const discount = Number(line.DiscountPercent || 0);
-      const tax = Number(line.TaxAmount || 0);
+//     lines.forEach((line: SalesDocumentLine) => {
+//       const qty = Number(line.Quantity) || 0;
+//       const price = Number(line.Price) || 0;
+//       const discount = Number(line.DiscountPercent || 0);
+//       const tax = Number(line.TaxAmount || 0);
 
-      const lineAmount = qty * price * (1 - discount / 100);
-      subtotal += lineAmount;
-      taxTotal += tax;
-    });
+//       const lineAmount = qty * price * (1 - discount / 100);
+//       subtotal += lineAmount;
+//       taxTotal += tax;
+//     });
 
-    const discountAmt = subtotal * (discountPercent / 100);
-    const totalBeforeDiscount = subtotal;
-    const docTotal = subtotal - discountAmt + taxTotal + freight + rounding;
+//     const discountAmt = subtotal * (discountPercent / 100);
+//     const totalBeforeDiscount = subtotal;
+//     const docTotal = subtotal - discountAmt + taxTotal + freight + rounding;
 
-    setTotals({
-      TotalBeforeDiscount: parseFloat(totalBeforeDiscount.toFixed(2)),
-      TaxTotal: parseFloat(taxTotal.toFixed(2)),
-      DiscountAmt: parseFloat(discountAmt.toFixed(2)),
-      DocTotal: parseFloat(docTotal.toFixed(2)),
-    });
-  };
+//     setTotals({
+//       TotalBeforeDiscount: parseFloat(totalBeforeDiscount.toFixed(2)),
+//       TaxTotal: parseFloat(taxTotal.toFixed(2)),
+//       DiscountAmt: parseFloat(discountAmt.toFixed(2)),
+//       DocTotal: parseFloat(docTotal.toFixed(2)),
+//     });
+//   };
 
-  // Debounced calc for performance (especially when editing multiple rows quickly)
-  const debouncedCalc = useDebouncedCallback(calculateTotals, 200);
+//   // Debounced calc for performance (especially when editing multiple rows quickly)
+//   const debouncedCalc = useDebouncedCallback(calculateTotals, 200);
 
-  useEffect(() => {
-    debouncedCalc();
-  }, [lines, freight, rounding, discountPercent]);
-}
+//   useEffect(() => {
+//     debouncedCalc();
+//   }, [lines, freight, rounding, discountPercent]);
+// }

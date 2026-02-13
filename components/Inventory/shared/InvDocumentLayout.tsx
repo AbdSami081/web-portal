@@ -45,7 +45,7 @@ export function InvDocumentLayout<T extends FieldValues>({
   const router = useRouter();
 
   const methods = useForm<T>({
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(schema as any),
     defaultValues: defaultValues as DefaultValues<T>,
     mode: "onSubmit",
   });
@@ -181,7 +181,7 @@ export function InvDocumentLayout<T extends FieldValues>({
     <InvDocContext.Provider value={config}>
       <FormProvider {...methods}>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-screen bg-background">
+        <form onSubmit={handleSubmit((data) => onSubmit(data as unknown as T))} className="flex flex-col min-h-screen bg-background">
 
           <div className="flex px-6 py-2 border-b bg-white">
             <Button

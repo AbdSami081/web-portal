@@ -39,7 +39,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const config = getDocumentConfig(docType);
 
   const methods = useForm<T>({
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(schema as any),
     defaultValues: defaultValues as DefaultValues<T>,
     mode: "onSubmit",
   });

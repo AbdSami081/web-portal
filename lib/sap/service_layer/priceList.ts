@@ -5,7 +5,7 @@ export const getPriceLists = async () => {
   const response = await sapApi.get(
     "/PriceLists?$select=PriceListNo,PriceListName"
   );
-  return response.data.value.map((pl) => ({
+  return response.data.value.map((pl:any) => ({
     id: pl.PriceListNo,
     name: pl.PriceListName,
   }));

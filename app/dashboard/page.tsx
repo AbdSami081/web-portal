@@ -287,7 +287,7 @@ export default function DashboardPage() {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                       <Label
-                        content={({ viewBox }) => {
+                        content={({ viewBox }:any) => {
                           if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                             return (
                               <text
