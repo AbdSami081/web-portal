@@ -1,22 +1,12 @@
 import { BaseProductionDocument } from "@/types/production/PRDDoc.type";
 import apiClient from "@/lib/apiClient";
 
-export const getPRDOrder = async (baseRef: number): Promise<BaseProductionDocument | null> => {
+export const getBOMList = async (): Promise<any[]> => {
   try {
-    const res = await apiClient.get(`ProductionOrders(${baseRef})`);
-
-    if (!res.data) return null;
-
-    const doc: BaseProductionDocument = {
-      ...res.data,
-      PRDOrderLines: (res.data.ProductionOrderLines || []).map((line: any) => ({
-        ...line,
-      })),
-    };
-
-    return doc;
+    const res = await apiClient.get(`api/Sales/GetBOMForProduction`);
+    return res.data?.value || [];
   } catch (err) {
-    console.error("Failed to fetch sales document", err);
-    return null;
+    console.error("Failed to fetch BOM list", err);
+    return [];
   }
 };
