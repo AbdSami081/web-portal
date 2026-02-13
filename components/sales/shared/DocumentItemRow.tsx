@@ -385,7 +385,7 @@ export function DocumentLineRow({ index, line }: Props) {
       <WarehouseSelectorDialog
         open={whDialogOpen}
         onClose={() => setWhDialogOpen(false)}
-        onSelect={(wh) => {
+        onSelect={(wh: any) => {
           setDraftLine({ ...draftLine, WarehouseCode: wh.WarehouseCode });
         }}
       />
