@@ -7,7 +7,12 @@ import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
-import { getPRDOrder } from "@/api+/sap/production/productionService";
+
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getwarehouses } from "@/api+/sap/master-data/warehouses";
+import { Warehouse } from "@/types/warehouse/warehouse";
+import { GenericModal } from "@/modals/GenericModal";
+import { getBOMList } from "@/api+/sap/production/productionService";
 
 export function PRDDocumentHeader() {
   const {
@@ -19,8 +24,44 @@ export function PRDDocumentHeader() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const { loadFromDocument } = useIFPRDDocument();
+  const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader } = useIFPRDDocument();
   const config = usePRDDocConfig();
+
+  const [bomModalOpen, setBomModalOpen] = useState(false);
+  const [bomList, setBomList] = useState<any[]>([]);
+  const [isLoadingBoms, setIsLoadingBoms] = useState(false);
+  const watchedPlannedQty = watch("PlannedQuantity");
+
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        const res = await getwarehouses();
+        setWarehouses(res);
+      } catch (error) {
+        console.error("Failed to fetch warehouses", error);
+      }
+    };
+    if (warehouses.length === 0) {
+      fetchWarehouses();
+    }
+  }, [setWarehouses, warehouses.length]);
+
+  const watchedWhs = watch("Warehouse");
+
+  useEffect(() => {
+    if (warehouses.length > 0) {
+      if (!watchedWhs) {
+        setValue("Warehouse", warehouses[0].WhsCode, { shouldDirty: true });
+      }
+    }
+  }, [warehouses, watchedWhs, setValue]);
+
+  useEffect(() => {
+    if (watchedPlannedQty !== undefined) {
+      recalculateFromHeader(Number(watchedPlannedQty));
+    }
+  }, [watchedPlannedQty]);
+
 
   const fetchDocument = async (baseRef: string) => {
 
@@ -178,57 +219,186 @@ export function PRDDocumentHeader() {
     }
   };
 
+  const fetchBOMs = async () => {
+    setIsLoadingBoms(true);
+    try {
+      const data = await getBOMList();
+      setBomList(data);
+      setBomModalOpen(true);
+    } catch (error) {
+      toast.error("Failed to fetch BOM list");
+    } finally {
+      setIsLoadingBoms(false);
+    }
+  };
+
+  const handleSelectBOM = (bom: any) => {
+    setValue("ItemNo", bom.TreeCode, { shouldDirty: true });
+    setValue("ProductDescription", bom.ProductDescription, { shouldDirty: true });
+
+    const currentPlannedQty = watch("PlannedQuantity");
+    const plannedQty = currentPlannedQty ? Number(currentPlannedQty) : 0;
+
+    loadFromBOM(bom, plannedQty);
+    setBomModalOpen(false);
+  };
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Label className="w-20">Order Number</Label>
-          <Input
-            type="text"
-            {...register("BaseRef")}
-            className="h-8 w-48"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                fetchDocument(searchValue);
-              }
-            }}
-            placeholder="Enter Order Number"
-          />
-
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 cursor-pointer"
-            onClick={() => fetchDocument(searchValue)}
-          >
-            {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Search className="h-5 w-5" />
-            )}
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <Label className="w-20">Reference</Label>
-          <Input
-            type="text"
-            {...register("Ref2")}
-            className="h-8 w-48"
-            placeholder="Enter Reference"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex justify-between items-center w-full">
-            <Label className="text-sm w-28">Document Date</Label>
-            <Input type="date" {...register("TaxDate")} className="h-8 w-48" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {config.headerFields.baseRef && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Order Number</Label>
+            <div className="flex items-center gap-2 flex-1">
+              <Input
+                type="text"
+                {...register("BaseRef")}
+                className="h-8"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    fetchDocument(searchValue);
+                  }
+                }}
+                placeholder="Enter Order Number"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer"
+                onClick={() => fetchDocument(searchValue)}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Search className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {config.headerFields.reference && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Reference</Label>
+            <Input
+              type="text"
+              {...register("Ref2")}
+              className="h-8 flex-1"
+              placeholder="Enter Reference"
+            />
+          </div>
+        )}
+
+        {config.headerFields.docDate && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Document Date</Label>
+            <Input type="date" {...register("TaxDate")} className="h-8 flex-1" />
+          </div>
+        )}
+
+        {config.headerFields.productNo && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Product No.</Label>
+            <div className="flex items-center gap-2 flex-1">
+              <Input type="text" {...register("ItemNo")} className="h-8 flex-1" />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer"
+                onClick={fetchBOMs}
+              >
+                {isLoadingBoms ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {config.headerFields.productDescription && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Description</Label>
+            <Input type="text" {...register("ProductDescription")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
+          </div>
+        )}
+
+        {config.headerFields.plannedQuantity && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Planned Qty</Label>
+            <Input type="number" {...register("PlannedQuantity")} className="h-8 flex-1" />
+          </div>
+        )}
+
+        {config.headerFields.warehouse && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Warehouse</Label>
+            <Input type="hidden" {...register("Warehouse")} />
+            <Select
+              onValueChange={(val) => setValue("Warehouse", val, { shouldDirty: true })}
+              value={watch("Warehouse") || warehouses[0]?.WhsCode || ""}
+            >
+              <SelectTrigger className="h-8 flex-1">
+                <SelectValue>
+                  {watch("Warehouse")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {warehouses.map((wh: Warehouse) => (
+                    <SelectItem key={wh.WhsCode} value={wh.WhsCode}>
+                      {wh.WhsName}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {config.headerFields.priority && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Priority</Label>
+            <Input type="number" {...register("Priority")} className="h-8 flex-1" />
+          </div>
+        )}
+
+        {config.headerFields.orderDate && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Order Date</Label>
+            <Input type="date" {...register("CreationDate")} className="h-8 flex-1" />
+          </div>
+        )}
+
+        {config.headerFields.startDate && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Start Date</Label>
+            <Input type="date" {...register("StartDate")} className="h-8 flex-1" />
+          </div>
+        )}
+
+        {config.headerFields.dueDate && (
+          <div className="flex items-center gap-4">
+            <Label className="w-24">Due Date</Label>
+            <Input type="date" {...register("DueDate")} className="h-8 flex-1" />
+          </div>
+        )}
       </div>
+
+      <GenericModal
+        title="Select Bill of Materials"
+        open={bomModalOpen}
+        onClose={() => setBomModalOpen(false)}
+        onSelect={handleSelectBOM}
+        data={bomList}
+        columns={[
+          { key: "TreeCode", label: "Item No" },
+          { key: "ProductDescription", label: "Description" },
+        ]}
+        getSelectValue={(item) => item}
+        isLoading={isLoadingBoms}
+      />
     </div>
   );
 }
