@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/api+/sap/inventory/inventoryService";
-import { FilePlus2 } from "lucide-react";
+import { FilePlus2, Search } from "lucide-react";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -83,10 +83,9 @@ export function InvDocumentLayout<T extends FieldValues>({
       CardName: "",
       Comments: "",
       JournalMemo: "",
-      FromWarehouse: "",
-      ToWarehouse: "",
       DocNum: 0,
       DocEntry: 0,
+      TaxDate: new Date().toISOString().split("T")[0],
     } as any);
     lineReset();
   };
@@ -187,18 +186,21 @@ export function InvDocumentLayout<T extends FieldValues>({
           <div className="flex px-6 py-2 border-b bg-white">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={ResetForm}
               title="New Document"
-              className="hover:bg-zinc-200"
+              disabled={!DocEntry || DocEntry === 0}
+              className="border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 w-8 disabled:opacity-50"
             >
-              <FilePlus2 className="w-5 h-5 text-zinc-600" />
+              <FilePlus2 className="w-4 h-4" />
             </Button>
           </div>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
-            <h1 className="text-xl font-semibold">{config.title}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold">{config.title}</h1>
+            </div>
 
             {actions && <div>{actions}</div>}
           </div>
