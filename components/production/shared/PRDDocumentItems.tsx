@@ -15,71 +15,59 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IFPRDDocumentLineRow } from "./PRDDocumentRow";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
+import { usePRDDocConfig } from "./PRDDocumentLayout";
 
 
 export function PRDDocumentItems() {
   const { watch, register } = useFormContext();
   const selectedCardCode = watch("CardCode");
-  const { lines, addLine, customer } = useIFPRDDocument();
-
+  const { lines, addLine, customer, warehouses } = useIFPRDDocument();
+  const config = usePRDDocConfig();
 
   // useEffect(() => {
   //   console.log("document items", lines);
   // }, [lines]);
 
   return (
-    <div className="grid overflow-x-auto w-full">
+    <div className="flex flex-col w-full">
+      <div className="relative max-w-full border rounded mt-4">
+        <div className="overflow-x-auto">
+          <Table className="text-xs w-full">
+            <TableHeader className="sticky top-0 bg-neutral-900 z-10">
+              <TableRow className="border-neutral-600">
+                {config.itemColumns.type && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Type</TableHead>}
+                {config.itemColumns.itemCode && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[150px]">Item No</TableHead>}
+                {config.itemColumns.itemDescription && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[300px]">Item Description</TableHead>}
+                {config.itemColumns.baseQty && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Base Qty</TableHead>}
+                {config.itemColumns.baseRatio && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Base Ratio</TableHead>}
+                {config.itemColumns.plannedQty && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[120px]">Planned Qty</TableHead>}
+                {config.itemColumns.issued && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Issued</TableHead>}
+                {config.itemColumns.available && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Available</TableHead>}
+                {config.itemColumns.uomCode && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">UoM Code</TableHead>}
+                {config.itemColumns.warehouse && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[180px]">Warehouse</TableHead>}
+                {config.itemColumns.issueMethod && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[150px]">Issue Method</TableHead>}
+                {config.itemColumns.actions && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[80px]">Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
 
-      <Tabs defaultValue="content" className="w-full pt-4">
-        <TabsList className="mb-4">
-          <TabsTrigger value="content" className="data-[state=active]:bg-primary dark:data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:text-primary-foreground dark:data-[state=active]:border-transparent">Content</TabsTrigger>
-          <TabsTrigger value="Attachments" className="data-[state=active]:bg-primary dark:data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:text-primary-foreground dark:data-[state=active]:border-transparent">Attachments</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="content">
-          <div className="relative max-w-full border rounded">
-            <div className={`min-w-max overflow-x-auto `}>
-              <Table className="text-xs w-max">
-              <TableHeader className="sticky top-0 bg-neutral-900 z-10">
-                <TableRow className="border-neutral-600">
-                  <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Type</TableHead>
-                  <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Item No</TableHead>
-                  <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Item Description</TableHead>
-                  <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Quantity</TableHead>
-                  <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Whse</TableHead>
-                  <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Actions</TableHead>
+            <TableBody className="text-center">
+              {lines.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={32} className="text-left text-gray-500 py-4">
+                    No items added yet.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                lines.map((line, idx) => (
+                  <TableRow key={idx}>
+                    <IFPRDDocumentLineRow index={idx} line={line} warehouses={warehouses} />
                   </TableRow>
-              </TableHeader>
-
-
-                <TableBody className="text-center">
-                  {lines.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={32} className="text-left text-gray-500 py-4">
-                        No items added yet.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    lines.map((line, idx) => (
-                      <TableRow key={idx}>
-                        <IFPRDDocumentLineRow index={idx} line={line} />
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-
-              </Table>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="Attachments">
-          <div className={`grid grid-cols-2 gap-4 p-5 rounded `}>
-
-          </div>
-        </TabsContent>
-
-      </Tabs>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </div>
   );
 }
