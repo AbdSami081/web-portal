@@ -8,6 +8,9 @@ interface IFPRDDocumentStore {
   docType: DocumentType;
   customer: BusinessPartner | null;
   lines: PRDDocumentLine[];
+  warehouses: any[];
+
+  setWarehouses: (warehouses: any[]) => void;
 
   setCustomer: (customer: BusinessPartner) => void;
   setDocType: (docType: DocumentType) => void;
@@ -15,7 +18,9 @@ interface IFPRDDocumentStore {
   removeLine: (itemCode: string) => void;
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   updateLine: (itemCode: string, updated: Partial<PRDDocumentLine>) => void;
+  loadFromBOM: (bom: any, plannedQty: number) => void;
   reset: () => void;
+  recalculateFromHeader: (headerPlannedQty: number) => void;
 }
 
 export const useIFPRDDocument = create<IFPRDDocumentStore>()(
@@ -23,7 +28,9 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     docType: DocumentType.IssueForProduction,
     customer: null,
     lines: [],
+    warehouses: [],
 
+    setWarehouses: (warehouses) => set({ warehouses }),
     setCustomer: (customer) => set({ customer }),
 
     setDocType: (docType) => set({ docType }),
@@ -46,6 +53,13 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         lines: state.lines.filter((line) => line.ItemNo !== itemCode),
       }));
     },
+    updateLine: (itemCode, updated) => {
+      set((state) => ({
+        lines: state.lines.map((line) =>
+          line.ItemNo === itemCode ? { ...line, ...updated } : line
+        ),
+      }));
+    },
     loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
       const mappedLines = doc.ProductionOrderLines?.map((line: any) => {
         return {
@@ -53,10 +67,33 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
           ItemName: line.ItemName,
           PlannedQuantity: line.PlannedQuantity,
           Warehouse: line.Warehouse,
-          ItemType: line.ItemType
+          ItemType: line.ItemType,
+          BaseQuantity: line.BaseQuantity,
+          BaseRatio: line.BaseRatio,
+          IssuedQuantity: line.IssuedQuantity,
+          AvailableQuantity: line.AvailableQuantity,
+          UoMCode: line.UoMCode,
+          ProductionOrderIssueType: line.ProductionOrderIssueType
         };
-
       }) || [];
+      set({
+        lines: mappedLines,
+        docType: type || DocumentType.IssueForProduction,
+      });
+    },
+    loadFromBOM: (bom: any, plannedQty: number = 0) => {
+      const mappedLines = bom.ProductTreeLines?.map((line: any) => ({
+        ItemNo: line.ItemCode,
+        ItemName: line.ItemName || "",
+        BaseQuantity: Number(line.Quantity || 0),
+        BaseRatio: 1,
+        PlannedQuantity: Number(line.Quantity || 0) * Number(plannedQty || 0),
+        IssuedQuantity: 0,
+        Warehouse: line.Warehouse || "",
+        ProductionOrderIssueType: line.IssueMethod === "im_Backflush" ? "im_Backflush" : "im_Manual",
+        ItemType: line.ItemType || "pit_Item",
+      })) || [];
+
       set({
         lines: mappedLines,
       });
@@ -65,7 +102,15 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       set({
         customer: null,
         lines: [],
-        docType: DocumentType.IssueForProduction,
+        docType: DocumentType.IssueForProduction
       }),
+    recalculateFromHeader: (headerPlannedQty: number) => {
+      set((state) => ({
+        lines: state.lines.map((line) => ({
+          ...line,
+          PlannedQuantity: Number(line.BaseQuantity || 0) * Number(headerPlannedQty || 0),
+        })),
+      }));
+    },
   }))
 );
