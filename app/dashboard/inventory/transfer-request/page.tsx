@@ -9,11 +9,13 @@ import { InvDocumentHeader } from "@/components/Inventory/shared/InvDocumentHead
 import { InvDocumentItems } from "@/components/Inventory/shared/InvDocumentItems";
 import InvDocumentFooter from "@/components/Inventory/shared/InvDocumentFooter";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useRouter } from "next/navigation";
 
 const inventoryTransferSchema = quotationSchema.extend({
+  CardCode: z.string().optional(),
+  CardName: z.string().optional(),
   JournalMemo: z.string().optional(),
   FromWarehouse: z.string().optional(),
   ToWarehouse: z.string().optional(),
@@ -24,6 +26,12 @@ type InventoryTransferFormData = z.infer<typeof inventoryTransferSchema>;
 export default function InvTransferRequestPage() {
   const router = useRouter();
   const { lines, reset: resetStore, DocEntry, lastLoadedDocType } = useInventoryDocument();
+
+  useEffect(() => {
+    return () => {
+      resetStore();
+    };
+  }, [resetStore]);
 
   const defaultValues: InventoryTransferFormData = useMemo(() => ({
     CardCode: "",
@@ -47,7 +55,7 @@ export default function InvTransferRequestPage() {
   const handleSubmit = async (data: InventoryTransferFormData) => {
     try {
       const payload: InventoryTransferPayload = {
-        CardCode: data.CardCode,
+        CardCode: data.CardCode || "",
         Comments: data.Comments,
         JournalMemo: data.JournalMemo,
         FromWarehouse: data.FromWarehouse || "",
