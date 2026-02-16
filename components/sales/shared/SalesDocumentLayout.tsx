@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotationDocument, getSalesOrderDocument, getSalesDeliveryDocument } from "@/api+/sap/quotation/salesService";
 import { FilePlus2 } from "lucide-react";
+import { HeaderActionPortal } from "@/components/header-portal";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -229,7 +230,8 @@ export function SalesDocumentLayout<T extends FieldValues>({
           }}
           className="flex flex-col min-h-screen bg-background"
         >
-          <div className="flex px-6 py-2 border-b bg-white">
+
+          <HeaderActionPortal>
             <Button
               type="button"
               variant="outline"
@@ -241,7 +243,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
             >
               <FilePlus2 className="w-4 h-4" />
             </Button>
-          </div>
+          </HeaderActionPortal>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
             <div className="flex items-center gap-3">

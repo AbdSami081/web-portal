@@ -9,6 +9,7 @@ import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/production/documentConfig";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { FilePlus2 } from "lucide-react";
+import { HeaderActionPortal } from "@/components/header-portal";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
@@ -82,7 +83,8 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
         <form onSubmit={handleSubmit((data) => onSubmit(data as any))} className="flex flex-col min-h-screen bg-background">
 
-          <div className="flex px-6 py-2 border-b bg-white">
+
+          <HeaderActionPortal>
             <Button
               type="button"
               variant="outline"
@@ -94,7 +96,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
             >
               <FilePlus2 className="w-4 h-4" />
             </Button>
-          </div>
+          </HeaderActionPortal>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
             <div className="flex items-center gap-3">

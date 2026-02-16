@@ -159,8 +159,8 @@ export function InvDocumentHeader() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8">
-      <div className="flex flex-col gap-4 w-full lg:w-1/2">
+    <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex flex-col gap-2 w-full lg:w-1/2">
         <div className="flex items-center gap-1">
           <Label className="w-32">Customer</Label>
           <div className="flex items-center gap-2">
@@ -259,8 +259,8 @@ export function InvDocumentHeader() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 w-full lg:w-1/2">
-        <div className="flex flex-col gap-4 items-end">
+      <div className="flex flex-col gap-2 w-full lg:w-1/2">
+        <div className="flex flex-col gap-2 items-end">
           <div className="flex items-center gap-1">
             <Input
               type="text"

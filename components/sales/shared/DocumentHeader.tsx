@@ -136,9 +136,9 @@ export function DocumentHeader() {
 
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Label className="w-20">Customer</Label>
           <div className="flex items-center">
             <Input
@@ -194,9 +194,9 @@ export function DocumentHeader() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row justify-between gap-10">
-        <div className="flex flex-col gap-4 w-full lg:w-1/2">
-          <div className="flex items-center w-full gap-4">
+      <div className="flex flex-col lg:flex-row justify-between gap-4">
+        <div className="flex flex-col gap-2 w-full lg:w-1/2">
+          <div className="flex items-center w-full gap-2">
             <Label className="w-20">Name</Label>
             <Input
               type="text"
@@ -208,7 +208,7 @@ export function DocumentHeader() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 w-full lg:w-1/2">
+        <div className="flex flex-col gap-2 w-full lg:w-1/2">
           <div className="flex justify-between items-center w-full">
             <Label className="text-xs w-28">Status</Label>
             <Select

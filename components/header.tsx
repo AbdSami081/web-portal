@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { NavUserToggle } from "./nav-user";
 import {
-  
+
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -32,6 +32,7 @@ const HeaderNav = () => {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          <div id="header-action-container" className="flex items-center gap-2 ml-2" />
         </div>
         {/* <div className="ml-auto px-3">
           <div className="flex items-center gap-2">

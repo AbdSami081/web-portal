@@ -244,10 +244,10 @@ export function PRDDocumentHeader() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
         {config.headerFields.baseRef && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Order Number</Label>
             <div className="flex items-center gap-2 flex-1">
               <Input
@@ -281,7 +281,7 @@ export function PRDDocumentHeader() {
         )}
 
         {config.headerFields.reference && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Reference</Label>
             <Input
               type="text"
@@ -293,14 +293,14 @@ export function PRDDocumentHeader() {
         )}
 
         {config.headerFields.docDate && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Document Date</Label>
             <Input type="date" {...register("TaxDate")} className="h-8 flex-1" />
           </div>
         )}
 
         {config.headerFields.productNo && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Product No.</Label>
             <div className="flex items-center gap-2 flex-1">
               <Input type="text" {...register("ItemNo")} className="h-8 flex-1" />
@@ -318,21 +318,21 @@ export function PRDDocumentHeader() {
         )}
 
         {config.headerFields.productDescription && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Description</Label>
             <Input type="text" {...register("ProductDescription")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
           </div>
         )}
 
         {config.headerFields.plannedQuantity && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Planned Qty</Label>
             <Input type="number" {...register("PlannedQuantity")} className="h-8 flex-1" />
           </div>
         )}
 
         {config.headerFields.warehouse && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Warehouse</Label>
             <Input type="hidden" {...register("Warehouse")} />
             <Select
@@ -358,28 +358,28 @@ export function PRDDocumentHeader() {
         )}
 
         {config.headerFields.priority && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Priority</Label>
             <Input type="number" {...register("Priority")} className="h-8 flex-1" />
           </div>
         )}
 
         {config.headerFields.orderDate && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Order Date</Label>
             <Input type="date" {...register("CreationDate")} className="h-8 flex-1" />
           </div>
         )}
 
         {config.headerFields.startDate && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Start Date</Label>
             <Input type="date" {...register("StartDate")} className="h-8 flex-1" />
           </div>
         )}
 
         {config.headerFields.dueDate && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Label className="w-24">Due Date</Label>
             <Input type="date" {...register("DueDate")} className="h-8 flex-1" />
           </div>
