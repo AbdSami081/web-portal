@@ -82,17 +82,24 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       });
     },
     loadFromBOM: (bom: any, plannedQty: number = 0) => {
-      const mappedLines = bom.ProductTreeLines?.map((line: any) => ({
-        ItemNo: line.ItemCode,
-        ItemName: line.ItemName || "",
-        BaseQuantity: Number(line.Quantity || 0),
-        BaseRatio: 1,
-        PlannedQuantity: Number(line.Quantity || 0) * Number(plannedQty || 0),
-        IssuedQuantity: 0,
-        Warehouse: line.Warehouse || "",
-        ProductionOrderIssueType: line.IssueMethod === "im_Backflush" ? "im_Backflush" : "im_Manual",
-        ItemType: line.ItemType || "pit_Item",
-      })) || [];
+      const parentQty = Number(bom.Quantity || 1); // Parent quantity of BOM
+      const mappedLines = bom.ProductTreeLines?.map((line: any) => {
+        const lineQty = Number(line.Quantity || 0);
+        const baseRatio = lineQty / parentQty;
+
+        return {
+          ItemNo: line.ItemCode,
+          ItemName: line.ItemName || "",
+          BaseQuantity: lineQty, // Store original line quantity here
+          BaseRatio: baseRatio,
+          BOMHeaderQty: parentQty, // Store header qty for recalculation
+          PlannedQuantity: baseRatio * Number(plannedQty || 0),
+          IssuedQuantity: 0,
+          Warehouse: line.Warehouse || "",
+          ProductionOrderIssueType: line.IssueMethod === "im_Backflush" ? "im_Backflush" : "im_Manual",
+          ItemType: line.ItemType || "pit_Item",
+        };
+      }) || [];
 
       set({
         lines: mappedLines,
