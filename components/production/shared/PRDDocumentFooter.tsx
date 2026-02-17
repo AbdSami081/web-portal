@@ -167,12 +167,12 @@ export default function PRDDocumentFooter() {
         </div>
 
         <div>
-          <Label htmlFor="journalRemarks">Journal Remarks</Label>
+          <Label htmlFor="pickRmrk">Pick and Pack Remarks</Label>
           <Textarea
-            id="journalRemarks"
-            {...register("JournalRemarks")}
+            id="pickRmrk"
+            {...register("PickRmrk")}
             className="h-24 mt-4 max-w-95"
-            placeholder="Enter journal remarks..."
+            placeholder="Enter pick and pack remarks..."
           />
         </div>
       </div>

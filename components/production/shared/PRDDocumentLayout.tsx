@@ -93,7 +93,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
               variant="outline"
               size="icon"
               onClick={ResetForm}
-              disabled={(!watch("AbsoluteEntry" as any) || watch("AbsoluteEntry" as any) === 0) && (!watch("DocEntry" as any) || watch("DocEntry" as any) === 0)}
+              disabled={(!watch("AbsoluteEntry" as any) || watch("AbsoluteEntry" as any) === 0) && (!watch("DocEntry" as any) || watch("DocEntry" as any) === 0) && !watch("ItemNo" as any)}
               title="New Document"
               className="border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 w-8 disabled:opacity-50"
             >

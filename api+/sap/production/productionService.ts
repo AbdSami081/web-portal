@@ -10,3 +10,13 @@ export const getBOMList = async (): Promise<any[]> => {
     return [];
   }
 };
+
+export const postProductionOrder = async (data: any): Promise<any> => {
+  try {
+    const res = await apiClient.post(`api/Sales/Production`, data);
+    return res.data;
+  } catch (err) {
+    console.error("Failed to post production order", err);
+    throw err;
+  }
+};
