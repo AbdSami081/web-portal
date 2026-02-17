@@ -13,12 +13,46 @@ import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { GenericModal } from "@/modals/GenericModal";
 import { getBOMList } from "@/api+/sap/production/productionService";
+import { Controller } from "react-hook-form";
+
+const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className, id }: any) => {
+  const [localValue, setLocalValue] = useState(value ? value.toString() : "");
+
+  useEffect(() => {
+    if (document.activeElement !== document.getElementById(id)) {
+      setLocalValue(value ? Number(value).toLocaleString() : "");
+    }
+  }, [value, id]);
+
+  return (
+    <Input
+      id={id}
+      type="text"
+      className={className}
+      value={localValue}
+      onChange={(e) => {
+        const val = e.target.value;
+        setLocalValue(val);
+        const numericVal = Number(val.replace(/,/g, ""));
+        if (!isNaN(numericVal)) {
+          onChange(numericVal);
+        }
+      }}
+      onBlur={() => {
+        onBlur();
+        setLocalValue(value ? Number(value).toLocaleString() : "");
+      }}
+      placeholder={placeholder}
+    />
+  );
+};
 
 export function PRDDocumentHeader() {
   const {
     register,
     watch,
     setValue,
+    control,
     formState: { errors },
   } = useFormContext();
 
@@ -28,6 +62,7 @@ export function PRDDocumentHeader() {
   const config = usePRDDocConfig();
 
   const [bomModalOpen, setBomModalOpen] = useState(false);
+  const [whsModalOpen, setWhsModalOpen] = useState(false);
   const [bomList, setBomList] = useState<any[]>([]);
   const [isLoadingBoms, setIsLoadingBoms] = useState(false);
   const watchedPlannedQty = watch("PlannedQuantity");
@@ -327,33 +362,43 @@ export function PRDDocumentHeader() {
         {config.headerFields.plannedQuantity && (
           <div className="flex items-center gap-2">
             <Label className="w-24">Planned Qty</Label>
-            <Input type="number" {...register("PlannedQuantity")} className="h-8 flex-1" />
+            <Controller
+              name="PlannedQuantity"
+              control={control}
+              render={({ field: { value, onChange, onBlur } }) => (
+                <FormattedHeaderInput
+                  id="planned-qty-input"
+                  value={value}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  className="h-8 flex-1"
+                  placeholder="Enter Planned Qty"
+                />
+              )}
+            />
           </div>
         )}
 
         {config.headerFields.warehouse && (
           <div className="flex items-center gap-2">
             <Label className="w-24">Warehouse</Label>
-            <Input type="hidden" {...register("Warehouse")} />
-            <Select
-              onValueChange={(val) => setValue("Warehouse", val, { shouldDirty: true })}
-              value={watch("Warehouse") || warehouses[0]?.WhsCode || ""}
-            >
-              <SelectTrigger className="h-8 flex-1">
-                <SelectValue placeholder="Select Warehouse">
-                  {watch("Warehouse")}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {warehouses.map((wh: Warehouse) => (
-                    <SelectItem key={wh.WhsCode} value={wh.WhsCode}>
-                      {wh.WhsName}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2 flex-1">
+              <Input
+                type="text"
+                {...register("Warehouse")}
+                className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed"
+                readOnly
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer"
+                onClick={() => setWhsModalOpen(true)}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 
@@ -385,6 +430,22 @@ export function PRDDocumentHeader() {
           </div>
         )}
       </div>
+
+      <GenericModal
+        title="Select Warehouse"
+        open={whsModalOpen}
+        onClose={() => setWhsModalOpen(false)}
+        onSelect={(wh: Warehouse) => {
+          setValue("Warehouse", wh.WhsCode, { shouldDirty: true });
+          setWhsModalOpen(false);
+        }}
+        data={warehouses}
+        columns={[
+          { key: "WhsCode", label: "Warehouse Code" },
+          { key: "WhsName", label: "Warehouse Name" },
+        ]}
+        getSelectValue={(item) => item}
+      />
 
       <GenericModal
         title="Select Bill of Materials"
