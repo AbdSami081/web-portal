@@ -45,12 +45,15 @@ export function PRDDocumentLayout<T extends FieldValues>({
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, watch, formState: { isSubmitting } } = methods;
+  const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty } } = methods;
   const { reset: lineReset } = useIFPRDDocument();
 
   useEffect(() => {
-    reset(defaultValues as DefaultValues<T>);
-  }, [defaultValues]);
+    const state = useIFPRDDocument.getState();
+    if (!isDirty) {
+      ResetForm();
+    }
+  }, [defaultValues, isDirty]);
 
   const ResetForm = () => {
     const today = new Date().toISOString().split("T")[0];

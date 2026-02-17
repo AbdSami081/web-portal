@@ -51,7 +51,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, watch, formState: { isSubmitting } } = methods;
+  const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty } } = methods;
   const { reset: lineReset, customer } = useSalesDocument();
 
   const docStatus = watch("DocStatus" as any);
@@ -143,21 +143,11 @@ export function SalesDocumentLayout<T extends FieldValues>({
         Rounding: state.rounding,
       } as unknown as DefaultValues<T>);
 
-      // We set isCopying to false, but we DON'T reset the store
       setIsCopying(false);
-    } else {
-      // If we are NOT copying and NOT in Edit mode (DocEntry is 0/empty), then we reset
-      // This allows manual entry to start fresh but preserves "Copy" workflow data
-      const currentDocEntry = watch("DocEntry" as any);
-      if (!currentDocEntry || currentDocEntry === "0") {
-        // If the store ALREADY has lines/DocEntry but we aren't "copying", 
-        // we only reset if it's a fresh manual visit.
-        // This is a bit tricky, but basically we want to avoid ResetForm() 
-        // if we just loaded copy data.
-        if (state.DocEntry === 0) {
-          ResetForm();
-        }
-      }
+    } else if (!isDirty) {
+      // If the form is clean (fresh navigation), we reset to ensure 
+      // old store data or previous page state is cleared.
+      ResetForm();
     }
   }, [defaultValues]);
 

@@ -71,9 +71,7 @@ export function InvDocumentLayout<T extends FieldValues>({
       } as unknown as DefaultValues<T>);
       setIsCopying(false);
     } else if (!isDirty) {
-      if (state.DocEntry === 0) {
-        ResetForm();
-      }
+      ResetForm();
     }
   }, [defaultValues]);
 
