@@ -36,10 +36,20 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const headerPlannedQty = watch("PlannedQuantity");
 
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
+  const [baseQtyInput, setBaseQtyInput] = useState<string>((line.BaseQuantity ?? 0).toString());
+  const [plannedQtyInput, setPlannedQtyInput] = useState<string>((line.PlannedQuantity ?? 0).toString());
 
   useEffect(() => {
     setDraftLine(line);
-  }, [line]);
+    // Only update input if it's not currently being edited or focused? 
+    // Actually, simple way: only update if value changed externally.
+    if (document.activeElement?.getAttribute('name') !== `BaseQty-${index}`) {
+      setBaseQtyInput((line.BaseQuantity ?? 0).toLocaleString());
+    }
+    if (document.activeElement?.getAttribute('name') !== `PlannedQty-${index}`) {
+      setPlannedQtyInput((line.PlannedQuantity ?? 0).toLocaleString());
+    }
+  }, [line, index]);
 
   const saveRow = () => {
     updateLine(line.ItemNo, draftLine);
@@ -68,39 +78,66 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
       {config.itemColumns.baseQty && (
         <td className="py-2 px-4 text-center">
           <Input
-            type="number"
-            value={draftLine.BaseQuantity ?? 0}
+            type="text"
+            name={`BaseQty-${index}`}
+            value={baseQtyInput}
             onChange={(e) => {
-              const baseQty = Number(e.target.value);
+              const val = e.target.value;
+              setBaseQtyInput(val);
+
+              const numericVal = Number(val.replace(/,/g, ""));
+              if (isNaN(numericVal)) return;
+
+              const parentQty = (draftLine as any).BOMHeaderQty || 1;
+              const newBaseRatio = numericVal / parentQty;
 
               const updatedLine = {
                 ...draftLine,
-                BaseQuantity: baseQty,
-                PlannedQuantity: baseQty * headerPlannedQty,
+                BaseQuantity: numericVal,
+                BaseRatio: newBaseRatio,
+                PlannedQuantity: newBaseRatio * headerPlannedQty,
               };
 
               setDraftLine(updatedLine);
               updateLine(line.ItemNo, updatedLine);
             }}
-            className="font-medium text-gray-700"
+            onBlur={() => {
+              setBaseQtyInput((draftLine.BaseQuantity ?? 0).toLocaleString());
+              saveRow();
+            }}
+            className="font-medium text-gray-700 text-center"
           />
         </td>
       )}
 
       {config.itemColumns.baseRatio && (
         <td className="py-2 px-4 text-center">
-          <span className="font-medium text-gray-700">{line.BaseRatio}</span>
+          <span className="font-medium text-gray-700">{Number(draftLine.BaseRatio ?? 0).toLocaleString()}</span>
         </td>
       )}
 
       {config.itemColumns.plannedQty && (
         <td className="py-2 px-4">
           <Input
-            type="number"
+            type="text"
+            name={`PlannedQty-${index}`}
             className="h-7 w-24 text-center border-zinc-300"
-            value={draftLine.PlannedQuantity || 0}
-            onChange={(e) => setDraftLine({ ...draftLine, PlannedQuantity: Number(e.target.value) })}
-            onBlur={saveRow}
+            value={plannedQtyInput}
+            onChange={(e) => {
+              const val = e.target.value;
+              setPlannedQtyInput(val);
+
+              const numericVal = Number(val.replace(/,/g, ""));
+              if (isNaN(numericVal)) return;
+
+              const updated = { ...draftLine, PlannedQuantity: numericVal };
+              setDraftLine(updated);
+              updateLine(line.ItemNo, updated);
+            }}
+            onBlur={() => {
+              setPlannedQtyInput((draftLine.PlannedQuantity || 0).toLocaleString());
+              saveRow();
+            }}
           />
         </td>
       )}
@@ -126,33 +163,20 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
       {config.itemColumns.warehouse && (
         <td className="py-2 px-4 text-center text-gray-700">
           <div className="flex items-center gap-1">
-            <Select
+            <Input
+              className="h-7 w-28 text-xs bg-gray-100 text-gray-500 cursor-not-allowed"
               value={draftLine.Warehouse || ""}
-              onValueChange={(val) => {
-                const updated = { ...draftLine, Warehouse: val };
-                setDraftLine(updated);
-                updateLine(line.ItemNo, updated);
-              }}
-            >
-              <SelectTrigger className="h-7 w-28 text-xs">
-                <span className="truncate px-1">{draftLine.Warehouse || "Select"}</span>
-              </SelectTrigger>
-              <SelectContent>
-                {warehouses?.map((wh) => (
-                  <SelectItem key={wh.WhsCode} value={wh.WhsCode}>
-                    {wh.WhsName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              disabled
+              readOnly
+            />
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="h-6 w-6"
+              className="h-7 w-7 cursor-pointer"
               onClick={() => setWarehouseModalOpen(true)}
             >
-              <Search className="h-3 w-3" />
+              <Search className="h-4 w-4" />
             </Button>
           </div>
         </td>
