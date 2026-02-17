@@ -20,10 +20,18 @@ export function InvDocumentLineRow({ index, line }: Props) {
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
+  const [localQty, setLocalQty] = useState<string>((line.Quantity || 0).toString());
+  const [localPrice, setLocalPrice] = useState<string>((line.ItemCost || 0).toString());
 
   useEffect(() => {
     setDraftLine(line);
-  }, [line]);
+    if (document.activeElement?.getAttribute('name') !== `Qty-${index}`) {
+      setLocalQty((line.Quantity || 0).toLocaleString());
+    }
+    if (document.activeElement?.getAttribute('name') !== `Price-${index}`) {
+      setLocalPrice((line.ItemCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    }
+  }, [line, index]);
 
   const saveRow = (updatedLine = draftLine) => {
     updateLine(line.ItemCode, updatedLine);
@@ -61,10 +69,9 @@ export function InvDocumentLineRow({ index, line }: Props) {
       <td className="py-2 px-4">
         <div className="flex items-center gap-1 w-full">
           <Input
-            className="h-6 w-full"
+            className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
             value={draftLine.FromWhsCode || ""}
-            onChange={(e) => setDraftLine({ ...draftLine, FromWhsCode: e.target.value })}
-            onBlur={() => saveRow()}
+            disabled
           />
           <Button
             type="button"
@@ -85,10 +92,9 @@ export function InvDocumentLineRow({ index, line }: Props) {
       <td className="py-2 px-4">
         <div className="flex items-center gap-1 w-full">
           <Input
-            className="h-6 w-full"
+            className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
             value={draftLine.WhsCode || ""}
-            onChange={(e) => setDraftLine({ ...draftLine, WhsCode: e.target.value })}
-            onBlur={() => saveRow()}
+            disabled
           />
           <Button
             type="button"
@@ -108,23 +114,46 @@ export function InvDocumentLineRow({ index, line }: Props) {
       {/* Quantity */}
       <td className="py-2 px-4">
         <Input
+          name={`Qty-${index}`}
           className="h-6 w-full text-right"
-          type="number"
-          value={draftLine.Quantity}
-          onChange={(e) => setDraftLine({ ...draftLine, Quantity: Number(e.target.value) })}
-          onBlur={() => saveRow()}
+          type="text"
+          value={localQty}
+          onChange={(e) => {
+            const val = e.target.value;
+            setLocalQty(val);
+            const numericVal = Number(val.replace(/,/g, ""));
+            if (!isNaN(numericVal)) {
+              setDraftLine({ ...draftLine, Quantity: numericVal });
+              updateLine(line.ItemCode, { ...draftLine, Quantity: numericVal });
+            }
+          }}
+          onBlur={() => {
+            setLocalQty((draftLine.Quantity || 0).toLocaleString());
+            saveRow();
+          }}
         />
       </td>
 
       {/* Unit Price */}
       <td className="py-2 px-4">
         <Input
+          name={`Price-${index}`}
           className="h-6 w-full text-right"
-          type="number"
-          step="0.01"
-          value={draftLine.ItemCost || 0}
-          onChange={(e) => setDraftLine({ ...draftLine, ItemCost: Number(e.target.value) })}
-          onBlur={() => saveRow()}
+          type="text"
+          value={localPrice}
+          onChange={(e) => {
+            const val = e.target.value;
+            setLocalPrice(val);
+            const numericVal = Number(val.replace(/,/g, ""));
+            if (!isNaN(numericVal)) {
+              setDraftLine({ ...draftLine, ItemCost: numericVal });
+              updateLine(line.ItemCode, { ...draftLine, ItemCost: numericVal });
+            }
+          }}
+          onBlur={() => {
+            setLocalPrice((draftLine.ItemCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            saveRow();
+          }}
         />
       </td>
 
