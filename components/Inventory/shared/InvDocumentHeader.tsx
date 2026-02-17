@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { GenericModal } from "@/modals/GenericModal";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -40,6 +41,8 @@ export function InvDocumentHeader() {
   } = useFormContext();
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [fromWhsModalOpen, setFromWhsModalOpen] = useState(false);
+  const [toWhsModalOpen, setToWhsModalOpen] = useState(false);
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { lines, customer, setCustomer, loadFromDocument, warehouses: globalWarehouses, setWarehouses, DocEntry, updateAllLinesWarehouse } = useInventoryDocument();
@@ -200,62 +203,46 @@ export function InvDocumentHeader() {
 
         <div className="flex items-center gap-1 w-full">
           <Label className="w-32">From Warehouse</Label>
-          <Input type="hidden" {...register("FromWarehouse")} />
-          <Select
-            disabled={DocEntry > 0}
-            onValueChange={(val) => {
-              setValue("FromWarehouse", val, { shouldDirty: true });
-              if (lines.length > 0) {
-                setSyncDialog({ open: true, type: "from", value: val });
-              }
-            }}
-            value={watch("FromWarehouse") || warehouses[0]?.WhsCode || ""}
-          >
-            <SelectTrigger className="h-8 w-56">
-              <SelectValue>
-                {watch("FromWarehouse")}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {warehouses.map((wh) => (
-                  <SelectItem key={wh.WhsCode} value={wh.WhsCode}>
-                    {wh.WhsName}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              {...register("FromWarehouse")}
+              className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
+              disabled
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 cursor-pointer"
+              disabled={DocEntry > 0}
+              onClick={() => setFromWhsModalOpen(true)}
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center gap-1 w-full">
           <Label className="w-32">To Warehouse</Label>
-          <Input type="hidden" {...register("ToWarehouse")} />
-          <Select
-            disabled={DocEntry > 0}
-            onValueChange={(val) => {
-              setValue("ToWarehouse", val, { shouldDirty: true });
-              if (lines.length > 0) {
-                setSyncDialog({ open: true, type: "to", value: val });
-              }
-            }}
-            value={watch("ToWarehouse") || warehouses[0]?.WhsCode || ""}
-          >
-            <SelectTrigger className="h-8 w-56">
-              <SelectValue>
-                {watch("ToWarehouse")}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {warehouses.map((wh) => (
-                  <SelectItem key={wh.WhsCode} value={wh.WhsCode}>
-                    {wh.WhsName}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              {...register("ToWarehouse")}
+              className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
+              disabled
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 cursor-pointer"
+              disabled={DocEntry > 0}
+              onClick={() => setToWhsModalOpen(true)}
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -309,6 +296,44 @@ export function InvDocumentHeader() {
           handleSelectBP(bp);
           setModalOpen(false);
         }}
+      />
+
+      <GenericModal
+        title="Select From Warehouse"
+        open={fromWhsModalOpen}
+        onClose={() => setFromWhsModalOpen(false)}
+        onSelect={(wh: Warehouse) => {
+          setValue("FromWarehouse", wh.WhsCode, { shouldDirty: true });
+          if (lines.length > 0) {
+            setSyncDialog({ open: true, type: "from", value: wh.WhsCode });
+          }
+          setFromWhsModalOpen(false);
+        }}
+        data={warehouses}
+        columns={[
+          { key: "WhsCode", label: "Warehouse Code" },
+          { key: "WhsName", label: "Warehouse Name" },
+        ]}
+        getSelectValue={(item) => item}
+      />
+
+      <GenericModal
+        title="Select To Warehouse"
+        open={toWhsModalOpen}
+        onClose={() => setToWhsModalOpen(false)}
+        onSelect={(wh: Warehouse) => {
+          setValue("ToWarehouse", wh.WhsCode, { shouldDirty: true });
+          if (lines.length > 0) {
+            setSyncDialog({ open: true, type: "to", value: wh.WhsCode });
+          }
+          setToWhsModalOpen(false);
+        }}
+        data={warehouses}
+        columns={[
+          { key: "WhsCode", label: "Warehouse Code" },
+          { key: "WhsName", label: "Warehouse Name" },
+        ]}
+        getSelectValue={(item) => item}
       />
 
       <AlertDialog
