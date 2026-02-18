@@ -334,6 +334,23 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
+        <div className="flex items-center gap-2">
+          <Label className="w-24">Type</Label>
+          <Select
+            onValueChange={(val) => setValue("ProductionOrderType", val, { shouldDirty: true })}
+            value={watch("ProductionOrderType") || "bopotStandard"}
+          >
+            <SelectTrigger className="h-8 flex-1">
+              <SelectValue placeholder="Select Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bopotStandard">Standard</SelectItem>
+              <SelectItem value="bopotSpecial">Special</SelectItem>
+              <SelectItem value="bopotDisassembly">Disassembly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {config.headerFields.productNo && (
           <div className="flex items-center gap-2">
             <Label className="w-24">Product No.</Label>

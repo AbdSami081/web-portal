@@ -34,6 +34,7 @@ export default function ProductionOrderPage() {
         PickRmrk: "",
         AbsoluteEntry: 0,
         PostingDate: new Date().toISOString().split("T")[0],
+        ProductionOrderType: "bopotStandard",
     }), []);
 
     const handleSubmit = async (data: ProductionOrderFormData) => {
@@ -47,7 +48,7 @@ export default function ProductionOrderPage() {
             DueDate: data.DueDate,
             Warehouse: data.Warehouse,
             Priority: data.Priority,
-            ProductionOrderType: "bopotStandard", // Default value
+            ProductionOrderType: data.ProductionOrderType || "bopotStandard",
             Remarks: data.Remarks || data.Comments,
             PickRemarks: data.PickRmrk || "Created via Web Portal",
             ProductionOrderLines: lines.map(line => ({
