@@ -6,14 +6,7 @@ import { Loader2, Search } from "lucide-react";
 import { GenericModal } from "@/modals/GenericModal";
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 import { Warehouse } from "@/types/warehouse/warehouse";
-import { getBOMList } from "@/api+/sap/production/productionService"; // Using BOM list for item search for now, or should it be item master? Usually item master.
-// For now, let's assume item search isn't explicitly requested for *search* but "modal open ka button bi dena serach ki trha same as inventory lines" likely refers to Warehouse.
-// "warehouse ko enable kro dropdown aega or warehouse fill krwaow or modal open ka button bi dena serach ki trha same as inventory lines" -> This definitely applies to Warehouse.
-// "line k andr ... (no mention of item search, wait) ... modal open ka button bi dena serach ki trha same as inventory lines" 
-// Re-reading: "warehouse ko enable kro dropdown aega or warehouse fill krwaow or modal open ka button bi dena serach ki trha same as inventory lines"
-// It seems the modal is for Warehouse.
-// But usually lines have Item search too. The user said "line k andr or header k andr description ko disbale kro ...".
-// Let's stick to Warehouse modal for now as explicitly requested.
+import { getBOMList } from "@/api+/sap/production/productionService";
 import { Trash } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";

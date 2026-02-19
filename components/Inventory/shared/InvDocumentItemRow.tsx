@@ -21,15 +21,11 @@ export function InvDocumentLineRow({ index, line }: Props) {
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
   const [localQty, setLocalQty] = useState<string>((line.Quantity || 0).toString());
-  const [localPrice, setLocalPrice] = useState<string>((line.ItemCost || 0).toString());
 
   useEffect(() => {
     setDraftLine(line);
     if (document.activeElement?.getAttribute('name') !== `Qty-${index}`) {
       setLocalQty((line.Quantity || 0).toLocaleString());
-    }
-    if (document.activeElement?.getAttribute('name') !== `Price-${index}`) {
-      setLocalPrice((line.ItemCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     }
   }, [line, index]);
 
@@ -129,29 +125,6 @@ export function InvDocumentLineRow({ index, line }: Props) {
           }}
           onBlur={() => {
             setLocalQty((draftLine.Quantity || 0).toLocaleString());
-            saveRow();
-          }}
-        />
-      </td>
-
-      {/* Unit Price */}
-      <td className="py-2 px-4">
-        <Input
-          name={`Price-${index}`}
-          className="h-6 w-full text-right"
-          type="text"
-          value={localPrice}
-          onChange={(e) => {
-            const val = e.target.value;
-            setLocalPrice(val);
-            const numericVal = Number(val.replace(/,/g, ""));
-            if (!isNaN(numericVal)) {
-              setDraftLine({ ...draftLine, ItemCost: numericVal });
-              updateLine(line.ItemCode, { ...draftLine, ItemCost: numericVal });
-            }
-          }}
-          onBlur={() => {
-            setLocalPrice((draftLine.ItemCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
             saveRow();
           }}
         />

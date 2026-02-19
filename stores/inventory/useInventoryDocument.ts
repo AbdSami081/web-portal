@@ -1,118 +1,145 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
-import { SalesDocumentLine, DocumentType } from "@/types/sales/salesDocuments.type";
-import { BaseInventoryDocument, InventoryDocumentLine } from "@/types/inventory/inventory.type";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 
 interface IOPRDDocumentStore {
-  docType: DocumentType;
   customer: BusinessPartner | null;
   lines: InventoryDocumentLine[];
   warehouses: any[];
   DocEntry: number;
-  isCopying: boolean;
   lastLoadedDocType: number | null;
+  fromWarehouse: string;
+  toWarehouse: string;
+  comments: string;
+  journalMemo: string;
+  docDate: string;
+  docStatus: string;
+  isCopyingTo: boolean;
 
-  setCustomer: (customer: BusinessPartner) => void;
+  setCustomer: (customer: BusinessPartner | null) => void;
   setWarehouses: (warehouses: any[]) => void;
-  setDocType: (docType: DocumentType) => void;
+  setDocEntry: (DocEntry: number) => void;
+  setFromWarehouse: (whs: string) => void;
+  setToWarehouse: (whs: string) => void;
+  setComments: (v: string) => void;
+  setJournalMemo: (v: string) => void;
+  setDocDate: (v: string) => void;
+  setIsCopyingTo: (v: boolean) => void;
   addLine: (line: InventoryDocumentLine) => void;
   removeLine: (itemCode: string) => void;
-  loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
-  setIsCopying: (isCopying: boolean) => void;
   updateAllLinesWarehouse: (whs: string, isFrom: boolean) => void;
+  loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   reset: () => void;
 }
 
+const today = () => new Date().toISOString().split("T")[0];
+
 export const useInventoryDocument = create<IOPRDDocumentStore>()(
   devtools((set, get) => ({
-    docType: DocumentType.InvTransfer,
     customer: null,
     lines: [],
     warehouses: [],
     DocEntry: 0,
-    isCopying: false,
     lastLoadedDocType: null,
 
-    setCustomer: (customer: BusinessPartner) => set({ customer }),
-    setWarehouses: (warehouses: any[]) => set({ warehouses }),
-    setDocType: (docType: DocumentType) => set({ docType }),
-    setIsCopying: (isCopying: boolean) => set({ isCopying }),
+    // Header defaults
+    fromWarehouse: "",
+    toWarehouse: "",
+    comments: "",
+    journalMemo: "",
+    docDate: today(),
+    docStatus: "",
+    isCopyingTo: false,
 
-    addLine: (line: InventoryDocumentLine) => {
-      const existingLine = get().lines.find((l) => l.ItemCode === line.ItemCode);
-      if (existingLine) {
-        get().updateLine(existingLine.ItemCode, {
-          ...existingLine,
-          Quantity: existingLine.Quantity + line.Quantity,
-        });
+    setCustomer: (customer) => set({ customer }),
+    setWarehouses: (warehouses) => set({ warehouses }),
+    setDocEntry: (DocEntry) => set({ DocEntry }),
+    setFromWarehouse: (fromWarehouse) => set({ fromWarehouse }),
+    setToWarehouse: (toWarehouse) => set({ toWarehouse }),
+    setComments: (comments) => set({ comments }),
+    setJournalMemo: (journalMemo) => set({ journalMemo }),
+    setDocDate: (docDate) => set({ docDate }),
+    setIsCopyingTo: (isCopyingTo) => set({ isCopyingTo }),
+
+    addLine: (line) => {
+      const existing = get().lines.find((l) => l.ItemCode === line.ItemCode);
+      if (existing) {
+        get().updateLine(existing.ItemCode, { Quantity: existing.Quantity + line.Quantity });
       } else {
-        set((s) => ({ lines: [...s.lines, line] }), false, "addLine");
+        set((s) => ({ lines: [...s.lines, line] }));
       }
     },
 
-    removeLine: (itemCode: string) => {
-      set((state) => ({
-        lines: state.lines.filter((line) => line.ItemCode !== itemCode),
-      }));
-    },
+    removeLine: (itemCode) =>
+      set((s) => ({ lines: s.lines.filter((l) => l.ItemCode !== itemCode) })),
 
-    loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
-      const mappedLines: InventoryDocumentLine[] = (doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [])?.map((line: any) => ({
+    updateLine: (itemCode, updated) =>
+      set((s) => ({
+        lines: s.lines.map((l) => (l.ItemCode === itemCode ? { ...l, ...updated } : l)),
+      })),
+
+    updateAllLinesWarehouse: (whsCode, isFrom) =>
+      set((s) => ({
+        lines: s.lines.map((l) => ({
+          ...l,
+          [isFrom ? "FromWhsCode" : "WhsCode"]: whsCode,
+        })),
+      })),
+
+    loadFromDocument: (doc, type, isCopy) => {
+      const rawLines = doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [];
+      const lines: InventoryDocumentLine[] = rawLines.map((line: any, idx: number) => ({
         ItemCode: line.ItemCode,
-        Dscription: line.ItemDescription || line.Dscription || "",
-        FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || "",
-        WhsCode: line.WarehouseCode || line.WhsCode || "",
+        Dscription: line.ItemDescription || line.Dscription || line.ItemName || "",
+        FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || doc.FromWarehouse || "",
+        WhsCode: line.WarehouseCode || line.WhsCode || doc.ToWarehouse || "",
         Quantity: Number(line.Quantity) || 0,
-        ItemCost: Number(line.UnitPrice || line.ItemCost || line.Price) || 0,
+        ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
         UomCode: line.UoMCode || line.UomCode || "",
-        LineNum: line.LineNum,
-        BaseType: line.BaseType,
-        BaseEntry: line.BaseEntry,
-        BaseLine: line.BaseLine,
+        LineNum: line.LineNum ?? idx,
+        BaseType: isCopy ? type : line.BaseType,
+        BaseEntry: isCopy ? doc.DocEntry : line.BaseEntry,
+        BaseLine: isCopy ? (line.LineNum ?? idx) : line.BaseLine,
       }));
 
       set({
-        customer: doc.CardCode ? {
-          CardCode: doc.CardCode,
-          CardName: doc.CardName || "",
-          CardType: "cCustomer",
-          Balance: 0,
-          Phone1: "",
-          Email: "",
-        } : null,
-        lines: mappedLines,
+        lines,
         DocEntry: isCopy ? 0 : (doc.DocEntry || 0),
-        lastLoadedDocType: type || null,
+        lastLoadedDocType: type ?? null,
+        fromWarehouse: doc.FromWarehouse || "",
+        toWarehouse: doc.ToWarehouse || "",
+        comments: isCopy ? "" : (doc.Comments || ""),
+        journalMemo: isCopy ? "" : (doc.JournalMemo || doc.JrnlMemo || ""),
+        docDate: isCopy ? today() : (doc.TaxDate ? doc.TaxDate.split("T")[0] : today()),
+        docStatus: isCopy ? "" : (doc.DocumentStatus || ""),
+        customer: doc.CardCode
+          ? { CardCode: doc.CardCode, CardName: doc.CardName || "", CardType: "cCustomer", Balance: 0, Phone1: "", Email: "" }
+          : null,
       });
     },
 
-    updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => {
-      set((state) => ({
-        lines: state.lines.map((line) =>
-          line.ItemCode === itemCode ? { ...line, ...updated } : line
-        ),
-      }));
-    },
-    updateAllLinesWarehouse: (whsCode: string, isFrom: boolean) => {
-      set((state) => ({
-        lines: state.lines.map((line) => ({
-          ...line,
-          [isFrom ? "FromWhsCode" : "WhsCode"]: whsCode,
-        })),
-      }));
-    },
-
-    reset: () =>
+    reset: () => {
+      if (get().isCopyingTo) {
+        set({ isCopyingTo: false });
+        return;
+      }
       set({
         customer: null,
         lines: [],
         warehouses: [],
-        docType: DocumentType.InvTransfer,
         DocEntry: 0,
-        isCopying: false,
         lastLoadedDocType: null,
-      }),
+        fromWarehouse: "",
+        toWarehouse: "",
+        comments: "",
+        journalMemo: "",
+        docDate: today(),
+        docStatus: "",
+        isCopyingTo: false,
+      });
+    },
   }))
 );

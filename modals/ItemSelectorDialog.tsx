@@ -16,9 +16,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSelectItems: (items: Item[]) => void;
+  multiple?: boolean;
 }
 
-export function ItemSelectorDialog({ open, onClose, onSelectItems }: Props) {
+export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = true }: Props) {
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -99,7 +100,9 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems }: Props) {
   ) => {
     let newSelectedCodes = [...selectedCodes];
 
-    if (e.shiftKey && lastSelectedIndex !== null) {
+    if (!multiple) {
+      newSelectedCodes = [itemCode];
+    } else if (e.shiftKey && lastSelectedIndex !== null) {
       const start = Math.min(lastSelectedIndex, idx);
       const end = Math.max(lastSelectedIndex, idx);
       const rangeItems = items.slice(start, end + 1).map((i) => i.itemCode);
@@ -147,7 +150,7 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems }: Props) {
             onClick={handleConfirm}
             disabled={selectedCodes.length === 0}
           >
-            {submitting ? `Adding...` : `Add ${selectedCodes.length} Item(s)`}
+            {submitting ? `Adding...` : multiple ? `Add ${selectedCodes.length} Item(s)` : `Select Item`}
           </Button>
         </div>
 
@@ -155,7 +158,7 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems }: Props) {
           <table className="w-full table-auto text-sm">
             <thead className="bg-gray-100 sticky top-0">
               <tr>
-                <th className="p-2 text-left w-10">Select</th>
+                {multiple && <th className="p-2 text-left w-10">Select</th>}
                 <th className="p-2 text-left">Item Code</th>
                 <th className="p-2 text-left">Item Description</th>
                 <th className="p-2 text-left">In Stock</th>
@@ -165,18 +168,20 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems }: Props) {
               {items.map((item, idx) => (
                 <tr
                   key={idx}
-                  className={`hover:bg-gray-50 cursor-pointer ${
-                    selectedCodes.includes(item.itemCode) ? "bg-blue-100" : ""
-                  }`}
+                  className={`hover:bg-gray-50 cursor-pointer ${selectedCodes.includes(item.itemCode) ? "bg-blue-100" : ""
+                    }`}
                   onClick={(e) => handleRowClick(idx, item.itemCode, e)}
+                  onDoubleClick={() => !multiple && handleConfirm()}
                 >
-                  <td className="p-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedCodes.includes(item.itemCode)}
-                      readOnly
-                    />
-                  </td>
+                  {multiple && (
+                    <td className="p-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedCodes.includes(item.itemCode)}
+                        readOnly
+                      />
+                    </td>
+                  )}
                   <td className="p-2">{item.itemCode}</td>
                   <td className="p-2">{item.itemName}</td>
                   <td className="p-2">{item.onHand}</td>
@@ -213,7 +218,7 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems }: Props) {
             onClick={handleConfirm}
             disabled={selectedCodes.length === 0}
           >
-            {submitting ? `Adding...` : `Add ${selectedCodes.length} Item(s)`}
+            {submitting ? `Adding...` : multiple ? `Add ${selectedCodes.length} Item(s)` : `Add Item`}
           </Button>
         </div>
       </DialogContent>

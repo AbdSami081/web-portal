@@ -9,6 +9,7 @@ interface IFPRDDocumentStore {
   customer: BusinessPartner | null;
   lines: PRDDocumentLine[];
   warehouses: any[];
+  selectedBOM: any | null;
 
   setWarehouses: (warehouses: any[]) => void;
 
@@ -29,6 +30,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     customer: null,
     lines: [],
     warehouses: [],
+    selectedBOM: null,
 
     setWarehouses: (warehouses) => set({ warehouses }),
     setCustomer: (customer) => set({ customer }),
@@ -82,6 +84,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       });
     },
     loadFromBOM: (bom: any, plannedQty: number = 0) => {
+      set({ selectedBOM: bom }); // Store the BOM for later re-loading
       const parentQty = Number(bom.Quantity || 1); // Parent quantity of BOM
       const mappedLines = bom.ProductTreeLines?.map((line: any) => {
         const lineQty = Number(line.Quantity || 0);
@@ -115,7 +118,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       set((state) => ({
         lines: state.lines.map((line) => ({
           ...line,
-          PlannedQuantity: Number(line.BaseQuantity || 0) * Number(headerPlannedQty || 0),
+          PlannedQuantity: Number(line.BaseRatio || 0) * Number(headerPlannedQty || 0),
         })),
       }));
     },

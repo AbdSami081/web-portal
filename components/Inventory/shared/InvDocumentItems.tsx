@@ -21,7 +21,7 @@ import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 export function InvDocumentItems() {
   const { watch, register } = useFormContext();
   const selectedCardCode = watch("CardCode");
-  const { lines, addLine, customer, warehouses } = useInventoryDocument();
+  const { lines, addLine, customer, warehouses, fromWarehouse, toWarehouse } = useInventoryDocument();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<string>("Select Type");
 
@@ -42,8 +42,6 @@ export function InvDocumentItems() {
   // }, [lines]);
 
   const handleOnSelectItems = (items: any[]) => {
-    const headerFromWhs = watch("FromWarehouse");
-    const headerToWhs = watch("ToWarehouse");
     const firstWhs = warehouses.length > 0 ? warehouses[0].WhsCode : "";
 
     items.map((item: any) => {
@@ -54,11 +52,11 @@ export function InvDocumentItems() {
       addLine({
         ItemCode: item.itemCode,
         Dscription: item.itemName ?? "",
-        FromWhsCode: headerFromWhs || defaultWhsLine, // Use header whs as default
+        FromWhsCode: fromWarehouse || defaultWhsLine, // Use header whs as default
         FromBinLoc: "",
         ToBinLoc: "",
         FisrtBin: "",
-        WhsCode: headerToWhs || defaultWhsLine,     // Use header whs as default
+        WhsCode: toWarehouse || defaultWhsLine,     // Use header whs as default
         Quantity: quantity,
         ItemCost: price,
         UomCode: item.uoM || item.uom || item.UoM || "",
@@ -106,7 +104,6 @@ export function InvDocumentItems() {
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">From Whs</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">To Whs</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Quantity</TableHead>
-                    <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Unit Price</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">UoM Code</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Actions</TableHead>
                   </TableRow>

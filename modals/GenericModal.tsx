@@ -144,6 +144,7 @@ export function GenericModal<T>({
                     />
                   </TableHead>
                 )}
+                <TableHead className="w-[50px]">S#</TableHead>
                 {columns.map((col) => (
                   <TableHead
                     key={col.key}
@@ -195,6 +196,7 @@ export function GenericModal<T>({
                       />
                     </TableCell>
                   )}
+                  <TableCell className="w-[50px]">{index + 1}</TableCell>
                   {columns.map((col) => (
                     <TableCell key={col.key}>
                       {col.key === "index"

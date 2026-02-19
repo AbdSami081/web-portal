@@ -13,7 +13,7 @@ import { useMemo, useEffect } from "react";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useRouter } from "next/navigation";
 
-const inventoryTransferSchema = quotationSchema.extend({
+const schema = quotationSchema.extend({
   CardCode: z.string().optional(),
   CardName: z.string().optional(),
   JournalMemo: z.string().optional(),
@@ -21,19 +21,22 @@ const inventoryTransferSchema = quotationSchema.extend({
   ToWarehouse: z.string().optional(),
 });
 
-type InventoryTransferFormData = z.infer<typeof inventoryTransferSchema>;
+type FormData = z.infer<typeof schema>;
 
 export default function InvTransferRequestPage() {
   const router = useRouter();
-  const { lines, reset: resetStore, DocEntry, lastLoadedDocType } = useInventoryDocument();
+  const {
+    lines,
+    reset: resetStore,
+    fromWarehouse,
+    toWarehouse,
+    comments,
+    journalMemo,
+    customer,
+  } = useInventoryDocument();
 
-  useEffect(() => {
-    return () => {
-      resetStore();
-    };
-  }, [resetStore]);
 
-  const defaultValues: InventoryTransferFormData = useMemo(() => ({
+  const defaultValues: FormData = useMemo(() => ({
     CardCode: "",
     CardName: "",
     DocDate: new Date().toISOString().split("T")[0],
@@ -52,57 +55,41 @@ export default function InvTransferRequestPage() {
     ToWarehouse: "",
   }), []);
 
-  const handleSubmit = async (data: InventoryTransferFormData) => {
+  const handleSubmit = async (data: FormData) => {
     try {
       const payload: InventoryTransferPayload = {
-        CardCode: data.CardCode || "",
-        Comments: data.Comments,
-        JournalMemo: data.JournalMemo,
-        FromWarehouse: data.FromWarehouse || "",
-        ToWarehouse: data.ToWarehouse || "",
-        StockTransferLines: lines.map((line: any) => {
-          const lineData: any = {
-            ItemCode: line.ItemCode,
-            Quantity: line.Quantity,
-            UnitPrice: line.ItemCost || line.Price || 0,
-            WarehouseCode: line.WhsCode || data.ToWarehouse || "",
-            FromWarehouseCode: line.FromWhsCode || data.FromWarehouse || "",
-          };
-
-          if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.InvTransferReq) {
-            lineData.BaseType = lastLoadedDocType;
-            lineData.BaseEntry = DocEntry;
-            lineData.BaseLine = line.LineNum;
-          } else {
-            lineData.BaseType = -1;
-            lineData.BaseEntry = null;
-            lineData.BaseLine = null;
-          }
-          return lineData;
-        })
+        CardCode: customer?.CardCode || "",
+        Comments: comments,
+        JournalMemo: journalMemo,
+        FromWarehouse: fromWarehouse || "",
+        ToWarehouse: toWarehouse || "",
+        StockTransferLines: lines.map((line) => ({
+          ItemCode: line.ItemCode,
+          Quantity: line.Quantity,
+          UnitPrice: line.ItemCost || 0,
+          WarehouseCode: line.WhsCode || toWarehouse || "",
+          FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
+          BaseType: line.BaseType ?? -1,
+          BaseEntry: line.BaseEntry ?? null,
+          BaseLine: line.BaseLine ?? null,
+        })),
       };
 
       const result = await postInventoryTransferRequest(payload);
       if (result?.DocEntry) {
-        toast.success(`Inventory Transfer Request created successfully! DocEntry: ${result.DocEntry}`);
+        toast.success(`Inventory Transfer Request created! DocEntry: ${result.DocEntry}`);
         resetStore();
         router.push("/dashboard/inventory/transfer-request");
       } else {
         throw new Error("Failed to create request");
       }
-
     } catch (error: any) {
       toast.error(error.message || "Failed to create request");
     }
   };
 
   return (
-    <InvDocumentLayout
-      schema={inventoryTransferSchema}
-      defaultValues={defaultValues}
-      onSubmit={handleSubmit}
-      docType={DocumentType.InvTransferReq}
-    >
+    <InvDocumentLayout schema={schema} defaultValues={defaultValues} onSubmit={handleSubmit} docType={DocumentType.InvTransferReq}>
       <InvDocumentHeader />
       <InvDocumentItems />
       <InvDocumentFooter />

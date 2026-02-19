@@ -15,17 +15,8 @@ import { Warehouse } from "@/types/warehouse/warehouse";
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { GenericModal } from "@/modals/GenericModal";
+import { ConfirmationModal } from "@/modals/ConfirmationModal";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -45,19 +36,37 @@ export function InvDocumentHeader() {
   const [toWhsModalOpen, setToWhsModalOpen] = useState(false);
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { lines, customer, setCustomer, loadFromDocument, warehouses: globalWarehouses, setWarehouses, DocEntry, updateAllLinesWarehouse } = useInventoryDocument();
+  const {
+    lines,
+    customer,
+    setCustomer,
+    loadFromDocument,
+    warehouses: globalWarehouses,
+    setWarehouses,
+    DocEntry,
+    updateAllLinesWarehouse,
+    fromWarehouse,
+    toWarehouse,
+    docDate,
+    setFromWarehouse,
+    setToWarehouse,
+    setDocDate,
+    comments,
+    setComments,
+    journalMemo,
+    setJournalMemo,
+  } = useInventoryDocument();
   const [warehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
 
   const docEntry = watch("DocEntry");
   const [docNumSearch, setDocNumSearch] = useState("");
+  const watchedStatus = watch("DocStatus") || "bost_Open";
+  const config = useInvDocConfig();
   const [syncDialog, setSyncDialog] = useState<{
     open: boolean;
     type: "from" | "to" | null;
     value: string;
   }>({ open: false, type: null, value: "" });
-
-  const watchedStatus = watch("DocStatus") || "bost_Open";
-  const config = useInvDocConfig();
 
   useEffect(() => {
     const fetchWarehouses = async () => {
@@ -77,14 +86,14 @@ export function InvDocumentHeader() {
 
   useEffect(() => {
     if (warehouses.length > 0) {
-      if (!fromWhs) {
-        setValue("FromWarehouse", warehouses[0].WhsCode, { shouldDirty: true });
+      if (!fromWarehouse) {
+        setFromWarehouse(warehouses[0].WhsCode);
       }
-      if (!toWhs) {
-        setValue("ToWarehouse", warehouses[0].WhsCode, { shouldDirty: true });
+      if (!toWarehouse) {
+        setToWarehouse(warehouses[0].WhsCode);
       }
     }
-  }, [warehouses, fromWhs, toWhs, setValue]);
+  }, [warehouses, fromWarehouse, toWarehouse, setFromWarehouse, setToWarehouse]);
 
   useEffect(() => {
     if (docEntry) {
@@ -92,12 +101,7 @@ export function InvDocumentHeader() {
     }
   }, [docEntry, setValue, watch, warehouses]);
 
-  useEffect(() => {
-    if (customer) {
-      setValue("CardCode", customer.CardCode);
-      setValue("CardName", customer.CardName);
-    }
-  }, [customer, setValue]);
+
 
   const fetchBusinessPartners = () => {
     const data: BusinessPartner[] = [
@@ -112,8 +116,6 @@ export function InvDocumentHeader() {
 
   const handleSelectBP = (bp: BusinessPartner) => {
     setCustomer(bp);
-    setValue("CardCode", bp.CardCode);
-    setValue("CardName", bp.CardName);
     setModalOpen(false);
   };
 
@@ -148,16 +150,21 @@ export function InvDocumentHeader() {
   const applyDocumentData = (documentData: any, type: number) => {
     setValue("DocEntry", documentData.DocEntry || 0);
     setValue("DocNum", documentData.DocNum || 0);
-    setValue("TaxDate", documentData.TaxDate ? documentData.TaxDate.split("T")[0] : "");
-    setValue("CardCode", documentData.CardCode);
-    setValue("CardName", documentData.CardName);
-    setValue("Comments", documentData.Comments);
-    setValue("FromWarehouse", documentData.FromWarehouse);
-    setValue("ToWarehouse", documentData.ToWarehouse);
-    setValue("JournalMemo", documentData.JournalMemo);
+    const dateStr = documentData.TaxDate ? documentData.TaxDate.split("T")[0] : "";
+    setDocDate(dateStr);
+    setCustomer(documentData.CardCode ? { CardCode: documentData.CardCode, CardName: documentData.CardName || "" } : null);
+    setComments(documentData.Comments || "");
+    setFromWarehouse(documentData.FromWarehouse || "");
+    setToWarehouse(documentData.ToWarehouse || "");
+    setJournalMemo(documentData.JournalMemo || "");
     setValue("DocStatus", documentData.DocumentStatus);
 
-    loadFromDocument(documentData, type);
+    const isCopy = type !== config.type;
+    loadFromDocument(documentData, type, isCopy);
+    if (isCopy) {
+      setValue("DocEntry", 0);
+      setValue("DocNum", 0);
+    }
     toast.success(`Document loaded successfully.`);
   }
 
@@ -169,10 +176,10 @@ export function InvDocumentHeader() {
           <div className="flex items-center gap-2">
             <Input
               type="text"
-              {...register("CardCode")}
+              value={customer?.CardCode || ""}
               className="h-8 w-56 pr-10"
               placeholder="Card Code"
-              disabled
+              readOnly
             />
             <Button
               type="button"
@@ -194,10 +201,10 @@ export function InvDocumentHeader() {
           <Label className="w-32">Name</Label>
           <Input
             type="text"
-            {...register("CardName")}
+            value={customer?.CardName || ""}
             className="h-8 w-56"
             placeholder="Card Name"
-            disabled
+            readOnly
           />
         </div>
 
@@ -206,9 +213,9 @@ export function InvDocumentHeader() {
           <div className="flex items-center gap-2">
             <Input
               type="text"
-              {...register("FromWarehouse")}
+              value={fromWarehouse}
               className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
-              disabled
+              readOnly
             />
             <Button
               type="button"
@@ -228,9 +235,9 @@ export function InvDocumentHeader() {
           <div className="flex items-center gap-2">
             <Input
               type="text"
-              {...register("ToWarehouse")}
+              value={toWarehouse}
               className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
-              disabled
+              readOnly
             />
             <Button
               type="button"
@@ -282,7 +289,8 @@ export function InvDocumentHeader() {
           <Label className="w-32">Document Date</Label>
           <Input
             type="date"
-            {...register("TaxDate")}
+            value={docDate}
+            onChange={(e) => setDocDate(e.target.value)}
             className="h-8 w-56"
             disabled={DocEntry > 0}
           />
@@ -303,7 +311,7 @@ export function InvDocumentHeader() {
         open={fromWhsModalOpen}
         onClose={() => setFromWhsModalOpen(false)}
         onSelect={(wh: Warehouse) => {
-          setValue("FromWarehouse", wh.WhsCode, { shouldDirty: true });
+          setFromWarehouse(wh.WhsCode);
           if (lines.length > 0) {
             setSyncDialog({ open: true, type: "from", value: wh.WhsCode });
           }
@@ -322,7 +330,7 @@ export function InvDocumentHeader() {
         open={toWhsModalOpen}
         onClose={() => setToWhsModalOpen(false)}
         onSelect={(wh: Warehouse) => {
-          setValue("ToWarehouse", wh.WhsCode, { shouldDirty: true });
+          setToWarehouse(wh.WhsCode);
           if (lines.length > 0) {
             setSyncDialog({ open: true, type: "to", value: wh.WhsCode });
           }
@@ -336,32 +344,24 @@ export function InvDocumentHeader() {
         getSelectValue={(item) => item}
       />
 
-      <AlertDialog
+      <ConfirmationModal
         open={syncDialog.open}
         onOpenChange={(open) => !open && setSyncDialog((s) => ({ ...s, open: false }))}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Update Line Warehouses?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Do you want to update the <strong>{syncDialog.type === "from" ? "From Warehouse" : "To Warehouse"}</strong> for all existing lines to <strong>{syncDialog.value}</strong>?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>No, keep lines</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (syncDialog.type) {
-                  updateAllLinesWarehouse(syncDialog.value, syncDialog.type === "from");
-                }
-                setSyncDialog({ open: false, type: null, value: "" });
-              }}
-            >
-              Yes, update all
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Update Line Warehouses?"
+        description={
+          <>
+            Do you want to update the <strong>{syncDialog.type === "from" ? "From Warehouse" : "To Warehouse"}</strong> for all existing lines to <strong>{syncDialog.value}</strong>?
+          </>
+        }
+        cancelText="No, keep lines"
+        confirmText="Yes, update all"
+        onConfirm={() => {
+          if (syncDialog.type) {
+            updateAllLinesWarehouse(syncDialog.value, syncDialog.type === "from");
+          }
+          setSyncDialog({ open: false, type: null, value: "" });
+        }}
+      />
     </div>
   );
 }

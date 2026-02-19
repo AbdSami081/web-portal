@@ -13,7 +13,11 @@ import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { GenericModal } from "@/modals/GenericModal";
 import { getBOMList } from "@/api+/sap/production/productionService";
+import { getItemsList } from "@/api+/sap/master-data/items";
 import { Controller } from "react-hook-form";
+import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
+import { Item } from "@/types/sales/Item.type";
+import { ConfirmationModal } from "@/modals/ConfirmationModal";
 
 const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className, id }: any) => {
   const [localValue, setLocalValue] = useState(value ? value.toString() : "");
@@ -53,18 +57,22 @@ export function PRDDocumentHeader() {
     watch,
     setValue,
     control,
+    getValues,
     formState: { errors },
   } = useFormContext();
 
   const [isLoading, setIsLoading] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader } = useIFPRDDocument();
-  const config = usePRDDocConfig();
-
   const [bomModalOpen, setBomModalOpen] = useState(false);
   const [whsModalOpen, setWhsModalOpen] = useState(false);
-  const [bomList, setBomList] = useState<any[]>([]);
-  const [isLoadingBoms, setIsLoadingBoms] = useState(false);
+  const [itemSelectorOpen, setItemSelectorOpen] = useState(false);
+  const [showTypeConfirm, setShowTypeConfirm] = useState(false);
+  const [pendingType, setPendingType] = useState<string | null>(null);
+
+  const [dataList, setDataList] = useState<any[]>([]); // Renamed from bomList
+  const [isLoadingItems, setIsLoadingItems] = useState(false); // Renamed from isLoadingBoms
+  const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM } = useIFPRDDocument();
+  const config = usePRDDocConfig();
   const watchedPlannedQty = watch("PlannedQuantity");
 
   useEffect(() => {
@@ -254,28 +262,64 @@ export function PRDDocumentHeader() {
     }
   };
 
-  const fetchBOMs = async () => {
-    setIsLoadingBoms(true);
+  const fetchItems = async () => {
+    const type = watch("ProductionOrderType");
+    if (type === "bopotSpecial") {
+      setItemSelectorOpen(true);
+      return;
+    }
+
+    setIsLoadingItems(true);
     try {
       const data = await getBOMList();
-      setBomList(data);
+      setDataList(data);
       setBomModalOpen(true);
     } catch (error) {
-      toast.error("Failed to fetch BOM list");
+      toast.error("Failed to fetch data");
     } finally {
-      setIsLoadingBoms(false);
+      setIsLoadingItems(false);
     }
   };
 
-  const handleSelectBOM = (bom: any) => {
-    setValue("ItemNo", bom.TreeCode, { shouldDirty: true });
-    setValue("ProductDescription", bom.ProductDescription, { shouldDirty: true });
+  const handleSelectItem = (item: any) => {
+    const type = getValues("ProductionOrderType");
+    if (type === "bopotSpecial") {
+      setValue("ItemNo", item.ItemCode, { shouldDirty: true, shouldValidate: true });
+      setValue("ProductDescription", item.ItemName || item.Dscription || "", { shouldDirty: true, shouldValidate: true });
+      resetStore(); // Clear lines for special
+    } else {
+      setValue("ItemNo", item.TreeCode, { shouldDirty: true, shouldValidate: true });
+      setValue("ProductDescription", item.ProductDescription, { shouldDirty: true, shouldValidate: true });
 
-    const currentPlannedQty = watch("PlannedQuantity");
-    const plannedQty = currentPlannedQty ? Number(currentPlannedQty) : 0;
+      const currentPlannedQty = watch("PlannedQuantity");
+      const plannedQty = currentPlannedQty ? Number(currentPlannedQty) : 0;
 
-    loadFromBOM(bom, plannedQty);
+      loadFromBOM(item, plannedQty);
+    }
     setBomModalOpen(false);
+  };
+
+  const handleTypeChange = (newType: string) => {
+    const currentItem = watch("ItemNo");
+    if (currentItem) {
+      setPendingType(newType);
+      setShowTypeConfirm(true);
+    } else {
+      setValue("ProductionOrderType", newType, { shouldDirty: true });
+    }
+  };
+
+  const confirmTypeChange = () => {
+    if (!pendingType) return;
+    setValue("ProductionOrderType", pendingType, { shouldDirty: true });
+
+    if (pendingType === "bopotSpecial") {
+      resetStore();
+    } else if (selectedBOM) {
+      const currentPlannedQty = watch("PlannedQuantity");
+      loadFromBOM(selectedBOM, Number(currentPlannedQty || 0));
+    }
+    setShowTypeConfirm(false);
   };
 
   return (
@@ -337,7 +381,7 @@ export function PRDDocumentHeader() {
         <div className="flex items-center gap-2">
           <Label className="w-24">Type</Label>
           <Select
-            onValueChange={(val) => setValue("ProductionOrderType", val, { shouldDirty: true })}
+            onValueChange={handleTypeChange}
             value={watch("ProductionOrderType") || "bopotStandard"}
           >
             <SelectTrigger className="h-8 flex-1">
@@ -361,9 +405,9 @@ export function PRDDocumentHeader() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8 cursor-pointer"
-                onClick={fetchBOMs}
+                onClick={fetchItems}
               >
-                {isLoadingBoms ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                {isLoadingItems ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </Button>
             </div>
           </div>
@@ -465,17 +509,53 @@ export function PRDDocumentHeader() {
       />
 
       <GenericModal
-        title="Select Bill of Materials"
+        title={watch("ProductionOrderType") === "bopotSpecial" ? "Select Item" : "Select Bill of Materials"}
         open={bomModalOpen}
         onClose={() => setBomModalOpen(false)}
-        onSelect={handleSelectBOM}
-        data={bomList}
-        columns={[
-          { key: "TreeCode", label: "Item No" },
-          { key: "ProductDescription", label: "Description" },
-        ]}
+        onSelect={handleSelectItem}
+        data={dataList}
+        columns={
+          watch("ProductionOrderType") === "bopotSpecial"
+            ? [
+              { key: "ItemCode", label: "Item No" },
+              { key: "ItemName", label: "Description" },
+            ]
+            : [
+              { key: "TreeCode", label: "Item No" },
+              { key: "ProductDescription", label: "Description" },
+            ]
+        }
         getSelectValue={(item) => item}
-        isLoading={isLoadingBoms}
+        isLoading={isLoadingItems}
+      />
+
+      <ItemSelectorDialog
+        open={itemSelectorOpen}
+        multiple={false}
+        onClose={() => setItemSelectorOpen(false)}
+        onSelectItems={(items: Item[]) => {
+          if (items.length > 0) {
+            const item = items[0];
+            setValue("ItemNo", item.itemCode, { shouldDirty: true, shouldValidate: true });
+            setValue("ProductDescription", item.itemName || "", { shouldDirty: true, shouldValidate: true });
+            resetStore();
+          }
+          setItemSelectorOpen(false);
+        }}
+      />
+
+      <ConfirmationModal
+        open={showTypeConfirm}
+        onOpenChange={setShowTypeConfirm}
+        title="Are you sure?"
+        description={
+          pendingType === "bopotSpecial"
+            ? "Components will be deleted. Do you want to continue?"
+            : "Components will be updated according to the production bom. Do you want to continue?"
+        }
+        onConfirm={confirmTypeChange}
+        cancelText="No, keep lines"
+        confirmText={pendingType === "bopotSpecial" ? "Yes, delete lines" : "Yes, update all"}
       />
     </div>
   );
