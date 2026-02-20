@@ -46,6 +46,18 @@ export function InvDocumentLineRow({ index, line }: Props) {
 
   return (
     <>
+      <td className="py-2 px-2 border-r border-neutral-100/10 text-center w-[60px]">
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-6 w-6 p-0 hover:bg-red-100/10"
+          onClick={() => removeLine(index)}
+          disabled={Boolean(watch("DocEntry") && watch("DocEntry") > 0)}
+        >
+          <Trash className={`h-4 w-4 ${watch("DocEntry") && watch("DocEntry") > 0 ? "text-gray-500" : "text-red-500"}`} />
+        </Button>
+      </td>
+
       {/* Item Code */}
       <td className="py-2 px-4">
         <span className="font-medium">{line.ItemCode}</span>
@@ -139,20 +151,6 @@ export function InvDocumentLineRow({ index, line }: Props) {
           readOnly
         />
       </td>
-
-      {/* Delete button */}
-      <td>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-6 w-6 p-0"
-          onClick={() => removeLine(line.ItemCode)}
-          disabled={Boolean(watch("DocEntry") && watch("DocEntry") > 0)}
-        >
-          <Trash className={`h-5 w-5 ${watch("DocEntry") && watch("DocEntry") > 0 ? "text-gray-400" : "text-red-500"}`} />
-        </Button>
-      </td>
-
       <WarehouseSelectorDialog
         open={isWhsModalOpen}
         onClose={() => setIsWhsModalOpen(false)}
