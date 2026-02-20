@@ -121,11 +121,23 @@ export function DocumentLineRow({ index, line }: Props) {
 
   return (
     <>
-      <td>
+      <td className="py-2 px-2 border-r border-neutral-100/10 text-center">
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-6 w-6 p-0 hover:bg-red-100/10"
+          onClick={() => removeLine(line.ItemCode)}
+          disabled={Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)}
+        >
+          <Trash className={`h-4 w-4 ${watch("DocEntry") && Number(watch("DocEntry")) > 0 ? "text-gray-500" : "text-red-500"}`} />
+        </Button>
+      </td>
+
+      <td className="px-12 py-2">
         <span className="font-medium">{line.ItemCode}</span>
       </td>
 
-      <td>
+      <td className="px-12 py-2">
         <Input className="h-6 w-32" value={draftLine.ItemName || ""} disabled />
       </td>
 
@@ -327,7 +339,7 @@ export function DocumentLineRow({ index, line }: Props) {
         </Select>
       </td>
 
-      <td>
+      <td className="px-12 py-2">
         <Input
           type="number"
           value={draftLine.Freight3Amount || 0}
@@ -336,52 +348,9 @@ export function DocumentLineRow({ index, line }: Props) {
             setDraftLine(prev => ({ ...prev, Freight3Amount: value }));
           }}
           onBlur={() => calculateAndUpdate(draftLine)}
+          className="h-6 w-24"
         />
-
       </td>
-
-      {/* <td>
-        <Select
-          value={draftLine.Freight3TaxGroup || "S2"}
-          onValueChange={(val) => setDraftLine({ ...draftLine, Freight3TaxGroup: val })}
-        >
-          <SelectTrigger className="h-6 w-28 text-xs">
-            <SelectValue placeholder="Select Tax Group" />
-          </SelectTrigger>
-          <SelectContent>
-            {taxcCodeGrp.map((grp) => (
-              <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
-                {grp.Title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </td>
-
-      <td>
-        <Input className="h-6 w-24 text-right" value={draftLine.Freight3TaxRate || 0} disabled />
-      </td>
-
-      <td>
-        <Input type="number" className="h-6 w-24 text-right" value={draftLine.Freight3TaxAmount || 0} disabled />
-      </td>
-
-      <td>
-        <Input type="number" className="h-6 w-24 text-right" disabled />
-      </td> */}
-
-      <td>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-6 w-6 p-0"
-          onClick={() => removeLine(line.ItemCode)}
-          disabled={Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)}
-        >
-          <Trash className={`h-5 w-5 ${watch("DocEntry") && Number(watch("DocEntry")) > 0 ? "text-gray-400" : "text-red-500"}`} />
-        </Button>
-      </td>
-
       <WarehouseSelectorDialog
         open={whDialogOpen}
         onClose={() => setWhDialogOpen(false)}
