@@ -18,6 +18,9 @@ import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 
 
+import { Plus } from "lucide-react";
+
+
 export function InvDocumentItems() {
   const { watch, register } = useFormContext();
   const selectedCardCode = watch("CardCode");
@@ -76,14 +79,17 @@ export function InvDocumentItems() {
   };
 
   return (
-    <div className="grid overflow-x-auto w-full">
-      <div className="flex justify-between items-center mb-1">
+    <div className="grid w-full relative pt-3">
+      <div className="absolute left-1 top-0 z-20">
         <Button
           type="button"
+          size="icon"
+          disabled={!fromWarehouse}
           onClick={() => setDialogOpen(true)}
-          className="mt-4 cursor-pointer"
+          className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-500 disabled:cursor-not-allowed text-white shadow-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center border-2 border-white dark:border-neutral-900"
+          title={fromWarehouse ? "Add Additional Item" : "Select a warehouse first"}
         >
-          + Add Item
+          <Plus className="h-5 w-5 stroke-[3px]" />
         </Button>
       </div>
 
@@ -99,13 +105,13 @@ export function InvDocumentItems() {
               <Table className="text-xs w-full">
                 <TableHeader className="sticky top-0 bg-neutral-900 z-10">
                   <TableRow className="border-neutral-600">
+                    <TableHead className="text-gray-300 px-4 py-2 border-r border-neutral-700 w-[60px] text-center">Actions</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Item</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Description</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">From Whs</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">To Whs</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Quantity</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">UoM Code</TableHead>
-                    <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
 
