@@ -16,20 +16,52 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IFPRDDocumentLineRow } from "./PRDDocumentRow";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
+import { Plus } from "lucide-react";
+import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 
 
 export function PRDDocumentItems() {
   const { watch, register } = useFormContext();
-  const selectedCardCode = watch("CardCode");
+  const productionOrderType = watch("ProductionOrderType");
+  const headerWarehouse = watch("Warehouse");
+  const itemNo = watch("ItemNo");
   const { lines, addLine, customer, warehouses } = useIFPRDDocument();
   const config = usePRDDocConfig();
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  // useEffect(() => {
-  //   console.log("document items", lines);
-  // }, [lines]);
+  const handleOnSelectItems = (items: any[]) => {
+    items.forEach((item: any) => {
+      addLine({
+        ItemNo: item.itemCode,
+        ItemName: item.itemName || item.Dscription || "",
+        PlannedQuantity: 1,
+        Warehouse: headerWarehouse || (warehouses.length > 0 ? warehouses[0].WhsCode : ""),
+        ItemType: "pit_Item",
+        BaseQuantity: 1,
+        BaseRatio: 0,
+        IssuedQuantity: 0,
+        AvailableQuantity: 0,
+        UoMCode: item.uoM || item.uom || item.UoM || "",
+        ProductionOrderIssueType: "im_Manual"
+      });
+    });
+  };
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full px-1 relative">
+      <div className="absolute left-2 -top-2 z-20">
+        <Button
+          type="button"
+          size="icon"
+          disabled={!itemNo}
+          onClick={() => setDialogOpen(true)}
+          className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-500 disabled:cursor-not-allowed text-white shadow-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center border-2 border-white dark:border-neutral-900"
+          title={itemNo ? "Add Additional Item" : "Select a product first"}
+        >
+          <Plus className="h-5 w-5 stroke-[3px]" />
+        </Button>
+      </div>
+
       <div className="relative max-w-full border rounded mt-4">
         <div className="overflow-x-auto">
           <Table className="text-xs w-full">
@@ -68,6 +100,12 @@ export function PRDDocumentItems() {
           </Table>
         </div>
       </div>
+
+      <ItemSelectorDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSelectItems={handleOnSelectItems}
+      />
     </div>
   );
 }
