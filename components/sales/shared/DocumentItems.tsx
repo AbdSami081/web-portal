@@ -21,6 +21,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 
+import { Plus } from "lucide-react";
+
+
 export function DocumentItems() {
   const { watch, register } = useFormContext();
   const selectedCardCode = watch("CardCode");
@@ -30,47 +33,6 @@ export function DocumentItems() {
   const config = useSalesDocConfig();
   const docStatus = watch("DocStatus");
   const isTableDisabled = config.isDisabledTable(customer?.DocumentStatus!);
-
-  // const dummyItems: any[] = [
-  //     {
-  //       LineNum: 1,
-  //       ItemCode: "A00001",
-  //       ItemDescription: "IBM Infoprint 1312",
-  //       Quantity: 5,
-  //       UnitPrice: 750,
-  //       LineTotal: 3750,
-  //       Price: 750,
-  //       TaxTotal: 60,
-  //       WarehouseCode: "01",
-  //       VatGroup: "S1",
-  //       LineStatus: "bost_Close",
-  //       UoMCode: "Manual",
-  //       DiscountPercent: 0,
-  //       TaxCode: "S1",
-  //       ItemName: "IBM Infoprint 1312", 
-  //       InvQty: 5,
-  //       PackageQuantity: 5,
-  //       CountryOrg: "USA",
-  //       CogsOcrCo2: "CO2-01",
-  //       CogsOcrCo3: "CO3-01", 
-  //       CogsOcrCo4: "CO4-01",
-  //       BlanketAgreementNo: "AGT123456",
-  //       LinePoPrss: false,
-  //       U_LastPrice: 700,
-  //       U_OQCR: "Yes",
-  //       U_OQDC: 100,
-  //       U_ExtraTax: 5,
-  //       U_FurtherTax: 2,
-  //       U_FixedRetailPrice: 800,
-  //       U_SaleType: 1,
-  //       U_SroScheduleNo: "SR123",
-  //       U_SroSerialItem: "SR123-XYZ",
-  //     }
-  //   ];
-  
-  // useEffect(() => {
-  //   console.log("document items", lines);
-  // }, [lines]);
 
   const handleOnSelectItems = (items: Item[]) => {
     const listnum = Number(watch("listNum"));
@@ -93,30 +55,28 @@ export function DocumentItems() {
 
 
   return (
-    <div className="grid overflow-x-auto w-full">
-      <div className="flex justify-between items-center mb-1">
-       <Button
+    <div className="grid w-full relative pt-3">
+      <div className="absolute left-1 top-0 z-20">
+        <Button
           type="button"
-          onClick={() => setDialogOpen(true)} 
-          className="mt-4 cursor-pointer"
+          size="icon"
           disabled={!selectedCardCode || isTableDisabled}
+          onClick={() => setDialogOpen(true)}
+          className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-500 disabled:cursor-not-allowed text-white shadow-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center border-2 border-white dark:border-neutral-900"
+          title={selectedCardCode ? "Add Additional Item" : "Select a customer first"}
         >
-          + Add Item
+          <Plus className="h-5 w-5 stroke-[3px]" />
         </Button>
       </div>
 
       <Tabs defaultValue="content" className="w-full pt-4">
-        {/* <TabsList className="mb-4">
-          <TabsTrigger value="content" className="data-[state=active]:bg-primary dark:data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:text-primary-foreground dark:data-[state=active]:border-transparent">Content</TabsTrigger>
-          <TabsTrigger value="logistic" className="data-[state=active]:bg-primary dark:data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:text-primary-foreground dark:data-[state=active]:border-transparent">Logistic</TabsTrigger>
-        </TabsList> */}
-
         <TabsContent value="content">
           <div className="relative max-w-full border rounded">
             <div className={`min-w-max overflow-x-auto ${isTableDisabled ? "opacity-80 pointer-events-none" : ""}`}>
               <Table className="text-xs w-max">
                 <TableHeader className="sticky top-0 bg-neutral-900 z-10">
                   <TableRow className="border-neutral-600">
+                    <TableHead className="text-gray-300 px-4 py-2 border-r border-neutral-700 w-[60px] text-center">Actions</TableHead>
                     <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Item Code</TableHead>
                     <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Item Description</TableHead>
                     <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Qty</TableHead>
@@ -166,7 +126,6 @@ export function DocumentItems() {
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Sale Type</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Sro Schedule No</TableHead>
                     <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Sro Item Serial No</TableHead> */}
-                    <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -195,7 +154,7 @@ export function DocumentItems() {
 
             <div className="flex flex-col">
               <Label className="text-xs">Ship To</Label>
-               <Select >
+              <Select >
                 <SelectTrigger className="w-full  mt-3">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
@@ -212,7 +171,7 @@ export function DocumentItems() {
                 {...register("Address2")}
                 className="mt-4"
               />
-              
+
             </div>
 
             <div className="flex flex-col">
@@ -248,10 +207,10 @@ export function DocumentItems() {
       /> */}
 
       <ItemSelectorDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          onSelectItems={handleOnSelectItems}
-        />
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSelectItems={handleOnSelectItems}
+      />
     </div>
   );
 }
