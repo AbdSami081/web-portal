@@ -28,7 +28,7 @@ interface IOPRDDocumentStore {
   setDocDate: (v: string) => void;
   setIsCopyingTo: (v: boolean) => void;
   addLine: (line: InventoryDocumentLine) => void;
-  removeLine: (itemCode: string) => void;
+  removeLine: (index: number) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
   updateAllLinesWarehouse: (whs: string, isFrom: boolean) => void;
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
@@ -73,8 +73,8 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
       }
     },
 
-    removeLine: (itemCode) =>
-      set((s) => ({ lines: s.lines.filter((l) => l.ItemCode !== itemCode) })),
+    removeLine: (index: number) =>
+      set((s) => ({ lines: s.lines.filter((_, i) => i !== index) })),
 
     updateLine: (itemCode, updated) =>
       set((s) => ({
