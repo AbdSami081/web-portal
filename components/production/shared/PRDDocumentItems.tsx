@@ -90,6 +90,7 @@ export function PRDDocumentItems() {
           <Table className="text-xs w-full">
             <TableHeader className="sticky top-0 bg-neutral-900 z-10">
               <TableRow className="border-neutral-600">
+                {config.itemColumns.actions && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[50px]">Actions</TableHead>}
                 {config.itemColumns.type && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Type</TableHead>}
                 {config.itemColumns.itemCode && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[150px]">Item No</TableHead>}
                 {config.itemColumns.itemDescription && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[300px]">Item Description</TableHead>}
@@ -101,7 +102,6 @@ export function PRDDocumentItems() {
                 {config.itemColumns.uomCode && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">UoM Code</TableHead>}
                 {config.itemColumns.warehouse && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[180px]">Warehouse</TableHead>}
                 {config.itemColumns.issueMethod && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[150px]">Issue Method</TableHead>}
-                {config.itemColumns.actions && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[80px]">Actions</TableHead>}
               </TableRow>
             </TableHeader>
 

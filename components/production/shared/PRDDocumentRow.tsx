@@ -45,11 +45,25 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   }, [line, index]);
 
   const saveRow = () => {
-    updateLine(line.ItemNo, draftLine);
+    updateLine(index, draftLine);
   };
 
   return (
     <>
+      {config.itemColumns.actions && (
+        <td className="w-[50px]">
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-6 w-6 p-0"
+            onClick={() => removeLine(index)}
+            disabled={Boolean(watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0)}
+          >
+            <Trash className={`h-5 w-5 ${watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0 ? "text-gray-400" : "text-red-500"}`} />
+          </Button>
+        </td>
+      )}
+
       {config.itemColumns.type && (
         <td className="py-2 px-4">
           <span className="font-medium text-gray-700">{line.ItemType}</span>
@@ -92,7 +106,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               };
 
               setDraftLine(updatedLine);
-              updateLine(line.ItemNo, updatedLine);
+              updateLine(index, updatedLine);
             }}
             onBlur={() => {
               setBaseQtyInput((draftLine.BaseQuantity ?? 0).toLocaleString());
@@ -125,7 +139,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
               const updated = { ...draftLine, PlannedQuantity: numericVal };
               setDraftLine(updated);
-              updateLine(line.ItemNo, updated);
+              updateLine(index, updated);
             }}
             onBlur={() => {
               setPlannedQtyInput((draftLine.PlannedQuantity || 0).toLocaleString());
@@ -182,7 +196,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
             onValueChange={(val: "im_Manual" | "im_Backflush") => {
               const updatedLine = { ...draftLine, ProductionOrderIssueType: val };
               setDraftLine(updatedLine);
-              updateLine(line.ItemNo, updatedLine);
+              updateLine(index, updatedLine);
             }}
           >
             <SelectTrigger className="h-7 w-32 text-xs">
@@ -196,19 +210,6 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
-      {config.itemColumns.actions && (
-        <td>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-6 w-6 p-0"
-            onClick={() => removeLine(line.ItemNo)}
-            disabled={Boolean(watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0)}
-          >
-            <Trash className={`h-5 w-5 ${watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0 ? "text-gray-400" : "text-red-500"}`} />
-          </Button>
-        </td>
-      )}
       <GenericModal
         title="Select Warehouse"
         open={warehouseModalOpen}
@@ -216,7 +217,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         onSelect={(val) => {
           const updated = { ...draftLine, Warehouse: val };
           setDraftLine(updated);
-          updateLine(line.ItemNo, updated);
+          updateLine(index, updated);
         }}
         data={warehouses || []}
         columns={[

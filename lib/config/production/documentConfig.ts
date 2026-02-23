@@ -102,6 +102,7 @@ export const PRDOrderConfig: DocumentConfig = {
     uomCode: true,
     warehouse: true,
     issueMethod: true,
+    actions: true,
   },
   footerActions: {
     showProductionOrderButton: false,

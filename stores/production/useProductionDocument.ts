@@ -16,9 +16,9 @@ interface IFPRDDocumentStore {
   setCustomer: (customer: BusinessPartner) => void;
   setDocType: (docType: DocumentType) => void;
   addLine: (line: PRDDocumentLine) => void;
-  removeLine: (itemCode: string) => void;
+  removeLine: (index: number) => void;
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
-  updateLine: (itemCode: string, updated: Partial<PRDDocumentLine>) => void;
+  updateLine: (index: number, updated: Partial<PRDDocumentLine>) => void;
   loadFromBOM: (bom: any, plannedQty: number) => void;
   reset: () => void;
   recalculateFromHeader: (headerPlannedQty: number) => void;
@@ -38,27 +38,18 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     setDocType: (docType) => set({ docType }),
 
     addLine: (line) => {
-      const existingLine = get().lines.find((l) => l.ItemNo === line.ItemNo);
-
-      if (existingLine) {
-        get().updateLine(existingLine.ItemNo, {
-          ...existingLine,
-          PlannedQuantity: existingLine.PlannedQuantity + line.PlannedQuantity,
-        });
-      } else {
-        set((s) => ({ lines: [...s.lines, line] }), false, "addLine");
-      }
+      set((s) => ({ lines: [...s.lines, line] }), false, "addLine");
     },
 
-    removeLine: (itemCode) => {
+    removeLine: (index) => {
       set((state) => ({
-        lines: state.lines.filter((line) => line.ItemNo !== itemCode),
+        lines: state.lines.filter((_, idx) => idx !== index),
       }));
     },
-    updateLine: (itemCode, updated) => {
+    updateLine: (index, updated) => {
       set((state) => ({
-        lines: state.lines.map((line) =>
-          line.ItemNo === itemCode ? { ...line, ...updated } : line
+        lines: state.lines.map((line, idx) =>
+          idx === index ? { ...line, ...updated } : line
         ),
       }));
     },
