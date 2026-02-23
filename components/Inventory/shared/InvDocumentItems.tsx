@@ -19,6 +19,7 @@ import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 
 
 import { Plus } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 export function InvDocumentItems() {
@@ -81,16 +82,27 @@ export function InvDocumentItems() {
   return (
     <div className="grid w-full relative pt-3">
       <div className="absolute left-1 top-0 z-20">
-        <Button
-          type="button"
-          size="icon"
-          disabled={!fromWarehouse}
-          onClick={() => setDialogOpen(true)}
-          className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-500 disabled:cursor-not-allowed text-white shadow-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center border-2 border-white dark:border-neutral-900"
-          title={fromWarehouse ? "Add Additional Item" : "Select a warehouse first"}
-        >
-          <Plus className="h-5 w-5 stroke-[3px]" />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                disabled={!fromWarehouse}
+                onClick={() => setDialogOpen(true)}
+                className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-500 disabled:cursor-not-allowed text-white shadow-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center border-2 border-white dark:border-neutral-900"
+              >
+                <Plus className="h-5 w-5 stroke-[3px]" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="right"
+              className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
+            >
+              Add Item
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <Tabs defaultValue="content" className="w-full pt-4">
