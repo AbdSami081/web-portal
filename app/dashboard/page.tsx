@@ -144,10 +144,10 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Business Overview</h1>
           <p className="text-muted-foreground">Monitor your business performance and key metrics in real-time.</p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <Button variant="outline" className="h-9 shadow-sm border-zinc-200 hover:bg-zinc-100">Download Report</Button>
           <Button className="h-9 shadow-sm bg-zinc-900 text-white hover:bg-zinc-800">Create New</Button>
-        </div>
+        </div> */}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -185,7 +185,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      {/* <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="bg-zinc-200/50 p-1 border border-zinc-200">
           <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Overview</TabsTrigger>
           <TabsTrigger value="analytics" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Analytics</TabsTrigger>
@@ -195,7 +195,7 @@ export default function DashboardPage() {
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-            {/* Main Area Chart */}
+        
             <Card className="lg:col-span-4 border-zinc-200 bg-white shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-zinc-900">
@@ -260,7 +260,6 @@ export default function DashboardPage() {
               </CardFooter>
             </Card>
 
-            {/* Distribution Pie Chart */}
             <Card className="lg:col-span-3 border-zinc-200 bg-white shadow-sm">
               <CardHeader className="items-center pb-0">
                 <CardTitle className="text-zinc-900">Sales by Category</CardTitle>
@@ -334,7 +333,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-            {/* Recent Activity Table */}
             <Card className="lg:col-span-4 border-zinc-200 bg-white shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -399,7 +397,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Side Task List or Quick Actions */}
             <Card className="lg:col-span-3 border-zinc-200 bg-white shadow-sm overflow-hidden">
               <CardHeader className="bg-zinc-50/50 border-b border-zinc-100">
                 <CardTitle className="flex items-center gap-2 text-zinc-900">
@@ -456,7 +453,7 @@ export default function DashboardPage() {
             </div>
           </Card>
         </TabsContent>
-      </Tabs>
+      </Tabs> */}
     </div>
   );
 }
