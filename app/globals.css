@@ -122,6 +122,17 @@
   }
 }
 
+@keyframes glow-red-blink {
+  0%, 100% { border-color: transparent; box-shadow: none; }
+  50% { border-color: #ef4444; box-shadow: 0 0 15px #ef4444; }
+}
+
+.animate-glow-red-blink {
+  animation: glow-red-blink 0.75s ease-in-out infinite;
+  border-color: #ef4444 !important;
+  border-width: 2px !important;
+}
+
 /* Target only span inside the element with specific data-slot */
 span.w-100.h-100 {
   width: unset !important;

@@ -142,6 +142,7 @@ export function DocumentHeader() {
           <Label className="w-20">Customer</Label>
           <div className="flex items-center">
             <Input
+              id="card-code-field"
               type="text"
               {...register("CardCode")}
               className="h-8 w-48 pr-10"

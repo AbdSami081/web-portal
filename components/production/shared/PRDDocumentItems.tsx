@@ -57,9 +57,20 @@ export function PRDDocumentItems() {
               <Button
                 type="button"
                 size="icon"
-                disabled={!itemNo}
-                onClick={() => setDialogOpen(true)}
-                className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-500 disabled:cursor-not-allowed text-white shadow-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center border-2 border-white dark:border-neutral-900"
+                onClick={() => {
+                  if (!itemNo) {
+                    const field = document.getElementById("item-no-field");
+                    if (field) {
+                      field.classList.add("animate-glow-red-blink");
+                      setTimeout(() => {
+                        field.classList.remove("animate-glow-red-blink");
+                      }, 3000);
+                    }
+                    return;
+                  }
+                  setDialogOpen(true);
+                }}
+                className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center border-2 border-white dark:border-neutral-900"
               >
                 <Plus className="h-5 w-5 stroke-[3px]" />
               </Button>
