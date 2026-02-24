@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AppLabel } from "@/components/Custom/AppLabel";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
@@ -39,7 +39,7 @@ export default function DocumentFooter() {
 
       <div className="grid grid-cols-2 gap-20">
         <div>
-          <Label htmlFor="Comments">Remarks</Label>
+          <AppLabel htmlFor="Comments">Remarks</AppLabel>
           <Textarea
             id="Comments"
             className="h-24 mt-4 max-w-95"
@@ -55,7 +55,7 @@ export default function DocumentFooter() {
 
         <div className={`space-y-3 bg-slate-100 p-4 rounded-lg text-sm -mt-12`}>
           <div className="grid grid-cols-2 gap-2 items-center">
-            <Label>Freight</Label>
+            <AppLabel>Freight</AppLabel>
             <Input
               type="number"
               className="h-6 text-right"
@@ -65,7 +65,7 @@ export default function DocumentFooter() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 items-center">
-            <Label>Rounding</Label>
+            <AppLabel>Rounding</AppLabel>
             <Input
               type="number"
               className="h-6 text-right"
@@ -76,7 +76,7 @@ export default function DocumentFooter() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 items-center">
-            <Label>Discount (%)</Label>
+            <AppLabel>Discount (%)</AppLabel>
             <Input
               type="number"
               className="h-6 text-right"
