@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AppLabel } from "@/components/Custom/AppLabel";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
@@ -327,7 +327,7 @@ export function PRDDocumentHeader() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
         {config.headerFields.baseRef && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Order Number</Label>
+            <AppLabel className="w-28 shrink-0">Order Number</AppLabel>
             <div className="flex items-center gap-2 flex-1">
               <Input
                 type="text"
@@ -361,7 +361,7 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.reference && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Reference</Label>
+            <AppLabel className="w-28 shrink-0">Reference</AppLabel>
             <Input
               type="text"
               {...register("Ref2")}
@@ -373,13 +373,13 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.docDate && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Document Date</Label>
+            <AppLabel className="w-28 shrink-0">Document Date</AppLabel>
             <Input type="date" {...register("TaxDate")} className="h-8 flex-1" />
           </div>
         )}
 
         <div className="flex items-center gap-2">
-          <Label className="w-24">Type</Label>
+          <AppLabel className="w-28 shrink-0">Type</AppLabel>
           <Select
             onValueChange={handleTypeChange}
             value={watch("ProductionOrderType") || "bopotStandard"}
@@ -397,7 +397,7 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.productNo && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Product No.</Label>
+            <AppLabel className="w-28 shrink-0">Product No.</AppLabel>
             <div className="flex items-center gap-2 flex-1">
               <Input id="item-no-field" type="text" {...register("ItemNo")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
               <Button
@@ -415,14 +415,14 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.productDescription && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Description</Label>
+            <AppLabel className="w-28 shrink-0">Description</AppLabel>
             <Input type="text" {...register("ProductDescription")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
           </div>
         )}
 
         {config.headerFields.plannedQuantity && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Planned Qty</Label>
+            <AppLabel className="w-28 shrink-0">Planned Qty</AppLabel>
             <Controller
               name="PlannedQuantity"
               control={control}
@@ -442,7 +442,7 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.warehouse && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Warehouse</Label>
+            <AppLabel className="w-28 shrink-0">Warehouse</AppLabel>
             <div className="flex items-center gap-2 flex-1">
               <Input
                 type="text"
@@ -465,28 +465,28 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.priority && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Priority</Label>
+            <AppLabel className="w-28 shrink-0">Priority</AppLabel>
             <Input type="number" {...register("Priority")} className="h-8 flex-1" />
           </div>
         )}
 
         {config.headerFields.orderDate && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Order Date</Label>
+            <AppLabel className="w-28 shrink-0">Order Date</AppLabel>
             <Input type="date" {...register("CreationDate")} className="h-8 flex-1" />
           </div>
         )}
 
         {config.headerFields.startDate && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Start Date</Label>
+            <AppLabel className="w-28 shrink-0">Start Date</AppLabel>
             <Input type="date" {...register("StartDate")} className="h-8 flex-1" />
           </div>
         )}
 
         {config.headerFields.dueDate && (
           <div className="flex items-center gap-2">
-            <Label className="w-24">Due Date</Label>
+            <AppLabel className="w-28 shrink-0">Due Date</AppLabel>
             <Input type="date" {...register("DueDate")} className="h-8 flex-1" />
           </div>
         )}
