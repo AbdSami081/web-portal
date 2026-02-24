@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AppLabel } from "@/components/Custom/AppLabel";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -53,16 +53,6 @@ export function DocumentHeader() {
     }
   }, [customer, setValue]);
 
-  const fetchBusinessPartners = () => {
-    const data: BusinessPartner[] = [
-      { CardCode: "C0001", CardName: "Alpha Traders" },
-      { CardCode: "C0002", CardName: "Beta Industries" },
-      { CardCode: "C0003", CardName: "Gamma Distributors" },
-      { CardCode: "C0004", CardName: "Delta Co." },
-      { CardCode: "C0005", CardName: "Zeta Solutions" },
-    ];
-    setBusinessPartners(data);
-  };
 
   const handleSelectBP = (bp: BusinessPartner) => {
     setCustomer(bp);
@@ -138,8 +128,8 @@ export function DocumentHeader() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Label className="w-20">Customer</Label>
+        <div className="flex items-center gap-3">
+          <AppLabel className="w-28 shrink-0">Customer</AppLabel>
           <div className="flex items-center">
             <Input
               id="card-code-field"
@@ -155,7 +145,6 @@ export function DocumentHeader() {
               size="icon"
               className="ml-2 h-8 w-8 cursor-pointer"
               onClick={() => {
-                fetchBusinessPartners();
                 setModalOpen(true);
               }}
               disabled={isHeaderDisabled}
@@ -197,8 +186,8 @@ export function DocumentHeader() {
 
       <div className="flex flex-col lg:flex-row justify-between gap-4">
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
-          <div className="flex items-center w-full gap-2">
-            <Label className="w-20">Name</Label>
+          <div className="flex items-center w-full gap-3">
+            <AppLabel className="w-28 shrink-0">Name</AppLabel>
             <Input
               type="text"
               {...register("CardName")}
@@ -210,12 +199,12 @@ export function DocumentHeader() {
         </div>
 
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
-          <div className="flex justify-between items-center w-full">
-            <Label className="text-xs w-28">Status</Label>
+          <div className="flex justify-end items-center w-full gap-3">
+            <AppLabel className="w-28 shrink-0 text-right">Status</AppLabel>
             <Select
               value={watchedStatus}
               onValueChange={(val) => setValue("DocStatus", val)}
-              disabled={isHeaderDisabled}
+              disabled={true}
             >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Select status" />
@@ -234,26 +223,26 @@ export function DocumentHeader() {
             </Select>
           </div>
 
-          <div className="flex justify-between items-center w-full">
-            <Label className="text-sm w-28">Posting Date</Label>
+          <div className="flex justify-end items-center w-full gap-3">
+            <AppLabel className="w-28 shrink-0 text-right">Posting Date</AppLabel>
             <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
               register("DocDate").onChange(e);
               setDocDate(e.target.value);
             }} />
           </div>
 
-          <div className="flex justify-between items-center w-full">
-            <Label className="text-sm w-28">
+          <div className="flex justify-end items-center w-full gap-3">
+            <AppLabel className="w-28 shrink-0 text-right">
               {getDateLabel(config.type)}
-            </Label>
+            </AppLabel>
             <Input type="date" {...register("DocDueDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
               register("DocDueDate").onChange(e);
               setDocDueDate(e.target.value);
             }} />
           </div>
 
-          <div className="flex justify-between items-center w-full">
-            <Label className="text-sm w-28">Document Date</Label>
+          <div className="flex justify-end items-center w-full gap-3">
+            <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
             <Input type="date" {...register("TaxDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
               register("TaxDate").onChange(e);
               setTaxDate(e.target.value);
