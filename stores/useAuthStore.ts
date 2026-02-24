@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             const now = Date.now();
             const delay = exp - now;
 
-            set({ expiryTime: exp });
+            set({ expiryTime: exp, isSessionExpired: false });
 
             if (delay > 0) {
                 timer = setTimeout(() => {
