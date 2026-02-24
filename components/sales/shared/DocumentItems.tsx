@@ -15,9 +15,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AppLabel } from "@/components/Custom/AppLabel";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 
@@ -92,11 +91,11 @@ export function DocumentItems() {
         </TooltipProvider>
       </div>
 
-      <Tabs defaultValue="content" className="w-full pt-4">
-        <TabsContent value="content">
-          <div className="relative max-w-full border rounded">
-            <div className={`min-w-max overflow-x-auto ${isTableDisabled ? "opacity-80 pointer-events-none" : ""}`}>
-              <Table className="text-xs w-max">
+      <Tabs defaultValue="content" className="w-full pt-4 overflow-hidden">
+        <TabsContent value="content" className="overflow-hidden">
+          <div className="relative border rounded overflow-hidden">
+            <div className={`overflow-x-auto pb-2 ${isTableDisabled ? "opacity-80 pointer-events-none" : ""}`}>
+              <Table className="text-xs min-w-full">
                 <TableHeader className="sticky top-0 bg-neutral-900 z-10">
                   <TableRow className="border-neutral-600">
                     <TableHead className="text-gray-300 px-4 py-2 border-r border-neutral-700 w-[60px] text-center">Actions</TableHead>
@@ -176,7 +175,7 @@ export function DocumentItems() {
           <div className={`grid grid-cols-2 gap-4 p-5 rounded ${isTableDisabled ? "opacity-80 pointer-events-none" : ""}`}>
 
             <div className="flex flex-col">
-              <Label className="text-xs">Ship To</Label>
+              <AppLabel className="text-xs">Ship To</AppLabel>
               <Select >
                 <SelectTrigger className="w-full  mt-3">
                   <SelectValue placeholder="Select type" />
@@ -198,7 +197,7 @@ export function DocumentItems() {
             </div>
 
             <div className="flex flex-col">
-              <Label className="text-xs">Bill To</Label>
+              <AppLabel className="text-xs">Bill To</AppLabel>
               <Select >
                 <SelectTrigger className="w-full  mt-3">
                   <SelectValue placeholder="Select type" />
