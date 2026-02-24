@@ -1,7 +1,7 @@
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
+import { AppLabel } from "@/components/Custom/AppLabel";
 
 export default function InvDocumentFooter() {
   const {
@@ -15,7 +15,7 @@ export default function InvDocumentFooter() {
     <>
       <div className="grid grid-cols-2 gap-10 -mt-0">
         <div>
-          <Label htmlFor="journalComments">Journal Remarks</Label>
+          <AppLabel htmlFor="journalComments">Journal Remarks</AppLabel>
           <Textarea
             id="journalComments"
             value={journalMemo}
@@ -26,7 +26,7 @@ export default function InvDocumentFooter() {
         </div>
 
         <div>
-          <Label htmlFor="remarks">Remarks</Label>
+          <AppLabel htmlFor="remarks">Remarks</AppLabel>
           <Textarea
             id="remarks"
             value={comments}
