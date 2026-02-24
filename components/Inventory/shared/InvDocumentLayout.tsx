@@ -14,6 +14,7 @@ import { GenericModal } from "@/modals/GenericModal";
 import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/api+/sap/inventory/inventoryService";
 import { FilePlus2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -221,17 +222,30 @@ export function InvDocumentLayout<T extends FieldValues>({
         <form onSubmit={handleSubmit((data) => onSubmit(data as unknown as T))} className="flex flex-col min-h-screen bg-background">
 
           <HeaderActionPortal>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={handleNewDocument}
-              title="New Document"
-              disabled={!DocEntry || DocEntry === 0}
-              className="border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 w-8 disabled:opacity-50"
-            >
-              <FilePlus2 className="w-4 h-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="inline-block">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleNewDocument}
+                      disabled={!DocEntry || DocEntry === 0}
+                      className="border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 w-8 disabled:opacity-50 transition-all active:scale-95"
+                    >
+                      <FilePlus2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="bottom"
+                  className="bg-blue-600 text-white border-blue-500 font-semibold shadow-[0_0_20px_rgba(37,99,235,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
+                >
+                  New Document
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </HeaderActionPortal>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
