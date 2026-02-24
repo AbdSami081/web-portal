@@ -256,7 +256,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
             {actions && <div>{actions}</div>}
           </div>
 
-          <div className="flex-1 flex flex-col gap-4 p-6 overflow-auto w-full">
+          <div className="flex-1 flex flex-col gap-4 p-6 overflow-y-auto overflow-x-hidden w-full">
             {children}
           </div>
 
