@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-import { Label } from "@/components/ui/label";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { AppLabel } from "@/components/Custom/AppLabel";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -171,8 +171,8 @@ export function InvDocumentHeader() {
   return (
     <div className="flex flex-col lg:flex-row gap-4">
       <div className="flex flex-col gap-2 w-full lg:w-1/2">
-        <div className="flex items-center gap-1">
-          <Label className="w-32">Customer</Label>
+        <div className="flex items-center gap-3">
+          <AppLabel className="w-28 shrink-0">Customer</AppLabel>
           <div className="flex items-center gap-2">
             <Input
               type="text"
@@ -185,7 +185,7 @@ export function InvDocumentHeader() {
               type="button"
               variant="outline"
               size="icon"
-              className="ml-2 h-8 w-8 cursor-pointer"
+              className="h-8 w-8 cursor-pointer"
               disabled={DocEntry > 0}
               onClick={() => {
                 fetchBusinessPartners();
@@ -197,8 +197,8 @@ export function InvDocumentHeader() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 w-full">
-          <Label className="w-32">Name</Label>
+        <div className="flex items-center gap-3 w-full">
+          <AppLabel className="w-28 shrink-0">Name</AppLabel>
           <Input
             type="text"
             value={customer?.CardName || ""}
@@ -208,8 +208,8 @@ export function InvDocumentHeader() {
           />
         </div>
 
-        <div className="flex items-center gap-1 w-full">
-          <Label className="w-32">From Warehouse</Label>
+        <div className="flex items-center gap-3 w-full">
+          <AppLabel className="w-28 shrink-0">From Warehouse</AppLabel>
           <div className="flex items-center gap-2">
             <Input
               type="text"
@@ -230,8 +230,8 @@ export function InvDocumentHeader() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 w-full">
-          <Label className="w-32">To Warehouse</Label>
+        <div className="flex items-center gap-3 w-full">
+          <AppLabel className="w-28 shrink-0">To Warehouse</AppLabel>
           <div className="flex items-center gap-2">
             <Input
               type="text"
@@ -285,8 +285,8 @@ export function InvDocumentHeader() {
           </div>
         </div>
 
-        <div className="flex justify-between items-center gap-1 w-full">
-          <Label className="w-32">Document Date</Label>
+        <div className="flex justify-end items-center gap-3 w-full">
+          <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
           <Input
             type="date"
             value={docDate}
