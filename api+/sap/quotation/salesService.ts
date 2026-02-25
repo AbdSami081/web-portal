@@ -230,3 +230,15 @@ export const patchARInvoice = async (docEntry: number, payload: any): Promise<an
     return null;
   }
 };
+
+export const getAttachment = async (filePath: string) => {
+  try {
+    const res = await apiClient.get(`api/Sales/DisplayAttachment?filePath=${encodeURIComponent(filePath)}`, {
+      responseType: 'blob'
+    });
+    return res.data;
+  } catch (err) {
+    console.error("Failed to fetch attachment", err);
+    return null;
+  }
+};

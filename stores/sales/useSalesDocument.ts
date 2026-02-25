@@ -27,6 +27,15 @@ interface SalesDocumentStore {
     VatGroup?: string;
     Remarks?: string;
   }[];
+  attachments: {
+    LineNum: number;
+    TargetPath: string;
+    FileName: string;
+    AttachmentDate: string;
+    FreeText: string;
+    CopyToTarget: boolean;
+    File?: File;
+  }[];
   isCopying: boolean;
   lastLoadedDocType: number | null; // Track original doc type
   setIsCopying: (val: boolean) => void;
@@ -64,6 +73,9 @@ interface SalesDocumentStore {
     }[]
   ) => void;
 
+  addAttachment: (file: File) => void;
+  updateAttachment: (lineNum: number, updated: Partial<{ FreeText: string; CopyToTarget: boolean }>) => void;
+  removeAttachment: (lineNum: number) => void;
 }
 
 const parseSafe = (val: any): number => {
@@ -93,6 +105,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     DocEntry: 0,
     lastLoadedDocType: null,
     additionalExpenses: [],
+    attachments: [],
     isCopying: false,
 
     setIsCopying: (val) => set({ isCopying: val }),
@@ -224,6 +237,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         lastLoadedDocType: null,
         currency: "USD",
         additionalExpenses: [],
+        attachments: [],
         isCopying: false,
       }),
 
@@ -305,11 +319,46 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           TaxCode: e.TaxCode || e.VatGroup || "",
           VatGroup: e.VatGroup || e.TaxCode || "",
           Remarks: e.Remarks || ""
-        }))
+        })),
+        attachments: isCopy ? [] : (doc.Attachments_Lines?.Attachments2_Lines || []).map((line: any) => ({
+          LineNum: line.LineNum,
+          TargetPath: line.TargetPath || "",
+          FileName: line.FileName + (line.FileExtension ? "." + line.FileExtension : ""),
+          AttachmentDate: (line.AttachmentDate || "").split("T")[0],
+          FreeText: line.FreeText || "",
+          CopyToTarget: line.CopyToTargetDoc === "tYES",
+        })),
       });
 
       get().calculateTotals();
     },
     setAdditionalExpenses: (exp) => set({ additionalExpenses: exp }),
+
+    addAttachment: (file: File) => {
+      const { attachments } = get();
+      const newLineNum = attachments.length > 0 ? Math.max(...attachments.map(a => a.LineNum)) + 1 : 1;
+      const newAttachment = {
+        LineNum: newLineNum,
+        TargetPath: "C:\\Attachments\\", // Mock path or handled by server
+        FileName: file.name,
+        AttachmentDate: new Date().toISOString().split("T")[0],
+        FreeText: "",
+        CopyToTarget: false,
+        File: file
+      };
+      set({ attachments: [...attachments, newAttachment] });
+    },
+
+    updateAttachment: (lineNum, updated) => {
+      set((s) => ({
+        attachments: s.attachments.map((a) => a.LineNum === lineNum ? { ...a, ...updated } : a)
+      }));
+    },
+
+    removeAttachment: (lineNum) => {
+      set((s) => ({
+        attachments: s.attachments.filter((a) => a.LineNum !== lineNum)
+      }));
+    },
   }))
 );
