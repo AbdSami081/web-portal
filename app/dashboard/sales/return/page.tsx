@@ -13,6 +13,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { postSalesReturn } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
+import { getSapErrorMessage } from "@/lib/errorHelper";
 
 export default function ReturnPage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function ReturnPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, reset: resetStore } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = useSalesDocument.getState();
 
     const payload = {
       ...data,
@@ -52,6 +53,13 @@ export default function ReturnPage() {
         }
         return lineData;
       }),
+      Attachments2_Lines: attachments.map((att) => ({
+        FileExtension: att.FileName.split('.').pop(),
+        FileName: att.FileName.split('.').slice(0, -1).join('.'),
+        SourcePath: att.SourcePath,
+        UserID: "1",
+        FreeText: att.FreeText
+      }))
     };
 
     try {
@@ -63,8 +71,9 @@ export default function ReturnPage() {
       } else {
         throw new Error("Failed to create Sales Return");
       }
-    } catch (error) {
-      toast.error("Failed to create Sales Return. Please try again.");
+    } catch (error: any) {
+      const message = getSapErrorMessage(error);
+      toast.error(message || "Failed to create Sales Return. Please try again.");
     }
   };
 
