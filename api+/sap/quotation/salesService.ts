@@ -77,7 +77,7 @@ export const postQuotation = async (payload: any): Promise<any | null> => {
     return doc;
   } catch (err) {
     console.error("Failed to save sales document", err);
-    return null;
+    throw err;
   }
 };
 
@@ -97,7 +97,7 @@ export const postSalesReturn = async (payload: any): Promise<any | null> => {
     return doc;
   } catch (err) {
     console.error("Failed to save sales document", err);
-    return null;
+    throw err;
   }
 };
 
@@ -117,7 +117,7 @@ export const postSalesOrder = async (payload: any): Promise<any | null> => {
     return doc;
   } catch (err) {
     console.error("Failed to save sales order", err);
-    return null;
+    throw err;
   }
 };
 
@@ -137,7 +137,7 @@ export const postDelivery = async (payload: any): Promise<any | null> => {
     return doc;
   } catch (err) {
     console.error("Failed to save delivery note", err);
-    return null;
+    throw err;
   }
 };
 
@@ -157,7 +157,7 @@ export const postARInvoice = async (payload: any): Promise<any | null> => {
     return doc;
   } catch (err) {
     console.error("Failed to save AR invoice", err);
-    return null;
+    throw err;
   }
 };
 
