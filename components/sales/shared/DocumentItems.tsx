@@ -187,10 +187,10 @@ function AttachmentsTab({ isTableDisabled }: { isTableDisabled: boolean }) {
     const att = attachments.find((a) => a.LineNum === selectedLineNum);
     if (!att) return;
 
-    const fullPath = att.TargetPath
-      ? att.TargetPath.replace(/\\$/, "") + "\\" + att.FileName
+    const fullPath = att.SourcePath
+      ? att.SourcePath.replace(/\\$/, "") + "\\" + att.FileName
       : att.FileName;
-      
+
     try {
       const blob = await getAttachment(fullPath);
       if (blob) {
@@ -253,7 +253,7 @@ function AttachmentsTab({ isTableDisabled }: { isTableDisabled: boolean }) {
                         }`}
                     >
                       <TableCell className="text-center font-mono text-zinc-400">{idx + 1}</TableCell>
-                      <TableCell className="text-zinc-500 italic max-w-xs truncate">{att.TargetPath}</TableCell>
+                      <TableCell className="text-zinc-500 italic max-w-xs truncate">{att.SourcePath || process.env.NEXT_PUBLIC_ATTACHMENT_SOURCE_PATH || "N/A"}</TableCell>
                       <TableCell className={`font-semibold ${isSelected ? "text-blue-700" : "text-zinc-900"}`}>{att.FileName}</TableCell>
                       <TableCell className="text-zinc-600">{att.AttachmentDate}</TableCell>
                       <TableCell className="p-1" onClick={(e) => e.stopPropagation()}>
