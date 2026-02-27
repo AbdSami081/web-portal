@@ -13,6 +13,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { postSalesOrder, patchSalesOrder } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
+import { getSapErrorMessage } from "@/lib/errorHelper";
 
 export default function OrderPage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function OrderPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, reset: resetStore } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Order) {
       const payload = {
@@ -66,6 +67,13 @@ export default function OrderPage() {
         }
         return lineData;
       }),
+      Attachments2_Lines: attachments.map((att) => ({
+        FileExtension: att.FileName.split('.').pop(),
+        FileName: att.FileName.split('.').slice(0, -1).join('.'),
+        SourcePath: att.SourcePath,
+        UserID: "1",
+        FreeText: att.FreeText
+      }))
     };
 
     try {
@@ -78,8 +86,9 @@ export default function OrderPage() {
       } else {
         throw new Error("Failed to create Sales Order");
       }
-    } catch (error) {
-      toast.error("Failed to create Sales Order. Please try again.");
+    } catch (error: any) {
+      const message = getSapErrorMessage(error);
+      toast.error(message || "Failed to create Sales Order. Please try again.");
     }
   };
 
