@@ -9,6 +9,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { postQuotation, patchQuotation } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { getSapErrorMessage } from "@/lib/errorHelper";
 
 export default function NewQuotationPage() {
   const loadFromDocument = useSalesDocument((state) => state.loadFromDocument);
@@ -30,7 +31,7 @@ export default function NewQuotationPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocTotal, freight, TaxTotal, additionalExpenses, DocEntry, lastLoadedDocType } = useSalesDocument.getState();
+    const { lines, DocTotal, freight, TaxTotal, additionalExpenses, DocEntry, lastLoadedDocType, attachments } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Quotation) {
       const payload = {
@@ -64,9 +65,16 @@ export default function NewQuotationPage() {
       }),
       Freight: freight,
       TaxTotal: TaxTotal,
-      DocumentLineAdditionalExpenses: additionalExpenses
+      DocumentLineAdditionalExpenses: additionalExpenses,
+      Attachments2_Lines: attachments.map((att) => ({
+        FileExtension: att.FileName.split('.').pop(),
+        FileName: att.FileName.split('.').slice(0, -1).join('.'),
+        SourcePath: att.SourcePath,
+        UserID: "1",
+        FreeText: att.FreeText
+      }))
     };
-
+    console.log(payload)
     try {
       const documentData = await postQuotation(payload);
       if (!documentData?.DocEntry) {
@@ -74,8 +82,9 @@ export default function NewQuotationPage() {
       }
       loadFromDocument(documentData, DocumentType.Quotation);
       toast.success(`Quotation #${documentData.DocNum} created successfully`);
-    } catch (error) {
-      toast.error("Failed to create quotation. Please try again.");
+    } catch (error: any) {
+      const message = getSapErrorMessage(error);
+      toast.error(message || "Failed to create quotation. Please try again.");
     }
   };
 
