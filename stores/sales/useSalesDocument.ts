@@ -29,7 +29,7 @@ interface SalesDocumentStore {
   }[];
   attachments: {
     LineNum: number;
-    TargetPath: string;
+    SourcePath: string;
     FileName: string;
     AttachmentDate: string;
     FreeText: string;
@@ -74,7 +74,7 @@ interface SalesDocumentStore {
   ) => void;
 
   addAttachment: (file: File) => void;
-  updateAttachment: (lineNum: number, updated: Partial<{ FreeText: string; CopyToTarget: boolean }>) => void;
+  updateAttachment: (lineNum: number, updated: Partial<{ FreeText: string; CopyToTarget: boolean; SourcePath: string }>) => void;
   removeAttachment: (lineNum: number) => void;
 }
 
@@ -322,7 +322,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         })),
         attachments: isCopy ? [] : (doc.Attachments_Lines?.Attachments2_Lines || []).map((line: any) => ({
           LineNum: line.LineNum,
-          TargetPath: line.TargetPath || "",
+          SourcePath: line.SourcePath || "",
           FileName: line.FileName + (line.FileExtension ? "." + line.FileExtension : ""),
           AttachmentDate: (line.AttachmentDate || "").split("T")[0],
           FreeText: line.FreeText || "",
@@ -337,9 +337,21 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     addAttachment: (file: File) => {
       const { attachments } = get();
       const newLineNum = attachments.length > 0 ? Math.max(...attachments.map(a => a.LineNum)) + 1 : 1;
+
+      let sourcePath = process.env.NEXT_PUBLIC_ATTACHMENT_SOURCE_PATH || "";
+      // Try to get path from various possible properties if available (e.g. Electron, specific browser setups)
+      const fullPath = (file as any).path || (file as any).webkitRelativePath || "";
+
+      if (fullPath) {
+        const lastIndex = Math.max(fullPath.lastIndexOf('\\'), fullPath.lastIndexOf('/'));
+        if (lastIndex !== -1) {
+          sourcePath = fullPath.substring(0, lastIndex);
+        }
+      }
+
       const newAttachment = {
         LineNum: newLineNum,
-        TargetPath: "C:\\Attachments\\", // Mock path or handled by server
+        SourcePath: sourcePath,
         FileName: file.name,
         AttachmentDate: new Date().toISOString().split("T")[0],
         FreeText: "",
