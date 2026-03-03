@@ -69,8 +69,9 @@ export default function InvTransferPage() {
           WarehouseCode: line.WhsCode || toWarehouse || "",
           FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
           BaseType: line.BaseType ?? -1,
-          BaseEntry: line.BaseEntry ?? null,
-          BaseLine: line.BaseLine ?? null,
+          BaseEntry: line.BaseEntry ?? -1,
+          BaseLine: line.BaseLine ?? -1,
+          
         })),
       };
 
