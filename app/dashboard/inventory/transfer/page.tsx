@@ -69,8 +69,14 @@ export default function InvTransferPage() {
           WarehouseCode: line.WhsCode || toWarehouse || "",
           FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
           BaseType: line.BaseType ?? -1,
-          BaseEntry: line.BaseEntry ?? null,
-          BaseLine: line.BaseLine ?? null,
+          BaseEntry: line.BaseEntry ?? undefined,
+          BaseLine: line.BaseLine ?? undefined,
+        })),
+        Attachments2_Lines: useInventoryDocument.getState().attachments.map((att) => ({
+          FileName: att.FileName,
+          SourcePath: att.SourcePath,
+          FreeText: att.FreeText,
+          CopyToTarget: att.CopyToTarget,
         })),
       };
 

@@ -10,6 +10,18 @@ interface IFPRDDocumentStore {
   lines: PRDDocumentLine[];
   warehouses: any[];
   selectedBOM: any | null;
+  attachments: {
+    LineNum: number;
+    SourcePath: string;
+    FileName: string;
+    AttachmentDate: string;
+    FreeText: string;
+    CopyToTarget: boolean;
+    File?: File;
+  }[];
+  addAttachment: (file: File) => void;
+  removeAttachment: (lineNum: number) => void;
+  updateAttachment: (lineNum: number, updated: Partial<IFPRDDocumentStore["attachments"][0]>) => void;
 
   setWarehouses: (warehouses: any[]) => void;
 
@@ -31,6 +43,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     lines: [],
     warehouses: [],
     selectedBOM: null,
+    attachments: [],
 
     setWarehouses: (warehouses) => set({ warehouses }),
     setCustomer: (customer) => set({ customer }),
@@ -51,6 +64,34 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         lines: state.lines.map((line, idx) =>
           idx === index ? { ...line, ...updated } : line
         ),
+      }));
+    },
+
+    addAttachment: (file: File) => {
+      const { attachments } = get();
+      const newLineNum = attachments.length > 0 ? Math.max(...attachments.map(a => a.LineNum)) + 1 : 1;
+
+      const newAttachment = {
+        LineNum: newLineNum,
+        SourcePath: process.env.NEXT_PUBLIC_ATTACHMENT_SOURCE_PATH || "",
+        FileName: file.name,
+        AttachmentDate: new Date().toISOString().split("T")[0],
+        FreeText: "",
+        CopyToTarget: false,
+        File: file
+      };
+      set({ attachments: [...attachments, newAttachment] });
+    },
+
+    removeAttachment: (lineNum: number) => {
+      set((s) => ({
+        attachments: s.attachments.filter((a) => a.LineNum !== lineNum)
+      }));
+    },
+
+    updateAttachment: (lineNum, updated) => {
+      set((s) => ({
+        attachments: s.attachments.map((a) => a.LineNum === lineNum ? { ...a, ...updated } : a)
       }));
     },
     loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
@@ -103,7 +144,8 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       set({
         customer: null,
         lines: [],
-        docType: DocumentType.IssueForProduction
+        docType: DocumentType.IssueForProduction,
+        attachments: [],
       }),
     recalculateFromHeader: (headerPlannedQty: number) => {
       set((state) => ({

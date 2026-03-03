@@ -31,6 +31,18 @@ interface IOPRDDocumentStore {
   removeLine: (index: number) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
   updateAllLinesWarehouse: (whs: string, isFrom: boolean) => void;
+  attachments: {
+    LineNum: number;
+    SourcePath: string;
+    FileName: string;
+    AttachmentDate: string;
+    FreeText: string;
+    CopyToTarget: boolean;
+    File?: File;
+  }[];
+  addAttachment: (file: File) => void;
+  removeAttachment: (lineNum: number) => void;
+  updateAttachment: (lineNum: number, updated: Partial<IOPRDDocumentStore["attachments"][0]>) => void;
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   reset: () => void;
 }
@@ -53,6 +65,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     docDate: today(),
     docStatus: "",
     isCopyingTo: false,
+    attachments: [],
 
     setCustomer: (customer) => set({ customer }),
     setWarehouses: (warehouses) => set({ warehouses }),
@@ -88,6 +101,34 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           [isFrom ? "FromWhsCode" : "WhsCode"]: whsCode,
         })),
       })),
+
+    addAttachment: (file: File) => {
+      const { attachments } = get();
+      const newLineNum = attachments.length > 0 ? Math.max(...attachments.map(a => a.LineNum)) + 1 : 1;
+
+      const newAttachment = {
+        LineNum: newLineNum,
+        SourcePath: process.env.NEXT_PUBLIC_ATTACHMENT_SOURCE_PATH || "",
+        FileName: file.name,
+        AttachmentDate: new Date().toISOString().split("T")[0],
+        FreeText: "",
+        CopyToTarget: false,
+        File: file
+      };
+      set({ attachments: [...attachments, newAttachment] });
+    },
+
+    removeAttachment: (lineNum: number) => {
+      set((s) => ({
+        attachments: s.attachments.filter((a) => a.LineNum !== lineNum)
+      }));
+    },
+
+    updateAttachment: (lineNum, updated) => {
+      set((s) => ({
+        attachments: s.attachments.map((a) => a.LineNum === lineNum ? { ...a, ...updated } : a)
+      }));
+    },
 
     loadFromDocument: (doc, type, isCopy) => {
       const rawLines = doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [];
@@ -139,6 +180,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         docDate: today(),
         docStatus: "",
         isCopyingTo: false,
+        attachments: [],
       });
     },
   }))

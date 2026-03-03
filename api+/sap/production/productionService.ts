@@ -1,4 +1,4 @@
-import { BaseProductionDocument } from "@/types/production/PRDDoc.type";
+import { getSapErrorMessage } from "@/lib/errorHelper";
 import apiClient from "@/lib/apiClient";
 
 export const getBOMList = async (): Promise<any[]> => {
@@ -15,8 +15,8 @@ export const postProductionOrder = async (data: any): Promise<any> => {
   try {
     const res = await apiClient.post(`api/Sales/Production`, data);
     return res.data;
-  } catch (err) {
+  } catch (err: any) {
     console.error("Failed to post production order", err);
-    throw err;
+    throw new Error(getSapErrorMessage(err) || "Failed to post production order");
   }
 };

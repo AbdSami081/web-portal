@@ -58,7 +58,13 @@ export default function ProductionOrderPage() {
                 IssuedQuantity: line.IssuedQuantity || 0,
                 ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
                 Warehouse: line.Warehouse || data.Warehouse
-            }))
+            })),
+            Attachments2_Lines: useIFPRDDocument.getState().attachments.map((att) => ({
+                FileName: att.FileName,
+                SourcePath: att.SourcePath,
+                FreeText: att.FreeText,
+                CopyToTarget: att.CopyToTarget,
+            })),
         };
 
         try {
