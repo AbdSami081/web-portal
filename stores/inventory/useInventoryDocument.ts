@@ -146,6 +146,15 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         BaseLine: isCopy ? (line.LineNum ?? idx) : line.BaseLine,
       }));
 
+      const attachments = doc.Attachments_Lines?.Attachments2_Lines?.map((att: any) => ({
+        LineNum: att.LineNum,
+        SourcePath: att.SourcePath || att.TargetPath || "",
+        FileName: att.FileExtension ? `${att.FileName}.${att.FileExtension}` : att.FileName,
+        AttachmentDate: att.AttachmentDate ? att.AttachmentDate.split("T")[0] : today(),
+        FreeText: att.FreeText || "",
+        CopyToTarget: att.CopyToTarget === "tYES" || att.CopyToTargetDoc === "tYES",
+      })) || [];
+
       set({
         lines,
         DocEntry: isCopy ? 0 : (doc.DocEntry || 0),
@@ -156,6 +165,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         journalMemo: isCopy ? "" : (doc.JournalMemo || doc.JrnlMemo || ""),
         docDate: isCopy ? today() : (doc.TaxDate ? doc.TaxDate.split("T")[0] : today()),
         docStatus: isCopy ? "" : (doc.DocumentStatus || ""),
+        attachments: isCopy ? [] : attachments,
         customer: doc.CardCode
           ? { CardCode: doc.CardCode, CardName: doc.CardName || "", CardType: "cCustomer", Balance: 0, Phone1: "", Email: "" }
           : null,

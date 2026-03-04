@@ -110,9 +110,19 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
           ProductionOrderIssueType: line.ProductionOrderIssueType
         };
       }) || [];
+      const attachments = doc.Attachments_Lines?.Attachments2_Lines?.map((att: any) => ({
+        LineNum: att.LineNum,
+        SourcePath: att.SourcePath || att.TargetPath || "",
+        FileName: att.FileExtension ? `${att.FileName}.${att.FileExtension}` : att.FileName,
+        AttachmentDate: att.AttachmentDate ? att.AttachmentDate.split("T")[0] : new Date().toISOString().split("T")[0],
+        FreeText: att.FreeText || "",
+        CopyToTarget: att.CopyToTarget === "tYES" || att.CopyToTargetDoc === "tYES",
+      })) || [];
+
       set({
         lines: mappedLines,
         docType: type || DocumentType.IssueForProduction,
+        attachments: isCopy ? [] : attachments,
       });
     },
     loadFromBOM: (bom: any, plannedQty: number = 0) => {
