@@ -86,11 +86,13 @@ export default function InvTransferRequestPage() {
           WarehouseCode: line.WhsCode || toWarehouse || "",
           FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
           BaseType: line.BaseType ?? -1,
-          BaseEntry: line.BaseEntry ?? null,
-          BaseLine: line.BaseLine ?? null,
+          BaseEntry: line.BaseEntry ?? -1,
+          BaseLine: line.BaseLine ?? -1,
         }));
         result = await postInventoryTransferRequest(payload);
-        toast.success(`Inventory Transfer Request created! DocEntry: ${result.DocEntry}`);
+        if (result?.DocEntry) {
+          toast.success(`Inventory Transfer Request created! DocEntry: ${result.DocEntry}`);
+        }
       }
 
       if (result || (DocEntry && DocEntry > 0)) {
