@@ -301,12 +301,9 @@ export function InvDocumentLayout<T extends FieldValues>({
               </Select>
             )}
 
-            {/* Submit — hidden when viewing an existing document */}
-            {(!DocEntry || DocEntry === 0) && (
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Submit"}
-              </Button>
-            )}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : (DocEntry && DocEntry > 0 ? "Update" : "Submit")}
+            </Button>
           </div>
 
           <GenericModal
