@@ -126,10 +126,8 @@ export function SalesDocumentLayout<T extends FieldValues>({
   };
 
   useEffect(() => {
-    // Only run this logic on initial mount or when defaultValues changes meaningfully
     const state = useSalesDocument.getState();
 
-    // If we are currently copying (redirected from another page)
     if (isCopying) {
       reset({
         ...defaultValues,
@@ -146,8 +144,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
       setIsCopying(false);
     } else if (!isDirty) {
-      // If the form is clean (fresh navigation), we reset to ensure 
-      // old store data or previous page state is cleared.
       ResetForm();
     }
   }, [defaultValues]);
@@ -256,7 +252,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
             {actions && <div>{actions}</div>}
           </div>
 
-          <div className="flex-1 flex flex-col gap-4 p-6 overflow-y-auto overflow-x-hidden w-full">
+          <div className="flex-1 flex flex-col gap-4 p-6 overflow-y-auto overflow-x-auto w-full">
             {children}
           </div>
 
