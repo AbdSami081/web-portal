@@ -43,7 +43,6 @@ export function NavMain({
   const [openParent, setOpenParent] = useState<string | null>(null);
 
   const filteredItems = useMemo(() => {
-    console.log('[NAV-MAIN] User allowedModules:', user?.allowedModules);
     if (!user?.allowedModules) return [];
 
     // 1. If "all", show everything
@@ -76,7 +75,6 @@ export function NavMain({
       return false;
     });
 
-    console.log('[NAV-MAIN] Filtered items:', deepFiltered.map(i => i.id));
     return deepFiltered;
   }, [items, user?.allowedModules]);
 
