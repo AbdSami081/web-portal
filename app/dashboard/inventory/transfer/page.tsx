@@ -1,7 +1,7 @@
 "use client"
 
 import { toast } from "sonner";
-import { postInventoryTransfer, InventoryTransferPayload } from "@/api+/sap/inventory/inventoryService";
+import { postInventoryTransfer, patchInventoryTransfer, InventoryTransferPayload } from "@/api+/sap/inventory/inventoryService";
 import { z } from "zod";
 import { quotationSchema } from "@/lib/schemas/quotationSchema";
 import { InvDocumentLayout } from "@/components/Inventory/shared/InvDocumentLayout";
@@ -33,6 +33,8 @@ export default function InvTransferPage() {
     comments,
     journalMemo,
     customer,
+    DocEntry,
+    attachments,
   } = useInventoryDocument();
 
   const defaultValues: FormData = useMemo(() => ({
@@ -56,13 +58,27 @@ export default function InvTransferPage() {
 
   const handleSubmit = async (data: FormData) => {
     try {
-      const payload: InventoryTransferPayload = {
-        CardCode: customer?.CardCode || "",
+      const payload: any = {
         Comments: comments,
         JournalMemo: journalMemo,
-        FromWarehouse: fromWarehouse || "",
-        ToWarehouse: toWarehouse || "",
-        StockTransferLines: lines.map((line) => ({
+        Attachments2_Lines: attachments.map((att) => ({
+          FileExtension: att.FileName.split('.').pop(),
+          FileName: att.FileName.split('.').slice(0, -1).join('.'),
+          SourcePath: att.SourcePath,
+          FreeText: att.FreeText,
+          CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
+        })),
+      };
+
+      let result;
+      if (DocEntry && DocEntry > 0) {
+        result = await patchInventoryTransfer(DocEntry, payload);
+        toast.success(`Inventory Transfer updated!`);
+      } else {
+        payload.CardCode = customer?.CardCode || "";
+        payload.FromWarehouse = fromWarehouse || "";
+        payload.ToWarehouse = toWarehouse || "";
+        payload.StockTransferLines = lines.map((line) => ({
           ItemCode: line.ItemCode,
           Quantity: line.Quantity,
           UnitPrice: line.ItemCost || 0,
@@ -71,22 +87,16 @@ export default function InvTransferPage() {
           BaseType: line.BaseType ?? -1,
           BaseEntry: line.BaseEntry ?? undefined,
           BaseLine: line.BaseLine ?? undefined,
-        })),
-        Attachments2_Lines: useInventoryDocument.getState().attachments.map((att) => ({
-          FileName: att.FileName,
-          SourcePath: att.SourcePath,
-          FreeText: att.FreeText,
-          CopyToTarget: att.CopyToTarget,
-        })),
-      };
-
-      const result = await postInventoryTransfer(payload);
-      if (result?.DocEntry) {
+        }));
+        result = await postInventoryTransfer(payload);
         toast.success(`Inventory Transfer created! DocEntry: ${result.DocEntry}`);
+      }
+
+      if (result || (DocEntry && DocEntry > 0)) {
         resetStore();
         router.push("/dashboard/inventory/transfer");
       } else {
-        throw new Error("Failed to create transfer");
+        throw new Error("Failed to process transfer");
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to create transfer");

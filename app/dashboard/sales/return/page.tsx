@@ -11,7 +11,7 @@ import {
 } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
-import { postSalesReturn } from "@/api+/sap/quotation/salesService";
+import { postSalesReturn, patchSalesReturn } from "@/api+/sap/quotation/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 
@@ -37,6 +37,27 @@ export default function ReturnPage() {
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = useSalesDocument.getState();
 
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.SalesReturn) {
+      const patchPayload = {
+        Comments: data.Comments,
+        Attachments2_Lines: attachments.map((att) => ({
+          FileExtension: att.FileName.split('.').pop(),
+          FileName: att.FileName.split('.').slice(0, -1).join('.'),
+          SourcePath: att.SourcePath,
+          FreeText: att.FreeText,
+          CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
+        }))
+      };
+
+      try {
+        await patchSalesReturn(Number(DocEntry), patchPayload);
+        toast.success(`Sales Return #${DocEntry} updated successfully`);
+      } catch (error) {
+        toast.error("Failed to update Sales Return");
+      }
+      return;
+    }
+
     const payload = {
       ...data,
       DocumentLines: lines.map((line) => {
@@ -57,8 +78,8 @@ export default function ReturnPage() {
         FileExtension: att.FileName.split('.').pop(),
         FileName: att.FileName.split('.').slice(0, -1).join('.'),
         SourcePath: att.SourcePath,
-        UserID: "1",
-        FreeText: att.FreeText
+        FreeText: att.FreeText,
+        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
       }))
     };
 

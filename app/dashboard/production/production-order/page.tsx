@@ -8,7 +8,7 @@ import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter"
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useMemo, useEffect } from "react";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
-import { postProductionOrder } from "@/api+/sap/production/productionService";
+import { postProductionOrder, patchProductionOrder } from "@/api+/sap/production/productionService";
 import { toast } from "sonner";
 
 export default function ProductionOrderPage() {
@@ -38,43 +38,51 @@ export default function ProductionOrderPage() {
     }), []);
 
     const handleSubmit = async (data: ProductionOrderFormData) => {
-        const { lines } = useIFPRDDocument.getState();
+        const { lines, attachments } = useIFPRDDocument.getState();
 
-        const payload = {
-            ItemNo: data.ItemNo,
-            PlannedQuantity: data.PlannedQuantity,
-            PostingDate: data.PostingDate || data.CreationDate,
-            StartDate: data.StartDate,
-            DueDate: data.DueDate,
-            Warehouse: data.Warehouse,
-            Priority: data.Priority,
-            ProductionOrderType: data.ProductionOrderType || "bopotStandard",
+        const payload: any = {
             Remarks: data.Remarks || data.Comments,
-            PickRemarks: data.PickRmrk || "Created via Web Portal",
-            ProductionOrderLines: lines.map(line => ({
-                ItemNo: line.ItemNo,
-                BaseQuantity: line.BaseQuantity || 1,
-                PlannedQuantity: line.PlannedQuantity,
-                IssuedQuantity: line.IssuedQuantity || 0,
-                ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
-                Warehouse: line.Warehouse || data.Warehouse
-            })),
-            Attachments2_Lines: useIFPRDDocument.getState().attachments.map((att) => ({
-                FileName: att.FileName,
+            Attachments2_Lines: attachments.map((att) => ({
+                FileExtension: att.FileName.split('.').pop(),
+                FileName: att.FileName.split('.').slice(0, -1).join('.'),
                 SourcePath: att.SourcePath,
                 FreeText: att.FreeText,
-                CopyToTarget: att.CopyToTarget,
+                CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
             })),
         };
 
         try {
-            const res = await postProductionOrder(payload);
-            if (res) {
+            let res;
+            if (data.AbsoluteEntry && data.AbsoluteEntry > 0) {
+                res = await patchProductionOrder(data.AbsoluteEntry, payload);
+                toast.success("Production Order updated successfully");
+            } else {
+                payload.ItemNo = data.ItemNo;
+                payload.PlannedQuantity = data.PlannedQuantity;
+                payload.PostingDate = data.PostingDate || data.CreationDate;
+                payload.StartDate = data.StartDate;
+                payload.DueDate = data.DueDate;
+                payload.Warehouse = data.Warehouse;
+                payload.Priority = data.Priority;
+                payload.ProductionOrderType = data.ProductionOrderType || "bopotStandard";
+                payload.PickRemarks = data.PickRmrk || "Created via Web Portal";
+                payload.ProductionOrderLines = lines.map(line => ({
+                    ItemNo: line.ItemNo,
+                    BaseQuantity: line.BaseQuantity || 1,
+                    PlannedQuantity: line.PlannedQuantity,
+                    IssuedQuantity: line.IssuedQuantity || 0,
+                    ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
+                    Warehouse: line.Warehouse || data.Warehouse
+                }));
+                res = await postProductionOrder(payload);
                 toast.success("Production Order created successfully");
+            }
+
+            if (res || (data.AbsoluteEntry && data.AbsoluteEntry > 0)) {
                 resetStore();
             }
         } catch (error) {
-            toast.error("Failed to create Production Order");
+            toast.error("Failed to process Production Order");
         }
     };
 

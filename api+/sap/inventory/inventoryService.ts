@@ -69,3 +69,20 @@ export const getInventoryTransferRequestList = async () => {
         throw new Error(getSapErrorMessage(error) || "Failed to fetch inventory transfer requests");
     }
 };
+export const patchInventoryTransferRequest = async (docEntry: number, payload: any) => {
+    try {
+        const response = await apiClient.patch(`api/Sales/InventoryTransferRequest/${docEntry}`, payload);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(getSapErrorMessage(error) || "Failed to patch inventory transfer request");
+    }
+};
+
+export const patchInventoryTransfer = async (docEntry: number, payload: any) => {
+    try {
+        const response = await apiClient.patch(`api/Sales/InventoryTransfer/${docEntry}`, payload);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(getSapErrorMessage(error) || "Failed to patch inventory transfer");
+    }
+};

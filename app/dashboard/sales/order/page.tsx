@@ -39,7 +39,14 @@ export default function OrderPage() {
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Order) {
       const payload = {
-        Comments: data.Comments
+        Comments: data.Comments,
+        Attachments2_Lines: attachments.map((att) => ({
+          FileExtension: att.FileName.split('.').pop(),
+          FileName: att.FileName.split('.').slice(0, -1).join('.'),
+          SourcePath: att.SourcePath,
+          FreeText: att.FreeText,
+          CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
+        }))
       };
 
       try {

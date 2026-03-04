@@ -231,6 +231,16 @@ export const patchARInvoice = async (docEntry: number, payload: any): Promise<an
   }
 };
 
+export const patchSalesReturn = async (docEntry: number, payload: any): Promise<any | null> => {
+  try {
+    const res = await apiClient.patch(`api/Sales/Returns/${docEntry}`, payload);
+    return res.data;
+  } catch (err) {
+    console.error("Failed to patch sales return", err);
+    return null;
+  }
+};
+
 export const getAttachment = async (filePath: string) => {
   try {
     const res = await apiClient.get(`api/Sales/DisplayAttachment?filePath=${encodeURIComponent(filePath)}`, {
