@@ -21,7 +21,11 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
+        if (!error.response) {
+            // Network error (server down, CORS, etc.)
+            typeof window !== "undefined" && import("sonner").then((mod) => mod.toast.error("Cannot reach the server. Please check your connection or ensure the API is running."));
+        }
+        else if (error.response.status === 401) {
             // Trigger session expired modal
             useAuthStore.getState().setSessionExpired(true);
         }

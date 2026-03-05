@@ -87,6 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
         ...dbParams
       });
+
       const decoded = parseJwt(data.accessToken);
       const userWithModules = {
         ...data.user,
@@ -101,7 +102,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       saveTokens(data.accessToken, data.refreshToken);
       router.push("/dashboard");
     } catch (error: any) {
-      throw new Error(error?.response?.data?.detail || error?.response?.data?.message || "Login failed");
+      if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+        throw new Error("Server is currently unreachable. Please ensure the API server is running.");
+      }
+      throw new Error(error?.response?.data?.detail || error?.response?.data?.message || "Login failed due to an unknown error.");
     }
   };
 
