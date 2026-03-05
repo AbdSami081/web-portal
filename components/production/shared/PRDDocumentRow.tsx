@@ -77,7 +77,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
       )}
 
       {config.itemColumns.itemDescription && (
-        <td className="py-2 px-4">
+        <td className="py-2 px-4 max-w-[250px] truncate" title={line.ItemName}>
           <span className="font-medium text-gray-700">{line.ItemName}</span>
         </td>
       )}

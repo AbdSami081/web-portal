@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 
 export function PRDDocumentItems() {
@@ -106,15 +107,15 @@ export function PRDDocumentItems() {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="relative border rounded overflow-x-auto">
-              <div className="w-full overflow-x-auto pb-2">
-                <Table className="text-xs min-w-[1600px]">
+            <div className={`relative border rounded ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? '' : 'overflow-x-auto'}`}>
+              <div className={`w-full pb-2 ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? '' : 'overflow-x-auto'}`}>
+                <Table className={`text-xs ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? 'w-full' : 'min-w-[1600px]'}`}>
                   <TableHeader className="sticky top-0 bg-neutral-900 z-10">
                     <TableRow className="border-neutral-600">
                       {config.itemColumns.actions && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[50px]">Actions</TableHead>}
                       {config.itemColumns.type && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Type</TableHead>}
                       {config.itemColumns.itemCode && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[150px]">Item No</TableHead>}
-                      {config.itemColumns.itemDescription && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[300px]">Item Description</TableHead>}
+                      {config.itemColumns.itemDescription && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[200px] max-w-[250px] truncate">Item Description</TableHead>}
                       {config.itemColumns.baseQty && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Base Qty</TableHead>}
                       {config.itemColumns.baseRatio && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Base Ratio</TableHead>}
                       {config.itemColumns.plannedQty && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[120px]">Planned Qty</TableHead>}
