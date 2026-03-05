@@ -466,7 +466,7 @@ export function PRDDocumentHeader() {
         {config.headerFields.priority && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Priority</AppLabel>
-            <Input type="number" {...register("Priority")} className="h-8 flex-1" />
+            <Input type="number" {...register("Priority")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
           </div>
         )}
 
