@@ -54,7 +54,7 @@ export function PRDDocumentItems() {
 
   return (
     <div className="grid w-full relative pt-2 overflow-visible">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-1 overflow-visible">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-1 overflow-x-auto">
         <TabsList className="grid w-[240px] grid-cols-2 mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800">
           <TabsTrigger
             value="content"
@@ -70,9 +70,9 @@ export function PRDDocumentItems() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="content" className="overflow-visible mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6">
+        <TabsContent value="content" className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto">
           <div className="relative overflow-visible">
-            <div className="absolute -top-7 left-2 z-50">
+            <div className="absolute -top-6 left-2 z-50">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -106,9 +106,9 @@ export function PRDDocumentItems() {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="relative border rounded overflow-hidden">
-              <div className="overflow-x-auto pb-2">
-                <Table className="text-xs min-w-full">
+            <div className="relative border rounded overflow-x-auto">
+              <div className="w-full overflow-x-auto pb-2">
+                <Table className="text-xs min-w-[1600px]">
                   <TableHeader className="sticky top-0 bg-neutral-900 z-10">
                     <TableRow className="border-neutral-600">
                       {config.itemColumns.actions && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[50px]">Actions</TableHead>}
