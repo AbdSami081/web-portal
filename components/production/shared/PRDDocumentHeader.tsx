@@ -14,6 +14,7 @@ import { Warehouse } from "@/types/warehouse/warehouse";
 import { GenericModal } from "@/modals/GenericModal";
 import { getBOMList } from "@/api+/sap/production/productionService";
 import { getItemsList } from "@/api+/sap/master-data/items";
+import { DocumentType as SAPDocumentType } from "@/types/sales/salesDocuments.type";
 import { Controller } from "react-hook-form";
 import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { Item } from "@/types/sales/Item.type";
@@ -73,6 +74,7 @@ export function PRDDocumentHeader() {
   const [isLoadingItems, setIsLoadingItems] = useState(false); // Renamed from isLoadingBoms
   const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM } = useIFPRDDocument();
   const config = usePRDDocConfig();
+  const docType = config.type;
   const watchedPlannedQty = watch("PlannedQuantity");
 
   useEffect(() => {
@@ -373,27 +375,31 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.docDate && (
           <div className="flex items-center gap-2">
-            <AppLabel className="w-28 shrink-0">Document Date</AppLabel>
+            <AppLabel className="w-28 shrink-0">
+              {docType === SAPDocumentType.ProductionOrder ? "Document Date" : "Posting Date"}
+            </AppLabel>
             <Input type="date" {...register("TaxDate")} className="h-8 flex-1" />
           </div>
         )}
 
-        <div className="flex items-center gap-2">
-          <AppLabel className="w-28 shrink-0">Type</AppLabel>
-          <Select
-            onValueChange={handleTypeChange}
-            value={watch("ProductionOrderType") || "bopotStandard"}
-          >
-            <SelectTrigger className="h-8 flex-1">
-              <SelectValue placeholder="Select Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bopotStandard">Standard</SelectItem>
-              <SelectItem value="bopotSpecial">Special</SelectItem>
-              <SelectItem value="bopotDisassembly">Disassembly</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {config.headerFields.type && (
+          <div className="flex items-center gap-2">
+            <AppLabel className="w-28 shrink-0">Type</AppLabel>
+            <Select
+              onValueChange={handleTypeChange}
+              value={watch("ProductionOrderType") || "bopotStandard"}
+            >
+              <SelectTrigger className="h-8 flex-1">
+                <SelectValue placeholder="Select Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bopotStandard">Standard</SelectItem>
+                <SelectItem value="bopotSpecial">Special</SelectItem>
+                <SelectItem value="bopotDisassembly">Disassembly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
 
 
@@ -422,30 +428,32 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-        <div className="flex items-center gap-2">
-          <AppLabel className="w-28 shrink-0">Status</AppLabel>
-          <Controller
-            name="ProductionOrderStatus"
-            control={control}
-            defaultValue="boposPlanned"
-            render={({ field }) => (
-              <Select
-                onValueChange={field.onChange}
-                value={field.value || "boposPlanned"}
-              >
-                <SelectTrigger className="h-8 flex-1">
-                  <SelectValue placeholder="Select Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="boposPlanned">Planned</SelectItem>
-                  {!!watch("AbsoluteEntry") && (
-                    <SelectItem value="boposReleased">Released</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
+        {config.headerFields.status && (
+          <div className="flex items-center gap-2">
+            <AppLabel className="w-28 shrink-0">Status</AppLabel>
+            <Controller
+              name="ProductionOrderStatus"
+              control={control}
+              defaultValue="boposPlanned"
+              render={({ field }) => (
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value || "boposPlanned"}
+                >
+                  <SelectTrigger className="h-8 flex-1">
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="boposPlanned">Planned</SelectItem>
+                    {!!watch("AbsoluteEntry") && (
+                      <SelectItem value="boposReleased">Released</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+        )}
 
         {config.headerFields.plannedQuantity && (
           <div className="flex items-center gap-2">
