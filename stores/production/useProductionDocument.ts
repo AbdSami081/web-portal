@@ -10,6 +10,7 @@ interface IFPRDDocumentStore {
   lines: PRDDocumentLine[];
   warehouses: any[];
   selectedBOM: any | null;
+  ProductionOrderStatus: string;
   attachments: {
     LineNum: number;
     SourcePath: string;
@@ -43,6 +44,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     lines: [],
     warehouses: [],
     selectedBOM: null,
+    ProductionOrderStatus: "boposPlanned",
     attachments: [],
 
     setWarehouses: (warehouses) => set({ warehouses }),
@@ -123,6 +125,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         lines: mappedLines,
         docType: type || DocumentType.IssueForProduction,
         attachments: isCopy ? [] : attachments,
+        ProductionOrderStatus: doc.ProductionOrderStatus || "boposPlanned",
       });
     },
     loadFromBOM: (bom: any, plannedQty: number = 0) => {
@@ -155,6 +158,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         customer: null,
         lines: [],
         docType: DocumentType.IssueForProduction,
+        ProductionOrderStatus: "boposPlanned",
         attachments: [],
       }),
     recalculateFromHeader: (headerPlannedQty: number) => {

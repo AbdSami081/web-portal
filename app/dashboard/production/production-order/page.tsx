@@ -35,6 +35,7 @@ export default function ProductionOrderPage() {
         AbsoluteEntry: 0,
         PostingDate: new Date().toISOString().split("T")[0],
         ProductionOrderType: "bopotStandard",
+        ProductionOrderStatus: "boposPlanned",
     }), []);
 
     const handleSubmit = async (data: ProductionOrderFormData) => {
@@ -42,6 +43,7 @@ export default function ProductionOrderPage() {
 
         const payload: any = {
             Remarks: data.Remarks || data.Comments,
+            ProductionOrderStatus: data.ProductionOrderStatus || "boposPlanned",
             Attachments2_Lines: attachments.map((att) => ({
                 FileExtension: att.FileName.split('.').pop(),
                 FileName: att.FileName.split('.').slice(0, -1).join('.'),

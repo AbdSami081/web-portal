@@ -395,6 +395,8 @@ export function PRDDocumentHeader() {
           </Select>
         </div>
 
+
+
         {config.headerFields.productNo && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Product No.</AppLabel>
@@ -419,6 +421,31 @@ export function PRDDocumentHeader() {
             <Input type="text" {...register("ProductDescription")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
           </div>
         )}
+
+        <div className="flex items-center gap-2">
+          <AppLabel className="w-28 shrink-0">Status</AppLabel>
+          <Controller
+            name="ProductionOrderStatus"
+            control={control}
+            defaultValue="boposPlanned"
+            render={({ field }) => (
+              <Select
+                onValueChange={field.onChange}
+                value={field.value || "boposPlanned"}
+              >
+                <SelectTrigger className="h-8 flex-1">
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="boposPlanned">Planned</SelectItem>
+                  {!!watch("AbsoluteEntry") && (
+                    <SelectItem value="boposReleased">Released</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
 
         {config.headerFields.plannedQuantity && (
           <div className="flex items-center gap-2">
@@ -490,6 +517,8 @@ export function PRDDocumentHeader() {
             <Input type="date" {...register("DueDate")} className="h-8 flex-1" />
           </div>
         )}
+
+
       </div>
 
       <GenericModal

@@ -15,6 +15,7 @@ export const productionOrderSchema = z.object({
     AbsoluteEntry: z.number().optional(),
     PostingDate: z.string().optional(),
     ProductionOrderType: z.string().optional(),
+    ProductionOrderStatus: z.string().optional(),
 });
 
 export type ProductionOrderFormData = z.infer<typeof productionOrderSchema>;
