@@ -16,6 +16,8 @@ export interface DocumentConfig {
     startDate?: boolean;
     orderDate?: boolean;
     dueDate?: boolean;
+    type?: boolean;
+    status?: boolean;
   };
   itemColumns: {
     type?: boolean;
@@ -40,9 +42,11 @@ export const IFPRDConfig: DocumentConfig = {
   type: DocumentType.IssueForProduction,
   title: "Issue For Production",
   headerFields: {
-    baseRef: true,
+    baseRef: false,
     reference: true,
     docDate: true,
+    type: false,
+    status: false,
   },
   itemColumns: {
     type: true,
@@ -61,9 +65,11 @@ export const ReceiptFPRDConfig: DocumentConfig = {
   type: DocumentType.ReceiptFromProduction,
   title: "Receipt From Production",
   headerFields: {
-    baseRef: true,
+    baseRef: false,
     reference: true,
     docDate: true,
+    type: false,
+    status: false,
   },
   itemColumns: {
     type: true,
@@ -90,6 +96,8 @@ export const PRDOrderConfig: DocumentConfig = {
     startDate: true,
     orderDate: true,
     dueDate: true,
+    type: true,
+    status: true,
   },
   itemColumns: {
     itemCode: true,
