@@ -25,7 +25,7 @@ export interface InventoryTransferPayload {
 export const postInventoryTransferRequest = async (payload: InventoryTransferPayload) => {
     try {
 
-        const response = await apiClient.post("api/Sales/InventoryTransferRequest", payload);
+        const response = await apiClient.post("api/Inventory/InventoryTransferRequest", payload);
         return response.data;
     } catch (error: any) {
         throw new Error(getSapErrorMessage(error) || "Failed to post inventory transfer");
@@ -35,7 +35,7 @@ export const postInventoryTransferRequest = async (payload: InventoryTransferPay
 export const postInventoryTransfer = async (payload: InventoryTransferPayload) => {
     try {
 
-        const response = await apiClient.post("api/Sales/InventoryTransfer", payload);
+        const response = await apiClient.post("api/Inventory/InventoryTransfer", payload);
         return response.data;
     } catch (error: any) {
         throw new Error(getSapErrorMessage(error) || "Failed to post inventory transfer");
@@ -44,7 +44,7 @@ export const postInventoryTransfer = async (payload: InventoryTransferPayload) =
 
 export const getInventoryTransferRequest = async (docNum: number) => {
     try {
-        const response = await apiClient.get(`api/Sales/InventoryTransferRequest?docNum=${docNum}`);
+        const response = await apiClient.get(`api/Inventory/InventoryTransferRequest?docNum=${docNum}`);
         return response.data;
     } catch (error: any) {
         throw new Error(getSapErrorMessage(error) || "Failed to fetch inventory transfer request");
@@ -53,7 +53,7 @@ export const getInventoryTransferRequest = async (docNum: number) => {
 
 export const getInventoryTransfer = async (docNum: number) => {
     try {
-        const response = await apiClient.get(`api/Sales/InventoryTransfer?docNum=${docNum}`);
+        const response = await apiClient.get(`api/Inventory/InventoryTransfer?docNum=${docNum}`);
         return response.data;
     } catch (error: any) {
         throw new Error(getSapErrorMessage(error) || "Failed to fetch inventory transfer");
@@ -62,7 +62,7 @@ export const getInventoryTransfer = async (docNum: number) => {
 
 export const getInventoryTransferRequestList = async () => {
     try {
-        const response = await apiClient.get(`api/Sales/InventoryTransferRequestList`);
+        const response = await apiClient.get(`api/Inventory/InventoryTransferRequestList`);
         const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
         return data.value || [];
     } catch (error: any) {
@@ -71,7 +71,7 @@ export const getInventoryTransferRequestList = async () => {
 };
 export const patchInventoryTransferRequest = async (docEntry: number, payload: any) => {
     try {
-        const response = await apiClient.patch(`api/Sales/InventoryTransferRequest/${docEntry}`, payload);
+        const response = await apiClient.patch(`api/Inventory/InventoryTransferRequest/${docEntry}`, payload);
         return response.data;
     } catch (error: any) {
         throw new Error(getSapErrorMessage(error) || "Failed to patch inventory transfer request");
@@ -80,7 +80,7 @@ export const patchInventoryTransferRequest = async (docEntry: number, payload: a
 
 export const patchInventoryTransfer = async (docEntry: number, payload: any) => {
     try {
-        const response = await apiClient.patch(`api/Sales/InventoryTransfer/${docEntry}`, payload);
+        const response = await apiClient.patch(`api/Inventory/InventoryTransfer/${docEntry}`, payload);
         return response.data;
     } catch (error: any) {
         throw new Error(getSapErrorMessage(error) || "Failed to patch inventory transfer");

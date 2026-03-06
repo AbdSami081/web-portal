@@ -4,7 +4,7 @@ import { Warehouse } from "@/types/warehouse/warehouse";
 
 export const getwarehouses = async (): Promise<Warehouse[]> => {
   try {
-    const res = await apiClient.get(`api/Sales/GetWarehouse`);
+    const res = await apiClient.get(`api/Master/GetWarehouse`);
     return Array.isArray(res.data) ? res.data : [];
   } catch (err) {
     console.error("Failed to fetch warehouse", err);

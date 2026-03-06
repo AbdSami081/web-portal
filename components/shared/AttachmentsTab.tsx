@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Trash2, ExternalLink, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
-import { getAttachment } from "@/api+/sap/quotation/salesService";
+import { getAttachment } from "@/api+/sap/sales/salesService";
 
 interface Attachment {
     LineNum: number;

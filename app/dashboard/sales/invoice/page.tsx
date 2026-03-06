@@ -11,7 +11,7 @@ import {
 } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
-import { postARInvoice, patchARInvoice } from "@/api+/sap/quotation/salesService";
+import { postARInvoice, patchARInvoice } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 

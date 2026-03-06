@@ -1,10 +1,9 @@
 import axios from "axios";
-import { API_URL } from "@/types/config";
 import { getAccessToken } from "@/api+/sap/auth/authService";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const apiClient = axios.create({
-    baseURL: API_URL,
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
 });
 
 apiClient.interceptors.request.use(

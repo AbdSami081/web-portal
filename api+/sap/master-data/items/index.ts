@@ -43,7 +43,7 @@ import { Item } from "@/types/sales/Item.type";
 
 export const getItemsList = async (search = "", skip = 0, top = 10): Promise<Item[]> => {
   try {
-    const res = await apiClient.get(`api/Sales/GetItems`, {
+    const res = await apiClient.get(`api/Master/GetItems`, {
       params: {
         search: search,
         skip: skip,

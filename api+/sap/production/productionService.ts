@@ -3,7 +3,7 @@ import apiClient from "@/lib/apiClient";
 
 export const getBOMList = async (): Promise<any[]> => {
   try {
-    const res = await apiClient.get(`api/Sales/GetBOMForProduction`);
+    const res = await apiClient.get(`api/Production/GetBOMForProduction`);
     return res.data?.value || [];
   } catch (err) {
     console.error("Failed to fetch BOM list", err);
@@ -13,7 +13,7 @@ export const getBOMList = async (): Promise<any[]> => {
 
 export const postProductionOrder = async (data: any): Promise<any> => {
   try {
-    const res = await apiClient.post(`api/Sales/Production`, data);
+    const res = await apiClient.post(`api/Production/Production`, data);
     return res.data;
   } catch (err: any) {
     console.error("Failed to post production order", err);
@@ -23,7 +23,7 @@ export const postProductionOrder = async (data: any): Promise<any> => {
 
 export const patchProductionOrder = async (docEntry: number, payload: any): Promise<any> => {
   try {
-    const res = await apiClient.patch(`api/Sales/Production/${docEntry}`, payload);
+    const res = await apiClient.patch(`api/Production/Production/${docEntry}`, payload);
     return res.data;
   } catch (err: any) {
     console.error("Failed to patch production order", err);

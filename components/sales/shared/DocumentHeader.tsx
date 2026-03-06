@@ -10,7 +10,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { toast } from "sonner";
-import { getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument } from "@/api+/sap/quotation/salesService";
+import { getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument } from "@/api+/sap/sales/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 
 const statusMap: Record<string, string> = {

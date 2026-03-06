@@ -6,7 +6,7 @@ import { DocumentItems } from "@/components/sales/shared/DocumentItems";
 import { SalesDocumentLayout } from "@/components/sales/shared/SalesDocumentLayout";
 import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { postQuotation, patchQuotation } from "@/api+/sap/quotation/salesService";
+import { postQuotation, patchQuotation } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { getSapErrorMessage } from "@/lib/errorHelper";

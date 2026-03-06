@@ -1,4 +1,3 @@
-import { API_URL } from "@/types/config";
 import axios from "axios";
 
 export interface LoginPayload {
@@ -18,7 +17,7 @@ export interface LoginResponse {
 }
 
 export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
-  const response = await axios.post<LoginResponse>(`${API_URL}api/Auth/login`, payload);
+  const response = await axios.post<LoginResponse>(`${process.env.NEXT_PUBLIC_API_URL}api/Auth/login`, payload);
   return response.data;
 };
 

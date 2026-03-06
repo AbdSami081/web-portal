@@ -29,7 +29,7 @@ import { BusinessPartner } from "@/types/sales/businessPartner.type";
 
 export const getCustomers = async (search = "", skip = 0, top = 10): Promise<BusinessPartner[]> => {
   try {
-    const res = await apiClient.get(`api/Sales/GetCustomers`, {
+    const res = await apiClient.get(`api/Master/GetCustomers`, {
       params: {
         search: search,
         skip: skip,
