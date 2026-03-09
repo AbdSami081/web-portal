@@ -8,11 +8,82 @@ import { Button } from "@/components/ui/button";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { AppLabel } from "@/components/Custom/AppLabel";
+import { GenericModal } from "@/modals/GenericModal";
+import { getReleasedProductionOrders } from "@/api+/sap/production/productionService";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 export default function PRDDocumentFooter() {
   const { watch, register, setValue } = useFormContext();
   const config = usePRDDocConfig();
   const [showItemSelector, setShowItemSelector] = useState(false);
+
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showLineModal, setShowLineModal] = useState(false);
+  const [productionOrders, setProductionOrders] = useState<any[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [isLoadingLines, setIsLoadingLines] = useState(false);
+
+  const { addLine } = useIFPRDDocument();
+
+  const handleFetchOrders = async () => {
+    setIsLoadingOrders(true);
+    setShowOrderModal(true);
+    try {
+      const data = await getReleasedProductionOrders();
+      const processedOrders = data.map((order: any) => ({
+        ...order,
+        DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
+          order.ProductionOrderType === "bopotSpecial" ? "Special" :
+            order.ProductionOrderType === "bopotAssembly" ? "Assembly" : order.ProductionOrderType
+      }));
+      setProductionOrders(processedOrders);
+    } catch (error) {
+      console.error("Failed to fetch released orders", error);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  };
+
+  const handleOrderSelect = (orderId: any) => {
+    const order = productionOrders.find(o => o.AbsoluteEntry === orderId);
+    if (order) {
+      setSelectedOrder(order);
+      setShowLineModal(true);
+      setIsLoadingLines(true);
+      setTimeout(() => {
+        setIsLoadingLines(false);
+      }, 500);
+    }
+  };
+
+  const handleLinesSelect = (lineNumbers: any[]) => {
+    if (selectedOrder) {
+      const selectedLines = selectedOrder.ProductionOrderLines.filter((l: any) =>
+        lineNumbers.includes(l.LineNumber)
+      );
+
+      selectedLines.forEach((line: any) => {
+        addLine({
+          ItemNo: line.ItemNo,
+          ItemName: line.ItemName || "",
+          PlannedQuantity: line.PlannedQuantity,
+          Warehouse: line.Warehouse || "",
+          ItemType: line.ItemType || "pit_Item",
+          BaseQuantity: line.BaseQuantity,
+          IssuedQuantity: line.IssuedQuantity || 0,
+          ProductionOrderIssueType: line.ProductionOrderIssueType,
+          UoMCode: line.UoMCode?.toString(),
+          OrderNumber: selectedOrder.AbsoluteEntry,
+          LineNumber: line.LineNumber,
+          StartDate: line.StartDate,
+          EndDate: line.EndDate,
+        });
+      });
+    }
+    setShowLineModal(false);
+    setSelectedOrder(null);
+  };
 
   const handleItemSelect = (selectedItems: any[]) => {
     if (selectedItems.length > 0) {
@@ -41,15 +112,32 @@ export default function PRDDocumentFooter() {
 
         <div className="space-y-4">
           <div className="flex flex-col gap-2">
-            <AppLabel htmlFor="pickRmrk">Pick and Pack Remarks</AppLabel>
+            <AppLabel htmlFor="pickRmrk">
+              {config.type === DocumentType.IssueForProduction ? "Journal Remarks" : "Pick and Pack Remarks"}
+            </AppLabel>
             <Textarea
               id="pickRmrk"
-              {...register("PickRmrk")}
+              {...register(config.type === DocumentType.IssueForProduction ? "JournalMemo" : "PickRmrk")}
               rows={4}
-              placeholder="Enter pick and pack specific instructions..."
+              placeholder={
+                config.type === DocumentType.IssueForProduction
+                  ? "Enter journal remarks..."
+                  : "Enter pick and pack specific instructions..."
+              }
               className="resize-none border-zinc-200 focus:border-zinc-400 focus:ring-zinc-100 transition-all text-sm leading-relaxed"
             />
           </div>
+          {config.footerActions?.showProductionOrderButton && (
+            <div className="flex justify-end mt-2">
+              <Button
+                type="button"
+                onClick={handleFetchOrders}
+                className="bg-black text-white hover:bg-zinc-800 h-8 text-xs font-semibold px-4 rounded-md shadow-sm transition-all active:scale-95"
+              >
+                Production Order
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -81,6 +169,50 @@ export default function PRDDocumentFooter() {
         onClose={() => setShowItemSelector(false)}
         onSelectItems={handleItemSelect}
         multiple={false}
+      />
+
+      <GenericModal
+        title="Select Production Order"
+        open={showOrderModal}
+        onClose={() => setShowOrderModal(false)}
+        data={productionOrders}
+        onSelect={handleOrderSelect}
+        getSelectValue={(item) => item.AbsoluteEntry}
+        isLoading={isLoadingOrders}
+        columns={[
+          { key: "DocumentNumber", label: "Docu..." },
+          { key: "Series", label: "Series Name" },
+          { key: "ItemNo", label: "Product No." },
+          { key: "DisplayType", label: "Production Order..." },
+          { key: "DueDate", label: "Due Date" },
+          { key: "ProductDescription", label: "Product Descrip..." },
+        ]}
+      />
+
+      <GenericModal
+        title={`Select Lines - Order #${selectedOrder?.AbsoluteEntry}`}
+        open={showLineModal}
+        onClose={() => setShowLineModal(false)}
+        data={selectedOrder?.ProductionOrderLines?.filter((l: any) => l.ProductionOrderIssueType === "im_Manual").map((l: any) => ({
+          ...l,
+          OrderNumber: selectedOrder.AbsoluteEntry,
+          DisplayItemType: l.ItemType === "pit_Item" ? "Item" : l.ItemType === "pit_Resource" ? "Resource" : l.ItemType
+        })) || []}
+        onSelect={handleLinesSelect}
+        multiple={true}
+        getSelectValue={(item) => item.LineNumber}
+        isLoading={isLoadingLines}
+        columns={[
+          { key: "OrderNumber", label: "Order Number" },
+          { key: "LineNumber", label: "Row No." },
+          { key: "ItemNo", label: "Item Number" },
+          { key: "ItemName", label: "Item Description" },
+          { key: "DisplayItemType", label: "Type" },
+          { key: "PlannedQuantity", label: "Qty" },
+          { key: "Warehouse", label: "Whse" },
+          { key: "StartDate", label: "Start Date" },
+          { key: "EndDate", label: "End Date" },
+        ]}
       />
     </div>
   );
