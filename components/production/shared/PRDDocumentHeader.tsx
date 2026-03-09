@@ -584,13 +584,9 @@ export function PRDDocumentHeader() {
       <ConfirmationModal
         open={showTypeConfirm}
         onOpenChange={setShowTypeConfirm}
-        title="Are you sure?"
-        description={
-          pendingType === "bopotSpecial"
-            ? "Components will be deleted. Do you want to continue?"
-            : "Components will be updated according to the production bom. Do you want to continue?"
-        }
         onConfirm={confirmTypeChange}
+        title="Change Document Type?"
+        description={pendingType === "bopotSpecial" ? "Changing to Special will delete all current lines. Do you want to proceed?" : "Changing type will update all existing lines. Do you want to proceed?"}
         cancelText="No, keep lines"
         confirmText={pendingType === "bopotSpecial" ? "Yes, delete lines" : "Yes, update all"}
       />
