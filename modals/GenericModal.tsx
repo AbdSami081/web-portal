@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState } from "react";
-import { ArrowUpDown, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { ArrowUpDown, ChevronDown, ChevronUp, Check, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface Column {
@@ -120,107 +120,119 @@ export function GenericModal<T>({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full">
+      <DialogContent className="max-w-6xl w-full max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        <Input
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="mb-3 w-full"
-        />
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0 relative">
+          <Input
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="mb-3 w-full"
+          />
 
-        <div className="max-h-60 overflow-y-auto border rounded">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {multiple && (
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={filteredData.length > 0 && selectedItems.length === filteredData.length}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                )}
-                <TableHead className="w-[50px]">S#</TableHead>
-                {columns.map((col) => (
-                  <TableHead
-                    key={col.key}
-                    className="cursor-pointer select-none"
-                    onClick={() => handleSort(col.key)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>{col.label}</span>
-                      <span className="ml-1">
-                        {sortKey === col.key ? (
-                          sortDirection === "asc" ? (
-                            <ChevronUp className="w-3 h-3" />
-                          ) : sortDirection === "desc" ? (
-                            <ChevronDown className="w-3 h-3" />
+          <div className="flex-1 border rounded relative flex flex-col min-h-[400px] overflow-auto bg-white transition-all duration-300 [&_[data-slot=table-container]]:overflow-visible">
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-[100] flex items-center justify-center transition-all duration-300">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-12 w-12 animate-spin text-black stroke-[1.5]" />
+                  <span className="text-sm font-semibold text-black/80 tracking-tight uppercase tracking-[0.1em]">Loading data...</span>
+                </div>
+              </div>
+            )}
+            <Table className="relative min-w-full mb-4">
+              <TableHeader>
+                <TableRow>
+                  {multiple && (
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={filteredData.length > 0 && selectedItems.length === filteredData.length}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                  )}
+                  <TableHead className="w-[50px]">S#</TableHead>
+                  {columns.map((col) => (
+                    <TableHead
+                      key={col.key}
+                      className="cursor-pointer select-none px-4 py-2"
+                      onClick={() => handleSort(col.key)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{col.label}</span>
+                        <span className="ml-1">
+                          {sortKey === col.key ? (
+                            sortDirection === "asc" ? (
+                              <ChevronUp className="w-3 h-3" />
+                            ) : sortDirection === "desc" ? (
+                              <ChevronDown className="w-3 h-3" />
+                            ) : (
+                              <ArrowUpDown className="w-3 h-3 opacity-30" />
+                            )
                           ) : (
                             <ArrowUpDown className="w-3 h-3 opacity-30" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 opacity-30" />
-                        )}
-                      </span>
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {filteredData.map((item, index) => (
-                <TableRow
-                  key={index}
-                  className={`cursor-pointer ${multiple
-                    ? selectedItems.includes(item)
-                      ? "bg-blue-50"
-                      : ""
-                    : selected === item
-                      ? "bg-blue-100"
-                      : ""
-                    }`}
-                  onClick={() => (multiple ? toggleSelectItem(item) : setSelected(item))}
-                  onDoubleClick={!multiple ? handleChoose : undefined}
-                >
-                  {multiple && (
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedItems.includes(item)}
-                        onCheckedChange={() => toggleSelectItem(item)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </TableCell>
-                  )}
-                  <TableCell className="w-[50px]">{index + 1}</TableCell>
-                  {columns.map((col) => (
-                    <TableCell key={col.key}>
-                      {col.key === "index"
-                        ? index + 1
-                        : (item as any)[col.key] ?? (item as any)[col.key.charAt(0).toLowerCase() + col.key.slice(1)] ?? (item as any)[col.key.toUpperCase()] ?? ""}
-                    </TableCell>
+                          )}
+                        </span>
+                      </div>
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {hasMore && (
-            <div className="p-2 text-center border-t">
-              <Button
-                variant="ghost"
-                className="w-full text-blue-600 h-8 text-xs"
-                onClick={onLoadMore}
-                disabled={isLoading}
-              >
-                {isLoading ? "Loading..." : "Load More"}
-              </Button>
-            </div>
-          )}
+              </TableHeader>
+
+              <TableBody>
+                {filteredData.map((item, index) => (
+                  <TableRow
+                    key={index}
+                    className={`cursor-pointer ${multiple
+                      ? selectedItems.includes(item)
+                        ? "bg-blue-50"
+                        : ""
+                      : selected === item
+                        ? "bg-blue-100"
+                        : ""
+                      }`}
+                    onClick={() => (multiple ? toggleSelectItem(item) : setSelected(item))}
+                    onDoubleClick={!multiple ? handleChoose : undefined}
+                  >
+                    {multiple && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedItems.includes(item)}
+                          onCheckedChange={() => toggleSelectItem(item)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell className="w-[50px]">{index + 1}</TableCell>
+                    {columns.map((col) => (
+                      <TableCell key={col.key} className="px-4 py-2">
+                        {col.key === "index"
+                          ? index + 1
+                          : (item as any)[col.key] ?? (item as any)[col.key.charAt(0).toLowerCase() + col.key.slice(1)] ?? (item as any)[col.key.toUpperCase()] ?? ""}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {hasMore && (
+              <div className="p-2 text-center border-t">
+                <Button
+                  variant="ghost"
+                  className="w-full text-blue-600 h-8 text-xs"
+                  onClick={onLoadMore}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Loading..." : "Load More"}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
+
+
 
         <DialogFooter className="mt-2 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
