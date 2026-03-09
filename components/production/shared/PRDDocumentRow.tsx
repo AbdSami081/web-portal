@@ -64,6 +64,12 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
+      {config.itemColumns.orderNumber && (
+        <td className="py-2 px-4 text-center">
+          <span className="font-medium text-gray-700">{line.OrderNumber}</span>
+        </td>
+      )}
+
       {config.itemColumns.type && (
         <td className="py-2 px-4">
           <span className="font-medium text-gray-700">{line.ItemType}</span>
