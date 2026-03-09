@@ -1,41 +1,35 @@
 "use client"
 
-import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
+import { productionSchema, ProductionFormData } from "@/lib/schemas/productionSchema";
 import { PRDDocumentLayout } from "@/components/production/shared/PRDDocumentLayout";
 import { PRDDocumentHeader } from "@/components/production/shared/PRDDocumentHeader";
 import { PRDDocumentItems } from "@/components/production/shared/PRDDocumentItems";
 import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { useMemo } from "react";
 
 export default function ReceiptFromProductionPage() {
-  const defaultValues: QuotationFormData = {
-    CardCode: "",
-    CardName: "",
+  const defaultValues: Partial<ProductionFormData> = useMemo(() => ({
     DocDate: new Date().toISOString().split("T")[0],
     DocDueDate: new Date().toISOString().split("T")[0],
-    DiscountPercent: 0,
-    Freight: 0,
-    Rounding: 0,
+    TaxDate: new Date().toISOString().split("T")[0],
     Comments: "",
-    TotalBeforeDiscount: 0,
-    TaxTotal: 0,
-    DocTotal: 0,
-    TaxDate: "",
+    JournalMemo: "",
     DocumentLines: [],
-  };
+  }), []);
 
-  const handleSubmit = async (data: QuotationFormData) => {
+  const handleSubmit = async (data: ProductionFormData) => {
     try {
 
     } catch (error) {
-      console.error("Error while creating quotation:", error);
+      console.error("Error while creating receipt from production:", error);
     }
   };
 
   return (
     <PRDDocumentLayout
-      schema={quotationSchema}
-      defaultValues={defaultValues}
+      schema={productionSchema}
+      defaultValues={defaultValues as any}
       onSubmit={handleSubmit}
       docType={DocumentType.ReceiptFromProduction}
     >
