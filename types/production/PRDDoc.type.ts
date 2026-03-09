@@ -31,4 +31,8 @@ export interface PRDDocumentLine {
     AvailableQuantity?: number;
     UoMCode?: string;
     ProductionOrderIssueType?: "im_Manual" | "im_Backflush";
+    OrderNumber?: number;
+    LineNumber?: number;
+    StartDate?: string;
+    EndDate?: string;
 }
