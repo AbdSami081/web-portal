@@ -56,6 +56,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
   try {
     if (docType === DocumentType.ProductionOrder) {
       const payload: any = {
+        ItemNo: data.ItemNo,
         Remarks: data.Remarks || data.Comments,
         ProductionOrderStatus: data.ProductionOrderStatus || "boposPlanned",
         Attachments2_Lines: attachments.map((att) => ({
@@ -94,7 +95,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
         Comments: data.Comments || data.Remarks,
         JournalMemo: data.JournalMemo,
         DocumentLines: lines.map(line => ({
-          ItemCode: line.ItemNo,
+          ItemCode: line.OrderNumber ? undefined : line.ItemNo,
           Quantity: line.PlannedQuantity,
           WarehouseCode: line.Warehouse,
           BaseType: line.OrderNumber ? 202 : undefined,
@@ -111,5 +112,25 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
     throw new Error("Unsupported document type for production submission");
   } catch (error: any) {
     throw error;
+  }
+};
+
+export const getIssueForProduction = async (docNum: number): Promise<any> => {
+  try {
+    const res = await apiClient.get(`api/Production/IssueForProduction?docNum=${docNum}`);
+    return res.data;
+  } catch (err: any) {
+    console.error("Failed to fetch issue for production", err);
+    throw new Error(getSapErrorMessage(err) || "Failed to fetch issue for production");
+  }
+};
+
+export const getProductionOrder = async (docNum: number): Promise<any> => {
+  try {
+    const res = await apiClient.get(`api/Production/ProductionOrder?docNum=${docNum}`);
+    return res.data;
+  } catch (err: any) {
+    console.error("Failed to fetch production order", err);
+    throw new Error(getSapErrorMessage(err) || "Failed to fetch production order");
   }
 };
