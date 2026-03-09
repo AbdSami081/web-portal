@@ -8,7 +8,7 @@ import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter"
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useMemo, useEffect } from "react";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
-import { postProductionOrder, patchProductionOrder } from "@/api+/sap/production/productionService";
+import { saveProductionDocument } from "@/api+/sap/production/productionService";
 import { toast } from "sonner";
 
 export default function ProductionOrderPage() {
@@ -41,50 +41,13 @@ export default function ProductionOrderPage() {
     const handleSubmit = async (data: ProductionOrderFormData) => {
         const { lines, attachments } = useIFPRDDocument.getState();
 
-        const payload: any = {
-            Remarks: data.Remarks || data.Comments,
-            ProductionOrderStatus: data.ProductionOrderStatus || "boposPlanned",
-            Attachments2_Lines: attachments.map((att) => ({
-                FileExtension: att.FileName.split('.').pop(),
-                FileName: att.FileName.split('.').slice(0, -1).join('.'),
-                SourcePath: att.SourcePath,
-                FreeText: att.FreeText,
-                CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-            })),
-        };
-
         try {
-            let res;
-            if (data.AbsoluteEntry && data.AbsoluteEntry > 0) {
-                res = await patchProductionOrder(data.AbsoluteEntry, payload);
-                toast.success("Production Order updated successfully");
-            } else {
-                payload.ItemNo = data.ItemNo;
-                payload.PlannedQuantity = data.PlannedQuantity;
-                payload.PostingDate = data.PostingDate || data.CreationDate;
-                payload.StartDate = data.StartDate;
-                payload.DueDate = data.DueDate;
-                payload.Warehouse = data.Warehouse;
-                payload.Priority = data.Priority;
-                payload.ProductionOrderType = data.ProductionOrderType || "bopotStandard";
-                payload.PickRemarks = data.PickRmrk || "Created via Web Portal";
-                payload.ProductionOrderLines = lines.map(line => ({
-                    ItemNo: line.ItemNo,
-                    BaseQuantity: line.BaseQuantity || 1,
-                    PlannedQuantity: line.PlannedQuantity,
-                    IssuedQuantity: line.IssuedQuantity || 0,
-                    ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
-                    Warehouse: line.Warehouse || data.Warehouse
-                }));
-                res = await postProductionOrder(payload);
-                toast.success("Production Order created successfully");
-            }
-
-            if (res || (data.AbsoluteEntry && data.AbsoluteEntry > 0)) {
-                resetStore();
-            }
-        } catch (error) {
-            toast.error("Failed to process Production Order");
+            await saveProductionDocument(DocumentType.ProductionOrder, data, lines, attachments);
+            toast.success(data.AbsoluteEntry && data.AbsoluteEntry > 0 ? "Production Order updated successfully" : "Production Order created successfully");
+            resetStore();
+        } catch (error: any) {
+            console.error("Error while processing Production Order:", error);
+            toast.error(error.message || "Failed to process Production Order");
         }
     };
 
