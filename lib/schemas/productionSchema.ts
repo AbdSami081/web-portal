@@ -40,7 +40,7 @@ export const productionSchema = z.object({
     PlannedQuantity: z.number().optional(),
     Priority: z.number().optional(),
     StartDate: z.string().optional(),
-    DocumentLines: z.array(productionLineSchema).min(1, "At least one line is required"),
+    DocumentLines: z.array(productionLineSchema).optional(),
 });
 
 export type ProductionFormData = z.infer<typeof productionSchema>;
