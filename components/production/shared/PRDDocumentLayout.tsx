@@ -50,8 +50,11 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const { lines, reset: lineReset } = useIFPRDDocument();
 
   useEffect(() => {
-    const state = useIFPRDDocument.getState();
-    if (!isDirty) {
+    const currentValues = methods.getValues();
+    const isDocumentLoaded =
+      (currentValues as any).AbsoluteEntry > 0 ||
+      (currentValues as any).DocEntry > 0;
+    if (!isDirty && !isDocumentLoaded) {
       ResetForm();
     }
   }, [defaultValues, isDirty]);
