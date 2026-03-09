@@ -74,38 +74,40 @@ export function PRDDocumentItems() {
         <TabsContent value="content" className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto">
           <div className="relative overflow-visible">
             <div className="absolute -top-6 left-2 z-50">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      onClick={() => {
-                        if (!itemNo) {
-                          const field = document.getElementById("item-no-field");
-                          if (field) {
-                            field.classList.add("animate-glow-red-blink");
-                            setTimeout(() => {
-                              field.classList.remove("animate-glow-red-blink");
-                            }, 3000);
+              {![DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={() => {
+                          if (!itemNo) {
+                            const field = document.getElementById("item-no-field");
+                            if (field) {
+                              field.classList.add("animate-glow-red-blink");
+                              setTimeout(() => {
+                                field.classList.remove("animate-glow-red-blink");
+                              }, 3000);
+                            }
+                            return;
                           }
-                          return;
-                        }
-                        setDialogOpen(true);
-                      }}
-                      className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
+                          setDialogOpen(true);
+                        }}
+                        className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
+                      >
+                        <Plus className="h-5 w-5 stroke-[2.5px]" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
                     >
-                      <Plus className="h-5 w-5 stroke-[2.5px]" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="right"
-                    className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
-                  >
-                    Add Item
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                      Add Item
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             <div className={`relative border rounded ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? '' : 'overflow-x-auto'}`}>
               <div className={`w-full pb-2 ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? '' : 'overflow-x-auto'}`}>
@@ -113,6 +115,7 @@ export function PRDDocumentItems() {
                   <TableHeader className="sticky top-0 bg-neutral-900 z-10">
                     <TableRow className="border-neutral-600">
                       {config.itemColumns.actions && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[50px]">Actions</TableHead>}
+                      {config.itemColumns.orderNumber && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[120px]">Order Number</TableHead>}
                       {config.itemColumns.type && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Type</TableHead>}
                       {config.itemColumns.itemCode && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[150px]">Item No</TableHead>}
                       {config.itemColumns.itemDescription && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[200px] max-w-[250px] truncate">Item Description</TableHead>}
