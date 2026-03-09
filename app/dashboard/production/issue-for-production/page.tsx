@@ -1,42 +1,48 @@
 "use client"
 
-import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
+import { productionSchema, ProductionFormData } from "@/lib/schemas/productionSchema";
 import { PRDDocumentLayout } from "@/components/production/shared/PRDDocumentLayout";
 import { PRDDocumentHeader } from "@/components/production/shared/PRDDocumentHeader";
 import { PRDDocumentItems } from "@/components/production/shared/PRDDocumentItems";
 import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { saveProductionDocument } from "@/api+/sap/production/productionService";
+import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
+import { toast } from "sonner";
+import { useMemo } from "react";
 
 export default function IssueForProductionPage() {
-  const defaultValues: QuotationFormData = {
-    CardCode: "",
-    CardName: "",
+  const { lines, attachments, reset } = useIFPRDDocument();
+
+  const defaultValues: Partial<ProductionFormData> = useMemo(() => ({
     DocDate: new Date().toISOString().split("T")[0],
     DocDueDate: new Date().toISOString().split("T")[0],
-    DiscountPercent: 0,
-    Freight: 0,
-    Rounding: 0,
+    TaxDate: new Date().toISOString().split("T")[0],
     Comments: "",
-    TotalBeforeDiscount: 0,
-    TaxTotal: 0,
-    DocTotal: 0,
-    TaxDate: "",
+    JournalMemo: "",
     DocumentLines: [],
-  };
+  }), []);
 
-
-  const handleSubmit = async (data: QuotationFormData) => {
+  const handleSubmit = async (data: ProductionFormData) => {
     try {
+      if (lines.length === 0) {
+        toast.error("Please add at least one line.");
+        return;
+      }
 
-    } catch (error) {
-      console.error("Error while creating quotation:", error);
+      await saveProductionDocument(DocumentType.IssueForProduction, data, lines, attachments);
+      toast.success("Issue for Production created successfully!");
+      reset(); // Clear store
+    } catch (error: any) {
+      console.error("Error while creating issue for production:", error);
+      toast.error(error.message || "Failed to create document");
     }
   };
 
   return (
     <PRDDocumentLayout
-      schema={quotationSchema}
-      defaultValues={defaultValues}
+      schema={productionSchema}
+      defaultValues={defaultValues as any}
       onSubmit={handleSubmit}
       docType={DocumentType.IssueForProduction}
     >
