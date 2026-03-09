@@ -46,8 +46,8 @@ export function PRDDocumentLayout<T extends FieldValues>({
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty } } = methods;
-  const { reset: lineReset } = useIFPRDDocument();
+  const { watch, reset, handleSubmit, formState: { isSubmitting, isDirty } } = methods;
+  const { lines, reset: lineReset } = useIFPRDDocument();
 
   useEffect(() => {
     const state = useIFPRDDocument.getState();
@@ -98,7 +98,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
                       variant="outline"
                       size="icon"
                       onClick={ResetForm}
-                      disabled={(!watch("AbsoluteEntry" as any) || watch("AbsoluteEntry" as any) === 0) && (!watch("DocEntry" as any) || watch("DocEntry" as any) === 0) && !watch("ItemNo" as any)}
+                      disabled={(!watch("AbsoluteEntry" as any) || watch("AbsoluteEntry" as any) === 0) && (!watch("DocEntry" as any) || watch("DocEntry" as any) === 0) && !watch("ItemNo" as any) && lines.length === 0}
                       className="border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 w-8 disabled:opacity-50 transition-all active:scale-95"
                     >
                       <FilePlus2 className="w-4 h-4" />
@@ -128,7 +128,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
           </div>
 
           <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || (docType === DocumentType.IssueForProduction && lines.length === 0)}>
               {isSubmitting ? "Saving..." : ((watch("AbsoluteEntry" as any) || watch("DocEntry" as any)) ? "Update" : "Submit")}
             </Button>
           </div>
