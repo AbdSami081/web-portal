@@ -290,7 +290,7 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.search && (
           <div className="flex justify-end items-center gap-2">
-            <div className="flex items-center gap-2 w-48">
+            <div className="flex items-center gap-2 w-53">
               <Input
                 type="text"
                 className="h-8"
@@ -298,6 +298,7 @@ export function PRDDocumentHeader() {
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
+                    e.preventDefault();
                     fetchDocument(searchValue);
                   }
                 }}
