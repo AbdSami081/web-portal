@@ -97,21 +97,24 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       }));
     },
     loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
-      const mappedLines = doc.ProductionOrderLines?.map((line: any) => {
+      const linesData = doc.ProductionOrderLines || doc.DocumentLines || [];
+      const mappedLines = linesData.map((line: any) => {
         return {
-          ItemNo: line.ItemNo,
-          ItemName: line.ItemName,
-          PlannedQuantity: line.PlannedQuantity,
-          Warehouse: line.Warehouse,
+          ItemNo: line.ItemNo || line.ItemCode,
+          ItemName: line.ItemName || line.ItemDescription,
+          PlannedQuantity: line.PlannedQuantity || line.Quantity,
+          Warehouse: line.Warehouse || line.WarehouseCode,
           ItemType: line.ItemType,
           BaseQuantity: line.BaseQuantity,
           BaseRatio: line.BaseRatio,
           IssuedQuantity: line.IssuedQuantity,
           AvailableQuantity: line.AvailableQuantity,
           UoMCode: line.UoMCode,
-          ProductionOrderIssueType: line.ProductionOrderIssueType
+          ProductionOrderIssueType: line.ProductionOrderIssueType,
+          OrderNumber: line.BaseEntry,
+          LineNumber: line.BaseLine,
         };
-      }) || [];
+      });
       const attachments = doc.Attachments_Lines?.Attachments2_Lines?.map((att: any) => ({
         LineNum: att.LineNum,
         SourcePath: att.SourcePath || att.TargetPath || "",
