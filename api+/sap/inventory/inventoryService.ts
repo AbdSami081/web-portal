@@ -25,6 +25,7 @@ export interface InventoryTransferPayload {
 export const postInventoryTransferRequest = async (payload: InventoryTransferPayload) => {
     try {
 
+        console.log(payload)
         const response = await apiClient.post("api/Inventory/InventoryTransferRequest", payload);
         return response.data;
     } catch (error: any) {
@@ -34,7 +35,6 @@ export const postInventoryTransferRequest = async (payload: InventoryTransferPay
 
 export const postInventoryTransfer = async (payload: InventoryTransferPayload) => {
     try {
-
         const response = await apiClient.post("api/Inventory/InventoryTransfer", payload);
         return response.data;
     } catch (error: any) {
