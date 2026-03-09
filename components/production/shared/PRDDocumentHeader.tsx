@@ -140,6 +140,7 @@ export function PRDDocumentHeader() {
           setValue("ProductionOrderStatus", documentData.ProductionOrderStatus, { shouldDirty: true });
           setValue("ProductionOrderType", documentData.ProductionOrderType, { shouldDirty: true });
           setValue("Remarks", documentData.Remarks, { shouldDirty: true });
+          setValue("PostingDate", documentData.PostingDate?.split("T")[0], { shouldDirty: true });
         } else {
           setValue("DocNum", documentData.DocNum);
           setValue("DocEntry", documentData.DocEntry);
@@ -343,10 +344,10 @@ export function PRDDocumentHeader() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="boposPlanned">Planned</SelectItem>
-                    {!!watch("AbsoluteEntry") && (
+                    {(!!watch("AbsoluteEntry") || field.value === "boposReleased") && (
                       <SelectItem value="boposReleased">Released</SelectItem>
                     )}
-                    {field.value === "boposReleased" && (
+                    {(field.value === "boposReleased" || field.value === "boposClosed") && (
                       <SelectItem value="boposClosed">Closed</SelectItem>
                     )}
                   </SelectContent>
