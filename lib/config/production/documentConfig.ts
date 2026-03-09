@@ -6,6 +6,7 @@ export interface DocumentConfig {
   title: string;
   headerFields: {
     baseRef?: boolean;
+    search?: boolean;
     reference?: boolean;
     docDate?: boolean;
     productNo?: boolean;
@@ -43,7 +44,7 @@ export const IFPRDConfig: DocumentConfig = {
   type: DocumentType.IssueForProduction,
   title: "Issue For Production",
   headerFields: {
-    baseRef: false,
+    search: true,
     reference: true,
     docDate: true,
     type: false,
@@ -67,7 +68,7 @@ export const ReceiptFPRDConfig: DocumentConfig = {
   type: DocumentType.ReceiptFromProduction,
   title: "Receipt From Production",
   headerFields: {
-    baseRef: false,
+    search: true,
     reference: true,
     docDate: true,
     type: false,
@@ -90,6 +91,7 @@ export const PRDOrderConfig: DocumentConfig = {
   type: DocumentType.ProductionOrder,
   title: "Production Order",
   headerFields: {
+    search: true,
     productNo: true,
     productDescription: true,
     plannedQuantity: true,
