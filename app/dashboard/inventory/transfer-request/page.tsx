@@ -85,9 +85,9 @@ export default function InvTransferRequestPage() {
           UnitPrice: line.ItemCost || 0,
           WarehouseCode: line.WhsCode || toWarehouse || "",
           FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
-          BaseType: line.BaseType ?? -1,
-          BaseEntry: line.BaseEntry ?? -1,
-          BaseLine: line.BaseLine ?? -1,
+          BaseType: line.BaseType ?? null,
+          BaseEntry: line.BaseEntry ?? null,
+          BaseLine: line.BaseLine ?? null,
         }));
         result = await postInventoryTransferRequest(payload);
         if (result?.DocEntry) {
