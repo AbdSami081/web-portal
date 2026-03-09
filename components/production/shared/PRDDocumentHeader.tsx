@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { GenericModal } from "@/modals/GenericModal";
-import { getBOMList } from "@/api+/sap/production/productionService";
+import { getBOMList, getIssueForProduction, getProductionOrder } from "@/api+/sap/production/productionService";
 import { getItemsList } from "@/api+/sap/master-data/items";
 import { DocumentType as SAPDocumentType } from "@/types/sales/salesDocuments.type";
 import { Controller } from "react-hook-form";
@@ -109,7 +109,6 @@ export function PRDDocumentHeader() {
 
 
   const fetchDocument = async (baseRef: string) => {
-
     var documentData: any;
     if (!baseRef) {
       toast.error("Invalid Document Number entered.");
@@ -118,146 +117,45 @@ export function PRDDocumentHeader() {
 
     setIsLoading(true);
     try {
-      // if (config.type === DocumentType.IssueForProduction) 
-      // {
-      //     documentData = await getPRDOrder(Number(baseRef));
-      // }
-      // documentData = {
-      //     AbsoluteEntry: 155,
-      //     DocumentNumber: 155,
-      //     Series: 23,
-      //     ItemNo: "P10001",
-      //     ProductionOrderStatus: "boposPlanned",
-      //     ProductionOrderType: "bopotStandard",
-      //     PlannedQuantity: 100.0,
-      //     CompletedQuantity: 0.0,
-      //     RejectedQuantity: 0.0,
-      //     PostingDate: "2021-06-21T00:00:00Z",
-      //     DueDate: "2021-06-21T00:00:00Z",
-      //     ProductionOrderOriginEntry: null,
-      //     ProductionOrderOriginNumber: null,
-      //     ProductionOrderOrigin: "bopooManual",
-      //     UserSignature: 1,
-      //     Remarks: null,
-      //     ClosingDate: null,
-      //     ReleaseDate: null,
-      //     CustomerCode: null,
-      //     Warehouse: "01",
-      //     InventoryUOM: null,
-      //     JournalRemarks: "Production Order - P10001",
-      //     TransactionNumber: null,
-      //     CreationDate: "2021-06-21T00:00:00Z",
-      //     Printed: "tNO",
-      //     DistributionRule: "",
-      //     Project: "",
-      //     DistributionRule2: "",
-      //     DistributionRule3: "",
-      //     DistributionRule4: "",
-      //     DistributionRule5: "",
-      //     UoMEntry: -1,
-      //     StartDate: "2021-06-21T00:00:00Z",
-      //     ProductDescription: "PC - 8x core, DDR 32GB, 2TB HDD",
-      //     Priority: 100,
-      //     RoutingDateCalculation: "raOnStartDate",
-      //     UpdateAllocation: "bouaManual",
-      //     SAPPassport: null,
-      //     AttachmentEntry: null,
-      //     PickRemarks: null,
-      //     ProductionOrderLines: [
-      //         {
-      //             DocumentAbsoluteEntry: 155,
-      //             LineNumber: 0,
-      //             ItemNo: "C00001",
-      //             BaseQuantity: 1.0,
-      //             PlannedQuantity: 100.0,
-      //             IssuedQuantity: 0.0,
-      //             ProductionOrderIssueType: "im_Manual",
-      //             Warehouse: "01",
-      //             VisualOrder: 0,
-      //             DistributionRule: null,
-      //             LocationCode: null,
-      //             Project: null,
-      //             DistributionRule2: null,
-      //             DistributionRule3: null,
-      //             DistributionRule4: null,
-      //             DistributionRule5: null,
-      //             UoMEntry: -1,
-      //             UoMCode: -1,
-      //             WipAccount: null,
-      //             ItemType: "pit_Item",
-      //             LineText: null,
-      //             AdditionalQuantity: 0.0,
-      //             ResourceAllocation: null,
-      //             StartDate: "2021-06-21T00:00:00Z",
-      //             EndDate: "2021-06-21T00:00:00Z",
-      //             StageID: null,
-      //             RequiredDays: 0.0,
-      //             ItemName: "Motherboard BTX",
-      //             WeightOfRecycledPlastic: null,
-      //             PlasticPackageExemptionReason: null,
-      //             SerialNumbers: [],
-      //             BatchNumbers: []
-      //         },
-      //         {
-      //             DocumentAbsoluteEntry: 155,
-      //             LineNumber: 1,
-      //             ItemNo: "C00003",
-      //             BaseQuantity: 1.0,
-      //             PlannedQuantity: 100.0,
-      //             IssuedQuantity: 0.0,
-      //             ProductionOrderIssueType: "im_Manual",
-      //             Warehouse: "01",
-      //             VisualOrder: 1,
-      //             DistributionRule: null,
-      //             LocationCode: null,
-      //             Project: null,
-      //             DistributionRule2: null,
-      //             DistributionRule3: null,
-      //             DistributionRule4: null,
-      //             DistributionRule5: null,
-      //             UoMEntry: -1,
-      //             UoMCode: -1,
-      //             WipAccount: null,
-      //             ItemType: "pit_Item",
-      //             LineText: null,
-      //             AdditionalQuantity: 0.0,
-      //             ResourceAllocation: null,
-      //             StartDate: "2021-06-21T00:00:00Z",
-      //             EndDate: "2021-06-21T00:00:00Z",
-      //             StageID: null,
-      //             RequiredDays: 0.0,
-      //             ItemName: "Quadcore CPU 3.4 GHz",
-      //             WeightOfRecycledPlastic: null,
-      //             PlasticPackageExemptionReason: null,
-      //             SerialNumbers: [],
-      //             BatchNumbers: []
-      //         }
-      //     ],
-      //     ProductionOrdersSalesOrderLines: [],
-      //     ProductionOrdersStages: [],
-      //     ProductionOrdersDocumentReferences: []
-      // }
-      documentData = {
-        Series: 23,
-        ProductionOrderLines: [
-          {
-            ItemNo: "ASDW23123",
-            ItemName: "Test Item 1",
-            PlannedQuantity: 100,
-            Warehouse: "01",
-            ItemType: "pit_Item"
-          }
-        ],
+      if (docType === SAPDocumentType.IssueForProduction) {
+        documentData = await getIssueForProduction(Number(baseRef));
+      } else if (docType === SAPDocumentType.ProductionOrder) {
+        documentData = await getProductionOrder(Number(baseRef));
       }
 
-      if (documentData) {
+      if (documentData && (documentData.DocEntry || documentData.AbsoluteEntry)) {
         loadFromDocument(documentData);
-        setValue("AbsoluteEntry", 155); // Placeholder for now to trigger read-only
+        // Map header fields to form
+        if (docType === SAPDocumentType.ProductionOrder) {
+          setValue("AbsoluteEntry", documentData.AbsoluteEntry, { shouldDirty: true });
+          setValue("DocNum", documentData.DocumentNumber, { shouldDirty: true });
+          setValue("ItemNo", documentData.ItemNo, { shouldDirty: true });
+          setValue("ProductDescription", documentData.ProductDescription, { shouldDirty: true });
+          setValue("PlannedQuantity", documentData.PlannedQuantity, { shouldDirty: true });
+          setValue("Warehouse", documentData.Warehouse, { shouldDirty: true });
+          setValue("Priority", documentData.Priority, { shouldDirty: true });
+          setValue("StartDate", documentData.StartDate?.split("T")[0], { shouldDirty: true });
+          setValue("DueDate", documentData.DueDate?.split("T")[0], { shouldDirty: true });
+          setValue("CreationDate", documentData.CreationDate?.split("T")[0], { shouldDirty: true });
+          setValue("ProductionOrderStatus", documentData.ProductionOrderStatus, { shouldDirty: true });
+          setValue("ProductionOrderType", documentData.ProductionOrderType, { shouldDirty: true });
+          setValue("Remarks", documentData.Remarks, { shouldDirty: true });
+        } else {
+          setValue("DocNum", documentData.DocNum);
+          setValue("DocEntry", documentData.DocEntry);
+          setValue("DocDate", documentData.DocDate?.split("T")[0]);
+          setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
+          setValue("TaxDate", documentData.TaxDate?.split("T")[0]);
+          setValue("Comments", documentData.Comments);
+          setValue("JournalMemo", documentData.JournalMemo);
+        }
+
+        toast.success(`Document #${baseRef} loaded successfully.`);
       } else {
         toast.info(`Document number ${baseRef} not found.`);
       }
-    } catch (error) {
-      toast.error("An error occurred while fetching the document.");
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred while fetching the document.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -327,39 +225,6 @@ export function PRDDocumentHeader() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-        {config.headerFields.baseRef && (
-          <div className="flex items-center gap-2">
-            <AppLabel className="w-28 shrink-0">Order Number</AppLabel>
-            <div className="flex items-center gap-2 flex-1">
-              <Input
-                type="text"
-                {...register("BaseRef")}
-                className="h-8"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    fetchDocument(searchValue);
-                  }
-                }}
-                placeholder="Enter Order Number"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 cursor-pointer"
-                onClick={() => fetchDocument(searchValue)}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Search className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
 
         {config.headerFields.reference && (
           <div className="flex items-center gap-2">
@@ -388,6 +253,7 @@ export function PRDDocumentHeader() {
             <Select
               onValueChange={handleTypeChange}
               value={watch("ProductionOrderType") || "bopotStandard"}
+              disabled={!!watch("AbsoluteEntry")}
             >
               <SelectTrigger className="h-8 flex-1">
                 <SelectValue placeholder="Select Type" />
@@ -421,6 +287,38 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
+        {config.headerFields.search && (
+          <div className="flex justify-end items-center gap-2">
+            <div className="flex items-center gap-2 w-48">
+              <Input
+                type="text"
+                className="h-8"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    fetchDocument(searchValue);
+                  }
+                }}
+                placeholder="Search DocNum..."
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer shrink-0"
+                onClick={() => fetchDocument(searchValue)}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Search className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {config.headerFields.productDescription && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Description</AppLabel>
@@ -447,6 +345,9 @@ export function PRDDocumentHeader() {
                     <SelectItem value="boposPlanned">Planned</SelectItem>
                     {!!watch("AbsoluteEntry") && (
                       <SelectItem value="boposReleased">Released</SelectItem>
+                    )}
+                    {field.value === "boposReleased" && (
+                      <SelectItem value="boposClosed">Closed</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
@@ -527,6 +428,7 @@ export function PRDDocumentHeader() {
         )}
 
 
+
       </div>
 
       <GenericModal
@@ -590,6 +492,6 @@ export function PRDDocumentHeader() {
         cancelText="No, keep lines"
         confirmText={pendingType === "bopotSpecial" ? "Yes, delete lines" : "Yes, update all"}
       />
-    </div>
+    </div >
   );
 }
