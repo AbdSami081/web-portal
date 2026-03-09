@@ -70,6 +70,7 @@ export default function InvTransferPage() {
         })),
       };
 
+      
       let result;
       if (DocEntry && DocEntry > 0) {
         result = await patchInventoryTransfer(DocEntry, payload);
