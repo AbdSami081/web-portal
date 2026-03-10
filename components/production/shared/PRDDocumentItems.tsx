@@ -74,7 +74,7 @@ export function PRDDocumentItems() {
         <TabsContent value="content" className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto">
           <div className="relative overflow-visible">
             <div className="absolute -top-6 left-2 z-50">
-              {![DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) && (
+              {(config.type === DocumentType.ProductionOrder ? watch("ProductionOrderStatus") !== "boposClosed" : ![DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type)) && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

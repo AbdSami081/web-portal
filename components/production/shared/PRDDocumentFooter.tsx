@@ -200,7 +200,7 @@ export default function PRDDocumentFooter() {
         })) || []}
         onSelect={handleLinesSelect}
         multiple={true}
-        getSelectValue={(item) => item.LineNumber}
+        getSelectValue={(item: any) => item.LineNumber}
         isLoading={isLoadingLines}
         columns={[
           { key: "OrderNumber", label: "Order Number" },
