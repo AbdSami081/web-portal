@@ -353,10 +353,10 @@ export function PRDDocumentHeader() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="boposPlanned">Planned</SelectItem>
-                    {(!!watch("AbsoluteEntry") || field.value !== "boposPlanned") && (
+                    {(!!watch("AbsoluteEntry") || field.value === "boposReleased" || field.value === "boposClosed") && (
                       <SelectItem value="boposReleased">Released</SelectItem>
                     )}
-                    {(field.value === "boposReleased" || field.value === "boposClosed") && (
+                    {(!!watch("AbsoluteEntry") || field.value === "boposClosed") && (
                       <SelectItem value="boposClosed">Closed</SelectItem>
                     )}
                   </SelectContent>
