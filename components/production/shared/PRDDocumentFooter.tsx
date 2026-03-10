@@ -263,7 +263,7 @@ export default function PRDDocumentFooter() {
         data={selectedOrder?.ProductionOrderLines?.filter((l: any) => l.ProductionOrderIssueType === "im_Manual").map((l: any) => ({
           ...l,
           OrderNumber: selectedOrder.AbsoluteEntry,
-          DisplayItemType: l.ItemType === "pit_Item" ? "Item" : l.ItemType === "pit_Resource" ? "Resource" : l.ItemType
+          DisplayItemType: l.ItemType?.replace(/^[pd]it_/, "")
         })) || []}
         onSelect={handleLinesSelect}
         multiple={true}
