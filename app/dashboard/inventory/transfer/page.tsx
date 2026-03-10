@@ -56,6 +56,12 @@ export default function InvTransferPage() {
     ToWarehouse: "",
   }), []);
 
+  useEffect(() => {
+    return () => {
+      resetStore();
+    };
+  }, [resetStore]);
+
   const handleSubmit = async (data: FormData) => {
     try {
       const payload: any = {
@@ -70,7 +76,7 @@ export default function InvTransferPage() {
         })),
       };
 
-      
+
       let result;
       if (DocEntry && DocEntry > 0) {
         result = await patchInventoryTransfer(DocEntry, payload);
