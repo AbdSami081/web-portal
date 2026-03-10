@@ -17,7 +17,9 @@ export interface LoginResponse {
 }
 
 export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
-  const response = await axios.post<LoginResponse>(`${process.env.NEXT_PUBLIC_API_URL}api/Auth/login`, payload);
+  const AUTH_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/Auth/login`;
+  console.log("AUTH_URL login with payload:", AUTH_URL, payload );
+  const response = await axios.post<LoginResponse>(AUTH_URL, payload);
   return response.data;
 };
 
