@@ -187,7 +187,10 @@ export function InvDocumentLayout<T extends FieldValues>({
         const doc = await getInventoryTransferRequest(num);
         if (!doc) continue;
         if (!mergedDoc) mergedDoc = { ...doc };
-        const docLines = doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [];
+        const docLines = (doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || []).map((line: any) => ({
+          ...line,
+          _parentDocEntry: doc.DocEntry
+        }));
         allLines = [...allLines, ...docLines];
       }
 
@@ -203,7 +206,14 @@ export function InvDocumentLayout<T extends FieldValues>({
         store.setFromWarehouse(fromWhs);
         store.setToWarehouse(toWhs);
 
-        loadFromDocument({ ...mergedDoc, DocumentLines: allLines, CardCode: "", CardName: "" }, DocumentType.InvTransferReq, true);
+        const linesWithBase = allLines.map((line: any, idx: number) => ({
+          ...line,
+          BaseType: DocumentType.InvTransferReq,
+          BaseEntry: line._parentDocEntry || line.DocEntry || mergedDoc.DocEntry,
+          BaseLine: line.LineNum ?? idx,
+        }));
+
+        loadFromDocument({ ...mergedDoc, DocumentLines: linesWithBase }, DocumentType.InvTransferReq, true);
         toast.success(`Copied from ${nums.length} ITR(s)`);
       }
     } catch (err: any) {

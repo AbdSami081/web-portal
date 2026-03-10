@@ -141,9 +141,9 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
         UomCode: line.UoMCode || line.UomCode || "",
         LineNum: line.LineNum ?? idx,
-        BaseType: isCopy ? type : line.BaseType,
-        BaseEntry: isCopy ? doc.DocEntry : line.BaseEntry,
-        BaseLine: isCopy ? (line.LineNum ?? idx) : line.BaseLine,
+        BaseType: line.BaseType ?? (isCopy ? type : undefined),
+        BaseEntry: line.BaseEntry ?? (isCopy ? doc.DocEntry : undefined),
+        BaseLine: line.BaseLine ?? (line.LineNum ?? idx),
       }));
 
       const attachments = doc.Attachments_Lines?.Attachments2_Lines?.map((att: any) => ({

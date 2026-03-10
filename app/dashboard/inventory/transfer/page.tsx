@@ -85,16 +85,19 @@ export default function InvTransferPage() {
         payload.CardCode = customer?.CardCode || "";
         payload.FromWarehouse = fromWarehouse || "";
         payload.ToWarehouse = toWarehouse || "";
-        payload.StockTransferLines = lines.map((line) => ({
-          ItemCode: line.ItemCode,
-          Quantity: line.Quantity,
-          UnitPrice: line.ItemCost || 0,
-          WarehouseCode: line.WhsCode || toWarehouse || "",
-          FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
-          BaseType: line.BaseType ?? -1,
-          BaseEntry: line.BaseEntry ?? -1,
-          BaseLine: line.BaseLine ?? -1,
-        }));
+        payload.StockTransferLines = lines.map((line, idx) => {
+          const item: any = {
+            ItemCode: line.ItemCode,
+            Quantity: line.Quantity,
+            UnitPrice: line.ItemCost || 0,
+            WarehouseCode: line.WhsCode || toWarehouse || "",
+            FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
+          };
+          if (line.BaseType !== undefined && line.BaseType !== -1) item.BaseType = line.BaseType;
+          if (line.BaseEntry !== undefined && line.BaseEntry !== -1) item.BaseEntry = line.BaseEntry;
+          if (line.BaseLine !== undefined && line.BaseLine !== -1) item.BaseLine = line.BaseLine;
+          return item;
+        });
         result = await postInventoryTransfer(payload);
         if (result?.DocEntry) {
           toast.success(`Inventory Transfer created! DocEntry: ${result.DocEntry}`);
