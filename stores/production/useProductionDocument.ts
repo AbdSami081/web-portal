@@ -108,7 +108,12 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
           Warehouse: line.Warehouse || line.WarehouseCode,
           ItemType: line.ItemType,
           BaseQuantity: line.BaseQuantity,
-          BaseRatio: line.BaseRatio,
+          BOMHeaderQty: doc.PlannedQuantity || 1,
+          BaseRatio: line.BaseRatio !== undefined
+            ? line.BaseRatio
+            : (doc.PlannedQuantity
+              ? ((line.BaseQuantity ?? line.PlannedQuantity) / doc.PlannedQuantity)
+              : 0),
           IssuedQuantity: line.IssuedQuantity,
           AvailableQuantity: line.AvailableQuantity,
           UoMCode: line.UoMCode,
