@@ -30,7 +30,7 @@ export function PRDDocumentItems() {
   const productionOrderType = watch("ProductionOrderType");
   const headerWarehouse = watch("Warehouse");
   const itemNo = watch("ItemNo");
-  const { lines, addLine, customer, warehouses, attachments, addAttachment, removeAttachment, updateAttachment } = useIFPRDDocument();
+  const { lines, addLine, customer, warehouses, attachments, addAttachment, removeAttachment, updateAttachment, initialStatus } = useIFPRDDocument();
   const config = usePRDDocConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
@@ -74,7 +74,7 @@ export function PRDDocumentItems() {
         <TabsContent value="content" className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto">
           <div className="relative overflow-visible">
             <div className="absolute -top-6 left-2 z-50">
-              {(config.type === DocumentType.ProductionOrder ? watch("ProductionOrderStatus") !== "boposClosed" : ![DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type)) && (
+              {(config.type === DocumentType.ProductionOrder ? initialStatus !== "boposClosed" : ![DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type)) && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -157,7 +157,7 @@ export function PRDDocumentItems() {
             addAttachment={addAttachment}
             removeAttachment={removeAttachment}
             updateAttachment={updateAttachment}
-            isTableDisabled={false}
+            isTableDisabled={initialStatus === "boposClosed"}
           />
         </TabsContent>
       </Tabs>

@@ -23,7 +23,7 @@ import { usePRDDocConfig } from "./PRDDocumentLayout";
 
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
-  const { updateLine, removeLine } = useIFPRDDocument();
+  const { updateLine, removeLine, initialStatus } = useIFPRDDocument();
   const [draftLine, setDraftLine] = useState<PRDDocumentLine>(line);
   const config = usePRDDocConfig();
   const headerPlannedQty = watch("PlannedQuantity");
@@ -57,7 +57,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
             variant="ghost"
             className="h-6 w-6 p-0"
             onClick={() => removeLine(index)}
-            disabled={Boolean((watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0) || watch("ProductionOrderStatus") === "boposClosed")}
+            disabled={Boolean((watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0) || initialStatus === "boposClosed")}
           >
             <Trash className={`h-5 w-5 ${watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0 ? "text-gray-400" : "text-red-500"}`} />
           </Button>
@@ -115,10 +115,9 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               updateLine(index, updatedLine);
             }}
             onBlur={() => {
-              setBaseQtyInput((draftLine.BaseQuantity ?? 0).toLocaleString());
               saveRow();
             }}
-            disabled={watch("ProductionOrderStatus") === "boposClosed"}
+            disabled={initialStatus === "boposClosed"}
             className="font-medium text-gray-700 text-center"
           />
         </td>
@@ -152,7 +151,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               setPlannedQtyInput((draftLine.PlannedQuantity || 0).toLocaleString());
               saveRow();
             }}
-            disabled={watch("ProductionOrderStatus") === "boposClosed"}
+            disabled={initialStatus === "boposClosed"}
           />
         </td>
       )}
@@ -190,7 +189,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               size="icon"
               className="h-7 w-7 cursor-pointer"
               onClick={() => setWarehouseModalOpen(true)}
-              disabled={watch("ProductionOrderStatus") === "boposClosed"}
+              disabled={initialStatus === "boposClosed"}
             >
               <Search className="h-4 w-4" />
             </Button>
@@ -207,7 +206,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               setDraftLine(updatedLine);
               updateLine(index, updatedLine);
             }}
-            disabled={watch("ProductionOrderStatus") === "boposClosed"}
+            disabled={initialStatus === "boposClosed"}
           >
             <SelectTrigger className="h-7 w-32 text-xs">
               <SelectValue />

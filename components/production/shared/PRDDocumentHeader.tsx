@@ -72,7 +72,7 @@ export function PRDDocumentHeader() {
 
   const [dataList, setDataList] = useState<any[]>([]); // Renamed from bomList
   const [isLoadingItems, setIsLoadingItems] = useState(false); // Renamed from isLoadingBoms
-  const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM } = useIFPRDDocument();
+  const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus } = useIFPRDDocument();
   const config = usePRDDocConfig();
   const docType = config.type;
   const watchedPlannedQty = watch("PlannedQuantity");
@@ -239,7 +239,7 @@ export function PRDDocumentHeader() {
               {...register("Ref2")}
               className="h-8 flex-1"
               placeholder="Enter Reference"
-              disabled={watch("ProductionOrderStatus") === "boposClosed"}
+              disabled={initialStatus === "boposClosed"}
             />
           </div>
         )}
@@ -249,7 +249,7 @@ export function PRDDocumentHeader() {
             <AppLabel className="w-28 shrink-0">
               {docType === SAPDocumentType.ProductionOrder ? "Document Date" : "Posting Date"}
             </AppLabel>
-            <Input type="date" {...register("TaxDate")} className="h-8 flex-1" disabled={watch("ProductionOrderStatus") === "boposClosed"} />
+            <Input type="date" {...register("TaxDate")} className="h-8 flex-1" disabled={initialStatus === "boposClosed"} />
           </div>
         )}
 
@@ -286,7 +286,7 @@ export function PRDDocumentHeader() {
                 size="icon"
                 className="h-8 w-8 cursor-pointer"
                 onClick={fetchItems}
-                disabled={watch("ProductionOrderStatus") === "boposClosed"}
+                disabled={initialStatus === "boposClosed"}
               >
                 {isLoadingItems ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </Button>
@@ -346,7 +346,7 @@ export function PRDDocumentHeader() {
                 <Select
                   onValueChange={field.onChange}
                   value={field.value || "boposPlanned"}
-                  disabled={field.value === "boposClosed"}
+                  disabled={initialStatus === "boposClosed"}
                 >
                   <SelectTrigger className="h-8 flex-1">
                     <SelectValue placeholder="Select Status" />
@@ -378,7 +378,7 @@ export function PRDDocumentHeader() {
                   value={value}
                   onChange={onChange}
                   onBlur={onBlur}
-                  disabled={watch("ProductionOrderStatus") === "boposClosed"}
+                  disabled={initialStatus === "boposClosed"}
                   className="h-8 flex-1"
                   placeholder="Enter Planned Qty"
                 />
@@ -395,7 +395,7 @@ export function PRDDocumentHeader() {
                 type="text"
                 className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed"
                 value={watch("Warehouse") || ""}
-                disabled={watch("ProductionOrderStatus") === "boposClosed"}
+                disabled={initialStatus === "boposClosed"}
                 readOnly
               />
               <Button
@@ -404,7 +404,7 @@ export function PRDDocumentHeader() {
                 size="icon"
                 className="h-8 w-8 cursor-pointer"
                 onClick={() => setWhsModalOpen(true)}
-                disabled={watch("ProductionOrderStatus") === "boposClosed"}
+                disabled={initialStatus === "boposClosed"}
               >
                 <Search className="h-4 w-4" />
               </Button>

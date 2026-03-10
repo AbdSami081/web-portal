@@ -47,7 +47,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
   });
 
   const { watch, reset, handleSubmit, formState: { isSubmitting, isDirty } } = methods;
-  const { lines, reset: lineReset } = useIFPRDDocument();
+  const { lines, reset: lineReset, initialStatus } = useIFPRDDocument();
 
   useEffect(() => {
     const currentValues = methods.getValues();
@@ -131,7 +131,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
           </div>
 
           <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
-            {watch("ProductionOrderStatus" as any) !== "boposClosed" && (
+            {initialStatus !== "boposClosed" && (
               <Button type="submit" disabled={isSubmitting || (docType === DocumentType.IssueForProduction && lines.length === 0)}>
                 {isSubmitting ? "Saving..." : ((watch("AbsoluteEntry" as any) || watch("DocEntry" as any)) ? "Update" : "Submit")}
               </Button>
