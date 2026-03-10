@@ -9,7 +9,7 @@ import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { GenericModal } from "@/modals/GenericModal";
-import { getReleasedProductionOrders } from "@/api+/sap/production/productionService";
+import { getReleasedProductionOrders, getDisassembleProductionOrders } from "@/api+/sap/production/productionService";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 export default function PRDDocumentFooter() {
@@ -23,10 +23,12 @@ export default function PRDDocumentFooter() {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [isLoadingLines, setIsLoadingLines] = useState(false);
+  const [modalTitle, setModalTitle] = useState("Select Production Order");
 
-  const { addLine } = useIFPRDDocument();
+  const { addLine, loadFromDocument } = useIFPRDDocument();
 
   const handleFetchOrders = async () => {
+    setModalTitle("Select Production Order");
     setIsLoadingOrders(true);
     setShowOrderModal(true);
     try {
@@ -45,15 +47,72 @@ export default function PRDDocumentFooter() {
     }
   };
 
+  const handleFetchDisassembleOrders = async () => {
+    setModalTitle("Select Disassembly Order");
+    setIsLoadingOrders(true);
+    setShowOrderModal(true);
+    try {
+      const data = await getDisassembleProductionOrders();
+      const processedOrders = data.map((order: any) => ({
+        ...order,
+        DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
+          order.ProductionOrderType === "bopotSpecial" ? "Special" :
+            order.ProductionOrderType === "bopotDisassembly" ? "Disassembly" : order.ProductionOrderType
+      }));
+      setProductionOrders(processedOrders);
+    } catch (error) {
+      console.error("Failed to fetch disassembly orders", error);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  };
+
   const handleOrderSelect = (orderId: any) => {
     const order = productionOrders.find(o => o.AbsoluteEntry === orderId);
     if (order) {
-      setSelectedOrder(order);
-      setShowLineModal(true);
-      setIsLoadingLines(true);
-      setTimeout(() => {
-        setIsLoadingLines(false);
-      }, 500);
+      if (modalTitle === "Select Disassembly Order") {
+        // Set Header Fields in the form
+        setValue("ItemNo", order.ItemNo, { shouldDirty: true });
+        setValue("ProductDescription", order.ProductDescription, { shouldDirty: true });
+        setValue("PlannedQuantity", order.PlannedQuantity, { shouldDirty: true });
+        setValue("Warehouse", order.Warehouse, { shouldDirty: true });
+        setValue("ProductionOrderType", order.ProductionOrderType, { shouldDirty: true });
+        setValue("Priority", order.Priority, { shouldDirty: true });
+        setValue("AbsoluteEntry", order.AbsoluteEntry, { shouldDirty: true });
+        setValue("DocNum", order.DocumentNumber, { shouldDirty: true });
+        setValue("ProductionOrderStatus", order.ProductionOrderStatus, { shouldDirty: true });
+        setValue("StartDate", order.StartDate?.split("T")[0], { shouldDirty: true });
+        setValue("DueDate", order.DueDate?.split("T")[0], { shouldDirty: true });
+        setValue("CreationDate", order.CreationDate?.split("T")[0], { shouldDirty: true });
+        setValue("PostingDate", order.PostingDate?.split("T")[0], { shouldDirty: true });
+
+        // Handle Disassembly: Load the Parent Item as a single line for "Issue"
+        const parentLine = {
+          ItemNo: order.ItemNo,
+          ItemDescription: order.ProductDescription,
+          Quantity: order.PlannedQuantity,
+          WarehouseCode: order.Warehouse,
+          BaseEntry: order.AbsoluteEntry,
+          BaseLine: -1,
+          ProductionOrderIssueType: "im_Manual",
+          ItemType: "pit_Item",
+        };
+
+        // Update Store (using the parent line instead of components)
+        loadFromDocument({
+          ...order,
+          ProductionOrderLines: [parentLine],
+        }, config.type);
+
+        setShowOrderModal(false);
+      } else {
+        setSelectedOrder(order);
+        setShowLineModal(true);
+        setIsLoadingLines(true);
+        setTimeout(() => {
+          setIsLoadingLines(false);
+        }, 500);
+      }
     }
   };
 
@@ -128,7 +187,14 @@ export default function PRDDocumentFooter() {
             />
           </div>
           {config.footerActions?.showProductionOrderButton && (
-            <div className="flex justify-end mt-2">
+            <div className="flex justify-end mt-2 gap-2">
+              <Button
+                type="button"
+                onClick={handleFetchDisassembleOrders}
+                className="bg-black text-white hover:bg-zinc-800 h-8 text-xs font-semibold px-4 rounded-md shadow-sm transition-all active:scale-95"
+              >
+                Disassembly Order
+              </Button>
               <Button
                 type="button"
                 onClick={handleFetchOrders}
@@ -172,7 +238,7 @@ export default function PRDDocumentFooter() {
       />
 
       <GenericModal
-        title="Select Production Order"
+        title={modalTitle}
         open={showOrderModal}
         onClose={() => setShowOrderModal(false)}
         data={productionOrders}

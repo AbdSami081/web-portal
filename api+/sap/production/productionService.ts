@@ -42,6 +42,16 @@ export const getReleasedProductionOrders = async (): Promise<any[]> => {
   }
 };
 
+export const getDisassembleProductionOrders = async (): Promise<any[]> => {
+  try {
+    const res = await apiClient.get(`api/Production/GetDisassembleProductionOrders`);
+    return res.data?.value || [];
+  } catch (err) {
+    console.error("Failed to fetch disassembly production orders", err);
+    return [];
+  }
+};
+
 export const postIssueForProduction = async (data: any): Promise<any> => {
   try {
     const res = await apiClient.post(`api/Production/IssueForProduction`, data);
