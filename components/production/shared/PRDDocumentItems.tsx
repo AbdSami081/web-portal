@@ -123,6 +123,7 @@ export function PRDDocumentItems() {
                       {config.itemColumns.baseRatio && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Base Ratio</TableHead>}
                       {config.itemColumns.plannedQty && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[120px]">Planned Qty</TableHead>}
                       {config.itemColumns.issued && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Issued</TableHead>}
+                      {config.itemColumns.openQty && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Open Qty</TableHead>}
                       {config.itemColumns.available && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Available</TableHead>}
                       {config.itemColumns.uomCode && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">UoM Code</TableHead>}
                       {config.itemColumns.warehouse && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[180px]">Warehouse</TableHead>}

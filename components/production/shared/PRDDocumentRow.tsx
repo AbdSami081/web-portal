@@ -130,11 +130,48 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
       )}
 
       {config.itemColumns.plannedQty && (
-        <td className="py-2 px-4">
+        <td className="py-2 px-4 text-center">
+          {config.itemColumns.openQty ? (
+            <span className="font-medium text-gray-700">{Number(line.OriginalPlannedQuantity ?? line.PlannedQuantity).toLocaleString()}</span>
+          ) : (
+            <Input
+              type="text"
+              name={`PlannedQty-${index}`}
+              className="h-7 w-24 mx-auto text-center border-zinc-300"
+              value={plannedQtyInput}
+              onChange={(e) => {
+                const val = e.target.value;
+                setPlannedQtyInput(val);
+
+                const numericVal = Number(val.replace(/,/g, ""));
+                if (isNaN(numericVal)) return;
+
+                const updated = { ...draftLine, PlannedQuantity: numericVal };
+                setDraftLine(updated);
+                updateLine(index, updated);
+              }}
+              onBlur={() => {
+                setPlannedQtyInput((draftLine.PlannedQuantity || 0).toLocaleString());
+                saveRow();
+              }}
+              disabled={initialStatus === "boposClosed"}
+            />
+          )}
+        </td>
+      )}
+
+      {config.itemColumns.issued && (
+        <td className="py-2 px-4 text-center text-gray-700">
+          <span>{line.IssuedQuantity || 0}</span>
+        </td>
+      )}
+
+      {config.itemColumns.openQty && (
+        <td className="py-2 px-4 text-center">
           <Input
             type="text"
-            name={`PlannedQty-${index}`}
-            className="h-7 w-24 text-center border-zinc-300"
+            name={`OpenQty-${index}`}
+            className="h-7 w-24 mx-auto text-center border-zinc-300"
             value={plannedQtyInput}
             onChange={(e) => {
               const val = e.target.value;
@@ -153,12 +190,6 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
             }}
             disabled={initialStatus === "boposClosed"}
           />
-        </td>
-      )}
-
-      {config.itemColumns.issued && (
-        <td className="py-2 px-4 text-center text-gray-700">
-          <span>{line.IssuedQuantity || 0}</span>
         </td>
       )}
 

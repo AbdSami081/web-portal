@@ -23,6 +23,7 @@ export interface PRDDocumentLine {
     ItemNo: string;
     ItemName?: string;
     PlannedQuantity: number;
+    OriginalPlannedQuantity?: number;
     Warehouse?: string;
     ItemType?: string;
     BaseQuantity?: number;

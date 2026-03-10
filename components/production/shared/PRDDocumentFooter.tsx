@@ -126,6 +126,7 @@ export default function PRDDocumentFooter() {
         addLine({
           ItemNo: line.ItemNo,
           ItemName: line.ItemName || "",
+          OriginalPlannedQuantity: line.PlannedQuantity,
           PlannedQuantity: line.PlannedQuantity - (line.IssuedQuantity || 0),
           Warehouse: line.Warehouse || "",
           ItemType: line.ItemType || "pit_Item",
@@ -190,17 +191,17 @@ export default function PRDDocumentFooter() {
             <div className="flex justify-end mt-2 gap-2">
               <Button
                 type="button"
-                onClick={handleFetchDisassembleOrders}
-                className="bg-black text-white hover:bg-zinc-800 h-8 text-xs font-semibold px-4 rounded-md shadow-sm transition-all active:scale-95"
-              >
-                Disassembly Order
-              </Button>
-              <Button
-                type="button"
                 onClick={handleFetchOrders}
                 className="bg-black text-white hover:bg-zinc-800 h-8 text-xs font-semibold px-4 rounded-md shadow-sm transition-all active:scale-95"
               >
                 Production Order
+              </Button>
+              <Button
+                type="button"
+                onClick={handleFetchDisassembleOrders}
+                className="bg-black text-white hover:bg-zinc-800 h-8 text-xs font-semibold px-4 rounded-md shadow-sm transition-all active:scale-95"
+              >
+                Disassembly Order
               </Button>
             </div>
           )}

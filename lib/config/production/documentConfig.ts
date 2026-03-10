@@ -34,6 +34,7 @@ export interface DocumentConfig {
     issueMethod?: boolean;
     actions?: boolean;
     orderNumber?: boolean;
+    openQty?: boolean;
   };
   footerActions?: {
     showProductionOrderButton?: boolean;
@@ -55,6 +56,8 @@ export const IFPRDConfig: DocumentConfig = {
     itemCode: true,
     itemDescription: true,
     plannedQty: true,
+    issued: true,
+    openQty: true,
     warehouse: true,
     actions: true,
     orderNumber: true,
