@@ -33,12 +33,17 @@ export default function PRDDocumentFooter() {
     setShowOrderModal(true);
     try {
       const data = await getReleasedProductionOrders();
-      const processedOrders = data.map((order: any) => ({
-        ...order,
-        DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
-          order.ProductionOrderType === "bopotSpecial" ? "Special" :
-            order.ProductionOrderType === "bopotAssembly" ? "Assembly" : order.ProductionOrderType
-      }));
+      const processedOrders = data
+        .filter((order: any) => {
+          const manualLines = order.ProductionOrderLines?.filter((l: any) => l.ProductionOrderIssueType === "im_Manual") || [];
+          return manualLines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
+        })
+        .map((order: any) => ({
+          ...order,
+          DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
+            order.ProductionOrderType === "bopotSpecial" ? "Special" :
+              order.ProductionOrderType === "bopotAssembly" ? "Assembly" : order.ProductionOrderType
+        }));
       setProductionOrders(processedOrders);
     } catch (error) {
       console.error("Failed to fetch released orders", error);
@@ -53,12 +58,17 @@ export default function PRDDocumentFooter() {
     setShowOrderModal(true);
     try {
       const data = await getDisassembleProductionOrders();
-      const processedOrders = data.map((order: any) => ({
-        ...order,
-        DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
-          order.ProductionOrderType === "bopotSpecial" ? "Special" :
-            order.ProductionOrderType === "bopotDisassembly" ? "Disassembly" : order.ProductionOrderType
-      }));
+      const processedOrders = data
+        .filter((order: any) => {
+          const manualLines = order.ProductionOrderLines?.filter((l: any) => l.ProductionOrderIssueType === "im_Manual") || [];
+          return manualLines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
+        })
+        .map((order: any) => ({
+          ...order,
+          DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
+            order.ProductionOrderType === "bopotSpecial" ? "Special" :
+              order.ProductionOrderType === "bopotDisassembly" ? "Disassembly" : order.ProductionOrderType
+        }));
       setProductionOrders(processedOrders);
     } catch (error) {
       console.error("Failed to fetch disassembly orders", error);
