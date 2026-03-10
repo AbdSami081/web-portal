@@ -126,7 +126,7 @@ export default function PRDDocumentFooter() {
         addLine({
           ItemNo: line.ItemNo,
           ItemName: line.ItemName || "",
-          PlannedQuantity: line.PlannedQuantity,
+          PlannedQuantity: line.PlannedQuantity - (line.IssuedQuantity || 0),
           Warehouse: line.Warehouse || "",
           ItemType: line.ItemType || "pit_Item",
           BaseQuantity: line.BaseQuantity,
@@ -274,7 +274,7 @@ export default function PRDDocumentFooter() {
           { key: "ItemNo", label: "Item Number" },
           { key: "ItemName", label: "Item Description" },
           { key: "DisplayItemType", label: "Type" },
-          { key: "PlannedQuantity", label: "Qty" },
+          { key: "IssuedQuantity", label: "Quantity" },
           { key: "Warehouse", label: "Whse" },
           { key: "StartDate", label: "Start Date" },
           { key: "EndDate", label: "End Date" },
