@@ -100,7 +100,7 @@ export default function InvTransferPage() {
         });
         result = await postInventoryTransfer(payload);
         if (result?.DocEntry) {
-          toast.success(`Inventory Transfer created! DocEntry: ${result.DocEntry}`);
+          toast.success(`Inventory Transfer created! #${result.DocNum}`);
         }
       }
 

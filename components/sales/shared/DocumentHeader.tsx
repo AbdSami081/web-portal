@@ -53,6 +53,13 @@ export function DocumentHeader() {
     }
   }, [customer, setValue]);
 
+  const docNum = watch("DocNum");
+  useEffect(() => {
+    if (docNum) {
+      setSearchValue(docNum.toString());
+    }
+  }, [docNum]);
+
 
   const handleSelectBP = (bp: BusinessPartner) => {
     setCustomer(bp);
@@ -96,6 +103,7 @@ export function DocumentHeader() {
         setValue("Address2", documentData.Address2);
         setValue("Address", documentData.Address);
         setValue("DocEntry", documentData.DocEntry);
+        setValue("DocNum", documentData.DocNum);
         setValue("Comments", documentData.Comments);
         toast.success(`Document ${documentData.DocNum} loaded successfully.`);
       }

@@ -58,7 +58,7 @@ export function InvDocumentHeader() {
   } = useInventoryDocument();
   const [warehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
 
-  const docEntry = watch("DocEntry");
+  const docNum = watch("DocNum");
   const [docNumSearch, setDocNumSearch] = useState("");
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const config = useInvDocConfig();
@@ -96,10 +96,10 @@ export function InvDocumentHeader() {
   }, [warehouses, fromWarehouse, toWarehouse, setFromWarehouse, setToWarehouse]);
 
   useEffect(() => {
-    if (docEntry) {
-      setDocNumSearch(docEntry.toString());
+    if (docNum) {
+      setDocNumSearch(docNum.toString());
     }
-  }, [docEntry, setValue, watch, warehouses]);
+  }, [docNum]);
 
 
 

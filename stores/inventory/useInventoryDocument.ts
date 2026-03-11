@@ -9,6 +9,7 @@ interface IOPRDDocumentStore {
   lines: InventoryDocumentLine[];
   warehouses: any[];
   DocEntry: number;
+  DocNum: number;
   lastLoadedDocType: number | null;
   fromWarehouse: string;
   toWarehouse: string;
@@ -55,6 +56,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     lines: [],
     warehouses: [],
     DocEntry: 0,
+    DocNum: 0,
     lastLoadedDocType: null,
 
     // Header defaults
@@ -158,6 +160,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
       set({
         lines,
         DocEntry: isCopy ? 0 : (doc.DocEntry || 0),
+        DocNum: isCopy ? 0 : (doc.DocNum || 0),
         lastLoadedDocType: type ?? null,
         fromWarehouse: doc.FromWarehouse || "",
         toWarehouse: doc.ToWarehouse || "",
@@ -182,6 +185,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         lines: [],
         warehouses: [],
         DocEntry: 0,
+        DocNum: 0,
         lastLoadedDocType: null,
         fromWarehouse: "",
         toWarehouse: "",

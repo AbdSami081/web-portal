@@ -51,7 +51,8 @@ export default function DeliveryPage() {
 
       try {
         await patchDeliveryNote(Number(DocEntry), payload);
-        toast.success(`Delivery Note #${DocEntry} updated successfully`);
+        const docNum = useSalesDocument.getState().DocNum;
+        toast.success(`Delivery Note #${docNum || DocEntry} updated successfully`);
       } catch (error) {
         toast.error("Failed to update Delivery Note");
       }

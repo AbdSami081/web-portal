@@ -16,6 +16,7 @@ interface SalesDocumentStore {
   discountPercent: number;
   currency: DocCurrency;
   DocEntry: number;
+  DocNum: number;
   TotalBeforeDiscount: number;
   TaxTotal: number;
   discSum: number;
@@ -103,6 +104,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     discSum: 0,
     DocTotal: 0,
     DocEntry: 0,
+    DocNum: 0,
     lastLoadedDocType: null,
     additionalExpenses: [],
     attachments: [],
@@ -233,6 +235,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         discSum: 0,
         DocTotal: 0,
         DocEntry: 0,
+        DocNum: 0,
         docType: DocumentType.Quotation,
         lastLoadedDocType: null,
         currency: "USD",
@@ -308,6 +311,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         discountPercent: parseSafe(doc.DiscountPercent || doc.discountPercent),
         currency: doc.DocCurrency || doc.Currency || "USD",
         DocEntry: isCopy ? 0 : parseSafe(doc.DocEntry),
+        DocNum: isCopy ? 0 : parseSafe(doc.DocNum),
         lastLoadedDocType: type || null,
         DocTotal: parseSafe(doc.DocTotal || doc.docTotal),
         TaxTotal: parseSafe(doc.TaxTotal || doc.taxTotal),

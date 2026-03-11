@@ -51,7 +51,8 @@ export default function OrderPage() {
 
       try {
         await patchSalesOrder(Number(DocEntry), payload);
-        toast.success(`Sales Order #${DocEntry} updated successfully`);
+        const docNum = useSalesDocument.getState().DocNum;
+        toast.success(`Sales Order #${docNum || DocEntry} updated successfully`);
       } catch (error) {
         toast.error("Failed to update Sales Order");
       }

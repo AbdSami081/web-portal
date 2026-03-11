@@ -47,7 +47,8 @@ export default function NewQuotationPage() {
 
       try {
         await patchQuotation(Number(DocEntry), payload);
-        toast.success(`Quotation #${DocEntry} updated successfully`);
+        const docNum = useSalesDocument.getState().DocNum;
+        toast.success(`Quotation #${docNum || DocEntry} updated successfully`);
       } catch (error) {
         toast.error("Failed to update quotation");
       }

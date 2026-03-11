@@ -107,6 +107,13 @@ export function PRDDocumentHeader() {
     }
   }, [watchedPlannedQty]);
 
+  const docNum = watch("DocNum");
+  useEffect(() => {
+    if (docNum) {
+      setSearchValue(docNum.toString());
+    }
+  }, [docNum]);
+
 
   const fetchDocument = async (baseRef: string) => {
     var documentData: any;

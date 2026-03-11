@@ -51,7 +51,8 @@ export default function InvoicePage() {
 
       try {
         await patchARInvoice(Number(DocEntry), payload);
-        toast.success(`A/R Invoice #${DocEntry} updated successfully`);
+        const docNum = useSalesDocument.getState().DocNum;
+        toast.success(`A/R Invoice #${docNum || DocEntry} updated successfully`);
       } catch (error) {
         toast.error("Failed to update AR Invoice");
       }

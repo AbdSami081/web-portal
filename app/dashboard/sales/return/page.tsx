@@ -51,7 +51,8 @@ export default function ReturnPage() {
 
       try {
         await patchSalesReturn(Number(DocEntry), patchPayload);
-        toast.success(`Sales Return #${DocEntry} updated successfully`);
+        const docNum = useSalesDocument.getState().DocNum;
+        toast.success(`Sales Return #${docNum || DocEntry} updated successfully`);
       } catch (error) {
         toast.error("Failed to update Sales Return");
       }
