@@ -59,10 +59,10 @@ export default function PRDDocumentFooter() {
     try {
       const data = await getDisassembleProductionOrders();
       const processedOrders = data
-        .filter((order: any) => {
-          const manualLines = order.ProductionOrderLines?.filter((l: any) => l.ProductionOrderIssueType === "im_Manual") || [];
-          return manualLines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
-        })
+    .filter((order: any) => {
+      const lines = order.ProductionOrderLines || [];
+      return lines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
+    })
         .map((order: any) => ({
           ...order,
           DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
