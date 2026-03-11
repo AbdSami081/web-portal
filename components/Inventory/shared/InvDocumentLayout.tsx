@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/api+/sap/inventory/inventoryService";
-import { FilePlus2 } from "lucide-react";
+import { FilePlus2, Loader2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -112,6 +112,7 @@ export function InvDocumentLayout<T extends FieldValues>({
   const [copyFromOpen, setCopyFromOpen] = useState(false);
   const [itrData, setItrData] = useState<any[]>([]);
   const [isLoadingCopyFrom, setIsLoadingCopyFrom] = useState(false);
+  const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
 
 
 
@@ -130,6 +131,7 @@ export function InvDocumentLayout<T extends FieldValues>({
       toast.error("Please search or select a document first!");
       return;
     }
+    setIsLoadingCopyTo(true);
 
     if (selected === DocumentType.InvTransfer.toString()) {
       const state = useInventoryDocument.getState();
@@ -278,8 +280,14 @@ export function InvDocumentLayout<T extends FieldValues>({
                   setTimeout(() => setSelectedCopyFrom(""), 0);
                 }}
               >
-                <SelectTrigger className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0">
-                  <SelectValue placeholder="Copy From" />
+                <SelectTrigger
+                  className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0"
+                  disabled={isLoadingCopyFrom || isLoadingCopyTo}
+                >
+                  <div className="flex items-center gap-2">
+                    {isLoadingCopyFrom && <Loader2 className="w-4 h-4 animate-spin text-white" />}
+                    <SelectValue placeholder="Copy From" />
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
@@ -295,11 +303,14 @@ export function InvDocumentLayout<T extends FieldValues>({
             {canCopyTo && (
               <Select
                 value={selectedCopyTo}
-                disabled={!DocEntry || DocEntry === 0}
+                disabled={!DocEntry || DocEntry === 0 || isLoadingCopyFrom}
                 onValueChange={handleCopyTo}
               >
                 <SelectTrigger className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0">
-                  <SelectValue placeholder="Copy To" />
+                  <div className="flex items-center gap-2">
+                    {isLoadingCopyTo && <Loader2 className="w-4 h-4 animate-spin text-white" />}
+                    <SelectValue placeholder="Copy To" />
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>

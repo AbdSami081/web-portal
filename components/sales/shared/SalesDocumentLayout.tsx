@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotationDocument, getSalesOrderDocument, getSalesDeliveryDocument } from "@/api+/sap/sales/salesService";
-import { FilePlus2 } from "lucide-react";
+import { FilePlus2, Loader2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -72,6 +72,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [isLoadingCopyFrom, setIsLoadingCopyFrom] = useState(false);
   const [selectedCopyFrom, setSelectedCopyFrom] = useState<string>("");
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
+  const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
 
   const copyFromOptions = (() => {
     if (docType === DocumentType.Order) return [DocumentType.Quotation];
@@ -192,6 +193,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
       toast.error("Please save or select a document first!");
       return;
     }
+    setIsLoadingCopyTo(true);
 
     if (copyType === DocumentType.Order.toString()) {
       setIsCopying(true);
@@ -262,7 +264,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
               <div className="flex items-center gap-3">
                 <Select
                   value={selectedCopyFrom}
-                  disabled={!customer?.CardCode || copyFromOptions.length === 0 || isLoadingDocument}
+                  disabled={!customer?.CardCode || copyFromOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom}
                   onValueChange={(value) => {
                     const type = parseInt(value) as DocumentType;
                     setCopyFromType(type);
@@ -270,8 +272,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
                     setTimeout(() => setSelectedCopyFrom(""), 0);
                   }}
                 >
-                  <SelectTrigger className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0">
-                    <SelectValue placeholder="Copy From" />
+                  <SelectTrigger
+                    className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0"
+                    disabled={isLoadingCopyFrom || isLoadingDocument || isLoadingCopyTo}
+                  >
+                    <div className="flex items-center gap-2">
+                      {(isLoadingCopyFrom || isLoadingDocument) && <Loader2 className="w-4 h-4 animate-spin text-white" />}
+                      <SelectValue placeholder="Copy From" />
+                    </div>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -290,14 +298,20 @@ export function SalesDocumentLayout<T extends FieldValues>({
               <div className="flex items-center gap-3">
                 <Select
                   value={selectedCopyTo}
-                  disabled={copyToOptions.length === 0 || isLoadingDocument}
+                  disabled={copyToOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom || isLoadingCopyTo}
                   onValueChange={(value) => {
                     setSelectedCopyTo(value);
                     handleCopyClick(value);
                   }}
                 >
-                  <SelectTrigger className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0">
-                    <SelectValue placeholder="Copy To" />
+                  <SelectTrigger
+                    className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0"
+                    disabled={isLoadingCopyTo}
+                  >
+                    <div className="flex items-center gap-2">
+                      {isLoadingCopyTo && <Loader2 className="w-4 h-4 animate-spin text-white" />}
+                      <SelectValue placeholder="Copy To" />
+                    </div>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
