@@ -348,9 +348,9 @@ export function SalesDocumentLayout<T extends FieldValues>({
             data={copyFromData}
             columns={[
               { key: "DocNum", label: "Doc Num" },
+              { key: "CardName", label: "Customer Name" },
               { key: "RefDate", label: "Date" },
               { key: "DueDate", label: "Due Date" },
-              { key: "CardName", label: "Customer Name" },
             ]}
             getSelectValue={(item) => item.DocNum}
             isLoading={isLoadingCopyFrom}
