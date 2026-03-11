@@ -57,9 +57,9 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
             variant="ghost"
             className="h-6 w-6 p-0"
             onClick={() => removeLine(index)}
-            disabled={initialStatus === "boposClosed" || (config.type === 202 && Boolean(watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0)) || (config.type === 60 && Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0))}
+            disabled={initialStatus === "boposClosed" || (config.type === 202 && Boolean(watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0)) || (config.type === 60 && Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)) || (config.type === 59 && Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0))}
           >
-            <Trash className={`h-5 w-5 ${initialStatus === "boposClosed" || (config.type === 202 && Boolean(watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0)) || (config.type === 60 && Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)) ? "text-gray-400" : "text-red-500"}`} />
+            <Trash className={`h-5 w-5 ${initialStatus === "boposClosed" || (config.type === 202 && Boolean(watch("AbsoluteEntry") && Number(watch("AbsoluteEntry")) > 0)) || (config.type === 60 && Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)) || (config.type === 59 && Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)) ? "text-gray-400" : "text-red-500"}`} />
           </Button>
         </td>
       )}

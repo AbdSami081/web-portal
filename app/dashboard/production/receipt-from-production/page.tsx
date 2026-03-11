@@ -5,8 +5,12 @@ import { PRDDocumentLayout } from "@/components/production/shared/PRDDocumentLay
 import { PRDDocumentHeader } from "@/components/production/shared/PRDDocumentHeader";
 import { PRDDocumentItems } from "@/components/production/shared/PRDDocumentItems";
 import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useMemo } from "react";
+import { saveProductionDocument } from "@/api+/sap/production/productionService";
+import { toast } from "sonner";
+import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
+import { useRouter } from "next/navigation";
+import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 export default function ReceiptFromProductionPage() {
   const defaultValues: Partial<ProductionFormData> = useMemo(() => ({
@@ -18,11 +22,25 @@ export default function ReceiptFromProductionPage() {
     DocumentLines: [],
   }), []);
 
-  const handleSubmit = async (data: ProductionFormData) => {
-    try {
+  const { lines, attachments, reset: resetStore } = useIFPRDDocument();
+  const router = useRouter();
 
-    } catch (error) {
+  const handleSubmit = async (data: ProductionFormData) => {
+    if (lines.length === 0) {
+      toast.error("Please add at least one line.");
+      return;
+    }
+
+    try {
+      const result = await saveProductionDocument(DocumentType.ReceiptFromProduction, data, lines, attachments);
+      const isUpdate = !!data.DocEntry;
+      const newDocNum = result?.DocNum || data.DocNum || "New";
+      toast.success(`Receipt From Production #${newDocNum} ${isUpdate ? "updated" : "created"} successfully!`);
+      resetStore();
+      router.refresh();
+    } catch (error: any) {
       console.error("Error while creating receipt from production:", error);
+      toast.error(error.message || "Failed to create Receipt From Production");
     }
   };
 

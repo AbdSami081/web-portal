@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { GenericModal } from "@/modals/GenericModal";
-import { getBOMList, getIssueForProduction, getProductionOrder } from "@/api+/sap/production/productionService";
+import { getBOMList, getIssueForProduction, getProductionOrder, getReceiptFromProduction } from "@/api+/sap/production/productionService";
 import { getItemsList } from "@/api+/sap/master-data/items";
 import { DocumentType as SAPDocumentType } from "@/types/sales/salesDocuments.type";
 import { Controller } from "react-hook-form";
@@ -128,6 +128,8 @@ export function PRDDocumentHeader() {
         documentData = await getIssueForProduction(Number(baseRef));
       } else if (docType === SAPDocumentType.ProductionOrder) {
         documentData = await getProductionOrder(Number(baseRef));
+      } else if (docType === SAPDocumentType.ReceiptFromProduction) {
+        documentData = await getReceiptFromProduction(Number(baseRef));
       }
 
       if (documentData && (documentData.DocEntry || documentData.AbsoluteEntry)) {
@@ -146,6 +148,7 @@ export function PRDDocumentHeader() {
           setValue("CreationDate", documentData.CreationDate?.split("T")[0], { shouldDirty: true });
           setValue("ProductionOrderType", documentData.ProductionOrderType, { shouldDirty: true });
           setValue("Remarks", documentData.Remarks, { shouldDirty: true });
+          setValue("Comments", documentData.Remarks, { shouldDirty: true });
           setValue("PostingDate", documentData.PostingDate?.split("T")[0], { shouldDirty: true });
 
           // Use setTimeout with a slight delay to ensure the Select options render before setting value

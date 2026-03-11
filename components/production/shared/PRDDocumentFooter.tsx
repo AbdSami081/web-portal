@@ -59,10 +59,10 @@ export default function PRDDocumentFooter() {
     try {
       const data = await getDisassembleProductionOrders();
       const processedOrders = data
-    .filter((order: any) => {
-      const lines = order.ProductionOrderLines || [];
-      return lines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
-    })
+        .filter((order: any) => {
+          const lines = order.ProductionOrderLines || [];
+          return lines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
+        })
         .map((order: any) => ({
           ...order,
           DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
@@ -172,7 +172,7 @@ export default function PRDDocumentFooter() {
             <AppLabel htmlFor="comments">Remarks</AppLabel>
             <Textarea
               id="comments"
-              {...register("Remarks")}
+              {...register("Comments")}
               rows={4}
               placeholder="Enter additional information or notes here..."
               className="resize-none border-zinc-200 focus:border-zinc-400 focus:ring-zinc-100 transition-all text-sm leading-relaxed"
@@ -183,14 +183,14 @@ export default function PRDDocumentFooter() {
         <div className="space-y-4">
           <div className="flex flex-col gap-2">
             <AppLabel htmlFor="pickRmrk">
-              {config.type === DocumentType.IssueForProduction ? "Journal Remarks" : "Pick and Pack Remarks"}
+              {[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? "Journal Remarks" : "Pick and Pack Remarks"}
             </AppLabel>
             <Textarea
               id="pickRmrk"
-              {...register(config.type === DocumentType.IssueForProduction ? "JournalMemo" : "PickRmrk")}
+              {...register([DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? "JournalMemo" : "PickRmrk")}
               rows={4}
               placeholder={
-                config.type === DocumentType.IssueForProduction
+                [DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type)
                   ? "Enter journal remarks..."
                   : "Enter pick and pack specific instructions..."
               }
@@ -206,13 +206,15 @@ export default function PRDDocumentFooter() {
               >
                 Production Order
               </Button>
-              <Button
-                type="button"
-                onClick={handleFetchDisassembleOrders}
-                className="bg-black text-white hover:bg-zinc-800 h-8 text-xs font-semibold px-4 rounded-md shadow-sm transition-all active:scale-95"
-              >
-                Disassembly Order
-              </Button>
+              {config.type !== DocumentType.ReceiptFromProduction && (
+                <Button
+                  type="button"
+                  onClick={handleFetchDisassembleOrders}
+                  className="bg-black text-white hover:bg-zinc-800 h-8 text-xs font-semibold px-4 rounded-md shadow-sm transition-all active:scale-95"
+                >
+                  Disassembly Order
+                </Button>
+              )}
             </div>
           )}
         </div>

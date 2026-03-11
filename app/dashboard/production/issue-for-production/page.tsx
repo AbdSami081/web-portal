@@ -31,7 +31,9 @@ export default function IssueForProductionPage() {
       }
 
       const result = await saveProductionDocument(DocumentType.IssueForProduction, data, lines, attachments);
-      toast.success(`Issue for Production #${result?.DocNum || ""} created successfully!`);
+      const isUpdate = !!data.DocEntry;
+      const docNum = result?.DocNum || data.DocNum || "";
+      toast.success(`Issue for Production #${docNum} ${isUpdate ? "updated" : "created"} successfully!`);
       reset(); // Clear store
     } catch (error: any) {
       console.error("Error while creating issue for production:", error);

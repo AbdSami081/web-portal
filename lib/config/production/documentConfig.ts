@@ -84,6 +84,8 @@ export const ReceiptFPRDConfig: DocumentConfig = {
     plannedQty: true,
     warehouse: true,
     actions: true,
+    orderNumber: true,
+    openQty: true,
   },
   footerActions: {
     showProductionOrderButton: true,

@@ -62,6 +62,36 @@ export const postIssueForProduction = async (data: any): Promise<any> => {
   }
 };
 
+export const postReceiptFromProduction = async (data: any): Promise<any> => {
+  try {
+    const res = await apiClient.post(`api/Production/ReceiptForProduction`, data);
+    return res.data;
+  } catch (err: any) {
+    console.error("Failed to post receipt from production", err);
+    throw new Error(getSapErrorMessage(err) || "Failed to post receipt from production");
+  }
+};
+
+export const patchIssueForProduction = async (docEntry: number, payload: any): Promise<any> => {
+  try {
+    const res = await apiClient.patch(`api/Production/IssueForProduction/${docEntry}`, payload);
+    return res.data;
+  } catch (err: any) {
+    console.error("Failed to patch issue for production", err);
+    throw new Error(getSapErrorMessage(err) || "Failed to patch issue for production");
+  }
+};
+
+export const patchReceiptFromProduction = async (docEntry: number, payload: any): Promise<any> => {
+  try {
+    const res = await apiClient.patch(`api/Production/ReceiptForProduction/${docEntry}`, payload);
+    return res.data;
+  } catch (err: any) {
+    console.error("Failed to patch receipt from production", err);
+    throw new Error(getSapErrorMessage(err) || "Failed to patch receipt from production");
+  }
+};
+
 export const saveProductionDocument = async (docType: DocumentType, data: any, lines: any[], attachments: any[]): Promise<any> => {
   try {
     if (docType === DocumentType.ProductionOrder) {
@@ -100,7 +130,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
         }));
         return await postProductionOrder(payload);
       }
-    } else if (docType === DocumentType.IssueForProduction) {
+    } else if (docType === DocumentType.IssueForProduction || docType === DocumentType.ReceiptFromProduction) {
       const payload = {
         Comments: data.Comments || data.Remarks,
         JournalMemo: data.JournalMemo,
@@ -117,7 +147,20 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
           File: att.File,
         }))
       };
-      return await postIssueForProduction(payload);
+
+      if (data.DocEntry && data.DocEntry > 0) {
+        if (docType === DocumentType.IssueForProduction) {
+          return await patchIssueForProduction(data.DocEntry, payload);
+        } else {
+          return await patchReceiptFromProduction(data.DocEntry, payload);
+        }
+      } else {
+        if (docType === DocumentType.IssueForProduction) {
+          return await postIssueForProduction(payload);
+        } else {
+          return await postReceiptFromProduction(payload);
+        }
+      }
     }
     throw new Error("Unsupported document type for production submission");
   } catch (error: any) {
@@ -132,6 +175,16 @@ export const getIssueForProduction = async (docNum: number): Promise<any> => {
   } catch (err: any) {
     console.error("Failed to fetch issue for production", err);
     throw new Error(getSapErrorMessage(err) || "Failed to fetch issue for production");
+  }
+};
+
+export const getReceiptFromProduction = async (docNum: number): Promise<any> => {
+  try {
+    const res = await apiClient.get(`api/Production/ReceiptForProduction?docNum=${docNum}`);
+    return res.data;
+  } catch (err: any) {
+    console.error("Failed to fetch receipt from production", err);
+    throw new Error(getSapErrorMessage(err) || "Failed to fetch receipt from production");
   }
 };
 
