@@ -1,8 +1,10 @@
 import { create } from "zustand";
+import { getAccessToken } from "@/api+/sap/auth/authService";
 
 interface AuthStore {
     isSessionExpired: boolean;
     expiryTime: number | null;
+    allowMultiBom: boolean;
     setSessionExpired: (expired: boolean) => void;
     resetSession: () => void;
     setExpiryTime: (time: number) => void;
@@ -29,6 +31,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     return {
         isSessionExpired: false,
         expiryTime: null,
+        allowMultiBom: false,
         setSessionExpired: (expired) => set({ isSessionExpired: expired }),
         resetSession: () => {
             if (timer) clearTimeout(timer);
@@ -45,7 +48,10 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             const now = Date.now();
             const delay = exp - now;
 
-            set({ expiryTime: exp, isSessionExpired: false });
+            // Parse AllowMultiBom from token claims
+            const allowMultiBom = decoded["AllowMultiBom"] === "True" || decoded["AllowMultiBom"] === "true";
+
+            set({ expiryTime: exp, isSessionExpired: false, allowMultiBom });
 
             if (delay > 0) {
                 timer = setTimeout(() => {
@@ -57,3 +63,19 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         },
     };
 });
+
+/** Read AllowMultiBom directly from the current token (for use outside React components) */
+export const getMultiBomAllowed = (): boolean => {
+    const token = getAccessToken();
+    if (!token) return false;
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(decodeURIComponent(atob(base64).split('').map(c =>
+            '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join('')));
+        return payload["AllowMultiBom"] === "True" || payload["AllowMultiBom"] === "true";
+    } catch {
+        return false;
+    }
+};

@@ -19,6 +19,7 @@ import { Controller } from "react-hook-form";
 import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { Item } from "@/types/sales/Item.type";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className, id }: any) => {
   const [localValue, setLocalValue] = useState(value ? value.toString() : "");
@@ -77,6 +78,7 @@ export function PRDDocumentHeader() {
   const [isMultiBom, setIsMultiBom] = useState(false);
 
   const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus } = useIFPRDDocument();
+  const { allowMultiBom: allowMultiBomConfig } = useAuthStore();
   const config = usePRDDocConfig();
   const docType = config.type;
   const watchedPlannedQty = watch("PlannedQuantity");
@@ -359,18 +361,20 @@ export function PRDDocumentHeader() {
                 </Button>
               </div>
 
-              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-neutral-100 rounded-md border border-neutral-200 shrink-0">
-                <input
-                  type="checkbox"
-                  id="is-multi-bom"
-                  className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
-                  checked={isMultiBom}
-                  onChange={(e) => setIsMultiBom(e.target.checked)}
-                />
-                <label htmlFor="is-multi-bom" className="text-[9px] font-bold text-neutral-600 cursor-pointer uppercase tracking-tighter whitespace-nowrap">
-                  M-BOM
-                </label>
-              </div>
+              {allowMultiBomConfig && (
+                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-neutral-100 rounded-md border border-neutral-200 shrink-0">
+                  <input
+                    type="checkbox"
+                    id="is-multi-bom"
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                    checked={isMultiBom}
+                    onChange={(e) => setIsMultiBom(e.target.checked)}
+                  />
+                  <label htmlFor="is-multi-bom" className="text-[9px] font-bold text-neutral-600 cursor-pointer uppercase tracking-tighter whitespace-nowrap">
+                    M-BOM
+                  </label>
+                </div>
+              )}
             </div>
           </div>
         )}
