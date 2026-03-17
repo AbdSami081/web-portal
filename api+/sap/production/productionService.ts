@@ -2,9 +2,9 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import apiClient from "@/lib/apiClient";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 
-export const getBOMList = async (): Promise<any[]> => {
+export const getBOMList = async (isMultiBom: boolean = false, search: string = "", skip: number = 0, top: number = 100): Promise<any[]> => {
   try {
-    const res = await apiClient.get(`api/Production/GetBOMForProduction`);
+    const res = await apiClient.get(`api/Production/GetBOMForProduction?isMultiBom=${isMultiBom}&search=${search}&skip=${skip}&top=${top}`);
     return res.data?.value || [];
   } catch (err) {
     console.error("Failed to fetch BOM list", err);
@@ -32,9 +32,9 @@ export const patchProductionOrder = async (docEntry: number, payload: any): Prom
   }
 };
 
-export const getReleasedProductionOrders = async (): Promise<any[]> => {
+export const getReleasedProductionOrders = async (skip: number = 0, top: number = 20): Promise<any[]> => {
   try {
-    const res = await apiClient.get(`api/Production/GetReleasedProductionOrders`);
+    const res = await apiClient.get(`api/Production/GetReleasedProductionOrders?skip=${skip}&top=${top}`);
     return res.data?.value || [];
   } catch (err) {
     console.error("Failed to fetch released production orders", err);
@@ -42,9 +42,9 @@ export const getReleasedProductionOrders = async (): Promise<any[]> => {
   }
 };
 
-export const getDisassembleProductionOrders = async (): Promise<any[]> => {
+export const getDisassembleProductionOrders = async (skip: number = 0, top: number = 20): Promise<any[]> => {
   try {
-    const res = await apiClient.get(`api/Production/GetDisassembleProductionOrders`);
+    const res = await apiClient.get(`api/Production/GetDisassembleProductionOrders?skip=${skip}&top=${top}`);
     return res.data?.value || [];
   } catch (err) {
     console.error("Failed to fetch disassembly production orders", err);

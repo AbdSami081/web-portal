@@ -143,18 +143,18 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       });
     },
     loadFromBOM: (bom: any, plannedQty: number = 0) => {
-      set({ selectedBOM: bom }); // Store the BOM for later re-loading
-      const parentQty = Number(bom.Quantity || 1); // Parent quantity of BOM
+      set({ selectedBOM: bom }); 
+      const parentQty = Number(bom.Quantity || 1); 
       const mappedLines = bom.ProductTreeLines?.map((line: any) => {
         const lineQty = Number(line.Quantity || 0);
         const baseRatio = lineQty / parentQty;
 
         return {
-          ItemNo: line.ItemCode,
-          ItemName: line.ItemName || "",
+          ItemNo: line.ComponentCode || line.ItemCode,
+          ItemName: line.ComponentName || line.ItemName || "",
           BaseQuantity: lineQty, // Store original line quantity here
           BaseRatio: baseRatio,
-          BOMHeaderQty: parentQty, // Store header qty for recalculation
+          BOMHeaderQty: parentQty, 
           PlannedQuantity: baseRatio * Number(plannedQty || 0),
           IssuedQuantity: 0,
           Warehouse: line.Warehouse || "",

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { GenericModal } from "@/modals/GenericModal";
-import { getBOMList, getIssueForProduction, getProductionOrder, getReceiptFromProduction } from "@/api+/sap/production/productionService";
+import { getBOMList, getDisassembleProductionOrders, getIssueForProduction, getProductionOrder, getReceiptFromProduction, getReleasedProductionOrders } from "@/api+/sap/production/productionService";
 import { getItemsList } from "@/api+/sap/master-data/items";
 import { DocumentType as SAPDocumentType } from "@/types/sales/salesDocuments.type";
 import { Controller } from "react-hook-form";
@@ -69,9 +69,13 @@ export function PRDDocumentHeader() {
   const [itemSelectorOpen, setItemSelectorOpen] = useState(false);
   const [showTypeConfirm, setShowTypeConfirm] = useState(false);
   const [pendingType, setPendingType] = useState<string | null>(null);
+  const [dataList, setDataList] = useState<any[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [skip, setSkip] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [modalType, setModalType] = useState<"bom" | "order">("bom");
+  const [isMultiBom, setIsMultiBom] = useState(false);
 
-  const [dataList, setDataList] = useState<any[]>([]); // Renamed from bomList
-  const [isLoadingItems, setIsLoadingItems] = useState(false); // Renamed from isLoadingBoms
   const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus } = useIFPRDDocument();
   const config = usePRDDocConfig();
   const docType = config.type;
@@ -177,7 +181,7 @@ export function PRDDocumentHeader() {
     }
   };
 
-  const fetchItems = async () => {
+  const fetchItems = async (isReset = true) => {
     const type = watch("ProductionOrderType");
     if (type === "bopotSpecial") {
       setItemSelectorOpen(true);
@@ -186,8 +190,26 @@ export function PRDDocumentHeader() {
 
     setIsLoadingItems(true);
     try {
-      const data = await getBOMList();
-      setDataList(data);
+      const currentSkip = isReset ? 0 : skip;
+      let data = await getBOMList(isMultiBom, searchValue, currentSkip, 20);
+
+      // Normalize Multi BOM structure: map 'lines' to 'ProductTreeLines' for the store
+      if (isMultiBom && data.length > 0) {
+        data = data.map((d: any) => ({
+          ...d,
+          ProductTreeLines: d.lines || []
+        }));
+      }
+
+      if (isReset) {
+        setDataList(data);
+        setSkip(20);
+      } else {
+        setDataList((prev) => [...prev, ...data]);
+        setSkip(currentSkip + 20);
+      }
+      setHasMore(data.length === 20);
+      setModalType("bom");
       setBomModalOpen(true);
     } catch (error) {
       toast.error("Failed to fetch data");
@@ -196,19 +218,55 @@ export function PRDDocumentHeader() {
     }
   };
 
+  const fetchOrders = async (isReset = true) => {
+    setIsLoadingItems(true);
+    try {
+      const currentSkip = isReset ? 0 : skip;
+      const productionOrderType = watch("ProductionOrderType");
+      let data = [];
+      if (productionOrderType === "bopotDisassembly") {
+        data = await getDisassembleProductionOrders(currentSkip, 20);
+      } else {
+        data = await getReleasedProductionOrders(currentSkip, 20);
+      }
+
+      if (isReset) {
+        setDataList(data);
+        setSkip(20);
+      } else {
+        setDataList((prev) => [...prev, ...data]);
+        setSkip(currentSkip + 20);
+      }
+      setHasMore(data.length === 20);
+      setModalType("order");
+      setBomModalOpen(true);
+    } catch (error) {
+      toast.error("Failed to fetch orders");
+    } finally {
+      setIsLoadingItems(false);
+    }
+  };
+
   const handleSelectItem = (item: any) => {
+    if (modalType === "order") {
+      fetchDocument(item.DocumentNumber || item.DocNum);
+      setBomModalOpen(false);
+      return;
+    }
+
     const type = getValues("ProductionOrderType");
     if (type === "bopotSpecial") {
-      setValue("ItemNo", item.ItemCode, { shouldDirty: true, shouldValidate: true });
-      setValue("ProductDescription", item.ItemName || item.Dscription || "", { shouldDirty: true, shouldValidate: true });
-      resetStore(); // Clear lines for special
+      setValue("ItemNo", item.ItemCode || item.ItemNo || "", { shouldDirty: true, shouldValidate: true });
+      setValue("ProductDescription", item.ItemName || item.Dscription || item.ProductDescription || "", { shouldDirty: true, shouldValidate: true });
+      resetStore();
     } else {
-      setValue("ItemNo", item.TreeCode, { shouldDirty: true, shouldValidate: true });
-      setValue("ProductDescription", item.ProductDescription, { shouldDirty: true, shouldValidate: true });
-
+      // Use U_PCode/U_Name as fallback for Multi-BOM
+      const itemCode = item.TreeCode || item.ItemCode || item.U_PCode;
+      const itemName = item.ProductDescription || item.ItemName || item.U_Name || "";
+      setValue("ItemNo", itemCode, { shouldDirty: true, shouldValidate: true });
+      setValue("ProductDescription", itemName, { shouldDirty: true, shouldValidate: true });
       const currentPlannedQty = watch("PlannedQuantity");
       const plannedQty = currentPlannedQty ? Number(currentPlannedQty) : 0;
-
       loadFromBOM(item, plannedQty);
     }
     setBomModalOpen(false);
@@ -283,23 +341,36 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-
-
         {config.headerFields.productNo && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Product No.</AppLabel>
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 relative">
               <Input id="item-no-field" type="text" {...register("ItemNo")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 cursor-pointer"
-                onClick={fetchItems}
-                disabled={initialStatus === "boposClosed"}
-              >
-                {isLoadingItems ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 cursor-pointer"
+                  onClick={() => fetchItems(true)}
+                  disabled={initialStatus === "boposClosed"}
+                >
+                  {isLoadingItems ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-neutral-100 rounded-md border border-neutral-200 shrink-0">
+                <input
+                  type="checkbox"
+                  id="is-multi-bom"
+                  className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                  checked={isMultiBom}
+                  onChange={(e) => setIsMultiBom(e.target.checked)}
+                />
+                <label htmlFor="is-multi-bom" className="text-[9px] font-bold text-neutral-600 cursor-pointer uppercase tracking-tighter whitespace-nowrap">
+                  M-BOM
+                </label>
+              </div>
             </div>
           </div>
         )}
@@ -321,6 +392,7 @@ export function PRDDocumentHeader() {
                 }}
                 placeholder="Search DocNum..."
               />
+
               <Button
                 type="button"
                 variant="outline"
@@ -471,24 +543,46 @@ export function PRDDocumentHeader() {
       />
 
       <GenericModal
-        title={watch("ProductionOrderType") === "bopotSpecial" ? "Select Item" : "Select Bill of Materials"}
+        title={
+          modalType === "order"
+            ? "Select Production Order"
+            : watch("ProductionOrderType") === "bopotSpecial"
+              ? "Select Item"
+              : isMultiBom
+                ? "Select Bill of Materials (Multi BOM)"
+                : "Select Bill of Materials"
+        }
         open={bomModalOpen}
         onClose={() => setBomModalOpen(false)}
         onSelect={handleSelectItem}
         data={dataList}
         columns={
-          watch("ProductionOrderType") === "bopotSpecial"
+          modalType === "order"
             ? [
-              { key: "ItemCode", label: "Item No" },
-              { key: "ItemName", label: "Description" },
+              { key: "DocumentNumber", label: "Doc Num" },
+              { key: "ItemNo", label: "Item No" },
+              { key: "ProductionOrderType", label: "Type" },
+              { key: "PlannedQuantity", label: "Qty" },
             ]
-            : [
-              { key: "TreeCode", label: "Item No" },
-              { key: "ProductDescription", label: "Description" },
-            ]
+            : watch("ProductionOrderType") === "bopotSpecial"
+              ? [
+                { key: "ItemCode", label: "Item No" },
+                { key: "ItemName", label: "Description" },
+              ]
+              : isMultiBom
+                ? [
+                  { key: "U_PCode", label: "Item No" },
+                  { key: "U_Name", label: "Description" },
+                ]
+                : [
+                  { key: "TreeCode", label: "Item No" },
+                  { key: "ProductDescription", label: "Description" },
+                ]
         }
         getSelectValue={(item) => item}
         isLoading={isLoadingItems}
+        onLoadMore={() => modalType === "order" ? fetchOrders(false) : fetchItems(false)}
+        hasMore={hasMore}
       />
 
       <ItemSelectorDialog
@@ -498,8 +592,8 @@ export function PRDDocumentHeader() {
         onSelectItems={(items: Item[]) => {
           if (items.length > 0) {
             const item = items[0];
-            setValue("ItemNo", item.itemCode, { shouldDirty: true, shouldValidate: true });
-            setValue("ProductDescription", item.itemName || "", { shouldDirty: true, shouldValidate: true });
+            setValue("ItemNo", item.ItemCode, { shouldDirty: true, shouldValidate: true });
+            setValue("ProductDescription", item.ItemName || "", { shouldDirty: true, shouldValidate: true });
             resetStore();
           }
           setItemSelectorOpen(false);
