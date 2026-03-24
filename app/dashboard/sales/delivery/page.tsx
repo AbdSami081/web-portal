@@ -14,6 +14,7 @@ import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { postDelivery, patchDeliveryNote } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
+import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 
 export default function DeliveryPage() {
   const router = useRouter();
@@ -36,11 +37,49 @@ export default function DeliveryPage() {
 
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = useSalesDocument.getState();
+    
+    // 1. First, identify which attachments need uploading
+    const newAttachments = attachments.filter(att => att.File);
+    const existingAttachments = attachments.filter(att => !att.File);
 
+    let uploadedAttachments: any[] = [];
+    if (newAttachments.length > 0) {
+      try {
+        const filesToUpload = newAttachments.map(att => att.File as File);
+        const uploadResults = await uploadAttachments(filesToUpload, "Delivery");
+        
+        toast.success(`${uploadResults.length} attachments uploaded successfully`);
+
+        // Map the results back to the attachment structure
+        uploadedAttachments = newAttachments.map((att, index) => ({
+          ...att,
+          SourcePath: uploadResults[index].path,
+        }));
+      } catch (error) {
+        console.error("Failed to upload attachments", error);
+        toast.error("Failed to upload attachments");
+        return; // Stop if upload fails
+      }
+    }
+
+    const processedAttachments = [...existingAttachments, ...uploadedAttachments];
+    // Get First attachment with a File to upload, if any
+    // const attachmentToUpload = attachments.find(att => att.File);
+    // if (attachmentToUpload) {
+    //   try {
+    //     const uploadRes = await uploadAttachment(attachmentToUpload.File!, "Delivery");
+    //     toast.success(`Attachment ${attachmentToUpload.FileName} uploaded successfully`);
+    //   } catch (error) {
+    //     console.error("Failed to upload attachment", attachmentToUpload.FileName, error);
+    //     toast.error(`Failed to upload attachment: ${attachmentToUpload.FileName}. Please try again.`);
+    //     return; // Stop submission if attachment upload fails
+    //   }
+    // }
+    
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Delivery) {
       const payload = {
         Comments: data.Comments,
-        Attachments2_Lines: attachments.map((att) => ({
+        Attachments2_Lines: processedAttachments.map((att) => ({
           FileExtension: att.FileName.split('.').pop(),
           FileName: att.FileName.split('.').slice(0, -1).join('.'),
           SourcePath: att.SourcePath,
@@ -75,7 +114,7 @@ export default function DeliveryPage() {
         }
         return lineData;
       }),
-      Attachments2_Lines: attachments.map((att) => ({
+      Attachments2_Lines: processedAttachments.map((att) => ({
         FileExtension: att.FileName.split('.').pop(),
         FileName: att.FileName.split('.').slice(0, -1).join('.'),
         SourcePath: att.SourcePath,
