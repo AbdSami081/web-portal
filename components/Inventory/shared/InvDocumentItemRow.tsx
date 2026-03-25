@@ -20,13 +20,8 @@ export function InvDocumentLineRow({ index, line }: Props) {
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
-  const [localQty, setLocalQty] = useState<string>((line.Quantity || 0).toString());
-
   useEffect(() => {
     setDraftLine(line);
-    if (document.activeElement?.getAttribute('name') !== `Qty-${index}`) {
-      setLocalQty((line.Quantity || 0).toLocaleString());
-    }
   }, [line, index]);
 
   const saveRow = (updatedLine = draftLine) => {
@@ -124,19 +119,18 @@ export function InvDocumentLineRow({ index, line }: Props) {
         <Input
           name={`Qty-${index}`}
           className="h-6 w-full text-right"
-          type="text"
-          value={localQty}
+          type="number"
+          min={1}
+          value={draftLine.Quantity || 1}
           onChange={(e) => {
-            const val = e.target.value;
-            setLocalQty(val);
-            const numericVal = Number(val.replace(/,/g, ""));
+            let numericVal = Number(e.target.value);
             if (!isNaN(numericVal)) {
+              if (numericVal < 1) numericVal = 1;
               setDraftLine({ ...draftLine, Quantity: numericVal });
               updateLine(line.ItemCode, { ...draftLine, Quantity: numericVal });
             }
           }}
           onBlur={() => {
-            setLocalQty((draftLine.Quantity || 0).toLocaleString());
             saveRow();
           }}
         />

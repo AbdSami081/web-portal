@@ -33,20 +33,19 @@ const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className,
   return (
     <Input
       id={id}
-      type="text"
+      type="number"
       className={className}
-      value={localValue}
+      value={value || ""}
       onChange={(e) => {
         const val = e.target.value;
-        setLocalValue(val);
-        const numericVal = Number(val.replace(/,/g, ""));
+        let numericVal = Number(val);
         if (!isNaN(numericVal)) {
+          if (numericVal < 1) numericVal = 1;
           onChange(numericVal);
         }
       }}
       onBlur={() => {
         onBlur();
-        setLocalValue(value ? Number(value).toLocaleString() : "");
       }}
       placeholder={placeholder}
     />

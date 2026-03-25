@@ -145,8 +145,12 @@ export function DocumentLineRow({ index, line }: Props) {
         <Input
           className="h-6 w-20 text-right"
           type="number"
+          min={1}
           value={draftLine.Quantity}
-          onChange={(e) => setDraftLine({ ...draftLine, Quantity: Number(e.target.value) })}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            setDraftLine({ ...draftLine, Quantity: val < 1 ? 1 : val });
+          }}
         />
       </td>
 
@@ -172,8 +176,12 @@ export function DocumentLineRow({ index, line }: Props) {
         <Input
           className="h-6 w-24 text-right"
           type="number"
+          min={1}
           value={draftLine.Price}
-          onChange={(e) => setDraftLine({ ...draftLine, Price: Number(e.target.value) })}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            setDraftLine({ ...draftLine, Price: val < 1 ? 1 : val });
+          }}
         />
       </td>
 
@@ -220,10 +228,11 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Input
           type="number"
+          min={1}
           value={draftLine.Freight1Amount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
-            setDraftLine(prev => ({ ...prev, Freight1Amount: value }));
+            setDraftLine(prev => ({ ...prev, Freight1Amount: value < 1 ? 1 : value }));
           }}
           onBlur={() => calculateAndUpdate(draftLine)}
         />
@@ -281,10 +290,11 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Input
           type="number"
+          min={1}
           value={draftLine.Freight2Amount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
-            setDraftLine(prev => ({ ...prev, Freight2Amount: value }));
+            setDraftLine(prev => ({ ...prev, Freight2Amount: value < 1 ? 1 : value }));
           }}
           onBlur={() => calculateAndUpdate(draftLine)}
         />
@@ -342,10 +352,11 @@ export function DocumentLineRow({ index, line }: Props) {
       <td className="px-12 py-2">
         <Input
           type="number"
+          min={1}
           value={draftLine.Freight3Amount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
-            setDraftLine(prev => ({ ...prev, Freight3Amount: value }));
+            setDraftLine(prev => ({ ...prev, Freight3Amount: value < 1 ? 1 : value }));
           }}
           onBlur={() => calculateAndUpdate(draftLine)}
           className="h-6 w-24"

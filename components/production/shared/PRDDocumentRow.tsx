@@ -29,19 +29,9 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const headerPlannedQty = watch("PlannedQuantity");
 
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
-  const [baseQtyInput, setBaseQtyInput] = useState<string>((line.BaseQuantity ?? 0).toString());
-  const [plannedQtyInput, setPlannedQtyInput] = useState<string>((line.PlannedQuantity ?? 0).toString());
 
   useEffect(() => {
     setDraftLine(line);
-    // Only update input if it's not currently being edited or focused? 
-    // Actually, simple way: only update if value changed externally.
-    if (document.activeElement?.getAttribute('name') !== `BaseQty-${index}`) {
-      setBaseQtyInput((line.BaseQuantity ?? 0).toLocaleString());
-    }
-    if (document.activeElement?.getAttribute('name') !== `PlannedQty-${index}`) {
-      setPlannedQtyInput((line.PlannedQuantity ?? 0).toLocaleString());
-    }
   }, [line, index]);
 
   const saveRow = () => {
@@ -91,15 +81,15 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
       {config.itemColumns.baseQty && (
         <td className="py-2 px-4 text-center">
           <Input
-            type="text"
+            type="number"
+            min={1}
             name={`BaseQty-${index}`}
-            value={baseQtyInput}
+            value={draftLine.BaseQuantity || 1}
             onChange={(e) => {
-              const val = e.target.value;
-              setBaseQtyInput(val);
-
-              const numericVal = Number(val.replace(/,/g, ""));
+              let numericVal = Number(e.target.value);
               if (isNaN(numericVal)) return;
+
+              if (numericVal < 1) numericVal = 1;
 
               const parentQty = (draftLine as any).BOMHeaderQty || 1;
               const newBaseRatio = numericVal / parentQty;
@@ -135,23 +125,22 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
             <span className="font-medium text-gray-700">{Number(line.OriginalPlannedQuantity ?? line.PlannedQuantity).toLocaleString()}</span>
           ) : (
             <Input
-              type="text"
+              type="number"
+              min={1}
               name={`PlannedQty-${index}`}
               className="h-7 w-24 mx-auto text-center border-zinc-300"
-              value={plannedQtyInput}
+              value={draftLine.PlannedQuantity || 1}
               onChange={(e) => {
-                const val = e.target.value;
-                setPlannedQtyInput(val);
-
-                const numericVal = Number(val.replace(/,/g, ""));
+                let numericVal = Number(e.target.value);
                 if (isNaN(numericVal)) return;
+
+                if (numericVal < 1) numericVal = 1;
 
                 const updated = { ...draftLine, PlannedQuantity: numericVal };
                 setDraftLine(updated);
                 updateLine(index, updated);
               }}
               onBlur={() => {
-                setPlannedQtyInput((draftLine.PlannedQuantity || 0).toLocaleString());
                 saveRow();
               }}
               disabled={initialStatus === "boposClosed"}
@@ -169,23 +158,22 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
       {config.itemColumns.openQty && (
         <td className="py-2 px-4 text-center">
           <Input
-            type="text"
+            type="number"
+            min={1}
             name={`OpenQty-${index}`}
             className="h-7 w-24 mx-auto text-center border-zinc-300"
-            value={plannedQtyInput}
+            value={draftLine.PlannedQuantity || 1}
             onChange={(e) => {
-              const val = e.target.value;
-              setPlannedQtyInput(val);
-
-              const numericVal = Number(val.replace(/,/g, ""));
+              let numericVal = Number(e.target.value);
               if (isNaN(numericVal)) return;
+
+              if (numericVal < 1) numericVal = 1;
 
               const updated = { ...draftLine, PlannedQuantity: numericVal };
               setDraftLine(updated);
               updateLine(index, updated);
             }}
             onBlur={() => {
-              setPlannedQtyInput((draftLine.PlannedQuantity || 0).toLocaleString());
               saveRow();
             }}
             disabled={initialStatus === "boposClosed"}
