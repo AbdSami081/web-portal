@@ -44,7 +44,7 @@ export default function ProductionOrderPage() {
         try {
             const result = await saveProductionDocument(DocumentType.ProductionOrder, data, lines, attachments);
             const docNum = useIFPRDDocument.getState().DocNum;
-            toast.success(data.AbsoluteEntry && data.AbsoluteEntry > 0 ? `Production Order #${docNum || data.AbsoluteEntry} updated successfully` : `Production Order #${result?.DocNum || ""} created successfully`);
+            toast.success(data.AbsoluteEntry && data.AbsoluteEntry > 0 ? `Production Order #${docNum || data.AbsoluteEntry} updated successfully` : `Production Order #${result?.DocNum || result?.DocumentNumber } created successfully`);
             resetStore();
         } catch (error: any) {
             console.error("Error while processing Production Order:", error);
