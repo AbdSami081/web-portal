@@ -151,6 +151,9 @@ export function PRDDocumentHeader() {
         // Fallbacks for Issue and Receipt to resolve empty Item columns
         ItemNo: d.ItemNo || d.U_ItemCode || d.ItemCode || (d.DocumentLines && d.DocumentLines[0]?.ItemCode) || "",
         ItemName: d.ProductDescription || d.U_ItemName || d.ItemName || (d.DocumentLines && d.DocumentLines[0]?.ItemDescription) || "",
+        // Format SAP enums for nice display
+        ProductionOrderStatus: d.ProductionOrderStatus?.replace("bopos", "") || d.ProductionOrderStatus,
+        DocumentStatus: d.DocumentStatus?.replace("bost_", "") || d.DocumentStatus,
       }));
 
       if (isLoadMore) {
@@ -292,6 +295,17 @@ export function PRDDocumentHeader() {
         data = await getReleasedProductionOrders(currentSkip, 20);
       }
 
+      const originalLength = data.length;
+
+      if (docType === SAPDocumentType.ReceiptFromProduction) {
+        data = data.filter((order: any) => (order.CompletedQuantity || 0) < (order.PlannedQuantity || 0));
+      } else if (docType === SAPDocumentType.IssueForProduction) {
+        data = data.filter((order: any) => {
+          const manualLines = order.ProductionOrderLines?.filter((l: any) => l.ProductionOrderIssueType === "im_Manual") || [];
+          return manualLines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
+        });
+      }
+
       if (isReset) {
         setDataList(data);
         setSkip(20);
@@ -299,7 +313,7 @@ export function PRDDocumentHeader() {
         setDataList((prev) => [...prev, ...data]);
         setSkip(currentSkip + 20);
       }
-      setHasMore(data.length === 20);
+      setHasMore(originalLength === 20);
       setModalType("order");
       setBomModalOpen(true);
     } catch (error) {
@@ -582,14 +596,14 @@ export function PRDDocumentHeader() {
         {config.headerFields.orderDate && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Order Date</AppLabel>
-            <Input type="date" {...register("CreationDate")} className="h-8 flex-1" />
+            <Input type="date" {...register("CreationDate")} className="h-8 flex-1" disabled={!!docNum} />
           </div>
         )}
 
         {config.headerFields.startDate && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Start Date</AppLabel>
-            <Input type="date" {...register("StartDate")} className="h-8 flex-1" />
+            <Input type="date" {...register("StartDate")} className="h-8 flex-1" disabled={!!docNum} />
           </div>
         )}
 
