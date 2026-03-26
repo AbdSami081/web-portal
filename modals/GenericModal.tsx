@@ -133,7 +133,7 @@ export function GenericModal<T>({
             className="mb-3 w-full"
           />
 
-          <div className="flex-1 border rounded relative flex flex-col min-h-[400px] overflow-auto bg-white transition-all duration-300 [&_[data-slot=table-container]]:overflow-visible">
+          <div className="flex-1 border rounded relative flex flex-col min-h-[400px] bg-white transition-all duration-300">
             {isLoading && (
               <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-[100] flex items-center justify-center transition-all duration-300">
                 <div className="flex flex-col items-center gap-3">
@@ -142,83 +142,94 @@ export function GenericModal<T>({
                 </div>
               </div>
             )}
-            <Table className="relative min-w-full mb-4">
-              <TableHeader>
-                <TableRow>
-                  {multiple && (
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={filteredData.length > 0 && selectedItems.length === filteredData.length}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </TableHead>
-                  )}
-                  <TableHead className="w-[50px]">S#</TableHead>
-                  {columns.map((col) => (
-                    <TableHead
-                      key={col.key}
-                      className="cursor-pointer select-none px-4 py-2"
-                      onClick={() => handleSort(col.key)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{col.label}</span>
-                        <span className="ml-1">
-                          {sortKey === col.key ? (
-                            sortDirection === "asc" ? (
-                              <ChevronUp className="w-3 h-3" />
-                            ) : sortDirection === "desc" ? (
-                              <ChevronDown className="w-3 h-3" />
+            <div className="flex-1 overflow-auto">
+              <Table className="relative min-w-full">
+                <TableHeader>
+                  <TableRow>
+                    {multiple && (
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                          checked={filteredData.length > 0 && selectedItems.length === filteredData.length}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                    )}
+                    <TableHead className="w-[50px]">S#</TableHead>
+                    {columns.map((col) => (
+                      <TableHead
+                        key={col.key}
+                        className="cursor-pointer select-none px-4 py-2"
+                        onClick={() => handleSort(col.key)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{col.label}</span>
+                          <span className="ml-1">
+                            {sortKey === col.key ? (
+                              sortDirection === "asc" ? (
+                                <ChevronUp className="w-3 h-3" />
+                              ) : sortDirection === "desc" ? (
+                                <ChevronDown className="w-3 h-3" />
+                              ) : (
+                                <ArrowUpDown className="w-3 h-3 opacity-30" />
+                              )
                             ) : (
                               <ArrowUpDown className="w-3 h-3 opacity-30" />
-                            )
-                          ) : (
-                            <ArrowUpDown className="w-3 h-3 opacity-30" />
-                          )}
-                        </span>
-                      </div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {filteredData.map((item, index) => (
-                  <TableRow
-                    key={index}
-                    className={`cursor-pointer ${multiple
-                      ? selectedItems.includes(item)
-                        ? "bg-blue-50"
-                        : ""
-                      : selected === item
-                        ? "bg-blue-100"
-                        : ""
-                      }`}
-                    onClick={() => (multiple ? toggleSelectItem(item) : setSelected(item))}
-                    onDoubleClick={!multiple ? handleChoose : undefined}
-                  >
-                    {multiple && (
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedItems.includes(item)}
-                          onCheckedChange={() => toggleSelectItem(item)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </TableCell>
-                    )}
-                    <TableCell className="w-[50px]">{index + 1}</TableCell>
-                    {columns.map((col) => (
-                      <TableCell key={col.key} className="px-4 py-2">
-                        {col.key === "index"
-                          ? index + 1
-                          : (item as any)[col.key] ?? (item as any)[col.key.charAt(0).toLowerCase() + col.key.slice(1)] ?? (item as any)[col.key.toUpperCase()] ?? ""}
-                      </TableCell>
+                            )}
+                          </span>
+                        </div>
+                      </TableHead>
                     ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+
+                <TableBody>
+                  {filteredData.map((item, index) => (
+                    <TableRow
+                      key={index}
+                      className={`cursor-pointer ${multiple
+                        ? selectedItems.includes(item)
+                          ? "bg-blue-50"
+                          : ""
+                        : selected === item
+                          ? "bg-blue-100"
+                          : ""
+                        }`}
+                      onClick={() => (multiple ? toggleSelectItem(item) : setSelected(item))}
+                      onDoubleClick={!multiple ? handleChoose : undefined}
+                    >
+                      {multiple && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedItems.includes(item)}
+                            onCheckedChange={() => toggleSelectItem(item)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </TableCell>
+                      )}
+                      <TableCell className="w-[50px]">{index + 1}</TableCell>
+                      {columns.map((col) => {
+                        const rawVal = col.key === "index"
+                          ? index + 1
+                          : (item as any)[col.key] ?? (item as any)[col.key.charAt(0).toLowerCase() + col.key.slice(1)] ?? (item as any)[col.key.toUpperCase()] ?? "";
+
+                        // Format SAP ISO dates to YYYY-MM-DD
+                        const displayVal = typeof rawVal === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(rawVal)
+                          ? rawVal.split('T')[0]
+                          : rawVal;
+
+                        return (
+                          <TableCell key={col.key} className="px-4 py-2">
+                            {displayVal}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
             {hasMore && (
-              <div className="p-2 text-center border-t">
+              <div className="p-2 text-center border-t shrink-0">
                 <Button
                   variant="ghost"
                   className="w-full text-blue-600 h-8 text-xs"
