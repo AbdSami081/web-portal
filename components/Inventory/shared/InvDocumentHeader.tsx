@@ -7,6 +7,8 @@ import { AppLabel } from "@/components/Custom/AppLabel";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { List } from "lucide-react";
+import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { useInvDocConfig } from "./InvDocumentLayout";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
@@ -60,6 +62,12 @@ export function InvDocumentHeader() {
 
   const docNum = watch("DocNum");
   const [docNumSearch, setDocNumSearch] = useState("");
+  const [docListModalOpen, setDocListModalOpen] = useState(false);
+  const [documentsList, setDocumentsList] = useState<any[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(false);
+  const [listSkip, setListSkip] = useState(0);
+  const [listHasMore, setListHasMore] = useState(true);
+  const LIST_PAGE_SIZE = 20;
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const config = useInvDocConfig();
   const [syncDialog, setSyncDialog] = useState<{
@@ -100,6 +108,53 @@ export function InvDocumentHeader() {
       setDocNumSearch(docNum.toString());
     }
   }, [docNum]);
+
+  const getResourceName = (type: number) => {
+    switch (type) {
+      case DocumentType.InvTransfer: return "StockTransfers";
+      case DocumentType.InvTransferReq: return "InventoryTransferRequests";
+      default: return "";
+    }
+  };
+
+  const fetchDocumentsList = async (isLoadMore = false) => {
+    const resourceName = getResourceName(config.type);
+    if (!resourceName) return;
+
+    const currentSkip = isLoadMore ? listSkip + LIST_PAGE_SIZE : 0;
+
+    setIsLoadingList(true);
+    try {
+      const data = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE);
+      const newDocs = data || [];
+
+      if (isLoadMore) {
+        setDocumentsList(prev => [...prev, ...newDocs]);
+        setListSkip(currentSkip);
+      } else {
+        setDocumentsList(newDocs);
+        setListSkip(0);
+        setDocListModalOpen(true);
+      }
+
+      setListHasMore(newDocs.length === LIST_PAGE_SIZE);
+    } catch (error) {
+      toast.error("Failed to fetch documents list.");
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        fetchDocumentsList(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [config.type, listSkip, listHasMore]);
 
 
 
@@ -282,6 +337,20 @@ export function InvDocumentHeader() {
                 <Search className="h-5 w-5" />
               )}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 cursor-pointer"
+              onClick={() => fetchDocumentsList(false)}
+              title="List documents (Ctrl+F)"
+            >
+              {isLoadingList ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <List className="h-5 w-5" />
+              )}
+            </Button>
           </div>
         </div>
 
@@ -304,6 +373,31 @@ export function InvDocumentHeader() {
           handleSelectBP(bp);
           setModalOpen(false);
         }}
+      />
+
+      <GenericModal
+        title={`Select ${getResourceName(config.type).replace(/([A-Z])/g, ' $1').trim()}`}
+        open={docListModalOpen}
+        onClose={() => setDocListModalOpen(false)}
+        onSelect={(val) => {
+          setDocNumSearch(val.toString());
+          // Using a small timeout or just calling fetchDocument with the value
+          // Since fetchDocument uses docNumSearch state, we might need a direct call
+          applyDocumentData(val.toString(), config.type);
+          setDocListModalOpen(false);
+        }}
+        data={documentsList}
+        getSelectValue={(item) => item.DocNum || item.DocumentNumber}
+        columns={[
+          { key: "DocNum", label: "Doc Num" },
+          { key: "CardCode", label: customer?.CardCode ? "Customer Code" : "BP Code" },
+          { key: "CardName", label: customer?.CardName ? "Customer Name" : "BP Name" },
+          { key: "DocDate", label: "Date" },
+          { key: "DocumentStatus", label: "Status" },
+        ]}
+        isLoading={isLoadingList}
+        onLoadMore={() => fetchDocumentsList(true)}
+        hasMore={listHasMore}
       />
 
       <GenericModal
@@ -362,6 +456,6 @@ export function InvDocumentHeader() {
           setSyncDialog({ open: false, type: null, value: "" });
         }}
       />
-    </div>
+    </div >
   );
 }
