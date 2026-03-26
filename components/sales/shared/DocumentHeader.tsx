@@ -10,8 +10,10 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { toast } from "sonner";
-import { getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument } from "@/api+/sap/sales/salesService";
+import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument } from "@/api+/sap/sales/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
+import { GenericModal } from "@/modals/GenericModal";
+import { List } from "lucide-react";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -35,6 +37,12 @@ export function DocumentHeader() {
   const docEntry = watch("DocEntry");
   const config = useSalesDocConfig();
   const [searchValue, setSearchValue] = useState("");
+  const [docListModalOpen, setDocListModalOpen] = useState(false);
+  const [documentsList, setDocumentsList] = useState<any[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(false);
+  const [skip, setSkip] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
   const currentDate = new Date().toISOString().split('T')[0];
 
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
@@ -59,6 +67,56 @@ export function DocumentHeader() {
       setSearchValue(docNum.toString());
     }
   }, [docNum]);
+
+  const getResourceName = (type: number) => {
+    switch (type) {
+      case DocumentType.Quotation: return "Quotations";
+      case DocumentType.Order: return "Orders";
+      case DocumentType.Delivery: return "DeliveryNotes";
+      case DocumentType.ARInvoice: return "Invoices";
+      case DocumentType.SalesReturn: return "Returns";
+      default: return "";
+    }
+  };
+
+  const fetchDocumentsList = async (isLoadMore = false) => {
+    const resourceName = getResourceName(config.type);
+    if (!resourceName) return;
+
+    const currentSkip = isLoadMore ? skip + PAGE_SIZE : 0;
+
+    setIsLoadingList(true);
+    try {
+      const data = await getDocumentsList(resourceName, currentSkip, PAGE_SIZE);
+      const newDocs = data || [];
+
+      if (isLoadMore) {
+        setDocumentsList(prev => [...prev, ...newDocs]);
+        setSkip(currentSkip);
+      } else {
+        setDocumentsList(newDocs);
+        setSkip(0);
+        setDocListModalOpen(true);
+      }
+
+      setHasMore(newDocs.length === PAGE_SIZE);
+    } catch (error) {
+      toast.error("Failed to fetch documents list.");
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        fetchDocumentsList(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [config.type]);
 
 
   const handleSelectBP = (bp: BusinessPartner) => {
@@ -89,6 +147,12 @@ export function DocumentHeader() {
       }
       else if (config.type === DocumentType.Delivery) {
         documentData = await getSalesDeliveryDocument(docNumInt);
+      }
+      else if (config.type === DocumentType.ARInvoice) {
+        documentData = await getARInvoiceDocument(docNumInt);
+      }
+      else if (config.type === DocumentType.SalesReturn) {
+        documentData = await getSalesReturnDocument(docNumInt);
       }
 
       if (!documentData?.DocEntry) {
@@ -189,6 +253,20 @@ export function DocumentHeader() {
               <Search className="h-5 w-5" />
             )}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 cursor-pointer"
+            onClick={() => fetchDocumentsList(false)}
+            title="List documents (Ctrl+F)"
+          >
+            {isLoadingList ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <List className="h-5 w-5" />
+            )}
+          </Button>
         </div>
       </div>
 
@@ -264,6 +342,28 @@ export function DocumentHeader() {
             handleSelectBP(bp);
             setModalOpen(false);
           }}
+        />
+        <GenericModal
+          title={`Select ${getResourceName(config.type).replace(/([A-Z])/g, ' $1').trim()}`}
+          open={docListModalOpen}
+          onClose={() => setDocListModalOpen(false)}
+          onSelect={(val) => {
+            fetchDocument(val.toString());
+            setDocListModalOpen(false);
+          }}
+          data={documentsList}
+          getSelectValue={(item) => item.DocNum}
+          columns={[
+            { key: "DocNum", label: "Doc Num" },
+            { key: "CardCode", label: "Customer Code" },
+            { key: "CardName", label: "Customer Name" },
+            { key: "DocDate", label: "Date" },
+            { key: "DocTotal", label: "Total" },
+            { key: "DocumentStatus", label: "Status" },
+          ]}
+          isLoading={isLoadingList}
+          onLoadMore={() => fetchDocumentsList(true)}
+          hasMore={hasMore}
         />
       </div>
     </div>
