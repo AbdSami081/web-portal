@@ -20,6 +20,8 @@ import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { Item } from "@/types/sales/Item.type";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { getDocumentsList } from "@/api+/sap/common/documentService";
+import { List } from "lucide-react";
 
 const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className, id }: any) => {
   const [localValue, setLocalValue] = useState(value ? value.toString() : "");
@@ -73,8 +75,14 @@ export function PRDDocumentHeader() {
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [modalType, setModalType] = useState<"bom" | "order">("bom");
+  const [modalType, setModalType] = useState<"bom" | "order" | "list">("bom");
   const [isMultiBom, setIsMultiBom] = useState(false);
+  const [docListModalOpen, setDocListModalOpen] = useState(false);
+  const [documentsList, setDocumentsList] = useState<any[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(false);
+  const [listSkip, setListSkip] = useState(0);
+  const [listHasMore, setListHasMore] = useState(true);
+  const LIST_PAGE_SIZE = 20;
 
   const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus } = useIFPRDDocument();
   const { allowMultiBom: allowMultiBomConfig } = useAuthStore();
@@ -119,6 +127,59 @@ export function PRDDocumentHeader() {
     }
   }, [docNum]);
 
+
+  const getResourceName = (type: number) => {
+    switch (type) {
+      case SAPDocumentType.ProductionOrder: return "ProductionOrders";
+      case SAPDocumentType.IssueForProduction: return "InventoryGenExits";
+      case SAPDocumentType.ReceiptFromProduction: return "InventoryGenEntries";
+      default: return "";
+    }
+  };
+
+  const fetchDocumentsList = async (isLoadMore = false) => {
+    const resourceName = getResourceName(docType);
+    if (!resourceName) return;
+
+    const currentSkip = isLoadMore ? listSkip + LIST_PAGE_SIZE : 0;
+
+    setIsLoadingList(true);
+    try {
+      const data = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE);
+      const newDocs = (data || []).map((d: any) => ({
+        ...d,
+        // Fallbacks for Issue and Receipt to resolve empty Item columns
+        ItemNo: d.ItemNo || d.U_ItemCode || d.ItemCode || (d.DocumentLines && d.DocumentLines[0]?.ItemCode) || "",
+        ItemName: d.ProductDescription || d.U_ItemName || d.ItemName || (d.DocumentLines && d.DocumentLines[0]?.ItemDescription) || "",
+      }));
+
+      if (isLoadMore) {
+        setDocumentsList(prev => [...prev, ...newDocs]);
+        setListSkip(currentSkip);
+      } else {
+        setDocumentsList(newDocs);
+        setListSkip(0);
+        setDocListModalOpen(true);
+      }
+
+      setListHasMore(newDocs.length === LIST_PAGE_SIZE);
+    } catch (error) {
+      toast.error("Failed to fetch documents list.");
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        fetchDocumentsList(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [docType, listSkip, listHasMore]);
 
   const fetchDocument = async (baseRef: string) => {
     var documentData: any;
@@ -409,6 +470,20 @@ export function PRDDocumentHeader() {
                   <Search className="h-4 w-4 text-black" />
                 )}
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer"
+                onClick={() => fetchDocumentsList(false)}
+                title="List documents (Ctrl+F)"
+              >
+                {isLoadingList ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-black" />
+                ) : (
+                  <List className="h-4 w-4 text-black" />
+                )}
+              </Button>
             </div>
           </div>
         )}
@@ -586,6 +661,39 @@ export function PRDDocumentHeader() {
         isLoading={isLoadingItems}
         onLoadMore={() => modalType === "order" ? fetchOrders(false) : fetchItems(false)}
         hasMore={hasMore}
+      />
+
+      <GenericModal
+        title={`Select ${getResourceName(docType).replace(/([A-Z])/g, ' $1').trim()}`}
+        open={docListModalOpen}
+        onClose={() => setDocListModalOpen(false)}
+        onSelect={(val) => {
+          fetchDocument(val.toString());
+          setDocListModalOpen(false);
+        }}
+        data={documentsList}
+        getSelectValue={(item) => item.DocNum || item.DocumentNumber}
+        columns={
+          docType === SAPDocumentType.ProductionOrder
+            ? [
+              { key: "DocumentNumber", label: "Doc Num" },
+              { key: "ItemNo", label: "Item No" },
+              { key: "PlannedQuantity", label: "Qty" },
+              { key: "ProductionOrderStatus", label: "Status" },
+              { key: "PostingDate", label: "Date" },
+            ]
+            : [
+              { key: "DocNum", label: "Doc Num" },
+              { key: "ItemNo", label: "Item No" },
+              { key: "ItemName", label: "Item Name" },
+              { key: "Comments", label: "Comments" },
+              { key: "DocumentStatus", label: "Status" },
+              { key: "DocDate", label: "Date" },
+            ]
+        }
+        isLoading={isLoadingList}
+        onLoadMore={() => fetchDocumentsList(true)}
+        hasMore={listHasMore}
       />
 
       <ItemSelectorDialog
