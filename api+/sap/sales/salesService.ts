@@ -61,6 +61,46 @@ export const getSalesDeliveryDocument = async (docNum: number): Promise<BaseSale
   }
 };
 
+export const getARInvoiceDocument = async (docNum: number): Promise<BaseSalesDocument | null> => {
+  try {
+    const res = await apiClient.get(`api/Sales/Invoices?docNum=${docNum}`);
+    if (!res.data) return null;
+
+    const doc: BaseSalesDocument = {
+      ...res.data,
+      comments: res.data.Comments ?? "",
+      DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+        ...line,
+      })),
+    };
+
+    return doc;
+  } catch (err) {
+    console.error("Failed to fetch AR invoice document", err);
+    return null;
+  }
+};
+
+export const getSalesReturnDocument = async (docNum: number): Promise<BaseSalesDocument | null> => {
+  try {
+    const res = await apiClient.get(`api/Sales/Returns?docNum=${docNum}`);
+    if (!res.data) return null;
+
+    const doc: BaseSalesDocument = {
+      ...res.data,
+      comments: res.data.Comments ?? "",
+      DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+        ...line,
+      })),
+    };
+
+    return doc;
+  } catch (err) {
+    console.error("Failed to fetch sales return document", err);
+    return null;
+  }
+};
+
 export const postQuotation = async (payload: any): Promise<any | null> => {
   try {
     const res = await apiClient.post(`api/Sales/Quotations`, payload);
@@ -252,3 +292,5 @@ export const getAttachment = async (filePath: string) => {
     return null;
   }
 };
+
+export { getDocumentsList } from "@/api+/sap/common/documentService";
