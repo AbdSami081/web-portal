@@ -5,7 +5,8 @@ import { DocumentType } from "@/types/sales/salesDocuments.type";
 export const getBOMList = async (isMultiBom: boolean = false, search: string = "", skip: number = 0, top: number = 100): Promise<any[]> => {
   try {
     const res = await apiClient.get(`api/Production/GetBOMForProduction?isMultiBom=${isMultiBom}&search=${search}&skip=${skip}&top=${top}`);
-    return res.data?.value || [];
+    const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+    return data?.value || (Array.isArray(data) ? data : []);
   } catch (err) {
     console.error("Failed to fetch BOM list", err);
     return [];
@@ -35,7 +36,8 @@ export const patchProductionOrder = async (docEntry: number, payload: any): Prom
 export const getReleasedProductionOrders = async (skip: number = 0, top: number = 20): Promise<any[]> => {
   try {
     const res = await apiClient.get(`api/Production/GetReleasedProductionOrders?skip=${skip}&top=${top}`);
-    return res.data?.value || [];
+    const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+    return data?.value || (Array.isArray(data) ? data : []);
   } catch (err) {
     console.error("Failed to fetch released production orders", err);
     return [];
@@ -45,7 +47,8 @@ export const getReleasedProductionOrders = async (skip: number = 0, top: number 
 export const getDisassembleProductionOrders = async (skip: number = 0, top: number = 20): Promise<any[]> => {
   try {
     const res = await apiClient.get(`api/Production/GetDisassembleProductionOrders?skip=${skip}&top=${top}`);
-    return res.data?.value || [];
+    const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+    return data?.value || (Array.isArray(data) ? data : []);
   } catch (err) {
     console.error("Failed to fetch disassembly production orders", err);
     return [];
