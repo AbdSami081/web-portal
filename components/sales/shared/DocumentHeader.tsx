@@ -88,7 +88,10 @@ export function DocumentHeader() {
     setIsLoadingList(true);
     try {
       const data = await getDocumentsList(resourceName, currentSkip, PAGE_SIZE);
-      const newDocs = data || [];
+      const newDocs = (data || []).map((d: any) => ({
+        ...d,
+        DocumentStatus: d.DocumentStatus?.replace("bost_", "") || d.DocumentStatus,
+      }));
 
       if (isLoadMore) {
         setDocumentsList(prev => [...prev, ...newDocs]);
