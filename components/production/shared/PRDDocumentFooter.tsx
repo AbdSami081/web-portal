@@ -85,7 +85,7 @@ export default function PRDDocumentFooter() {
   const handleOrderSelect = (orderId: any) => {
     const order = productionOrders.find(o => o.AbsoluteEntry === orderId);
     if (order) {
-      if (modalTitle === "Select Disassembly Order") {
+      if (modalTitle === "Select Disassembly Order" || config.type === DocumentType.ReceiptFromProduction) {
         // Set Header Fields in the form
         setValue("ItemNo", order.ItemNo, { shouldDirty: true });
         setValue("ProductDescription", order.ProductDescription, { shouldDirty: true });
@@ -101,14 +101,20 @@ export default function PRDDocumentFooter() {
         setValue("CreationDate", order.CreationDate?.split("T")[0], { shouldDirty: true });
         setValue("PostingDate", order.PostingDate?.split("T")[0], { shouldDirty: true });
 
-        // Handle Disassembly: Load the Parent Item as a single line for "Issue"
+        // Handle Disassembly/Receipt: Load the Parent Item as a single line
+        const pendingQuantity = order.PlannedQuantity - (order.CompletedQuantity || 0);
         const parentLine = {
           ItemNo: order.ItemNo,
           ItemDescription: order.ProductDescription,
-          Quantity: order.PlannedQuantity,
+          ItemName: order.ProductDescription,
+          Quantity: pendingQuantity > 0 ? pendingQuantity : order.PlannedQuantity,
+          PlannedQuantity: pendingQuantity > 0 ? pendingQuantity : order.PlannedQuantity,
           WarehouseCode: order.Warehouse,
+          Warehouse: order.Warehouse,
           BaseEntry: order.AbsoluteEntry,
+          OrderNumber: order.AbsoluteEntry,
           BaseLine: -1,
+          LineNumber: -1,
           ProductionOrderIssueType: "im_Manual",
           ItemType: "pit_Item",
         };
