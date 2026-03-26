@@ -64,7 +64,7 @@ export function GenericModal<T>({
     }
   };
 
-  const filteredData = data
+  const filteredData = (Array.isArray(data) ? data : [])
     .filter((item) =>
       columns.some((col) => {
         const val = String((item as any)[col.key] || "").toLowerCase();
