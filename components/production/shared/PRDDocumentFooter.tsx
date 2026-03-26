@@ -32,18 +32,23 @@ export default function PRDDocumentFooter() {
     setIsLoadingOrders(true);
     setShowOrderModal(true);
     try {
-      const data = await getReleasedProductionOrders();
-      const processedOrders = data
-        .filter((order: any) => {
+      let data = await getReleasedProductionOrders();
+
+      if (config.type === DocumentType.ReceiptFromProduction) {
+        data = data.filter((order: any) => (order.CompletedQuantity || 0) < (order.PlannedQuantity || 0));
+      } else if (config.type === DocumentType.IssueForProduction) {
+        data = data.filter((order: any) => {
           const manualLines = order.ProductionOrderLines?.filter((l: any) => l.ProductionOrderIssueType === "im_Manual") || [];
           return manualLines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
-        })
-        .map((order: any) => ({
-          ...order,
-          DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
-            order.ProductionOrderType === "bopotSpecial" ? "Special" :
-              order.ProductionOrderType === "bopotAssembly" ? "Assembly" : order.ProductionOrderType
-        }));
+        });
+      }
+
+      const processedOrders = data.map((order: any) => ({
+        ...order,
+        DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
+          order.ProductionOrderType === "bopotSpecial" ? "Special" :
+            order.ProductionOrderType === "bopotAssembly" ? "Assembly" : order.ProductionOrderType
+      }));
       setProductionOrders(processedOrders);
     } catch (error) {
       console.error("Failed to fetch released orders", error);
