@@ -203,7 +203,7 @@ export function PRDDocumentHeader() {
       }
 
       if (documentData && (documentData.DocEntry || documentData.AbsoluteEntry)) {
-        loadFromDocument(documentData);
+        loadFromDocument(documentData, docType);
         // Map header fields to form
         if (docType === SAPDocumentType.ProductionOrder) {
           setValue("AbsoluteEntry", documentData.AbsoluteEntry, { shouldDirty: true });

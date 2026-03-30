@@ -178,8 +178,8 @@ export function InvDocumentHeader() {
     setModalOpen(false);
   };
 
-  const fetchDocument = async () => {
-    const docNumInt = parseInt(docNumSearch);
+  const fetchDocument = async (overrideNum?: string) => {
+    const docNumInt = parseInt(overrideNum || docNumSearch);
     if (isNaN(docNumInt) || docNumInt <= 0) {
       toast.error("Please enter a valid document number to load.");
       return;
@@ -324,7 +324,7 @@ export function InvDocumentHeader() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  fetchDocument();
+                  fetchDocument(docNumSearch);
                 }
               }}
             />
@@ -333,7 +333,7 @@ export function InvDocumentHeader() {
               variant="outline"
               size="icon"
               className="h-8 w-8 cursor-pointer"
-              onClick={() => fetchDocument()}
+              onClick={() => fetchDocument(docNumSearch)}
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -384,10 +384,7 @@ export function InvDocumentHeader() {
         open={docListModalOpen}
         onClose={() => setDocListModalOpen(false)}
         onSelect={(val) => {
-          setDocNumSearch(val.toString());
-          // Using a small timeout or just calling fetchDocument with the value
-          // Since fetchDocument uses docNumSearch state, we might need a direct call
-          applyDocumentData(val.toString(), config.type);
+          fetchDocument(val.toString());
           setDocListModalOpen(false);
         }}
         data={documentsList}
