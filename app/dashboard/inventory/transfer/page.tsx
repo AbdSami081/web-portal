@@ -56,11 +56,6 @@ export default function InvTransferPage() {
     ToWarehouse: "",
   }), []);
 
-  useEffect(() => {
-    return () => {
-      resetStore();
-    };
-  }, [resetStore]);
 
   const handleSubmit = async (data: FormData) => {
     try {

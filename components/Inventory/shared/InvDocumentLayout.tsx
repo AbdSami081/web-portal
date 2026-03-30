@@ -150,6 +150,7 @@ export function InvDocumentLayout<T extends FieldValues>({
         comments: "",
         journalMemo: "",
         DocEntry: 0,
+        docDate: new Date().toISOString().split("T")[0],
         customer: state.customer,
         isCopyingTo: true,
       });
