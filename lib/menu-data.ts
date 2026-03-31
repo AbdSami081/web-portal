@@ -94,5 +94,20 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/production/receipt-from-production",
             }
         ],
+    },
+    ,
+    {
+        id: "41d32b37-f60a-4f85-879b-9ef904695054",
+        title: "Reporting",
+        url: "#",
+        iconName: "Factory",
+        isActive: true,
+        items: [
+            {
+                id: "e250a09e-1ea0-4640-8561-ea3fa2526b40",
+                title: "Upload Report",
+                url: "/dashboard/reports/upload",
+            }
+        ],
     }
 ];
