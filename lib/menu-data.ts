@@ -99,7 +99,7 @@ export const SERVER_MENUS: MenuItem[] = [
         id: "41d32b37-f60a-4f85-879b-9ef904695054",
         title: "Reporting",
         url: "#",
-        iconName: "Factory",
+        iconName: "FileText",
         isActive: true,
         items: [
             {

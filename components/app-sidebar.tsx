@@ -9,14 +9,15 @@ import { NavUser } from "./sidenav-user"
 import { useAuth } from "@/context/authContext";
 import { useEffect, useState } from "react";
 import { getFilteredMenu } from "@/actions/menu";
-import { BadgeDollarSign, Factory, LayoutDashboardIcon, Package, LucideIcon } from "lucide-react";
+import { BadgeDollarSign, Factory, FileText, LayoutDashboardIcon, Package, LucideIcon } from "lucide-react";
 
 // Map for string icons to components
 const ICON_MAP: Record<string, LucideIcon> = {
   "LayoutDashboardIcon": LayoutDashboardIcon,
   "BadgeDollarSign": BadgeDollarSign,
   "Package": Package,
-  "Factory": Factory
+  "Factory": Factory,
+  "FileText": FileText
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
