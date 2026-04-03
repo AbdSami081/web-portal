@@ -22,7 +22,8 @@ export default function DocumentFooter() {
     setRounding,
     setDiscountPercent,
     setTaxTotal,
-    setComments
+    setComments,
+    TotalFreight = 0
   } = useSalesDocument();
 
   const docStatus = watch("DocStatus");
@@ -60,7 +61,8 @@ export default function DocumentFooter() {
               type="number"
               className="h-6 text-right"
               value={freight}
-              disabled
+              onChange={(e) => setFreight(Number(e.target.value))}
+              disabled={isFooterDisabled}
             />
           </div>
 
@@ -102,6 +104,10 @@ export default function DocumentFooter() {
             <div className="flex justify-between font-medium">
               <span>Tax:</span>
               <span>{formatCurrency(TaxTotal)}</span>
+            </div>
+            <div className="flex justify-between font-medium">
+              <span>Total Freight:</span>
+              <span>{formatCurrency(TotalFreight || 0)}</span>
             </div>
             <div className="flex justify-between font-bold text-lg">
               <span>Document Total:</span>

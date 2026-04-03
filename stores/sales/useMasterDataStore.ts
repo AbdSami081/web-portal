@@ -38,44 +38,55 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
 
   async loadMasterData() {
     set({ itemLoading: true });
-    const res = await axios.get("/api/sap/master-data");
-    const { items, customers, warehouses, priceLists, vatGroups, uoms } =
-      await res.data;
-    //console.log("loadMasterData", vatGroups);
-    set({
-      items: { 1: items },
-      customers,
-      warehouses,
-      priceLists,
-      vatGroups,
-      uoms,
-      currentItemPage: 1,
-      itemLoading: false,
-    });
+    try {
+      const res = await axios.get("/api/sap/master-data");
+      const data = res.data;
+
+      const items = data.items || data.Items || [];
+      const customers = data.customers || data.Customers || [];
+      const warehouses = data.warehouses || data.Warehouses || [];
+      const priceLists = data.priceLists || data.PriceLists || [];
+      const vatGroups = data.vatGroups || data.VatGroups || [];
+      const uoms = data.uoms || data.UoMs || [];
+
+      set({
+        items: { 1: items },
+        customers,
+        warehouses,
+        priceLists,
+        vatGroups,
+        uoms,
+        currentItemPage: 1,
+        itemLoading: false,
+      });
+    } catch (error) {
+      console.error("Failed to load master data", error);
+      set({ itemLoading: false });
+    }
   },
 
   async loadItemPage(page) {
-    const { itemSearch, items } = get();
     set({ itemLoading: true });
-    const skip = (page - 1) * 50;
-    const res = await axios.get(
-      `/api/sap/master-data/items?top=50&skip=${skip}&search=${encodeURIComponent(
-        itemSearch
-      )}`
-    );
-    const data = await res.data;
-    const pageItems = data.items || [];
-    // const uniquePageItems = pageItems.filter(
-    //   (item) =>
-    //     !Object.values(items)
-    //       .flat()
-    //       .some((i) => i.ItemCode === item.ItemCode)
-    // );
-    // set((state) => ({
-    //   items: { ...state.items, [page]: uniquePageItems },
-    //   currentItemPage: page,
-    //   itemLoading: false,
-    // }));
+    try {
+      const { itemSearch } = get();
+      const skip = (page - 1) * 50;
+      const res = await axios.get(
+        `/api/sap/master-data/items?top=50&skip=${skip}&search=${encodeURIComponent(
+          itemSearch
+        )}`
+      );
+      const data = res.data;
+      const pageItems = data.items || data.Items || [];
+
+      set((state) => ({
+        items: { ...state.items, [page]: pageItems },
+        currentItemPage: page,
+        itemLoading: false,
+      }));
+    } catch (error) {
+      console.error("Failed to load item page", error);
+      set({ itemLoading: false });
+    }
   },
 
   async loadMoreItemPages() {

@@ -63,7 +63,7 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
 
   const handleConfirm = () => {
     const selectedItems = items.filter((i) =>
-      selectedCodes.includes(i.itemCode)
+      selectedCodes.includes(i.ItemCode)
     );
     setSubmitting(true);
     setTimeout(() => {
@@ -105,7 +105,7 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
     } else if (e.shiftKey && lastSelectedIndex !== null) {
       const start = Math.min(lastSelectedIndex, idx);
       const end = Math.max(lastSelectedIndex, idx);
-      const rangeItems = items.slice(start, end + 1).map((i) => i.itemCode);
+      const rangeItems = items.slice(start, end + 1).map((i) => i.ItemCode);
       newSelectedCodes = Array.from(new Set([...newSelectedCodes, ...rangeItems]));
     } else {
       if (newSelectedCodes.includes(itemCode)) {
@@ -138,20 +138,6 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
               debouncedSearch(e.target.value);
             }}
           />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fetchItems(search, 1, false)}
-          >
-            Refresh
-          </Button>
-          <Button
-            type="button"
-            onClick={handleConfirm}
-            disabled={selectedCodes.length === 0}
-          >
-            {submitting ? `Adding...` : multiple ? `Add ${selectedCodes.length} Item(s)` : `Select Item`}
-          </Button>
         </div>
 
         <ScrollArea className="h-80 border rounded">
@@ -168,23 +154,23 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
               {items.map((item, idx) => (
                 <tr
                   key={idx}
-                  className={`hover:bg-gray-50 cursor-pointer ${selectedCodes.includes(item.itemCode) ? "bg-blue-100" : ""
+                  className={`hover:bg-gray-50 cursor-pointer ${selectedCodes.includes(item.ItemCode) ? "bg-blue-100" : ""
                     }`}
-                  onClick={(e) => handleRowClick(idx, item.itemCode, e)}
+                  onClick={(e) => handleRowClick(idx, item.ItemCode, e)}
                   onDoubleClick={() => !multiple && handleConfirm()}
                 >
                   {multiple && (
                     <td className="p-2">
                       <input
                         type="checkbox"
-                        checked={selectedCodes.includes(item.itemCode)}
+                        checked={selectedCodes.includes(item.ItemCode)}
                         readOnly
                       />
                     </td>
                   )}
-                  <td className="p-2">{item.itemCode}</td>
-                  <td className="p-2">{item.itemName}</td>
-                  <td className="p-2">{item.onHand}</td>
+                  <td className="p-2">{item.ItemCode}</td>
+                  <td className="p-2">{item.ItemName}</td>
+                  <td className="p-2">{item.OnHand}</td>
                 </tr>
               ))}
             </tbody>

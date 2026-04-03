@@ -169,8 +169,8 @@ export default function PRDDocumentFooter() {
   const handleItemSelect = (selectedItems: any[]) => {
     if (selectedItems.length > 0) {
       const item = selectedItems[0];
-      setValue("U_ItemCode", item.itemCode);
-      setValue("U_ItemDescription", item.itemName);
+      setValue("U_ItemCode", item.ItemCode);
+      setValue("U_ItemDescription", item.ItemName || item.ItemDescription || "");
     }
     setShowItemSelector(false);
   };

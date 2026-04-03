@@ -34,6 +34,10 @@ export function DocumentLineRow({ index, line }: Props) {
   const [cogsData, setCogsData] = useState<Record[]>([]);
 
   useEffect(() => {
+    setDraftLine(line);
+  }, [line, index]);
+
+  useEffect(() => {
     calculateAndUpdate(draftLine);
   }, [
     draftLine.Quantity,
@@ -52,7 +56,7 @@ export function DocumentLineRow({ index, line }: Props) {
     const price = Number(lineData.Price) || 0;
     const discount = Number(lineData.DiscountPercent) || 0;
 
-    const selectedTax = vatGroups.find(t => t.Code === lineData.TaxCode);
+    const selectedTax = vatGroups.find(t => (t.Code || (t as any).code) === lineData.TaxCode);
     const itemTaxRate = Number(selectedTax?.VatGroups_Lines?.[0]?.Rate || 0);
 
     const subtotal = quantity * price;

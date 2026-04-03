@@ -2,7 +2,7 @@ export type Item = {
   ItemCode: string;
   ItemDescription?: string;
   ItemName?: string;
-  ItemType?: "itItems" | "itLabor" | "itTravel" | "itFixedAssets"; // Enum
+  ItemType?: "itItems" | "itLabor" | "itTravel" | "itFixedAssets";
   ItemsGroupCode?: number;
   InventoryItem?: "tYES" | "tNO";
   SalesItem?: "tYES" | "tNO";
@@ -16,6 +16,13 @@ export type Item = {
   Valid?: "tYES" | "tNO";
   Frozen?: "tYES" | "tNO";
   User_Text?: string;
+  OnHand?: number;
+  VatGourpSa?: string; // Matching API typo
+  Prices?: {
+    PriceList: number;
+    PriceAmount: number; // Matching API name
+    Currency: string;
+  }[];
 
   // Optional: Add more fields as needed
   // Custom fields / UDFs

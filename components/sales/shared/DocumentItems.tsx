@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 
 
 export function DocumentItems() {
@@ -39,21 +40,22 @@ export function DocumentItems() {
   const docStatus = watch("DocStatus");
   const isTableDisabled = config.isDisabledTable(customer?.DocumentStatus!);
 
+  const { vatGroups } = useMasterDataStore();
+
   const handleOnSelectItems = (items: Item[]) => {
-    const listnum = Number(watch("listNum"));
-
     items.forEach((item) => {
-      const priceObj = item.prices?.find(
-        (p: any) => p.priceList === listnum
-      );
+      const price = getCustomerPrice(item.Prices || []);
+      
+      const selectedTax = vatGroups.find(t => t.Code === item.VatGourpSa);
+      const taxRate = Number(selectedTax?.VatGroups_Lines?.[0]?.Rate || 0);
 
-      const price = priceObj?.priceAmount ?? 0.0;
       addLine({
-        ItemCode: item.itemCode,
-        ItemName: item.itemName,
+        ItemCode: item.ItemCode,
+        ItemName: item.ItemName || item.ItemDescription || "",
         Quantity: 1,
         Price: price,
-        TaxCode: item.vatGourpSa
+        TaxCode: item.VatGourpSa,
+        TaxRate: taxRate
       });
     });
   };

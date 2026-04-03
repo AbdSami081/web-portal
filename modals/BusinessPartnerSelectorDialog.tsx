@@ -112,13 +112,13 @@ export function BusinessPartnerSelectorDialog({
           <div className="divide-y">
             {items.map((bp) => (
               <button
-                key={bp.cardCode}
+                key={bp.CardCode}
                 className="grid grid-cols-3 gap-2 px-4 py-2 hover:bg-gray-50 w-full text-left"
                 onClick={() => handleSelect(bp)}
               >
-                <div>{bp.cardCode}</div>
-                <div>{bp.cardName}</div>
-                <div className="text-right">{bp.balance}</div>
+                <div>{bp.CardCode}</div>
+                <div>{bp.CardName}</div>
+                <div className="text-right">{bp.Balance}</div>
               </button>
             ))}
 

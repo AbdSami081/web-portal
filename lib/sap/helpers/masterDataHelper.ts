@@ -1,14 +1,21 @@
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 
-export const getCustomerPrice = (ItemPrices: any[]) => {
+export const getCustomerPrice = (Prices: any[]) => {
   const { customer } = useSalesDocument.getState();
-  if (customer && ItemPrices) {
-    const priceList = ItemPrices?.find(
-      (p) => p.PriceList === customer?.PriceListNum
+  const priceListNum = customer?.PriceListNum || (customer as any)?.PriceList;
+
+  if (priceListNum && Prices) {
+    const priceList = Prices?.find(
+      (p: any) => (p.PriceList || p.priceList) === priceListNum
     );
-    console.log("priceList", priceList);
+
     if (priceList) {
-      return priceList.Price;
+      return (
+        priceList.PriceAmount ||
+        priceList.Price ||
+        priceList.priceAmount ||
+        0
+      );
     }
   }
   return 0;

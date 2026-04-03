@@ -35,11 +35,11 @@ export function PRDDocumentItems() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
 
-  const handleOnSelectItems = (items: any[]) => {
-    items.forEach((item: any) => {
+  const handleOnSelectItems = (items: Item[]) => {
+    items.forEach((item: Item) => {
       addLine({
-        ItemNo: item.itemCode,
-        ItemName: item.itemName || item.Dscription || "",
+        ItemNo: item.ItemCode,
+        ItemName: item.ItemName || item.ItemDescription || "",
         PlannedQuantity: 1,
         Warehouse: headerWarehouse || (warehouses.length > 0 ? warehouses[0].WhsCode : ""),
         ItemType: "pit_Item",
@@ -47,7 +47,7 @@ export function PRDDocumentItems() {
         BaseRatio: 0,
         IssuedQuantity: 0,
         AvailableQuantity: 0,
-        UoMCode: item.uoM || item.uom || item.UoM || "",
+        UoMCode: item.UoMGroupEntry?.toString() || "", // Adjusting based on Item.type.ts
         ProductionOrderIssueType: "im_Manual"
       });
     });

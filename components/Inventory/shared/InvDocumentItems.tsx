@@ -44,17 +44,17 @@ export function InvDocumentItems() {
     console.log("Selected:", value);
   }
 
-  const handleOnSelectItems = (items: any[]) => {
+  const handleOnSelectItems = (items: Item[]) => {
     const firstWhs = warehouses.length > 0 ? warehouses[0].WhsCode : "";
 
-    items.map((item: any) => {
-      const price = item.price || 0.0;
-      const defaultWhsLine = item.defaultWhse || firstWhs;
+    items.forEach((item: Item) => {
+      const price = item.Prices?.[0]?.PriceAmount || 0.0;
+      const defaultWhsLine = item.DefaultWhse || firstWhs;
       const quantity = 1;
 
       addLine({
-        ItemCode: item.itemCode,
-        Dscription: item.itemName ?? "",
+        ItemCode: item.ItemCode,
+        Dscription: item.ItemName || item.ItemDescription || "",
         FromWhsCode: fromWarehouse || defaultWhsLine,
         FromBinLoc: "",
         ToBinLoc: "",
@@ -62,7 +62,8 @@ export function InvDocumentItems() {
         WhsCode: toWarehouse || defaultWhsLine,
         Quantity: quantity,
         ItemCost: price,
-        UomCode: item.uoM || item.uom || item.UoM || "",
+        LineTotal: quantity * price,
+        UomCode: item.UoMGroupEntry?.toString() || "", 
         unitMsr: "",
         PlPaWght: 0,
         U_LastPrice: price,
