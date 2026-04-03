@@ -23,9 +23,6 @@ export const uploadAttachments = async (
 
   const token = getAccessToken();
 
-  console.log("Uploading attachments:", files.map(f => f.name));
-  console.log("token:", token);
-
   const response = await apiClient.post(
     "api/Attachments/upload",
     formData,
@@ -37,6 +34,5 @@ export const uploadAttachments = async (
     }
   );
 
-  console.log("Upload response:", response.data);
   return response.data;
 };
