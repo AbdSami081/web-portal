@@ -56,8 +56,8 @@ export function DocumentHeader() {
 
   useEffect(() => {
     if (customer) {
-      setValue("CardCode", customer.CardCode);
-      setValue("CardName", customer.CardName);
+      setValue("CardCode", customer.cardCode);
+      setValue("CardName", customer.cardName);
     }
   }, [customer, setValue]);
 
