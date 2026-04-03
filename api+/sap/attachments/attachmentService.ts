@@ -36,3 +36,19 @@ export const uploadAttachments = async (
 
   return response.data;
 };
+
+export const downloadAttachment = async (filePath: string) => {
+  const token = getAccessToken();
+  try {
+    const res = await apiClient.get(`api/Attachments/display?filePath=${encodeURIComponent(filePath)}`, {
+      responseType: 'blob',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res.data;
+  } catch (err) {
+    console.error("Failed to fetch attachment", err);
+    return null;
+  }
+};

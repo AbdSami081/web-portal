@@ -10,9 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Trash2, ExternalLink, FolderOpen } from "lucide-react";
+import { Trash2, ExternalLink, FolderOpen, Download } from "lucide-react";
 import { toast } from "sonner";
-import { getAttachment } from "@/api+/sap/sales/salesService";
+import { downloadAttachment } from "@/api+/sap/attachments/attachmentService";
 
 interface Attachment {
     LineNum: number;
@@ -55,22 +55,31 @@ export function AttachmentsTab({
         if (!att) return;
 
         const fullPath = att.SourcePath
-            ? att.SourcePath.replace(/\\$/, "") + "\\" + att.FileName
+            ? (att.SourcePath.endsWith('\\') ? att.SourcePath : att.SourcePath + '\\') + att.FileName
             : att.FileName;
 
         try {
-            const blob = await getAttachment(fullPath);
+            toast.loading("Fetching attachment...", { id: "attachment-fetch" });
+            const blob = await downloadAttachment(fullPath);
+            toast.dismiss("attachment-fetch");
+
             if (blob) {
                 const url = window.URL.createObjectURL(blob);
-
-                let iframe = document.getElementById("attachment-download-frame") as HTMLIFrameElement;
-                if (!iframe) {
-                    iframe = document.createElement("iframe");
-                    iframe.id = "attachment-download-frame";
-                    iframe.style.display = "none";
-                    document.body.appendChild(iframe);
-                }
-                iframe.src = url;
+                const a = document.createElement("a");
+                a.style.display = "none";
+                a.href = url;
+                a.target = "_blank";
+                
+                // If the user specifically wants download, we could add a.download = att.FileName;
+                // But target="_blank" is safer for viewing.
+                
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 100);
             } else {
                 toast.error("Failed to fetch attachment.");
             }
