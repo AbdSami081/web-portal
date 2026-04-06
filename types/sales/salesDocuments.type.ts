@@ -102,21 +102,27 @@ export interface SalesDocumentLine {
 
   Freight1Type?: string;
   Freight1Amount?: number;
+  Freight1LCAmount?: number;
   Freight1TaxGroup?: string;
   Freight1TaxRate?: number;
   Freight1TaxAmount?: number;
+  Freight1TaxLCAmount?: number;
 
   Freight2Type?: string;
   Freight2Amount?: number;
+  Freight2LCAmount?: number;
   Freight2TaxGroup?: string;
   Freight2TaxRate?: number;
   Freight2TaxAmount?: number;
+  Freight2TaxLCAmount?: number;
 
   Freight3Type?: string;
   Freight3Amount?: number;
+  Freight3LCAmount?: number;
   Freight3TaxGroup?: string;
   Freight3TaxRate?: number;
   Freight3TaxAmount?: number;
+  Freight3TaxLCAmount?: number;
   BaseType?: number;
   BaseEntry?: number;
   BaseLine?: number;

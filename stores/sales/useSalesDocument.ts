@@ -3,6 +3,7 @@ import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "../../types/sales/businessPartner.type";
 import { BaseSalesDocument, DocCurrency, SalesDocumentLine, DocumentType } from "@/types/sales/salesDocuments.type";
 import { calculateFreightTax } from "@/utils/taxCalculations";
+import { useMasterDataStore } from "./useMasterDataStore";
 
 
 interface SalesDocumentStore {
@@ -186,6 +187,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
 
     calculateTotals: () => {
       const { lines, freight, rounding, discountPercent, additionalExpenses } = get();
+      const { vatGroups } = useMasterDataStore.getState();
 
       let totalBeforeDiscount = 0;
       let totalLineFreight = 0;
@@ -201,11 +203,11 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         const itemTax = (lineSubtotal - discountAmount) * (taxRate / 100);
 
         // Calculate line-level freight taxes
-        const f1 = calculateFreightTax(parseSafe(line.Freight1Amount), line.Freight1TaxGroup || "S2");
-        const f2 = calculateFreightTax(parseSafe(line.Freight2Amount), line.Freight2TaxGroup || "S2");
-        const f3 = calculateFreightTax(parseSafe(line.Freight3Amount), line.Freight3TaxGroup || "S2");
+        const f1 = calculateFreightTax(parseSafe(line.Freight1LCAmount), line.Freight1TaxGroup || "S2", vatGroups);
+        const f2 = calculateFreightTax(parseSafe(line.Freight2LCAmount), line.Freight2TaxGroup || "S2", vatGroups);
+        const f3 = calculateFreightTax(parseSafe(line.Freight3LCAmount), line.Freight3TaxGroup || "S2", vatGroups);
 
-        const lineFreightTotal = parseSafe(line.Freight1Amount) + parseSafe(line.Freight2Amount) + parseSafe(line.Freight3Amount);
+        const lineFreightTotal = parseSafe(line.Freight1LCAmount) + parseSafe(line.Freight2LCAmount) + parseSafe(line.Freight3LCAmount);
         const lineFreightTaxTotal = f1.taxAmount + f2.taxAmount + f3.taxAmount;
 
         totalBeforeDiscount += (lineSubtotal - discountAmount);

@@ -58,11 +58,9 @@ export default function DocumentFooter() {
           <div className="grid grid-cols-2 gap-2 items-center">
             <AppLabel>Freight</AppLabel>
             <Input
-              type="number"
-              className="h-6 text-right"
-              value={freight}
-              onChange={(e) => setFreight(Number(e.target.value))}
-              disabled={isFooterDisabled}
+              className="h-6 text-right bg-slate-200"
+              value={TotalFreight}
+              disabled={true}
             />
           </div>
 
@@ -104,10 +102,6 @@ export default function DocumentFooter() {
             <div className="flex justify-between font-medium">
               <span>Tax:</span>
               <span>{formatCurrency(TaxTotal)}</span>
-            </div>
-            <div className="flex justify-between font-medium">
-              <span>Total Freight:</span>
-              <span>{formatCurrency(TotalFreight || 0)}</span>
             </div>
             <div className="flex justify-between font-bold text-lg">
               <span>Document Total:</span>

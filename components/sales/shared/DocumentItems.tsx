@@ -40,14 +40,16 @@ export function DocumentItems() {
   const docStatus = watch("DocStatus");
   const isTableDisabled = config.isDisabledTable(customer?.DocumentStatus!);
 
-  const { vatGroups } = useMasterDataStore();
+  const { vatGroups, warehouses } = useMasterDataStore();
+  const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
 
   const handleOnSelectItems = (items: Item[]) => {
     items.forEach((item) => {
       const price = getCustomerPrice(item.Prices || []);
-      
+
       const selectedTax = vatGroups.find(t => t.Code === item.VatGourpSa);
       const taxRate = Number(selectedTax?.VatGroups_Lines?.[0]?.Rate || 0);
+      const defaultWhsLine = item.DefaultWhse || firstWhs;
 
       addLine({
         ItemCode: item.ItemCode,
@@ -55,7 +57,8 @@ export function DocumentItems() {
         Quantity: 1,
         Price: price,
         TaxCode: item.VatGourpSa,
-        TaxRate: taxRate
+        TaxRate: taxRate,
+        WarehouseCode: defaultWhsLine
       });
     });
   };
@@ -125,22 +128,35 @@ export function DocumentItems() {
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Item Description</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Qty</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">UoM</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-center">Whs</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Price</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Code</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Line Total</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1</TableHead>
+                      
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1 Type</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1 (LC)</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 2</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Group</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax %</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Amt (LC)</TableHead>
+
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 2 Type</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 2 (LC)</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 3</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Group</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax %</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Amt (LC)</TableHead>
+
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 3 Type</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 3 (LC)</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Group</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax %</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Amt (LC)</TableHead>
                     </TableRow>
                   </TableHeader>
 
                   <TableBody className="text-center">
                     {lines.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={14} className="text-left text-gray-500 py-4">
+                        <TableCell colSpan={26} className="text-left text-gray-500 py-4">
                           No items added yet.
                         </TableCell>
                       </TableRow>

@@ -43,12 +43,14 @@ export function DocumentLineRow({ index, line }: Props) {
     draftLine.Quantity,
     draftLine.Price,
     draftLine.DiscountPercent,
-    draftLine.Freight1Amount,
+    draftLine.TaxCode,
+    draftLine.Freight1LCAmount,
     draftLine.Freight1TaxGroup,
-    draftLine.Freight2Amount,
+    draftLine.Freight2LCAmount,
     draftLine.Freight2TaxGroup,
-    draftLine.Freight3Amount,
+    draftLine.Freight3LCAmount,
     draftLine.Freight3TaxGroup,
+    vatGroups,
   ]);
 
   const calculateAndUpdate = (lineData: SalesDocumentLine) => {
@@ -63,20 +65,21 @@ export function DocumentLineRow({ index, line }: Props) {
     const discounted = subtotal * (1 - discount / 100);
     const itemTax = (discounted * itemTaxRate) / 100;
 
-    const f1 = calculateFreightTax(Number(lineData.Freight1Amount || 0), lineData.Freight1TaxGroup || "S2");
-    const f2 = calculateFreightTax(Number(lineData.Freight2Amount || 0), lineData.Freight2TaxGroup || "S2");
-    const f3 = calculateFreightTax(Number(lineData.Freight3Amount || 0), lineData.Freight3TaxGroup || "S2");
+    const f1 = calculateFreightTax(Number(lineData.Freight1LCAmount || 0), lineData.Freight1TaxGroup || "S2", vatGroups);
+    const f2 = calculateFreightTax(Number(lineData.Freight2LCAmount || 0), lineData.Freight2TaxGroup || "S2", vatGroups);
+    const f3 = calculateFreightTax(Number(lineData.Freight3LCAmount || 0), lineData.Freight3TaxGroup || "S2", vatGroups);
 
     const totalTax = itemTax + f1.taxAmount + f2.taxAmount + f3.taxAmount;
 
     const updatedLine = {
       ...lineData,
+      TaxRate: itemTaxRate,
       Freight1TaxRate: f1.rate,
-      Freight1TaxAmount: f1.taxAmount,
+      Freight1TaxLCAmount: f1.taxAmount,
       Freight2TaxRate: f2.rate,
-      Freight2TaxAmount: f2.taxAmount,
+      Freight2TaxLCAmount: f2.taxAmount,
       Freight3TaxRate: f3.rate,
-      Freight3TaxAmount: f3.taxAmount,
+      Freight3TaxLCAmount: f3.taxAmount,
       TaxAmount: Number(totalTax.toFixed(2)),
       LineTotal: Number((discounted + totalTax).toFixed(2)),
     };
@@ -176,6 +179,26 @@ export function DocumentLineRow({ index, line }: Props) {
         </Select>
       </td>
 
+      {/* Warehouse */}
+      <td className="py-2 px-4">
+        <div className="flex items-center gap-1 w-full justify-center">
+          <Input
+            className="h-6 w-16 bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
+            value={draftLine.WarehouseCode || ""}
+            disabled
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={() => setWhDialogOpen(true)}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+      </td>
+
       <td>
         <Input
           className="h-6 w-24 text-right"
@@ -207,8 +230,9 @@ export function DocumentLineRow({ index, line }: Props) {
         </Select>
       </td>
 
+
       <td>
-        <Input className="h-6 w-24 text-right" value={draftLine.LineTotal || draftLine.Price} disabled />
+        <Input className="h-6 w-24 text-right" value={draftLine.LineTotal || 0} disabled />
       </td>
 
       <td>
@@ -229,49 +253,56 @@ export function DocumentLineRow({ index, line }: Props) {
         </Select>
       </td>
 
+
       <td>
         <Input
+          className="h-6 w-24 text-right"
           type="number"
-          min={1}
-          value={draftLine.Freight1Amount || 0}
+          value={draftLine.Freight1LCAmount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
-            setDraftLine(prev => ({ ...prev, Freight1Amount: value < 1 ? 1 : value }));
+            setDraftLine(prev => ({ ...prev, Freight1LCAmount: value }));
           }}
-          onBlur={() => calculateAndUpdate(draftLine)}
         />
-
       </td>
 
-      {/* <td>
+      <td>
         <Select
-          value={draftLine.Freight1TaxGroup || "S2"}
+          value={draftLine.Freight1TaxGroup || ""}
           onValueChange={(val) => setDraftLine({ ...draftLine, Freight1TaxGroup: val })}
         >
           <SelectTrigger className="h-6 w-28 text-xs">
-            <SelectValue placeholder="Select Tax Group" />
+            <SelectValue placeholder="Select Tax" />
           </SelectTrigger>
           <SelectContent>
+            {/* Standard SAP Tax Codes from screenshot */}
             {taxcCodeGrp.map((grp) => (
               <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
-                {grp.Title}
+                {grp.Value} - {grp.Title}
               </SelectItem>
             ))}
+            {/* Dynamic VatGroups from Store */}
+            {vatGroups.length > 0 && <div className="h-px bg-neutral-200 my-1" />}
+            {vatGroups.map((grp) => (
+              <SelectItem key={grp.Code} value={grp.Code} className="text-xs">
+                {grp.Code} - {grp.Name || grp.Code}
+              </SelectItem>
+            ))}
+            <div className="h-px bg-neutral-200 my-1" />
+            <SelectItem value="DEFINE_NEW" className="text-xs font-semibold">
+              Define New
+            </SelectItem>
           </SelectContent>
         </Select>
-      </td> */}
+      </td>
 
-      {/* <td>
-        <Input className="h-6 w-24 text-right" value={draftLine.Freight1TaxRate || 0} disabled />
-      </td> */}
+      <td>
+        <Input className="h-6 w-16 text-right bg-neutral-100" value={draftLine.Freight1TaxRate || 0} disabled />
+      </td>
 
-      {/* <td>
-        <Input type="number" className="h-6 w-24 text-right" value={draftLine.Freight1TaxAmount || 0} disabled />
-      </td> */}
-
-      {/* <td>
-        <Input type="number" className="h-6 w-24 text-right" disabled />
-      </td> */}
+      <td>
+        <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight1TaxLCAmount || 0} disabled />
+      </td>
 
       <td>
         <Select
@@ -291,49 +322,56 @@ export function DocumentLineRow({ index, line }: Props) {
         </Select>
       </td>
 
+
       <td>
         <Input
+          className="h-6 w-24 text-right"
           type="number"
-          min={1}
-          value={draftLine.Freight2Amount || 0}
+          value={draftLine.Freight2LCAmount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
-            setDraftLine(prev => ({ ...prev, Freight2Amount: value < 1 ? 1 : value }));
+            setDraftLine(prev => ({ ...prev, Freight2LCAmount: value }));
           }}
-          onBlur={() => calculateAndUpdate(draftLine)}
         />
-
       </td>
 
-      {/* <td>
+      <td>
         <Select
-          value={draftLine.Freight2TaxGroup || "S2"}
+          value={draftLine.Freight2TaxGroup || ""}
           onValueChange={(val) => setDraftLine({ ...draftLine, Freight2TaxGroup: val })}
         >
           <SelectTrigger className="h-6 w-28 text-xs">
-            <SelectValue placeholder="Select Tax Group" />
+            <SelectValue placeholder="Select Tax" />
           </SelectTrigger>
           <SelectContent>
+            {/* Standard SAP Tax Codes from screenshot */}
             {taxcCodeGrp.map((grp) => (
               <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
-                {grp.Title}
+                {grp.Value} - {grp.Title}
               </SelectItem>
             ))}
+            {/* Dynamic VatGroups from Store */}
+            {vatGroups.length > 0 && <div className="h-px bg-neutral-200 my-1" />}
+            {vatGroups.map((grp) => (
+              <SelectItem key={grp.Code} value={grp.Code} className="text-xs">
+                {grp.Code} - {grp.Name || grp.Code}
+              </SelectItem>
+            ))}
+            <div className="h-px bg-neutral-200 my-1" />
+            <SelectItem value="DEFINE_NEW" className="text-xs font-semibold">
+              Define New
+            </SelectItem>
           </SelectContent>
         </Select>
       </td>
 
       <td>
-        <Input className="h-6 w-24 text-right" value={draftLine.Freight2TaxRate || 0} disabled />
+        <Input className="h-6 w-16 text-right bg-neutral-100" value={draftLine.Freight2TaxRate || 0} disabled />
       </td>
 
       <td>
-        <Input type="number" className="h-6 w-24 text-right" value={draftLine.Freight2TaxAmount || 0} disabled />
+        <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight2TaxLCAmount || 0} disabled />
       </td>
-
-      <td>
-        <Input type="number" className="h-6 w-24 text-right" disabled />
-      </td> */}
 
       <td>
         <Select
@@ -353,24 +391,64 @@ export function DocumentLineRow({ index, line }: Props) {
         </Select>
       </td>
 
-      <td className="px-12 py-2">
+
+      <td>
         <Input
+          className="h-6 w-24 text-right"
           type="number"
-          min={1}
-          value={draftLine.Freight3Amount || 0}
+          value={draftLine.Freight3LCAmount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
-            setDraftLine(prev => ({ ...prev, Freight3Amount: value < 1 ? 1 : value }));
+            setDraftLine(prev => ({ ...prev, Freight3LCAmount: value }));
           }}
           onBlur={() => calculateAndUpdate(draftLine)}
-          className="h-6 w-24"
         />
+      </td>
+
+      <td>
+        <Select
+          value={draftLine.Freight3TaxGroup || ""}
+          onValueChange={(val) => setDraftLine({ ...draftLine, Freight3TaxGroup: val })}
+        >
+          <SelectTrigger className="h-6 w-28 text-xs">
+            <SelectValue placeholder="Select Tax" />
+          </SelectTrigger>
+          <SelectContent>
+            {/* Standard SAP Tax Codes from screenshot */}
+            {taxcCodeGrp.map((grp) => (
+              <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
+                {grp.Value} - {grp.Title}
+              </SelectItem>
+            ))}
+            {/* Dynamic VatGroups from Store */}
+            {vatGroups.length > 0 && <div className="h-px bg-neutral-200 my-1" />}
+            {vatGroups.map((grp) => (
+              <SelectItem key={grp.Code} value={grp.Code} className="text-xs">
+                {grp.Code} - {grp.Name || grp.Code}
+              </SelectItem>
+            ))}
+            <div className="h-px bg-neutral-200 my-1" />
+            <SelectItem value="DEFINE_NEW" className="text-xs font-semibold">
+              Define New
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </td>
+
+      <td>
+        <Input className="h-6 w-16 text-right bg-neutral-100" value={draftLine.Freight3TaxRate || 0} disabled />
+      </td>
+
+      <td>
+        <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight3TaxLCAmount || 0} disabled />
       </td>
       <WarehouseSelectorDialog
         open={whDialogOpen}
         onClose={() => setWhDialogOpen(false)}
         onSelect={(wh: any) => {
-          setDraftLine({ ...draftLine, WarehouseCode: wh.WarehouseCode });
+          const updated = { ...draftLine, WarehouseCode: wh.WarehouseCode };
+          setDraftLine(updated);
+          updateLine(line.ItemCode, updated);
         }}
       />
 

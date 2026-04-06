@@ -1,7 +1,7 @@
 export const taxcCodeGrp = [
-  { Value: "SE", Title: "AU Sales - Export Supplier", Rate: 0 },
+  { Value: "SE", Title: "AU Sales - Export Supplies", Rate: 0 },
   { Value: "S2", Title: "AU Sales - GST Exempt/GST Free", Rate: 0 },
-  { Value: "S1", Title: "AU Sales - GST Lable", Rate: 10 },
+  { Value: "S1", Title: "AU Sales - GST Liable", Rate: 10 },
   { Value: "GST-EO", Title: "NZ GST - Exempt", Rate: 0 },
   { Value: "GSTO", Title: "NZ GST - Output", Rate: 15 },
   { Value: "GSTO-ZRO", Title: "NZ GST - Zero Rated", Rate: 0 },
@@ -13,19 +13,35 @@ export const freightTypes = [
   { value: "Insurance", label: "Insurance" },
   { value: "Sales Commission", label: "Sales Commission" },
   { value: "Tax", label: "Tax" },
+  { value: "Define New", label: "Define New" },
 ];
 
 export const uomOptions = ["kg", "Manual", "Media", "Paper"];
 
-export function calculateFreightTax(amount: number, taxCode: string): { rate: number; taxAmount: number } {
-  const tax = taxcCodeGrp.find(t => t.Value === taxCode);
-  const rate = Number(tax?.Rate || 0);
-  const taxAmount = (amount * rate) / 100;
+import { VatGroup } from "@/types/sales/VatGroups.type";
 
-  return {
-    rate,
-    taxAmount: Number(taxAmount.toFixed(2))
-  };
+export function calculateFreightTax(
+  amount: number,
+  taxCode: string,
+  vatGroups?: VatGroup[]
+): { rate: number; taxAmount: number } {
+  // Try static list first as it matches the user's setup
+  const staticTax = taxcCodeGrp.find((t) => t.Value === taxCode);
+  if (staticTax) {
+    const rate = Number(staticTax.Rate || 0);
+    const taxAmount = (amount * rate) / 100;
+    return { rate, taxAmount: Number(taxAmount.toFixed(2)) };
+  }
+
+  // Fallback to dynamic vatGroups if provided
+  if (vatGroups) {
+    const tax = vatGroups.find((t) => (t.Code || (t as any).code) === taxCode);
+    const rate = Number(tax?.VatGroups_Lines?.[0]?.Rate || 0);
+    const taxAmount = (amount * rate) / 100;
+    return { rate, taxAmount: Number(taxAmount.toFixed(2)) };
+  }
+
+  return { rate: 0, taxAmount: 0 };
 }
 
 export function calculateLineTax(
