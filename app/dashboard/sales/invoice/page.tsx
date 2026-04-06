@@ -114,8 +114,6 @@ export default function InvoicePage() {
       const response = await postARInvoice(payload);
       if (response?.DocEntry) {
         toast.success(`A/R Invoice #${response.DocNum} created successfully!`);
-        resetStore();
-        router.push("/dashboard/sales/invoice");
       } else {
         throw new Error("Failed to create AR Invoice");
       }

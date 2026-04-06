@@ -88,8 +88,6 @@ export default function ReturnPage() {
       const response = await postSalesReturn(payload);
       if (response?.DocEntry) {
         toast.success(`Sales Return #${response.DocNum} created successfully!`);
-        resetStore();
-        router.push("/dashboard/sales/return");
       } else {
         throw new Error("Failed to create Sales Return");
       }

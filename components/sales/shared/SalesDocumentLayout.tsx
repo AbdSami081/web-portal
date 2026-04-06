@@ -215,7 +215,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleSubmit((data) => onSubmit(data as unknown as T))();
+            handleSubmit(async (data) => {
+              try {
+                await onSubmit(data as unknown as T);
+                ResetForm();
+              } catch (error) {
+                // Error handled in onSubmit
+              }
+            })();
           }}
           className="flex flex-col min-h-screen bg-background"
         >

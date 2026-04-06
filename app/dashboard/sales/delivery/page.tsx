@@ -127,8 +127,6 @@ export default function DeliveryPage() {
       const response = await postDelivery(payload);
       if (response?.DocEntry) {
         toast.success(`Delivery Note #${response.DocNum} created successfully!`);
-        resetStore();
-        router.push("/dashboard/sales/delivery");
       } else {
         throw new Error("Failed to create Delivery Note");
       }

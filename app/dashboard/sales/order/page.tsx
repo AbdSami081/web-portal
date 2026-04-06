@@ -116,8 +116,6 @@ export default function OrderPage() {
 
       if (response?.DocEntry) {
         toast.success(`Sales Order #${response.DocNum} created successfully!`);
-        resetStore();
-        router.push("/dashboard/sales/order");
       } else {
         throw new Error("Failed to create Sales Order");
       }
