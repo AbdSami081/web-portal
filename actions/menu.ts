@@ -19,11 +19,12 @@ export async function getFilteredMenu(accessToken: string): Promise<MenuItem[]> 
     if (!accessToken) return [];
 
     const decoded = parseJwtPart(accessToken);
-    if (!decoded || !decoded.AllowedModules) return [];
+    const allowedModulesClaim = decoded?.AllowedModules || decoded?.allowedModules;
+    if (!decoded || !allowedModulesClaim) return [];
 
     // Parse allowed modules string to array
     // Handle "all" case
-    const allowedStr = decoded.AllowedModules as string;
+    const allowedStr = allowedModulesClaim as string;
     const allowed = allowedStr.split(',').map(m => m.trim().toLowerCase());
 
     // 1. If "all", show everything

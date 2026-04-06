@@ -18,8 +18,16 @@ export interface LoginResponse {
 
 export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
   const AUTH_URL = `${process.env.NEXT_PUBLIC_API_URL}api/Auth/login`;
-  const response = await axios.post<LoginResponse>(AUTH_URL, payload);
-  return response.data;
+  const response = await axios.post<any>(AUTH_URL, payload);
+
+  const rawData = response.data;
+  
+  // Safely map values whether the backend returns PascalCase or camelCase
+  return {
+    accessToken: rawData.AccessToken || rawData.accessToken,
+    refreshToken: rawData.RefreshToken || rawData.refreshToken,
+    user: rawData.User || rawData.user
+  };
 };
 
 export const saveTokens = (accessToken: string, refreshToken: string) => {

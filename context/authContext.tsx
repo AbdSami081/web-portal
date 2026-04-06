@@ -53,12 +53,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       useAuthStore.getState().startExpiryTimer(token);
       const decoded = parseJwt(token);
       if (decoded) {
+        const allowedModulesClaim = decoded.AllowedModules || decoded.allowedModules;
         setUser({
           empId: decoded.sub || decoded.nameid,
           userName: decoded.unique_name || decoded.name,
           role: decoded.role,
-          allowedModules: decoded.AllowedModules
-            ? decoded.AllowedModules.split(',').map((m: string) => m.trim())
+          allowedModules: allowedModulesClaim
+            ? allowedModulesClaim.split(',').map((m: string) => m.trim())
             : []
         });
       }
@@ -89,10 +90,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const decoded = parseJwt(data.accessToken);
+      const allowedModulesClaim = decoded?.AllowedModules || decoded?.allowedModules;
       const userWithModules = {
         ...data.user,
-        allowedModules: decoded?.AllowedModules
-          ? decoded.AllowedModules.split(',').map((m: string) => m.trim())
+        allowedModules: allowedModulesClaim
+          ? allowedModulesClaim.split(',').map((m: string) => m.trim())
           : []
       };
 
