@@ -180,6 +180,7 @@ export function DocumentLineRow({ index, line }: Props) {
       </td>
 
       {/* Warehouse */}
+      {/*
       <td className="py-2 px-4">
         <div className="flex items-center gap-1 w-full justify-center">
           <Input
@@ -198,6 +199,7 @@ export function DocumentLineRow({ index, line }: Props) {
           </Button>
         </div>
       </td>
+      */}
 
       <td>
         <Input
@@ -235,6 +237,8 @@ export function DocumentLineRow({ index, line }: Props) {
         <Input className="h-6 w-24 text-right" value={draftLine.LineTotal || 0} disabled />
       </td>
 
+      {/* Freight 1 */}
+      {/*
       <td>
         <Select
           value={draftLine.Freight1Type || ""}
@@ -275,13 +279,11 @@ export function DocumentLineRow({ index, line }: Props) {
             <SelectValue placeholder="Select Tax" />
           </SelectTrigger>
           <SelectContent>
-            {/* Standard SAP Tax Codes from screenshot */}
             {taxcCodeGrp.map((grp) => (
               <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
                 {grp.Value} - {grp.Title}
               </SelectItem>
             ))}
-            {/* Dynamic VatGroups from Store */}
             {vatGroups.length > 0 && <div className="h-px bg-neutral-200 my-1" />}
             {vatGroups.map((grp) => (
               <SelectItem key={grp.Code} value={grp.Code} className="text-xs">
@@ -303,7 +305,10 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight1TaxLCAmount || 0} disabled />
       </td>
+      */}
 
+      {/* Freight 2 */}
+      {/*
       <td>
         <Select
           value={draftLine.Freight2Type || ""}
@@ -344,13 +349,11 @@ export function DocumentLineRow({ index, line }: Props) {
             <SelectValue placeholder="Select Tax" />
           </SelectTrigger>
           <SelectContent>
-            {/* Standard SAP Tax Codes from screenshot */}
             {taxcCodeGrp.map((grp) => (
               <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
                 {grp.Value} - {grp.Title}
               </SelectItem>
             ))}
-            {/* Dynamic VatGroups from Store */}
             {vatGroups.length > 0 && <div className="h-px bg-neutral-200 my-1" />}
             {vatGroups.map((grp) => (
               <SelectItem key={grp.Code} value={grp.Code} className="text-xs">
@@ -372,7 +375,10 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight2TaxLCAmount || 0} disabled />
       </td>
+      */}
 
+      {/* Freight 3 */}
+      {/*
       <td>
         <Select
           value={draftLine.Freight3Type || ""}
@@ -414,13 +420,11 @@ export function DocumentLineRow({ index, line }: Props) {
             <SelectValue placeholder="Select Tax" />
           </SelectTrigger>
           <SelectContent>
-            {/* Standard SAP Tax Codes from screenshot */}
             {taxcCodeGrp.map((grp) => (
               <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
                 {grp.Value} - {grp.Title}
               </SelectItem>
             ))}
-            {/* Dynamic VatGroups from Store */}
             {vatGroups.length > 0 && <div className="h-px bg-neutral-200 my-1" />}
             {vatGroups.map((grp) => (
               <SelectItem key={grp.Code} value={grp.Code} className="text-xs">
@@ -442,6 +446,7 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight3TaxLCAmount || 0} disabled />
       </td>
+      */}
       <WarehouseSelectorDialog
         open={whDialogOpen}
         onClose={() => setWhDialogOpen(false)}
