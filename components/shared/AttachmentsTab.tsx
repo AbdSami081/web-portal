@@ -66,9 +66,6 @@ export function AttachmentsTab({
                 a.href = url;
                 a.target = "_blank";
                 
-                // If the user specifically wants download, we could add a.download = att.FileName;
-                // But target="_blank" is safer for viewing.
-                
                 document.body.appendChild(a);
                 a.click();
                 
