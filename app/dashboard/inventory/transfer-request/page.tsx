@@ -12,6 +12,7 @@ import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { useMemo, useEffect } from "react";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useRouter } from "next/navigation";
+import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 
 const schema = quotationSchema.extend({
   CardCode: z.string().optional(),
@@ -60,10 +61,37 @@ export default function InvTransferRequestPage() {
 
   const handleSubmit = async (data: FormData) => {
     try {
-      const payload: any = {
+      const newAttachments = attachments.filter(att => att.File);
+      const existingAttachments = attachments.filter(att => !att.File);
+
+      let uploadedAttachments: any[] = [];
+
+      if (newAttachments.length > 0) {
+        try {
+          const filesToUpload = newAttachments.map(att => att.File as File);
+
+          const uploadResults = await uploadAttachments(filesToUpload, "InventoryTransferRequest");
+
+          toast.success(`${uploadResults.length} attachments uploaded successfully`);
+
+          uploadedAttachments = newAttachments.map((att, index) => ({
+            ...att,
+            SourcePath: uploadResults[index].path,
+          }));
+
+        } catch (error) {
+          console.error("Attachment upload failed", error);
+          toast.error("Failed to upload attachments");
+          return;
+        }
+      }
+
+      const processedAttachments = [...existingAttachments, ...uploadedAttachments];
+
+      const basePayload: any = {
         Comments: comments,
         JournalMemo: journalMemo,
-        Attachments2_Lines: attachments.map((att) => ({
+        Attachments2_Lines: processedAttachments.map((att) => ({
           FileExtension: att.FileName.split('.').pop(),
           FileName: att.FileName.split('.').slice(0, -1).join('.'),
           SourcePath: att.SourcePath,
@@ -73,24 +101,31 @@ export default function InvTransferRequestPage() {
       };
 
       let result;
+
       if (DocEntry && DocEntry > 0) {
-        result = await patchInventoryTransferRequest(DocEntry, payload);
+        result = await patchInventoryTransferRequest(DocEntry, basePayload);
         toast.success(`Inventory Transfer Request updated!`);
-      } else {
-        payload.CardCode = customer?.CardCode || "";
-        payload.FromWarehouse = fromWarehouse || "";
-        payload.ToWarehouse = toWarehouse || "";
-        payload.StockTransferLines = lines.map((line) => ({
-          ItemCode: line.ItemCode,
-          Quantity: line.Quantity,
-          UnitPrice: line.ItemCost || 0,
-          WarehouseCode: line.WhsCode || toWarehouse || "",
-          FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
-          BaseType: line.BaseType ?? null,
-          BaseEntry: line.BaseEntry ?? null,
-          BaseLine: line.BaseLine ?? null,
-        }));
+      }
+      else {
+        const payload = {
+          ...basePayload,
+          CardCode: customer?.CardCode || "",
+          FromWarehouse: fromWarehouse || "",
+          ToWarehouse: toWarehouse || "",
+          StockTransferLines: lines.map((line) => ({
+            ItemCode: line.ItemCode,
+            Quantity: line.Quantity,
+            UnitPrice: line.ItemCost || 0,
+            WarehouseCode: line.WhsCode || toWarehouse || "",
+            FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
+            BaseType: line.BaseType ?? null,
+            BaseEntry: line.BaseEntry ?? null,
+            BaseLine: line.BaseLine ?? null,
+          })),
+        };
+
         result = await postInventoryTransferRequest(payload);
+
         if (result?.DocEntry) {
           toast.success(`Inventory Transfer Request created! #${result.DocNum}`);
         }
@@ -102,6 +137,7 @@ export default function InvTransferRequestPage() {
       } else {
         throw new Error("Failed to process request");
       }
+
     } catch (error: any) {
       toast.error(error.message || "Failed to create request");
     }
