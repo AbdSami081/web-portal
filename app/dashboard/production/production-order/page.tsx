@@ -10,6 +10,7 @@ import { useMemo, useEffect } from "react";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { saveProductionDocument } from "@/api+/sap/production/productionService";
 import { toast } from "sonner";
+import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 
 export default function ProductionOrderPage() {
     const { reset: resetStore } = useIFPRDDocument();
@@ -42,9 +43,47 @@ export default function ProductionOrderPage() {
         const { lines, attachments } = useIFPRDDocument.getState();
 
         try {
-            const result = await saveProductionDocument(DocumentType.ProductionOrder, data, lines, attachments);
+            const newAttachments = attachments.filter(att => att.File);
+            const existingAttachments = attachments.filter(att => !att.File);
+
+            let uploadedAttachments: any[] = [];
+
+            if (newAttachments.length > 0) {
+                try {
+                    const filesToUpload = newAttachments.map(att => att.File as File);
+
+                    const uploadResults = await uploadAttachments(filesToUpload, "ProductionOrder");
+
+                    toast.success(`${uploadResults.length} attachments uploaded successfully`);
+
+                    uploadedAttachments = newAttachments.map((att, index) => ({
+                        ...att,
+                        SourcePath: uploadResults[index].path, 
+                    }));
+                } catch (error) {
+                    console.error("Attachment upload failed", error);
+                    toast.error("Failed to upload attachments");
+                    return;
+                }
+            }
+
+            const processedAttachments = [...existingAttachments, ...uploadedAttachments];
+
+            const result = await saveProductionDocument(
+                DocumentType.ProductionOrder,
+                data,
+                lines,
+                processedAttachments
+            );
+
             const docNum = useIFPRDDocument.getState().DocNum;
-            toast.success(data.AbsoluteEntry && data.AbsoluteEntry > 0 ? `Production Order #${docNum || data.AbsoluteEntry} updated successfully` : `Production Order #${result?.DocNum || result?.DocumentNumber } created successfully`);
+
+            toast.success(
+                data.AbsoluteEntry && data.AbsoluteEntry > 0
+                    ? `Production Order #${docNum || data.AbsoluteEntry} updated successfully`
+                    : `Production Order #${result?.DocNum || result?.DocumentNumber} created successfully`
+            );
+
             resetStore();
         } catch (error: any) {
             console.error("Error while processing Production Order:", error);

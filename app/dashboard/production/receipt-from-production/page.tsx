@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { useRouter } from "next/navigation";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 
 export default function ReceiptFromProductionPage() {
   const defaultValues: Partial<ProductionFormData> = useMemo(() => ({
@@ -26,18 +27,56 @@ export default function ReceiptFromProductionPage() {
   const router = useRouter();
 
   const handleSubmit = async (data: ProductionFormData) => {
-    if (lines.length === 0) {
+    const { lines, attachments } = useIFPRDDocument.getState();
+
+    if (!lines || lines.length === 0) {
       toast.error("Please add at least one line.");
       return;
     }
 
     try {
-      const result = await saveProductionDocument(DocumentType.ReceiptFromProduction, data, lines, attachments);
+      const newAttachments = attachments.filter(att => att.File);
+      const existingAttachments = attachments.filter(att => !att.File);
+
+      let uploadedAttachments: any[] = [];
+
+      // 3️⃣ Upload new attachments
+      if (newAttachments.length > 0) {
+        try {
+          const filesToUpload = newAttachments.map(att => att.File as File);
+
+          const uploadResults = await uploadAttachments(filesToUpload, "ReceiptFromProduction");
+
+          toast.success(`${uploadResults.length} attachments uploaded successfully`);
+
+          uploadedAttachments = newAttachments.map((att, index) => ({
+            ...att,
+            SourcePath: uploadResults[index].path, 
+          }));
+        } catch (error) {
+          console.error("Attachment upload failed", error);
+          toast.error("Failed to upload attachments");
+          return; 
+        }
+      }
+
+      const processedAttachments = [...existingAttachments, ...uploadedAttachments];
+
+      const result = await saveProductionDocument(
+        DocumentType.ReceiptFromProduction,
+        data,
+        lines,
+        processedAttachments
+      );
+
       const isUpdate = !!data.DocEntry;
       const newDocNum = result?.DocNum || data.DocNum || "New";
+
       toast.success(`Receipt From Production #${newDocNum} ${isUpdate ? "updated" : "created"} successfully!`);
+
       resetStore();
       router.refresh();
+
     } catch (error: any) {
       console.error("Error while creating receipt from production:", error);
       toast.error(error.message || "Failed to create Receipt From Production");
