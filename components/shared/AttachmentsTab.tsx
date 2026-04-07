@@ -54,13 +54,9 @@ export function AttachmentsTab({
         const att = attachments.find((a) => a.LineNum === selectedLineNum);
         if (!att) return;
 
-        const fullPath = att.SourcePath
-            ? (att.SourcePath.endsWith('\\') ? att.SourcePath : att.SourcePath + '\\') + att.FileName
-            : att.FileName;
-
         try {
             toast.loading("Fetching attachment...", { id: "attachment-fetch" });
-            const blob = await downloadAttachment(fullPath);
+            const blob = await downloadAttachment(att.SourcePath);
             toast.dismiss("attachment-fetch");
 
             if (blob) {
