@@ -10,6 +10,7 @@ interface User {
   userName: string;
   role: string;
   allowedModules?: string[];
+  isSuperAdmin: boolean;
 }
 
 interface AuthContextType {
@@ -62,23 +63,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const allowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
             let uniqueAllowed = Array.from(new Set(allowed)).map(id => id.toLowerCase());
             
-            // Fixed: More robust role detection (supporting standard claim types)
-            const role = decoded.role || decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-            const isAdmin = role?.toLowerCase() === "admin";
-
-            // Auto-grant Admin modules if the user is an Admin
-            if (isAdmin) {
-              const adminModuleId = "debc3362-4bc4-4664-9726-a143aea26ec2".toLowerCase();
-              const authCompId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890".toLowerCase();
-              if (!uniqueAllowed.includes(adminModuleId)) uniqueAllowed.push(adminModuleId);
-              if (!uniqueAllowed.includes(authCompId)) uniqueAllowed.push(authCompId);
-            }
+            const isSuperAdmin = decoded.isSuperAdmin === "True" || decoded.issuperadmin === "True" || decoded.isSuperAdmin === true;
 
             setUser({
               empId: decoded.sub || decoded.nameid,
               userName: decoded.unique_name || decoded.name,
-              role: isAdmin ? "Admin" : (role || "User"),
-              allowedModules: uniqueAllowed
+              role: role || (isAdmin ? "Admin" : "User"),
+              allowedModules: uniqueAllowed,
+              isSuperAdmin: isSuperAdmin
             });
           })
           .catch(err => {
@@ -88,7 +80,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               empId: decoded.sub || decoded.nameid,
               userName: decoded.unique_name || decoded.name,
               role: decoded.role,
-              allowedModules: []
+              allowedModules: [],
+              isSuperAdmin: false
             });
           });
       }
@@ -124,21 +117,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const allowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
       let uniqueAllowed = Array.from(new Set(allowed)).map(id => id.toLowerCase());
 
-      // Fixed: Robust role check
-      const isAdmin = data.user.role?.toLowerCase() === "admin";
-
-      // Auto-grant Admin modules if the user is an Admin
-      if (isAdmin) {
-        const adminModuleId = "debc3362-4bc4-4664-9726-a143aea26ec2".toLowerCase();
-        const authCompId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890".toLowerCase();
-        if (!uniqueAllowed.includes(adminModuleId)) uniqueAllowed.push(adminModuleId);
-        if (!uniqueAllowed.includes(authCompId)) uniqueAllowed.push(authCompId);
-      }
+      const isSuperAdmin = decoded.isSuperAdmin === "True" || decoded.issuperadmin === "True" || decoded.isSuperAdmin === true;
 
       const userWithModules = {
         ...data.user,
-        role: isAdmin ? "Admin" : data.user.role,
-        allowedModules: uniqueAllowed
+        role: data.user.role,
+        allowedModules: uniqueAllowed,
+        isSuperAdmin: isSuperAdmin
       };
 
       setUser(userWithModules);

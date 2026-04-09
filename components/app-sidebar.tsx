@@ -34,8 +34,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           
           const mapped = filtered
             .filter(item => {
-              if (item.url === "/dashboard/authorization") {
-                return user?.role?.toLowerCase() === "admin";
+              // Strictly only show Administration to SuperAdmins
+              if (item.url === "#" && item.title === "Administration") {
+                return user.isSuperAdmin;
               }
               return true;
             })

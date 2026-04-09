@@ -46,9 +46,10 @@ export function RouteGuard({ children }: { children: ReactNode }) {
         const bestMatch = matches.sort((a, b) => b.url.length - a.url.length)[0];
 
         if (pathname.includes("/dashboard/authorization")) {
-            setIsAuthorized(user.role?.toLowerCase() === "admin");
+            setIsAuthorized(user.isSuperAdmin === true);
             return;
         }
+
 
         if (!bestMatch) {
             setIsAuthorized(true);
