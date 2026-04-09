@@ -55,14 +55,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       useAuthStore.getState().startExpiryTimer(token);
       const decoded = parseJwt(token);
       if (decoded) {
-        // Fetch permissions from DB instead of JWT
-        const companyDB = decoded.CompanyDB || decoded.companyDB; // Assuming companyDB is in token or we can get from store
+        const companyDB = decoded.CompanyDB || decoded.companyDB;
         
         getUserAccess(decoded.sub || decoded.nameid, companyDB || "SBODemoAU")
           .then(access => {
-            const allowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
-            let uniqueAllowed = Array.from(new Set(allowed)).map(id => id.toLowerCase());
+            const allowedModulesClaim = decoded.AllowedModules || decoded.allowedModules || "";
+            const tokenModules = allowedModulesClaim.split(',').map((id: string) => id.trim().toLowerCase()).filter((id: string) => id !== "");
             
+            const dbAllowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
+            let uniqueAllowed = Array.from(new Set([...dbAllowed, ...tokenModules])).map(id => id.toLowerCase());
+            
+            const role = decoded.role || decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+            const isAdmin = role?.toLowerCase() === "admin";
             const isSuperAdmin = decoded.isSuperAdmin === "True" || decoded.issuperadmin === "True" || decoded.isSuperAdmin === true;
 
             setUser({
@@ -75,13 +79,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           })
           .catch(err => {
             console.error("Failed to load permissions from DB", err);
-            // Fallback to JWT if DB fails or just empty
+            const isSuperAdmin = decoded.isSuperAdmin === "True" || decoded.issuperadmin === "True" || decoded.isSuperAdmin === true;
             setUser({
               empId: decoded.sub || decoded.nameid,
               userName: decoded.unique_name || decoded.name,
               role: decoded.role,
               allowedModules: [],
-              isSuperAdmin: false
+              isSuperAdmin: isSuperAdmin
             });
           });
       }
@@ -113,9 +117,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const decoded = parseJwt(data.accessToken);
       const companyDB = decoded?.CompanyDB || decoded?.companyDB || (dbParams?.companyDB);
+      
+      const allowedModulesClaim = decoded.AllowedModules || decoded.allowedModules || "";
+      const tokenModules = allowedModulesClaim.split(',').map((id: string) => id.trim().toLowerCase()).filter((id: string) => id !== "");
+      
       const access = await getUserAccess(data.user.empId, companyDB || "SBODemoAU");
-      const allowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
-      let uniqueAllowed = Array.from(new Set(allowed)).map(id => id.toLowerCase());
+      const dbAllowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
+      let uniqueAllowed = Array.from(new Set([...dbAllowed, ...tokenModules])).map(id => id.toLowerCase());
 
       const isSuperAdmin = decoded.isSuperAdmin === "True" || decoded.issuperadmin === "True" || decoded.isSuperAdmin === true;
 
