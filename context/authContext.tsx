@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { login as apiLogin, saveTokens, clearTokens, getAccessToken, LoginPayload } from "../api+/sap/auth/authService";
+import { getUserAccess } from "../api+/sap/authorization/authorizationService";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 interface User {
@@ -53,15 +54,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       useAuthStore.getState().startExpiryTimer(token);
       const decoded = parseJwt(token);
       if (decoded) {
-        const allowedModulesClaim = decoded.AllowedModules || decoded.allowedModules;
-        setUser({
-          empId: decoded.sub || decoded.nameid,
-          userName: decoded.unique_name || decoded.name,
-          role: decoded.role,
-          allowedModules: allowedModulesClaim
-            ? allowedModulesClaim.split(',').map((m: string) => m.trim())
-            : []
-        });
+        // Fetch permissions from DB instead of JWT
+        const companyDB = decoded.CompanyDB || decoded.companyDB; // Assuming companyDB is in token or we can get from store
+        
+        getUserAccess(decoded.sub || decoded.nameid, companyDB || "SBODemoAU")
+          .then(access => {
+            const allowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
+            let uniqueAllowed = Array.from(new Set(allowed)).map(id => id.toLowerCase());
+            
+            // Fixed: More robust role detection (supporting standard claim types)
+            const role = decoded.role || decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+            const isAdmin = role?.toLowerCase() === "admin";
+
+            // Auto-grant Admin modules if the user is an Admin
+            if (isAdmin) {
+              const adminModuleId = "debc3362-4bc4-4664-9726-a143aea26ec2".toLowerCase();
+              const authCompId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890".toLowerCase();
+              if (!uniqueAllowed.includes(adminModuleId)) uniqueAllowed.push(adminModuleId);
+              if (!uniqueAllowed.includes(authCompId)) uniqueAllowed.push(authCompId);
+            }
+
+            setUser({
+              empId: decoded.sub || decoded.nameid,
+              userName: decoded.unique_name || decoded.name,
+              role: isAdmin ? "Admin" : (role || "User"),
+              allowedModules: uniqueAllowed
+            });
+          })
+          .catch(err => {
+            console.error("Failed to load permissions from DB", err);
+            // Fallback to JWT if DB fails or just empty
+            setUser({
+              empId: decoded.sub || decoded.nameid,
+              userName: decoded.unique_name || decoded.name,
+              role: decoded.role,
+              allowedModules: []
+            });
+          });
       }
 
       if (pathname === "/") {
@@ -90,12 +119,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const decoded = parseJwt(data.accessToken);
-      const allowedModulesClaim = decoded?.AllowedModules || decoded?.allowedModules;
+      const companyDB = decoded?.CompanyDB || decoded?.companyDB || (dbParams?.companyDB);
+      const access = await getUserAccess(data.user.empId, companyDB || "SBODemoAU");
+      const allowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
+      let uniqueAllowed = Array.from(new Set(allowed)).map(id => id.toLowerCase());
+
+      // Fixed: Robust role check
+      const isAdmin = data.user.role?.toLowerCase() === "admin";
+
+      // Auto-grant Admin modules if the user is an Admin
+      if (isAdmin) {
+        const adminModuleId = "debc3362-4bc4-4664-9726-a143aea26ec2".toLowerCase();
+        const authCompId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890".toLowerCase();
+        if (!uniqueAllowed.includes(adminModuleId)) uniqueAllowed.push(adminModuleId);
+        if (!uniqueAllowed.includes(authCompId)) uniqueAllowed.push(authCompId);
+      }
+
       const userWithModules = {
         ...data.user,
-        allowedModules: allowedModulesClaim
-          ? allowedModulesClaim.split(',').map((m: string) => m.trim())
-          : []
+        role: isAdmin ? "Admin" : data.user.role,
+        allowedModules: uniqueAllowed
       };
 
       setUser(userWithModules);

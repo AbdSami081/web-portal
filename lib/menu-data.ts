@@ -1,12 +1,9 @@
-import { BadgeDollarSign, Factory, LayoutDashboardIcon, Package } from "lucide-react";
-
-// Types for the menu with string-based icons
 export type MenuItem = {
     id: string;
     title: string;
     url: string;
     isMain?: boolean;
-    iconName?: string; // Changed from icon component to string name
+    iconName?: string;
     isActive?: boolean;
     items?: {
         id: string;
@@ -106,6 +103,20 @@ export const SERVER_MENUS: MenuItem[] = [
                 id: "e250a09e-1ea0-4640-8561-ea3fa2526b40",
                 title: "Upload Report",
                 url: "/dashboard/reports/upload",
+            }
+        ],
+    },
+    {
+        id: "debc3362-4bc4-4664-9726-a143aea26ec2",
+        title: "Administration",
+        url: "#",
+        iconName: "Settings",
+        isActive: true,
+        items: [
+            {
+                id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                title: "Module Access",
+                url: "/dashboard/authorization",
             }
         ],
     }

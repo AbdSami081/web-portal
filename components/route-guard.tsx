@@ -45,6 +45,11 @@ export function RouteGuard({ children }: { children: ReactNode }) {
         const matches = flatMenus.filter(item => pathname.startsWith(item.url));
         const bestMatch = matches.sort((a, b) => b.url.length - a.url.length)[0];
 
+        if (pathname.includes("/dashboard/authorization")) {
+            setIsAuthorized(user.role?.toLowerCase() === "admin");
+            return;
+        }
+
         if (!bestMatch) {
             setIsAuthorized(true);
         } else {

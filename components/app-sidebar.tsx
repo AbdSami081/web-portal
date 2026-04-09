@@ -9,7 +9,7 @@ import { NavUser } from "./sidenav-user"
 import { useAuth } from "@/context/authContext";
 import { useEffect, useState } from "react";
 import { getFilteredMenu } from "@/actions/menu";
-import { BadgeDollarSign, Factory, FileText, LayoutDashboardIcon, Package, LucideIcon } from "lucide-react";
+import { BadgeDollarSign, Factory, FileText, LayoutDashboardIcon, Package, ShieldCheck, LucideIcon } from "lucide-react";
 
 // Map for string icons to components
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -17,23 +17,32 @@ const ICON_MAP: Record<string, LucideIcon> = {
   "BadgeDollarSign": BadgeDollarSign,
   "Package": Package,
   "Factory": Factory,
-  "FileText": FileText
+  "FileText": FileText,
+  "ShieldCheck": ShieldCheck,
+  "Settings": ShieldCheck // Using ShieldCheck for Administration as well
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const [menuItems, setMenuItems] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadMenu() {
-      if (accessToken) {
+      if (accessToken && user) {
         try {
-          const filtered = await getFilteredMenu(accessToken);
-          // Map icons back to components
-          const mapped = filtered.map(item => ({
-            ...item,
-            icon: item.iconName ? ICON_MAP[item.iconName] : undefined
-          }));
+          const filtered = await getFilteredMenu(accessToken, user.allowedModules);
+          
+          const mapped = filtered
+            .filter(item => {
+              if (item.url === "/dashboard/authorization") {
+                return user?.role?.toLowerCase() === "admin";
+              }
+              return true;
+            })
+            .map(item => ({
+              ...item,
+              icon: item.iconName ? ICON_MAP[item.iconName] : undefined
+            }));
           setMenuItems(mapped);
         } catch (error) {
           console.error("Failed to load menu", error);
@@ -41,7 +50,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     }
     loadMenu();
-  }, [accessToken]);
+  }, [accessToken, user]);
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props} className="bg-black">

@@ -15,17 +15,21 @@ function parseJwtPart(token: string) {
     }
 }
 
-export async function getFilteredMenu(accessToken: string): Promise<MenuItem[]> {
+export async function getFilteredMenu(accessToken: string, allowedIds?: string[]): Promise<MenuItem[]> {
     if (!accessToken) return [];
 
-    const decoded = parseJwtPart(accessToken);
-    const allowedModulesClaim = decoded?.AllowedModules || decoded?.allowedModules;
-    if (!decoded || !allowedModulesClaim) return [];
+    let allowed: string[] = [];
 
-    // Parse allowed modules string to array
-    // Handle "all" case
-    const allowedStr = allowedModulesClaim as string;
-    const allowed = allowedStr.split(',').map(m => m.trim().toLowerCase());
+    if (allowedIds && allowedIds.length > 0) {
+        allowed = allowedIds.map(id => id.toLowerCase());
+    } else {
+        const decoded = parseJwtPart(accessToken);
+        const allowedModulesClaim = decoded?.AllowedModules || decoded?.allowedModules;
+        if (!decoded || !allowedModulesClaim) return [];
+
+        const allowedStr = allowedModulesClaim as string;
+        allowed = allowedStr.split(',').map(m => m.trim().toLowerCase());
+    }
 
     // 1. If "all", show everything
     if (allowed.includes("all")) {
