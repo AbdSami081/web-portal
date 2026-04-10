@@ -163,14 +163,14 @@ export function InvDocumentHeader() {
 
 
   const fetchBusinessPartners = () => {
-    const data: BusinessPartner[] = [
-      { CardCode: "C0001", CardName: "Alpha Traders" },
-      { CardCode: "C0002", CardName: "Beta Industries" },
-      { CardCode: "C0003", CardName: "Gamma Distributors" },
-      { CardCode: "C0004", CardName: "Delta Co." },
-      { CardCode: "C0005", CardName: "Zeta Solutions" },
-    ];
-    setBusinessPartners(data);
+    // const data: BusinessPartner[] = [
+    //   { CardCode: "C0001", CardName: "Alpha Traders" },
+    //   { CardCode: "C0002", CardName: "Beta Industries" },
+    //   { CardCode: "C0003", CardName: "Gamma Distributors" },
+    //   { CardCode: "C0004", CardName: "Delta Co." },
+    //   { CardCode: "C0005", CardName: "Zeta Solutions" },
+    // ];
+    // setBusinessPartners(data);
   };
 
   const handleSelectBP = (bp: BusinessPartner) => {
@@ -247,7 +247,6 @@ export function InvDocumentHeader() {
               className="h-8 w-8 cursor-pointer"
               disabled={DocEntry > 0}
               onClick={() => {
-                fetchBusinessPartners();
                 setModalOpen(true);
               }}
             >

@@ -16,7 +16,7 @@ export type BusinessPartner = {
   Website?: string;
   ContactPerson?: string; // Optional
   Notes?: string; // Optional
-  Balance: number; // Optional
+  Balance?: number; // Optional
   Currency?: string;
   PriceListNum?: number;
 };
