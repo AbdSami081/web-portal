@@ -29,6 +29,15 @@ import {
   LayoutDashboardIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface DatabaseConfig {
   CompanyName: string;
@@ -47,6 +56,7 @@ export default function AuthorizationPage() {
   const [selectedPermissions, setSelectedPermissions] = useState<Record<string, boolean>>({});
   
   const [saving, setSaving] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const databases = useMemo<DatabaseConfig[]>(() => {
     try {
@@ -184,7 +194,8 @@ export default function AuthorizationPage() {
         }
       }
 
-      toast.success(`Access updated for ${selectedUsers.length} user(s)`);
+      // toast.success(...) - Removed in favor of modal
+      setShowSuccessModal(true);
     } catch (error: any) {
       console.error("Full Save Error:", error);
       const serverMessage = error.response?.data?.message || error.message;
@@ -482,6 +493,33 @@ export default function AuthorizationPage() {
           background: #cbd5e1;
         }
       `}</style>
+      <AlertDialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <AlertDialogContent className="bg-white border-zinc-200 shadow-2xl rounded-2xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900">
+              <div className="bg-emerald-100 p-2 rounded-full">
+                <ShieldCheck className="w-6 h-6 text-emerald-600" />
+              </div>
+              Success!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 font-medium pt-4 space-y-3 leading-relaxed">
+              <p>User permissions have been updated successfully in the system.</p>
+              <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 text-amber-800 text-sm font-semibold flex items-start gap-2 shadow-sm">
+                <Info className="w-5 h-5 shrink-0" />
+                <span>IMPORTANT: The updated users must log out and sign back in to apply these changes to their session.</span>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-4">
+            <AlertDialogAction
+              onClick={() => setShowSuccessModal(false)}
+              className="bg-black hover:bg-zinc-800 text-white font-bold px-8 py-2 rounded-xl transition-all shadow-xl shadow-zinc-200 active:scale-95"
+            >
+              Ok
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
