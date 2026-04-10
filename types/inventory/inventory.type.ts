@@ -38,4 +38,5 @@ export interface InventoryDocumentLine {
     BaseType?: number;
     BaseEntry?: number;
     BaseLine?: number;
+    LineTotal?: number;
 }
