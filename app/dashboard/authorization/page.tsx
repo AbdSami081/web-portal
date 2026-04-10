@@ -135,15 +135,21 @@ export default function AuthorizationPage() {
   const handlePermissionToggle = (moduleId: string, componentId?: string) => {
     const key = componentId ? `${moduleId}|${componentId}` : moduleId;
     setSelectedPermissions(prev => {
-      const newState = { ...prev, [key]: !prev[key] };
+      const isChecking = !prev[key];
+      const newState = { ...prev, [key]: isChecking };
       
-      if (!componentId && !newState[key]) {
-        Object.keys(newState).forEach(k => {
-          if (k.startsWith(`${moduleId}|`)) newState[k] = false;
+   
+      if (!componentId) {
+        SERVER_MENUS.forEach(menu => {
+          if (menu.id === moduleId && menu.items) {
+            menu.items.forEach(item => {
+              newState[`${moduleId}|${item.id}`] = isChecking;
+            });
+          }
         });
       }
       
-      if (componentId && newState[key]) {
+      if (componentId && isChecking) {
         newState[moduleId] = true;
       }
       
@@ -423,7 +429,7 @@ export default function AuthorizationPage() {
                                       )}>{menu.title}</span>
                                   </div>
                                   <Checkbox 
-                                      className="h-5 w-5 border-slate-200 data-[state=checked]:bg-slate-900 border-2 rounded"
+                                      className="h-5 w-5 border-slate-400 data-[state=checked]:bg-slate-900 border-2 rounded transition-colors"
                                       checked={selectedPermissions[menu.id] || false}
                                       onCheckedChange={() => handlePermissionToggle(menu.id)}
                                   />
@@ -450,7 +456,7 @@ export default function AuthorizationPage() {
                                                   )}>{item.title}</span>
                                               </div>
                                               <Checkbox 
-                                                  className="h-4 w-4 border-slate-200 data-[state=checked]:bg-slate-900 rounded"
+                                                  className="h-4 w-4 border-slate-400 data-[state=checked]:bg-slate-900 border-2 rounded transition-colors"
                                                   checked={selectedPermissions[`${menu.id}|${item.id}`] || false}
                                                   onCheckedChange={() => handlePermissionToggle(menu.id, item.id)}
                                                   onClick={(e) => e.stopPropagation()}
