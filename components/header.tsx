@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { FilePlus2, Search, Package, ShoppingCart, Factory, ClipboardList, BadgeDollarSign, LayoutDashboardIcon } from "lucide-react";
+import { FilePlus2, Search, Package, ShoppingCart, Factory, ClipboardList, BadgeDollarSign, LayoutDashboardIcon, ShieldCheck, Settings, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,10 @@ const ICON_MAP: Record<string, any> = {
   "Package": Package,
   "Factory": Factory,
   "ShoppingCart": ShoppingCart,
-  "ClipboardList": ClipboardList
+  "ClipboardList": ClipboardList,
+  "FileText": FileText,
+  "ShieldCheck": ShieldCheck,
+  "Settings": ShieldCheck 
 };
 
 const HeaderNav = () => {
