@@ -1,4 +1,4 @@
-import apiClient from "@/lib/apiClient";
+import apiClient, { reportingApiClient } from "@/lib/apiClient";
 
 export interface ReportData {
   Code?: string;
@@ -13,28 +13,39 @@ export interface ReportData {
 }
 
 export const uploadReport = async (formData: FormData) => {
-  try {
-    const response = await apiClient.post("api/ReportingAPI/Upload", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error uploading report:", error);
-    throw error;
-  }
+  const response = await apiClient.post("api/ReportingAPI/Upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
 };
 
 export const getReports = async (employeeId?: string): Promise<ReportData[]> => {
-  try {
-    const url = employeeId 
-      ? `api/ReportingAPI/GetReports?employeeId=${encodeURIComponent(employeeId)}` 
-      : "api/ReportingAPI/GetReports";
-    const response = await apiClient.get(url);
-    return response.data || [];
-  } catch (error) {
-    console.error("Error fetching reports:", error);
-    return [];
-  }
+  const url = employeeId 
+    ? `api/ReportingAPI/GetReports?employeeId=${encodeURIComponent(employeeId)}` 
+    : "api/ReportingAPI/GetReports";
+  const response = await apiClient.get(url);
+  return response.data || [];
+};
+
+// export const downloadReport = async (params: any) => {
+//     const response = await reportingApiClient.post("api/reports/render", params);
+//     return response;
+// };
+
+export const downloadReport = async (params: any) => {
+  const response = await reportingApiClient.post(
+    "api/reports/render",
+    params,
+    { responseType: "blob" } 
+  );
+
+  const blob = new Blob([response.data], { type: "application/pdf" });
+  const url = window.URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "PNLReport.pdf";
+  link.click();
 };

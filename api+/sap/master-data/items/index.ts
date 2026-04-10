@@ -42,18 +42,13 @@ import apiClient from "@/lib/apiClient";
 import { Item } from "@/types/sales/Item.type";
 
 export const getItemsList = async (search = "", skip = 0, top = 10): Promise<Item[]> => {
-  try {
-    const res = await apiClient.get(`api/Master/GetItems`, {
-      params: {
-        search: search,
-        skip: skip,
-        top: top
-      },
-    });
+  const res = await apiClient.get(`api/Master/GetItems`, {
+    params: {
+      search: search,
+      skip: skip,
+      top: top
+    },
+  });
 
-    return Array.isArray(res.data) ? res.data : [];
-  } catch (err) {
-    console.error("Failed to fetch items", err);
-    return [];
-  }
+  return Array.isArray(res.data) ? res.data : [];
 };

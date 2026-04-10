@@ -28,18 +28,13 @@ import apiClient from "@/lib/apiClient";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 
 export const getCustomers = async (search = "", skip = 0, top = 10): Promise<BusinessPartner[]> => {
-  try {
-    const res = await apiClient.get(`api/Master/GetCustomers`, {
-      params: {
-        search: search,
-        skip: skip,
-        top: top
-      },
-    });
+  const res = await apiClient.get(`api/Master/GetCustomers`, {
+    params: {
+      search: search,
+      skip: skip,
+      top: top
+    },
+  });
 
-    return Array.isArray(res.data) ? res.data : [];
-  } catch (err) {
-    console.error("Failed to fetch customers", err);
-    return [];
-  }
+  return Array.isArray(res.data) ? res.data : [];
 };
