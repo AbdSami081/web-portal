@@ -137,14 +137,12 @@ export default function AuthorizationPage() {
     setSelectedPermissions(prev => {
       const newState = { ...prev, [key]: !prev[key] };
       
-      // Cascade off
       if (!componentId && !newState[key]) {
         Object.keys(newState).forEach(k => {
           if (k.startsWith(`${moduleId}|`)) newState[k] = false;
         });
       }
       
-      // Cascade on
       if (componentId && newState[key]) {
         newState[moduleId] = true;
       }
@@ -173,10 +171,6 @@ export default function AuthorizationPage() {
         }
       });
 
-      // Save for each selected user
-      console.log("Saving permissions for users:", selectedUsers);
-      console.log("Permissions payload:", permissions);
-
       for (const userId of selectedUsers) {
         const payload = {
           userID: userId,
@@ -190,11 +184,10 @@ export default function AuthorizationPage() {
           await saveUserAccess(payload);
         } catch (apiError: any) {
           console.error(`API Error for user ${userId}:`, apiError.response?.data || apiError.message);
-          throw apiError; // Re-throw to catch in outer block
+          throw apiError; 
         }
       }
 
-      // toast.success(...) - Removed in favor of modal
       setShowSuccessModal(true);
     } catch (error: any) {
       console.error("Full Save Error:", error);
@@ -205,7 +198,6 @@ export default function AuthorizationPage() {
     }
   };
 
-  // Map for icons
   const ICON_MAP: Record<string, any> = {
     "LayoutDashboardIcon": LayoutDashboardIcon,
     "BadgeDollarSign": BadgeDollarSign,
@@ -229,7 +221,6 @@ export default function AuthorizationPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F8FAFC]">
-      {/* Professional Sticky Header */}
       <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200">
         <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -238,7 +229,7 @@ export default function AuthorizationPage() {
             </div>
             <div>
                 <h1 className="text-xl font-bold text-slate-900">Module Access Control</h1>
-                <p className="text-xs text-slate-500 font-medium tracking-tight">Enterprise Permission Management</p>
+                <p className="text-xs text-slate-500 font-medium tracking-tight">Manage user access to modules</p>
             </div>
           </div>
 
