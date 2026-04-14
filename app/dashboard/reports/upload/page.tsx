@@ -185,7 +185,7 @@ export default function ReportsManagePage() {
       <header className="flex h-14 items-center justify-between border-b px-6 bg-slate-50/50">
         <div className="flex items-center gap-4">
           <Settings2 className="h-5 w-5 text-slate-400" />
-          <h1 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Report Management Console</h1>
+          <h1 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Report Management</h1>
         </div>
       </header>
 
