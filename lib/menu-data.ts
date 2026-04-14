@@ -112,8 +112,13 @@ export const SERVER_MENUS: MenuItem[] = [
         items: [
             {
                 id: "e250a09e-1ea0-4640-8561-ea3fa2526b40",
-                title: "Upload Report",
+                title: "Manage Reports",
                 url: "/dashboard/reports/upload",
+            },
+            {
+                id: "278db848-0aa3-4dff-a8d3-dad1206c5b84",
+                title: "Report Generate",
+                url: "/dashboard/reports/generate",
             }
         ],
     },
@@ -128,7 +133,13 @@ export const SERVER_MENUS: MenuItem[] = [
                 id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 title: "Module Access",
                 url: "/dashboard/authorization",
+            },
+            {
+                id: "7b157858-90e3-4295-9ea8-1412a7b6ea3e",
+                title: "Report Access",
+                url: "/dashboard/administration/report-access",
             }
         ],
     }
+
 ];
