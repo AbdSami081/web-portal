@@ -97,8 +97,5 @@ export const downloadReport = async (params: any) => {
   const blob = new Blob([response.data], { type: "application/pdf" });
   const url = window.URL.createObjectURL(blob);
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "Report.pdf";
-  link.click();
+  return url;
 };

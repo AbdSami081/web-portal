@@ -65,11 +65,8 @@ export function NavMain({
       }
       return newItem;
     }).filter(item => {
-      // Keep if:
-      // 1. Explicitly Allowed (e.g. Dashboard)
       if (allowed.includes(item.id.toLowerCase())) return true;
 
-      // 2. OR Has allowed children (e.g. Sales with only Delivery allowed)
       if (item.items && item.items.length > 0) return true;
 
       return false;

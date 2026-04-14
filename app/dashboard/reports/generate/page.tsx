@@ -9,30 +9,53 @@ import {
   Search, 
   FileText,
   Printer,
-  Download,
-  Filter,
   BarChart3,
-  CalendarDays,
-  User,
-  ExternalLink
+  ArrowUpDown,
+  LayoutGrid,
+  List as ListIcon
 } from "lucide-react";
 import { useAuth } from "@/context/authContext";
-import { getAuthorizedReports, downloadReport, ReportData } from "@/api+/sap/reporting/reportingService";
+import { getAuthorizedReports, getReports, downloadReport, ReportData } from "@/api+/sap/reporting/reportingService";
+import ReportViewer from "@/components/reporting/ReportViewer";
 import { cn } from "@/lib/utils";
+
+type SortOrder = "asc" | "desc";
 
 export default function ReportGeneratePage() {
   const { user } = useAuth();
+  
+  // State
   const [reports, setReports] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(true);
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  // Viewer State
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [selectedReportName, setSelectedReportName] = useState("");
 
   useEffect(() => {
     if (user?.empId) {
       const fetchReports = async () => {
+        setLoading(true);
         try {
-          const data = await getAuthorizedReports(user.empId);
-          setReports(data);
+          const [allReports, rights] = await Promise.all([
+            getReports(),
+            getAuthorizedReports(user.empId)
+          ]);
+
+          const authorizedCodes = new Set(
+            rights.map((r: any) => String(r.U_ReportCode || r.u_reportcode || r.Code || "").trim().toLowerCase())
+          );
+
+          const filtered = allReports.filter(report => {
+            const reportCode = String(report.Code || "").trim().toLowerCase();
+            return authorizedCodes.has(reportCode);
+          });
+
+          setReports(filtered);
         } catch (error) {
           toast.error("Could not load authorized reports");
         } finally {
@@ -43,112 +66,178 @@ export default function ReportGeneratePage() {
     }
   }, [user]);
 
-  const filteredReports = useMemo(() => {
-    return reports.filter(r => 
+  const sortedAndFilteredReports = useMemo(() => {
+    let result = reports.filter(r => 
       r.Name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
       r.U_FileName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [reports, searchQuery]);
 
-  const handlePrint = async (report: ReportData) => {
+    result.sort((a, b) => {
+      const nameA = (a.Name || a.U_FileName || "").toLowerCase();
+      const nameB = (b.Name || b.U_FileName || "").toLowerCase();
+      return sortOrder === "asc" ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    });
+
+    return result;
+  }, [reports, searchQuery, sortOrder]);
+
+  const handleGenerate = async (report: ReportData) => {
     if (!report.Code) return;
     
     setPrintingId(report.Code);
+    setSelectedReportName(report.Name || report.U_FileName || "Report");
+    
     try {
-      await downloadReport({
-        reportCode: report.Code,
-        reportPath: report.U_FilePath,
-        parameters: {
-          UserCode: user?.empId,
-          PrintDate: new Date().toISOString()
+      const pdfUrl = await downloadReport({
+        ReportFileName: "PNLREPORT",
+        Parameters: {
+          FromDate: "2025-08-04",
+          ToDate: "2026-08-04"
         }
       });
-      toast.success("Generation Initiated", {
-        description: `Processing ${report.Name || report.U_FileName}`
-      });
+      
+      setViewerUrl(pdfUrl);
     } catch (error) {
-      // Error handled by interceptor
+      toast.error("Generation Failed", {
+        description: "Check reporting service logs"
+      });
     } finally {
       setPrintingId(null);
     }
   };
 
+  const toggleSort = () => setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-50/50">
+        <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-6 animate-pulse">
+          Synchronizing Authorized Records
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50/50 font-sans">
-      <header className="flex h-14 items-center justify-between border-b px-6 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-sm">
+    <div className="flex flex-col h-full min-w-0 bg-white font-sans">
+      
+      {/* HEADER */}
+      <header className="flex shrink-0 h-14 items-center justify-between border-b px-6 bg-slate-50/50 sticky top-0 z-20 backdrop-blur-sm">
         <div className="flex items-center gap-4">
-          <BarChart3 className="h-5 w-5 text-slate-400" />
-          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Reporting</h2>
+          <FileText className="h-5 w-5 text-slate-400" />
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Report Generation</h2>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative w-64">
+        <div className="flex items-center gap-3">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input 
               placeholder="Search reports..." 
-              className="pl-9 h-8 text-[11px] border-slate-200 bg-white/50 focus:bg-white transition-all shadow-none rounded-lg"
+              className="pl-9 w-64 h-9 text-[11px] border-slate-200 bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+
+          <div className="h-6 w-px bg-slate-200 mx-1" />
+
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleSort}
+            className="h-9 w-9 border border-slate-200 bg-white"
+          >
+            <ArrowUpDown className="h-3.5 w-3.5 text-slate-500" />
+          </Button>
+
+          <div className="flex bg-slate-100 p-1 rounded-md border">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setViewMode("grid")}
+              className={cn("h-7 w-7 rounded-sm", viewMode === "grid" && "bg-white shadow-sm")}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setViewMode("list")}
+              className={cn("h-7 w-7 rounded-sm", viewMode === "list" && "bg-white shadow-sm")}
+            >
+              <ListIcon className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto w-full">
-        {filteredReports.length === 0 ? (
+      {/* MAIN CONTENT */}
+      <main className="flex-1 flex flex-col min-h-0 min-w-0 w-full max-w-[1600px] mx-auto overflow-hidden">
+        {viewerUrl ? (
+          <div className="flex-1 m-6 bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col">
+            <ReportViewer 
+              url={viewerUrl} 
+              title={selectedReportName}
+              onClose={() => {
+                setViewerUrl(null);
+                URL.revokeObjectURL(viewerUrl);
+              }} 
+            />
+          </div>
+        ) : (
+          <div className="p-6 overflow-y-auto">
+            {sortedAndFilteredReports.length === 0 ? (
           <div className="flex flex-col items-center justify-center pt-32 text-center">
-            <div className="h-20 w-20 bg-white rounded-3xl border flex items-center justify-center mb-6 shadow-sm">
+            <div className="h-16 w-16 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center mb-6">
               <FileText className="h-8 w-8 text-slate-200" />
             </div>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">Access Restricted</h2>
-            <p className="text-sm text-slate-500 max-w-xs mt-3 leading-relaxed font-medium">
-              We couldn't find any reports authorized for your identity. Please contact your system administrator to assign reporting rights.
+            <h2 className="text-lg font-bold text-slate-900">No Reports Found</h2>
+            <p className="text-xs text-slate-500 max-w-sm mt-2 leading-relaxed">
+              No reports matching your criteria or authorization.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredReports.map(report => (
+          <div className={cn(
+            "gap-4",
+            viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "flex flex-col"
+          )}>
+            {sortedAndFilteredReports.map(report => (
               <div 
                 key={report.Code} 
-                className="group relative bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-2xl hover:shadow-slate-200/50 hover:border-blue-200 transition-all duration-300 flex flex-col"
+                className={cn(
+                  "group relative bg-white border border-slate-200 rounded-xl transition-all hover:border-blue-200 hover:shadow-sm flex flex-col",
+                  viewMode === "grid" ? "p-5" : "p-3 flex-row items-center justify-between"
+                )}
               >
-                <div className="flex items-start justify-between mb-6">
-                  <div className="h-12 w-12 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-blue-50 transition-colors">
-                    <FileText className="h-6 w-6 text-slate-400 group-hover:text-blue-500" />
+                <div className={cn("flex items-start gap-4", viewMode === "grid" ? "flex-col mb-6" : "flex-row items-center")}>
+                  <div className="h-10 w-10 bg-slate-50 rounded-lg flex items-center justify-center border group-hover:bg-blue-50 transition-colors">
+                    <FileText className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
                   </div>
-                  <div className="flex gap-2">
-                    <span className="h-6 px-2.5 rounded-full bg-slate-100 text-[9px] font-bold text-slate-500 flex items-center uppercase">
-                      {report.U_ExtType || ".rpt"}
-                    </span>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-slate-800 text-sm truncate group-hover:text-blue-700 transition-colors">
+                      {report.Name || report.U_FileName}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                       <span className="h-5 px-2 rounded bg-slate-100 text-[9px] font-bold text-slate-500 flex items-center uppercase tracking-wider">
+                        {report.U_ExtType || ".rpt"}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex-1 space-y-2 mb-8">
-                  <h3 className="font-black text-slate-900 leading-tight group-hover:text-blue-700 transition-colors">
-                    {report.Name || report.U_FileName}
-                  </h3>
-                </div>
-
-                <div className="mt-6 flex gap-2 pt-2 transition-all duration-300">
+                <div className={cn("flex gap-2", viewMode === "grid" ? "mt-auto" : "ml-4")}>
                   <Button 
-                    onClick={() => handlePrint(report)}
+                    onClick={() => handleGenerate(report)}
                     disabled={!!printingId}
-                    className="flex-1 h-10 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl"
+                    className="flex-1 h-9 bg-slate-900 hover:bg-slate-800 text-white font-bold text-[10px] rounded-md px-4"
                   >
                     {printingId === report.Code ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <>
-                        <Printer className="h-4 w-4 mr-2" />
-                        Generate
+                        <Printer className="h-3.5 w-3.5 mr-2" />
+                        GENERATE
                       </>
                     )}
                   </Button>
@@ -156,6 +245,8 @@ export default function ReportGeneratePage() {
               </div>
             ))}
           </div>
+        )}
+        </div>
         )}
       </main>
     </div>
