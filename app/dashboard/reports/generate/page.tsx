@@ -83,23 +83,18 @@ export default function ReportGeneratePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50/50 font-sans">
-      <header className="flex h-16 items-center justify-between border-b px-8 bg-white sticky top-0 z-10">
+      <header className="flex h-14 items-center justify-between border-b px-6 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-sm">
         <div className="flex items-center gap-4">
-          <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
-            <BarChart3 className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-sm font-black text-slate-900 uppercase tracking-widest">Reporting Hub</h1>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Authorized Intelligence Access</p>
-          </div>
+          <BarChart3 className="h-5 w-5 text-slate-400" />
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Reporting Hub</h2>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="relative w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input 
-              placeholder="Filter reports..." 
-              className="pl-10 h-10 text-xs border-slate-200 bg-slate-50 focus-visible:bg-white transition-all shadow-none"
+              placeholder="Search authorized reports..." 
+              className="pl-9 h-8 text-[11px] border-slate-200 bg-white/50 focus:bg-white transition-all shadow-none rounded-lg"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
