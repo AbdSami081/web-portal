@@ -193,7 +193,7 @@ export default function ReportsManagePage() {
         {/* Step 1: Browse Server Folders */}
         <aside className="w-[450px] border-r flex flex-col bg-slate-50/20">
           <div className="p-4 border-b bg-white">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Server Directory: CrystalReports</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Directory</p>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input 
