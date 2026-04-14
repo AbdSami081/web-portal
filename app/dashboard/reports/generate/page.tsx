@@ -93,7 +93,7 @@ export default function ReportGeneratePage() {
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input 
-              placeholder="Search authorized reports..." 
+              placeholder="Search reports..." 
               className="pl-9 h-8 text-[11px] border-slate-200 bg-white/50 focus:bg-white transition-all shadow-none rounded-lg"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -135,20 +135,6 @@ export default function ReportGeneratePage() {
                   <h3 className="font-black text-slate-900 leading-tight group-hover:text-blue-700 transition-colors">
                     {report.Name || report.U_FileName}
                   </h3>
-                  <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
-                    Source manifest located at {report.U_FilePath}
-                  </p>
-                </div>
-
-                <div className="pt-6 border-t border-slate-50 mt-auto grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    <span className="text-[10px] font-bold">LIVE SYNC</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-400 justify-end">
-                    <User className="h-3.5 w-3.5" />
-                    <span className="text-[10px] font-bold uppercase tracking-tighter">SECURE</span>
-                  </div>
                 </div>
 
                 <div className="mt-6 flex gap-2 pt-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
@@ -165,9 +151,6 @@ export default function ReportGeneratePage() {
                         Generate
                       </>
                     )}
-                  </Button>
-                  <Button variant="outline" className="h-10 w-10 p-0 rounded-xl border-slate-200">
-                    <ExternalLink className="h-4 w-4 text-slate-400" />
                   </Button>
                 </div>
               </div>

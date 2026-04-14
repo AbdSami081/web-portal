@@ -158,7 +158,7 @@ export default function ReportAccessPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input 
-                placeholder="Find administrator/user..." 
+                placeholder="Search users..." 
                 className="pl-9 h-9 text-[11px] border-slate-200"
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
