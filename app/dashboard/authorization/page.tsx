@@ -58,15 +58,12 @@ export default function AuthorizationPage() {
   const [saving, setSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const databases = useMemo<DatabaseConfig[]>(() => {
-    try {
-      const dbStr = process.env.NEXT_PUBLIC_SAP_DATABASES || "[]";
-      return JSON.parse(dbStr);
-    } catch (e) {
-      console.error("Failed to parse NEXT_PUBLIC_SAP_DATABASES", e);
-      return [];
+  // Automatically set company from auth context
+  useEffect(() => {
+    if (user?.companyDB) {
+      setSelectedCompany(user.companyDB);
     }
-  }, []);
+  }, [user]);
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => 
@@ -241,7 +238,7 @@ export default function AuthorizationPage() {
 
           <div className="flex items-center gap-3">
             {selectedUsers.length > 0 && (
-                <div className="hidden md:flex items-center border-l border-slate-200 pl-4 h-8 mr-2">
+                <div className="hidden md:flex items-center border-l border-slate-200 pl-4 h-8 mr-2 px-4">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mr-3">Selected</span>
                     <div className="flex -space-x-2">
                         {selectedUsers.slice(0, 3).map(id => (
@@ -257,6 +254,13 @@ export default function AuthorizationPage() {
                     </div>
                 </div>
             )}
+            
+            <div className="hidden lg:flex items-center gap-2 px-4 border-l border-slate-200 h-8">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Environment</span>
+              <Badge variant="outline" className="bg-slate-50 border-slate-200 text-slate-600 font-bold px-3 py-1 text-[10px] uppercase tracking-wider">
+                {selectedCompany || "Loading..."}
+              </Badge>
+            </div>
             
             <Button 
                 variant="outline" 
@@ -284,24 +288,6 @@ export default function AuthorizationPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5" /> Select Environment
-              </label>
-              <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                <SelectTrigger className="h-10 border-slate-200 bg-slate-50/50 font-semibold text-slate-700">
-                  <SelectValue placeholder="Select Database" />
-                </SelectTrigger>
-                <SelectContent className="rounded-lg border-slate-200 shadow-lg">
-                  {databases.map((db) => (
-                    <SelectItem key={db.CompanyDB} value={db.CompanyDB} className="font-medium text-slate-800 py-2.5">
-                      {db.CompanyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[580px]">
               <div className="p-4 border-b border-slate-100 space-y-3">
                 <div className="flex items-center justify-between">
