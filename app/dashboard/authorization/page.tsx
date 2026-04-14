@@ -253,13 +253,6 @@ export default function AuthorizationPage() {
                 </div>
             )}
             
-            <div className="hidden lg:flex items-center gap-2 px-4 border-l border-slate-200 h-8">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Environment</span>
-              <Badge variant="outline" className="bg-slate-50 border-slate-200 text-slate-600 font-bold px-3 py-1 text-[10px] uppercase tracking-wider">
-                {selectedCompany || "Loading..."}
-              </Badge>
-            </div>
-            
             <Button 
                 variant="outline" 
                 size="sm"
