@@ -86,7 +86,7 @@ export default function ReportGeneratePage() {
       <header className="flex h-14 items-center justify-between border-b px-6 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-sm">
         <div className="flex items-center gap-4">
           <BarChart3 className="h-5 w-5 text-slate-400" />
-          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Reporting Hub</h2>
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Reporting</h2>
         </div>
 
         <div className="flex items-center gap-4">
@@ -137,7 +137,7 @@ export default function ReportGeneratePage() {
                   </h3>
                 </div>
 
-                <div className="mt-6 flex gap-2 pt-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                <div className="mt-6 flex gap-2 pt-2 transition-all duration-300">
                   <Button 
                     onClick={() => handlePrint(report)}
                     disabled={!!printingId}
