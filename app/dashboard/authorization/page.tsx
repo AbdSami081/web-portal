@@ -58,7 +58,6 @@ export default function AuthorizationPage() {
   const [saving, setSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // Automatically set company from auth context
   useEffect(() => {
     if (user?.companyDB) {
       setSelectedCompany(user.companyDB);
@@ -71,8 +70,7 @@ export default function AuthorizationPage() {
       u.empId.toString().includes(searchQuery)
     );
   }, [users, searchQuery]);
-
-  // Fetch users when company changes
+  
   useEffect(() => {
     if (selectedCompany) {
       loadUsers();
