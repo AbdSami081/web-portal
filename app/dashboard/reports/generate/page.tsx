@@ -139,36 +139,6 @@ export default function ReportGeneratePage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={toggleSort}
-            className="h-9 w-9 border border-slate-200 bg-white"
-          >
-            <ArrowUpDown className="h-3.5 w-3.5 text-slate-500" />
-          </Button>
-
-          <div className="flex bg-slate-100 p-1 rounded-md border">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setViewMode("grid")}
-              className={cn("h-7 w-7 rounded-sm", viewMode === "grid" && "bg-white shadow-sm")}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setViewMode("list")}
-              className={cn("h-7 w-7 rounded-sm", viewMode === "list" && "bg-white shadow-sm")}
-            >
-              <ListIcon className="h-3.5 w-3.5" />
-            </Button>
-          </div>
         </div>
       </header>
 
