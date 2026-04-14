@@ -133,7 +133,7 @@ export default function ReportAccessPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white font-sans overflow-hidden">
+    <div className="flex flex-col h-full bg-white font-sans overflow-hidden">
       <header className="flex h-14 items-center justify-between border-b px-6 bg-slate-50/50">
         <div className="flex items-center gap-4">
           <ShieldCheck className="h-5 w-5 text-slate-400" />

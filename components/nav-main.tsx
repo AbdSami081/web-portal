@@ -87,9 +87,9 @@ export function NavMain({
   }, [currentPath, filteredItems]);
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-slate-500 font-bold tracking-widest text-[10px] uppercase mb-4 px-4">Core Modules</SidebarGroupLabel>
-      <SidebarMenu className="gap-1 px-2">
+    <SidebarGroup className="group-data-[collapsible=icon]:p-0">
+      <SidebarGroupLabel className="text-slate-500 font-bold tracking-widest text-[10px] uppercase mb-1 px-4 group-data-[collapsible=icon]:hidden">Core Modules</SidebarGroupLabel>
+      <SidebarMenu className="gap-1 px-2 group-data-[collapsible=icon]:px-0">
         {filteredItems.map((item) => {
           const hasChildren = item.items && item.items.length > 0;
           const isOpen = openParent === item.title;
@@ -105,15 +105,16 @@ export function NavMain({
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton className={`
                       h-10 rounded-lg transition-all duration-200 group/btn flex items-center
+                      group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0
                       ${isOpen ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}
                     `}>
                       <item.icon size={18} className={`
                         transition-colors shrink-0
                         ${isOpen ? "text-white" : "text-slate-400 group-hover/btn:text-slate-200"}
                       `} />
-                      <span className="font-medium ml-3 truncate transition-colors">{item.title}</span>
+                      <span className="font-medium ml-3 group-data-[collapsible=icon]:ml-0 truncate transition-colors group-data-[collapsible=icon]:hidden">{item.title}</span>
 
-                      <div className="ml-auto transition-transform duration-200 shrink-0">
+                      <div className="ml-auto transition-transform duration-200 shrink-0 group-data-[collapsible=icon]:hidden text-slate-500">
                         {isOpen ? (
                           <Minus className="text-white/70" size={14} />
                         ) : (
@@ -125,11 +126,12 @@ export function NavMain({
                 ) : (
                   <SidebarMenuButton asChild className={`
                     h-10 rounded-lg transition-all duration-200 flex items-center
+                    group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0
                     ${currentPath === item.url ? "bg-white text-black shadow-lg shadow-white/10" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}
                   `}>
-                    <Link href={item.url} className="flex items-center w-full">
+                    <Link href={item.url} className="flex items-center w-full group-data-[collapsible=icon]:justify-center">
                       <item.icon size={18} className="shrink-0" />
-                      <span className="font-medium ml-3 truncate">{item.title}</span>
+                      <span className="font-medium ml-3 group-data-[collapsible=icon]:ml-0 truncate group-data-[collapsible=icon]:hidden">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 )}
