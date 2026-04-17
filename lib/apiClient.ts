@@ -23,7 +23,6 @@ const responseInterceptor = (response: any) => response;
 
 const errorInterceptor = (error: any) => {
     if (axios.isAxiosError(error)) {
-        // Log detailed diagnostics for developers
         if (error.response) {
             console.error('API Error Response:', {
                 status: error.response.status,
@@ -32,7 +31,6 @@ const errorInterceptor = (error: any) => {
             });
 
             if (error.response.status === 401) {
-                // Trigger session expired modal
                 useAuthStore.getState().setSessionExpired(true);
             }
         }
