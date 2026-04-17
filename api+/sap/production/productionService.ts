@@ -80,7 +80,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
       payload.ProductionOrderLines = lines.map(line => ({
         ItemNo: line.ItemNo,
         BaseQuantity: line.BaseQuantity || 1,
-        PlannedQuantity: line.PlannedQuantity,
+        PlannedQuantity: line.PlannedQuantity || 0,
         IssuedQuantity: line.IssuedQuantity || 0,
         ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
         Warehouse: line.Warehouse || data.Warehouse
