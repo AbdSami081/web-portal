@@ -435,7 +435,7 @@ export function PRDDocumentHeader() {
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Product No.</AppLabel>
             <div className="flex items-center gap-2 flex-1 relative">
-              <Input id="item-no-field" type="text" {...register("ItemNo")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
+              <Input id="item-no-field" type="text" {...register("ItemNo")} className="h-8 min-w-[180px] max-w-[220px] bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
