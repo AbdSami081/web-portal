@@ -127,6 +127,15 @@ export function PRDDocumentHeader() {
     }
   }, [docNum]);
 
+  useEffect(() => {
+    if (isMultiBom) {
+      setValue("ProductionOrderType", "bopotSpecial", { shouldValidate: true });
+    }
+    else{
+      setValue("ProductionOrderType", "bopotStandard", { shouldValidate: true });
+    }
+
+  }, [isMultiBom]);
 
   const getResourceName = (type: number) => {
     switch (type) {
@@ -249,7 +258,7 @@ export function PRDDocumentHeader() {
 
   const fetchItems = async (isReset = true) => {
     const type = watch("ProductionOrderType");
-    if (type === "bopotSpecial") {
+    if (!isMultiBom && type === "bopotSpecial") {
       setItemSelectorOpen(true);
       return;
     }
@@ -332,7 +341,7 @@ export function PRDDocumentHeader() {
     }
 
     const type = getValues("ProductionOrderType");
-    if (type === "bopotSpecial") {
+    if (!isMultiBom && type === "bopotSpecial") {
       setValue("ItemNo", item.ItemCode || item.ItemNo || "", { shouldDirty: true, shouldValidate: true });
       setValue("ProductDescription", item.ItemName || item.Dscription || item.ProductDescription || "", { shouldDirty: true, shouldValidate: true });
       resetStore();
@@ -410,9 +419,13 @@ export function PRDDocumentHeader() {
                 <SelectValue placeholder="Select Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bopotStandard">Standard</SelectItem>
+                {!isMultiBom && (
+                  <SelectItem value="bopotStandard">Standard</SelectItem>
+                )}
                 <SelectItem value="bopotSpecial">Special</SelectItem>
-                <SelectItem value="bopotDisassembly">Disassembly</SelectItem>
+                {!isMultiBom && (
+                  <SelectItem value="bopotDisassembly">Disassembly</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -639,7 +652,7 @@ export function PRDDocumentHeader() {
         title={
           modalType === "order"
             ? "Select Production Order"
-            : watch("ProductionOrderType") === "bopotSpecial"
+            : (!isMultiBom && watch("ProductionOrderType") === "bopotSpecial")
               ? "Select Item"
               : isMultiBom
                 ? "Select Bill of Materials (Multi BOM)"
@@ -657,8 +670,8 @@ export function PRDDocumentHeader() {
               { key: "ProductionOrderType", label: "Type" },
               { key: "PlannedQuantity", label: "Qty" },
             ]
-            : watch("ProductionOrderType") === "bopotSpecial"
-              ? [
+            : (!isMultiBom && watch("ProductionOrderType") === "bopotSpecial")
+            ? [
                 { key: "ItemCode", label: "Item No" },
                 { key: "ItemName", label: "Description" },
               ]
