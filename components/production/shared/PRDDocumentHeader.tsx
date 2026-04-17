@@ -469,7 +469,7 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.search && (
           <div className="flex items-center gap-2">
-            <div className="w-28 shrink-0" /> {/* Spacer to match label width */}
+            <div className="w-28 shrink-0" /> 
             <div className="flex items-center gap-2 flex-1">
               <Input
                 type="text"
