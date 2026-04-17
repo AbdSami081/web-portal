@@ -85,7 +85,7 @@ export default function ReportGeneratePage() {
     if (!report.Code) return;
     
     setPrintingId(report.Code);
-    setSelectedReportName(report.Name || report.U_FileName || "Report");
+    setSelectedReportName(report.U_FileName || "Report");
     
     try {
       const pdfUrl = await downloadReport({
@@ -185,8 +185,8 @@ export default function ReportGeneratePage() {
                     <FileText className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-slate-800 text-sm truncate group-hover:text-blue-700 transition-colors">
-                      {report.Name || report.U_FileName}
+                    <h3 className="font-bold text-slate-800 text-sm truncate w-55 group-hover:text-blue-700 transition-colors">
+                      {report.U_FileName}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
                        <span className="h-5 px-2 rounded bg-slate-100 text-[9px] font-bold text-slate-500 flex items-center uppercase tracking-wider">

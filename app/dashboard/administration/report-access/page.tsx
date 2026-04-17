@@ -228,7 +228,7 @@ export default function ReportAccessPage() {
                           <FileText className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-800">{report.Name || report.U_FileName}</p>
+                          <p className="text-sm font-bold text-slate-800">{report.U_FileName}</p>
                           <p className="text-[11px] text-slate-400 flex items-center gap-2">
                             <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold text-slate-500">{report.U_ExtType || ".rpt"}</span>
                             {report.U_FilePath}
