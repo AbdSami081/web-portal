@@ -43,7 +43,10 @@ export function AttachmentsTab({
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) addAttachment(file);
+        if (file) {
+            addAttachment(file);
+            e.target.value = ""; // Reset value to allow re-uploading same file
+        }
     };
 
     const handleDisplay = async () => {

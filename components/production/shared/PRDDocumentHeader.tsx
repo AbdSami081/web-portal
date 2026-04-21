@@ -127,6 +127,15 @@ export function PRDDocumentHeader() {
     }
   }, [docNum]);
 
+  useEffect(() => {
+    if (isMultiBom) {
+      setValue("ProductionOrderType", "bopotSpecial", { shouldValidate: true });
+    }
+    else{
+      setValue("ProductionOrderType", "bopotStandard", { shouldValidate: true });
+    }
+
+  }, [isMultiBom]);
 
   const getResourceName = (type: number) => {
     switch (type) {
@@ -249,7 +258,7 @@ export function PRDDocumentHeader() {
 
   const fetchItems = async (isReset = true) => {
     const type = watch("ProductionOrderType");
-    if (type === "bopotSpecial") {
+    if (!isMultiBom && type === "bopotSpecial") {
       setItemSelectorOpen(true);
       return;
     }
@@ -332,7 +341,7 @@ export function PRDDocumentHeader() {
     }
 
     const type = getValues("ProductionOrderType");
-    if (type === "bopotSpecial") {
+    if (!isMultiBom && type === "bopotSpecial") {
       setValue("ItemNo", item.ItemCode || item.ItemNo || "", { shouldDirty: true, shouldValidate: true });
       setValue("ProductDescription", item.ItemName || item.Dscription || item.ProductDescription || "", { shouldDirty: true, shouldValidate: true });
       resetStore();
@@ -410,9 +419,13 @@ export function PRDDocumentHeader() {
                 <SelectValue placeholder="Select Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bopotStandard">Standard</SelectItem>
+                {!isMultiBom && (
+                  <SelectItem value="bopotStandard">Standard</SelectItem>
+                )}
                 <SelectItem value="bopotSpecial">Special</SelectItem>
-                <SelectItem value="bopotDisassembly">Disassembly</SelectItem>
+                {!isMultiBom && (
+                  <SelectItem value="bopotDisassembly">Disassembly</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -422,7 +435,7 @@ export function PRDDocumentHeader() {
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Product No.</AppLabel>
             <div className="flex items-center gap-2 flex-1 relative">
-              <Input id="item-no-field" type="text" {...register("ItemNo")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
+              <Input id="item-no-field" type="text" {...register("ItemNo")} className="h-8 min-w-[180px] max-w-[220px] bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -456,7 +469,7 @@ export function PRDDocumentHeader() {
 
         {config.headerFields.search && (
           <div className="flex items-center gap-2">
-            <div className="w-28 shrink-0" /> {/* Spacer to match label width */}
+            <div className="w-28 shrink-0" /> 
             <div className="flex items-center gap-2 flex-1">
               <Input
                 type="text"
@@ -639,7 +652,7 @@ export function PRDDocumentHeader() {
         title={
           modalType === "order"
             ? "Select Production Order"
-            : watch("ProductionOrderType") === "bopotSpecial"
+            : (!isMultiBom && watch("ProductionOrderType") === "bopotSpecial")
               ? "Select Item"
               : isMultiBom
                 ? "Select Bill of Materials (Multi BOM)"
@@ -657,8 +670,8 @@ export function PRDDocumentHeader() {
               { key: "ProductionOrderType", label: "Type" },
               { key: "PlannedQuantity", label: "Qty" },
             ]
-            : watch("ProductionOrderType") === "bopotSpecial"
-              ? [
+            : (!isMultiBom && watch("ProductionOrderType") === "bopotSpecial")
+            ? [
                 { key: "ItemCode", label: "Item No" },
                 { key: "ItemName", label: "Description" },
               ]

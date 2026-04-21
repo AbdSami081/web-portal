@@ -44,16 +44,16 @@ export function NavUser() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="w-full h-12 rounded-lg bg-white/5 hover:bg-white/10 transition-all flex items-center px-3"
+              className="w-full h-12 rounded-lg bg-white/5 hover:bg-white/10 transition-all flex items-center px-3 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
             >
               <div className="size-8 rounded-md bg-white text-black flex items-center justify-center font-bold text-xs shrink-0">
                 {user?.userName?.charAt(0).toUpperCase() || "U"}
               </div>
-              <div className="flex flex-col text-left text-sm leading-tight ml-3 flex-1 overflow-hidden">
+              <div className="flex flex-col text-left text-sm leading-tight ml-3 group-data-[collapsible=icon]:ml-0 flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
                 <span className="truncate font-bold text-white">{user?.userName || "User"}</span>
                 <span className="truncate text-[10px] text-slate-500 font-medium uppercase tracking-widest">Active</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4 text-slate-500 shrink-0" />
+              <ChevronsUpDown className="ml-auto size-4 text-slate-500 shrink-0 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

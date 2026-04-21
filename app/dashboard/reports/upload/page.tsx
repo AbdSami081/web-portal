@@ -1,224 +1,263 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/authContext";
-import { uploadReport, downloadReport } from "@/api+/sap/reporting/reportingService";
+import { getReportFolders, importReport, ReportFolderItem } from "@/api+/sap/reporting/reportingService";
 import { toast } from "sonner";
 import { 
   Loader2, 
   Search, 
-  FileUp, 
+  FileJson, 
   Settings2,
-  Terminal,
+  FolderOpen,
   ChevronRight,
-  Database
+  Database,
+  FileCode,
+  UserCheck,
+  ChevronDown
 } from "lucide-react";
-import { SERVER_MENUS } from "@/lib/menu-data";
 import { cn } from "@/lib/utils";
 
-export default function ReportsUploadPage() {
-  const { user } = useAuth();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [selectedObjectCode, setSelectedObjectCode] = useState<string>("");
+export default function ReportsManagePage() {
+  const { user: currentUser } = useAuth();
+  const [folders, setFolders] = useState<ReportFolderItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Selection State
+  const [selectedItems, setSelectedItems] = useState<Set<ReportFolderItem>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
-  const modules = useMemo(() => {
-    const list: { title: string; objectCode: string; category: string }[] = [];
-    SERVER_MENUS.forEach((menu) => {
-      if (["Sales", "Inventory", "Production"].includes(menu.title) && menu.items) {
-          menu.items.forEach((item) => {
-            if (item.objectCode && (item.title.toLowerCase().includes(searchQuery.toLowerCase()) || item.objectCode.toString().includes(searchQuery))) {
-              list.push({
-                title: item.title,
-                objectCode: item.objectCode.toString(),
-                category: menu.title
-              });
-            }
-          });
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const folderData = await getReportFolders();
+        setFolders(folderData);
+      } catch (error) {
+        console.error("Data Load Error:", error);
+        toast.error("Failed to load management data");
+      } finally {
+        setLoading(false);
       }
-    });
-    return list;
-  }, [searchQuery]);
+    };
+    fetchData();
+  }, []);
 
-  const categories = useMemo(() => {
-    const groups: Record<string, typeof modules> = {};
-    modules.forEach(m => {
-      if (!groups[m.category]) groups[m.category] = [];
-      groups[m.category].push(m);
-    });
-    return Object.entries(groups);
-  }, [modules]);
-
-  const selectedModule = useMemo(() => {
-    return modules.find(m => m.objectCode === selectedObjectCode);
-  }, [modules, selectedObjectCode]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      if (!file.name.toLowerCase().endsWith(".rpt")) {
-        toast.error("Format mismatch: Select a Crystal Report binary (.rpt)");
-        return;
-      }
-      setSelectedFile(file);
-    }
+  const toggleFolder = (path: string) => {
+    const next = new Set(expandedFolders);
+    if (next.has(path)) next.delete(path);
+    else next.add(path);
+    setExpandedFolders(next);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedObjectCode || !selectedFile || !user) return;
+  const toggleSelection = (item: ReportFolderItem, isChecked: boolean) => {
+    const next = new Set(selectedItems);
+    if (isChecked) next.add(item);
+    else next.delete(item);
+    setSelectedItems(next);
+  };
 
-    setLoading(true);
+  const handleImport = async () => {
+    if (selectedItems.size === 0) {
+      toast.error("Please select at least one report");
+      return;
+    }
+
+    setImporting(true);
     try {
-      const formData = new FormData();
-      formData.append("File", selectedFile);
-      formData.append("U_EmployeeId", user.empId);
-      formData.append("U_EmployeeName", user.userName);
-      formData.append("U_ObjectCode", selectedObjectCode);
+      const payloads = Array.from(selectedItems).map(item => {
+        const pathParts = item.path.split('/').filter(Boolean);
+        const moduleName = pathParts[0] || "General";
+        const subModule = pathParts.length > 2 ? pathParts[1] : undefined;
+        
+        let objectCode = "";
+        const targetName = (subModule || moduleName).toLowerCase();
+        const parentName = moduleName.toLowerCase();
+        
+        if (targetName.includes("quotation")) objectCode = "23";
+        else if (targetName.includes("sale") && targetName.includes("order")) objectCode = "17";
+        else if (targetName.includes("purchase") && targetName.includes("order")) objectCode = "22";
+        else if (targetName.includes("delivery")) objectCode = "15";
+        else if (targetName.includes("invoice") && (targetName.includes("ap") || parentName.includes("purchase"))) objectCode = "18";
+        else if (targetName.includes("invoice") && (targetName.includes("ar") || parentName.includes("sale"))) objectCode = "13";
+        else if (targetName.includes("goods receipt po") || targetName.includes("grpo")) objectCode = "20";
+        else if (targetName.includes("return") && parentName.includes("sale")) objectCode = "16";
+        else if (targetName.includes("production")) objectCode = "202";
+        else if (targetName.includes("inventory transfer") || targetName.includes("transfer")) objectCode = "67";
+        else if (targetName.includes("goods receipt") || targetName.includes("receipt")) objectCode = "59";
+        else if (targetName.includes("goods issue") || targetName.includes("issue")) objectCode = "60";
+        else if (targetName.includes("business partner") || targetName.includes("bp")) objectCode = "2";
+        else if (targetName.includes("item") || targetName.includes("master")) objectCode = "4";
+        
+        // If not recognized, we can send "0" or leave empty
+        if (!objectCode) objectCode = "0";
 
-      await uploadReport(formData);
-      toast.success("Deployment Successful", {
-        description: `Source mapped to ${selectedModule?.title}`
+        return {
+          reportName: item.name.replace(".rpt", ""),
+          module: objectCode,  // now passing the number instead of string
+          subModule: subModule,
+          fileName: item.name,
+          filePath: item.path,
+          userCode: currentUser?.empId || "",
+          userName: currentUser?.userName || ""
+        };
       });
 
-      setSelectedFile(null);
-      setSelectedObjectCode("");
-      const fileInput = document.getElementById("rpt-upload") as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-    } catch (error: any) {
-      // apiClient handles logs
+      await importReport(payloads);
+
+      toast.success("Reports Imported Successfully", {
+        description: `Imported ${selectedItems.size} reports.`
+      });
+      
+      setSelectedItems(new Set());
+    } catch (error) {
+      // Error handled by interceptor
     } finally {
-      setLoading(false);
+      setImporting(false);
     }
   };
 
+  const renderFolderItem = (item: ReportFolderItem, depth = 0) => {
+    const isExpanded = expandedFolders.has(item.path);
+    const isFile = item.type === "file";
+    const isSelected = selectedItems.has(item);
+
+    if (isFile && !item.name.toLowerCase().endsWith(".rpt")) return null;
+
+    return (
+      <div key={item.path} className="select-none">
+        <div 
+          onClick={() => {
+            if (isFile) toggleSelection(item, !isSelected);
+            else toggleFolder(item.path);
+          }}
+          className={cn(
+            "flex items-center gap-2 py-2 px-4 cursor-pointer hover:bg-slate-100 transition-colors rounded-sm text-[13px]",
+            isSelected ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600",
+            depth > 0 && "ml-4 border-l border-slate-100"
+          )}
+        >
+          {isFile ? (
+            <input 
+              type="checkbox" 
+              className="h-3.5 w-3.5 mr-1 accent-blue-600"
+              checked={isSelected}
+              onChange={(e) => {
+                toggleSelection(item, e.target.checked);
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : null}
+
+          {isFile ? (
+            <FileCode className={cn("h-4 w-4 shrink-0", isSelected ? "text-blue-600" : "text-slate-400")} />
+          ) : (
+            isExpanded ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />
+          )}
+          
+          {!isFile && <FolderOpen className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />}
+          <span>{item.name}</span>
+        </div>
+
+        {isExpanded && item.children && (
+          <div className="mt-1">
+            {item.children.map(child => renderFolderItem(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-screen bg-white">
-      {/* Console Header */}
-      <header className="flex h-14 items-center justify-between border-b px-6 shrink-0 bg-slate-50/50">
+    <div className="flex flex-col h-screen bg-white font-sans">
+      <header className="flex h-14 items-center justify-between border-b px-6 bg-slate-50/50">
         <div className="flex items-center gap-4">
           <Settings2 className="h-5 w-5 text-slate-400" />
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Report Management</h1>
-          </div>
+          <h1 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Report Management</h1>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Module Navigator - No Cards, Just Structure */}
-        <aside className="w-80 border-r flex flex-col bg-slate-50/30">
-          <div className="p-4 border-b">
+        {/* Step 1: Browse Server Folders */}
+        <aside className="w-[450px] border-r flex flex-col bg-slate-50/20">
+          <div className="p-4 border-b bg-white">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Directory</p>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <input 
-                type="text"
-                placeholder="Find modules..."
-                className="w-full bg-white border border-slate-200 pl-9 h-9 rounded-md text-xs font-medium focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all"
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input 
+                placeholder="Search local reports..." 
+                className="pl-10 h-10 text-xs border-slate-200"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
-
-          <nav className="flex-1 overflow-y-auto py-4">
-            {categories.map(([category, items]) => (
-              <div key={category} className="mb-6">
-                <h2 className="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{category} Modules</h2>
-                <div className="space-y-px">
-                  {items.map((item) => (
-                    <button
-                      key={item.objectCode}
-                      onClick={() => setSelectedObjectCode(item.objectCode)}
-                      className={cn(
-                        "w-full flex items-center justify-between px-6 py-2.5 text-xs transition-colors group relative",
-                        selectedObjectCode === item.objectCode 
-                          ? "bg-blue-50/80 text-blue-700 font-bold" 
-                          : "text-slate-600 hover:bg-slate-100/80"
-                      )}
-                    >
-                      <span>{item.title}</span>
-                      {selectedObjectCode === item.objectCode && (
-                        <div className="absolute right-0 top-0 bottom-0 w-1 bg-blue-600" />
-                      )}
-                      <ChevronRight className={cn(
-                        "h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity",
-                        selectedObjectCode === item.objectCode ? "opacity-100 text-blue-600" : "text-slate-400"
-                      )} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </nav>
+          <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-200">
+            {folders.map(item => renderFolderItem(item))}
+          </div>
         </aside>
 
-        {/* Action Workspace */}
-        <main className="flex-1 overflow-y-auto bg-white flex flex-col">
-          {!selectedObjectCode ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-              <div className="h-12 w-12 border rounded-xl flex items-center justify-center mb-4 bg-slate-50">
-                <Terminal className="h-6 w-6 text-slate-300" />
-              </div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Select Module</p>
-              <p className="text-[12px] text-slate-500 max-w-xs leading-relaxed">
-                Choose a module from the list to upload and map its specific report binary.
+        {/* Step 2: Import Action */}
+        <main className="flex-1 flex flex-col bg-white">
+          {selectedItems.size === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+              <FolderOpen className="h-16 w-16 text-slate-100 mb-4" />
+              <h3 className="text-lg font-bold text-slate-900">Select Reports to Import</h3>
+              <p className="text-sm text-slate-500 max-w-sm mt-2 leading-relaxed">
+                Check one or more <code>.rpt</code> files from the server directory to initiate the batch import process.
               </p>
             </div>
           ) : (
-            <div className="flex-1 max-w-2xl w-full mx-auto p-12 space-y-12 animate-in fade-in slide-in-from-right-4 duration-300">
-              <header className="space-y-4">
-
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                  {selectedModule?.title}
-                </h2>
-                <p className="text-sm text-slate-500 leading-relaxed font-medium">
-                  Select the <code>.rpt</code> file to associate with this module.
-                </p>
-              </header>
-
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="space-y-3">
-                  <Label htmlFor="rpt-upload" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
-                    Select Report binary (.RPT)
-                  </Label>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1 relative group">
-                      <Input
-                        id="rpt-upload"
-                        type="file"
-                        accept=".rpt"
-                        onChange={handleFileChange}
-                        className="h-11 border-slate-200 shadow-none focus-visible:ring-slate-900 cursor-pointer file:font-bold file:text-[10px] file:uppercase file:bg-slate-100 file:border-r file:border-slate-200 file:-ml-3 file:mr-4 file:px-4"
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
+            <div className="flex-1 p-12 max-w-4xl w-full mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-slate-600 mb-2">
+                  <Database className="h-4 w-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Selected Components</span>
                 </div>
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">{selectedItems.size} Reports Selected</h2>
+                <div className="max-h-[300px] overflow-y-auto border rounded-xl bg-slate-50/50 p-4 space-y-3">
+                  {Array.from(selectedItems).map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 bg-white p-3 rounded-lg border shadow-sm">
+                      <FileCode className="h-5 w-5 text-blue-600 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-900">{item.name}</span>
+                        <span className="text-xs text-slate-500 font-mono truncate">{item.path}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-                <div className="pt-6">
+              <div className="flex flex-col gap-6 max-w-md">
+                <div className="pt-2">
                   <Button 
-                    type="submit" 
-                    disabled={loading || !selectedFile}
-                    className="h-12 px-10 bg-slate-900 hover:bg-black text-white font-bold text-[11px] uppercase tracking-widest transition-all active:scale-[0.98]"
+                    onClick={handleImport}
+                    disabled={importing}
+                    className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white shadow-sm font-semibold"
                   >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading Asset...
-                      </>
+                    {importing ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Importing {selectedItems.size} Reports...
+                      </div>
                     ) : (
-                      <>
-                        <FileUp className="mr-2 h-4 w-4" />
-                        Upload and Map Report
-                      </>
+                      `Import ${selectedItems.size} Selected Reports`
                     )}
                   </Button>
                 </div>
-              </form>
+              </div>
             </div>
           )}
         </main>
@@ -226,3 +265,4 @@ export default function ReportsUploadPage() {
     </div>
   );
 }
+

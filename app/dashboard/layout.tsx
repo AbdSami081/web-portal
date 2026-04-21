@@ -11,16 +11,12 @@ const DashboardLayout = ({
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="flex flex-col min-h-0 overflow-hidden">
         <HeaderNav />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-2 md:gap-6 md:py-2 px-4 ">
-              <RouteGuard>
-                {children}
-              </RouteGuard>
-            </div>
-          </div>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <RouteGuard>
+            {children}
+          </RouteGuard>
         </div>
       </SidebarInset>
     </SidebarProvider>

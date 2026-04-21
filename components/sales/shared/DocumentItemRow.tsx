@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Trash } from "lucide-react";
+import { Settings, Trash, Search } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
@@ -179,8 +179,6 @@ export function DocumentLineRow({ index, line }: Props) {
         </Select>
       </td>
 
-      {/* Warehouse */}
-      {/*
       <td className="py-2 px-4">
         <div className="flex items-center gap-1 w-full justify-center">
           <Input
@@ -195,11 +193,10 @@ export function DocumentLineRow({ index, line }: Props) {
             className="h-6 w-6 shrink-0"
             onClick={() => setWhDialogOpen(true)}
           >
-            <Settings className="h-4 w-4" />
+            <Search className="h-4 w-4" />
           </Button>
         </div>
       </td>
-      */}
 
       <td>
         <Input
@@ -451,7 +448,7 @@ export function DocumentLineRow({ index, line }: Props) {
         open={whDialogOpen}
         onClose={() => setWhDialogOpen(false)}
         onSelect={(wh: any) => {
-          const updated = { ...draftLine, WarehouseCode: wh.WarehouseCode };
+          const updated = { ...draftLine, WarehouseCode: wh.WhsCode };
           setDraftLine(updated);
           updateLine(line.ItemCode, updated);
         }}

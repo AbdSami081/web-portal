@@ -55,23 +55,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props} className="bg-black">
-      <SidebarHeader>
-        <SidebarMenu>
+      <SidebarHeader className="group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:pt-2">
+        <SidebarMenu className="group-data-[collapsible=icon]:p-0">
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="hover:bg-white/5 active:bg-white/10 transition-all py-10">
-              <Link href="/dashboard" className="flex items-center gap-4">
-                <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-white p-1.5 shrink-0 shadow-lg shadow-white/10">
+            <SidebarMenuButton size="lg" asChild className="hover:bg-white/5 active:bg-white/10 transition-all py-6 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:h-16">
+              <Link href="/dashboard" className="flex items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
+                <div className="flex aspect-square size-10 group-data-[collapsible=icon]:size-8 items-center justify-center rounded-xl bg-white p-1.5 shrink-0 shadow-lg shadow-white/10 transition-all border border-slate-200">
                   <Image
                     src={logoImage}
                     alt="Logo"
                     width={28}
                     height={28}
-                    className="object-contain"
+                    className="object-contain group-data-[collapsible=icon]:size-5"
                   />
                 </div>
-                <div className="flex flex-col text-left leading-none">
-                  <span className="font-bold text-white tracking-tight text-lg uppercase mb-1">Supernova</span>
-                  <div className="h-[2px] w-8 bg-white/60 mb-1" />
+                <div className="flex flex-col text-left leading-none ml-4 group-data-[collapsible=icon]:hidden overflow-hidden">
+                  <span className="font-bold text-white tracking-tight text-lg uppercase">Supernova</span>
+                  <div className="h-[2px] w-8 bg-white/60 my-1" />
                   <span className="text-[9px] text-slate-400 font-black tracking-widest uppercase opacity-80 leading-none">Solutions</span>
                 </div>
               </Link>

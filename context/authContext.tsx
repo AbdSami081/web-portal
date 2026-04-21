@@ -11,6 +11,7 @@ interface User {
   role: string;
   allowedModules?: string[];
   isSuperAdmin: boolean;
+  companyDB: string;
 }
 
 interface AuthContextType {
@@ -74,7 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               userName: decoded.unique_name || decoded.name,
               role: role || (isAdmin ? "Admin" : "User"),
               allowedModules: uniqueAllowed,
-              isSuperAdmin: isSuperAdmin
+              isSuperAdmin: isSuperAdmin,
+              companyDB: companyDB || "SBODemoAU"
             });
           })
           .catch(err => {
@@ -85,7 +87,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               userName: decoded.unique_name || decoded.name,
               role: decoded.role,
               allowedModules: [],
-              isSuperAdmin: isSuperAdmin
+              isSuperAdmin: isSuperAdmin,
+              companyDB: companyDB || "SBODemoAU"
             });
           });
       }
@@ -131,7 +134,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ...data.user,
         role: data.user.role,
         allowedModules: uniqueAllowed,
-        isSuperAdmin: isSuperAdmin
+        isSuperAdmin: isSuperAdmin,
+        companyDB: companyDB || "SBODemoAU"
       };
 
       setUser(userWithModules);

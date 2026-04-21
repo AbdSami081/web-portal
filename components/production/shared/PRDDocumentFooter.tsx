@@ -231,29 +231,6 @@ export default function PRDDocumentFooter() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-
-        {watch("ProductionOrderType") === "bopotSpecial" && (
-          <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
-            <AppLabel>Special Item Selection</AppLabel>
-            <div className="flex gap-2">
-              <div className="flex-1 h-10 px-3 flex items-center bg-white border border-zinc-100 rounded-lg text-sm text-zinc-500 truncate italic">
-                {watch("U_ItemCode") ? `${watch("U_ItemCode")} - ${watch("U_ItemDescription")}` : "No special item selected"}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-10 px-4 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-900 transition-all font-medium whitespace-nowrap"
-                onClick={() => setShowItemSelector(true)}
-              >
-                Select Item
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
       <ItemSelectorDialog
         open={showItemSelector}
         onClose={() => setShowItemSelector(false)}
