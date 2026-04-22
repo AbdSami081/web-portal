@@ -50,7 +50,7 @@ export const patchReceiptFromProduction = async (docEntry: number, payload: any)
   return res.data;
 };
 
-const mapAttachmentForSAP = (att: any) => {
+const mapAttachment = (att: any) => {
   const sourcePath = att.SourcePath || "";
   const storedFileName = att.FileName || "";
 
@@ -79,7 +79,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
       ItemNo: data.ItemNo,
       Remarks: data.Remarks || data.Comments,
       ProductionOrderStatus: data.ProductionOrderStatus || "boposPlanned",
-      Attachments2_Lines: attachments.map((att) => mapAttachmentForSAP(att)),
+      Attachments2_Lines: attachments.map((att) => mapAttachment(att)),
     };
 
     if (data.AbsoluteEntry && data.AbsoluteEntry > 0) {
@@ -128,7 +128,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
         }
         return linePayload;
       }),
-      Attachments2_Lines: attachments.map(att => mapAttachmentForSAP(att))
+      Attachments2_Lines: attachments.map(att => mapAttachment(att))
     };
 
     if (data.DocEntry && data.DocEntry > 0) {
