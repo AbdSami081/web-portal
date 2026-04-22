@@ -47,14 +47,17 @@ export function PRDDocumentLayout<T extends FieldValues>({
   });
 
   const { watch, reset, handleSubmit, formState: { isSubmitting, isDirty } } = methods;
-  const { lines, reset: lineReset, initialStatus } = useIFPRDDocument();
+  const { lines, attachments, reset: lineReset, initialStatus } = useIFPRDDocument();
 
   useEffect(() => {
     const currentValues = methods.getValues();
     const isDocumentLoaded =
       (currentValues as any).AbsoluteEntry > 0 ||
       (currentValues as any).DocEntry > 0;
-    if (!isDirty && !isDocumentLoaded) {
+    const { lines: storeLines, attachments: storeAttachments } = useIFPRDDocument.getState();
+    const hasStoreContent = storeLines.length > 0 || storeAttachments.length > 0;
+
+    if (!isDirty && !isDocumentLoaded && !hasStoreContent) {
       ResetForm();
     }
   }, [defaultValues, isDirty]);

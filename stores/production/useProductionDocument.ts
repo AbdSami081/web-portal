@@ -101,29 +101,56 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       }));
     },
     loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
-      const linesData = doc.ProductionOrderLines || doc.DocumentLines || [];
-      const mappedLines = linesData.map((line: any) => {
-        return {
-          ItemNo: line.ItemNo || line.ItemCode,
-          ItemName: line.ItemName || line.ItemDescription,
-          PlannedQuantity: line.PlannedQuantity || line.Quantity,
-          Warehouse: line.Warehouse || line.WarehouseCode,
-          ItemType: line.ItemType,
-          BaseQuantity: line.BaseQuantity,
-          BOMHeaderQty: doc.PlannedQuantity || 1,
-          BaseRatio: line.BaseRatio !== undefined
-            ? line.BaseRatio
-            : (doc.PlannedQuantity
-              ? ((line.BaseQuantity ?? line.PlannedQuantity) / doc.PlannedQuantity)
-              : 0),
-          IssuedQuantity: line.IssuedQuantity,
-          AvailableQuantity: line.AvailableQuantity,
-          UoMCode: line.UoMCode,
-          ProductionOrderIssueType: line.ProductionOrderIssueType,
-          OrderNumber: line.BaseEntry,
-          LineNumber: line.BaseLine,
-        };
-      });
+      const currentDocType = type || get().docType;
+      
+      // If we are loading a Production Order (202) into a Receipt (59), we want the PARENT item
+      // In SAP, Receipt From Production targets the Finished Good, not components.
+      let mappedLines = [];
+      const isSourceProductionOrder = !!(doc.ProductionOrderLines || doc.AbsoluteEntry);
+
+      if (currentDocType === DocumentType.ReceiptFromProduction && isSourceProductionOrder && !doc.DocumentLines) {
+        mappedLines = [{
+          ItemNo: doc.ItemNo || doc.ItemCode || "",
+          ItemName: doc.ProductDescription || doc.ItemName || "",
+          PlannedQuantity: (doc.PlannedQuantity || 0) - (doc.CompletedQuantity || 0),
+          Warehouse: doc.Warehouse || doc.WarehouseCode || "",
+          ItemType: "pit_Item",
+          BaseQuantity: 1,
+          BOMHeaderQty: 1,
+          BaseRatio: 1,
+          IssuedQuantity: 0,
+          AvailableQuantity: 0,
+          UoMCode: doc.UoMCode || "",
+          ProductionOrderIssueType: "im_Manual",
+          OrderNumber: doc.AbsoluteEntry || doc.DocEntry,
+          LineNumber: -1, // Header reference
+        }];
+      } else {
+        const linesData = doc.ProductionOrderLines || doc.DocumentLines || [];
+        mappedLines = linesData.map((line: any) => {
+          return {
+            ItemNo: line.ItemNo || line.ItemCode,
+            ItemName: line.ItemName || line.ItemDescription,
+            PlannedQuantity: line.PlannedQuantity || line.Quantity,
+            Warehouse: line.Warehouse || line.WarehouseCode,
+            ItemType: line.ItemType,
+            BaseQuantity: line.BaseQuantity,
+            BOMHeaderQty: doc.PlannedQuantity || 1,
+            BaseRatio: line.BaseRatio !== undefined
+              ? line.BaseRatio
+              : (doc.PlannedQuantity
+                ? ((line.BaseQuantity ?? line.PlannedQuantity) / doc.PlannedQuantity)
+                : 0),
+            IssuedQuantity: line.IssuedQuantity,
+            AvailableQuantity: line.AvailableQuantity,
+            UoMCode: line.UoMCode,
+            ProductionOrderIssueType: line.ProductionOrderIssueType,
+            OrderNumber: line.BaseEntry || (isSourceProductionOrder ? (doc.AbsoluteEntry || doc.DocEntry) : undefined),
+            LineNumber: (currentDocType === type && !isCopy) ? line.LineNum : (line.BaseLine ?? line.LineNum),
+          };
+        });
+      }
+
       const attachments = doc.Attachments_Lines?.Attachments2_Lines?.map((att: any) => ({
         LineNum: att.LineNum,
         SourcePath: att.SourcePath || att.TargetPath || "",
@@ -135,7 +162,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
 
       set({
         lines: mappedLines,
-        docType: type || DocumentType.IssueForProduction,
+        docType: currentDocType,
         attachments: isCopy ? [] : attachments,
         DocNum: isCopy ? 0 : (doc.DocNum || doc.DocumentNumber || 0),
         ProductionOrderStatus: doc.ProductionOrderStatus || "boposPlanned",

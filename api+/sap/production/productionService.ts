@@ -88,20 +88,35 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
       return await postProductionOrder(payload);
     }
   } else if (docType === DocumentType.IssueForProduction || docType === DocumentType.ReceiptFromProduction) {
+    const isUpdate = !!(data.DocEntry && data.DocEntry > 0);
     const payload = {
       Comments: data.Comments || data.Remarks,
       JournalMemo: data.JournalMemo,
-      DocumentLines: lines.map(line => ({
-        ItemCode: line.OrderNumber ? undefined : line.ItemNo,
-        Quantity: line.PlannedQuantity,
-        WarehouseCode: line.Warehouse,
-        BaseType: line.OrderNumber ? 202 : undefined,
-        BaseEntry: line.OrderNumber,
-        BaseLine: line.LineNumber,
-      })),
+      DocumentLines: lines.map(line => {
+        const linePayload: any = {
+          Quantity: line.PlannedQuantity,
+          WarehouseCode: line.Warehouse,
+        };
+
+        if (isUpdate) {
+          // For updates, we need LineNum to identify the line, 
+          // but we MUST omit read-only reference fields (BaseType, BaseEntry, BaseLine, ItemCode)
+          linePayload.LineNum = line.LineNumber;
+        } else {
+          // For new documents, we include the references
+          linePayload.ItemCode = line.OrderNumber ? undefined : (line.ItemNo || line.ItemCode);
+          linePayload.BaseType = line.OrderNumber ? 202 : undefined;
+          linePayload.BaseEntry = line.OrderNumber;
+          linePayload.BaseLine = (line.OrderNumber && line.LineNumber === -1) ? undefined : line.LineNumber;
+        }
+        return linePayload;
+      }),
       Attachments2_Lines: attachments.map(att => ({
         FileName: att.FileName,
         File: att.File,
+        SourcePath: att.SourcePath,
+        FreeText: att.FreeText,
+        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
       }))
     };
 
