@@ -101,7 +101,6 @@ export function PRDDocumentLayout<T extends FieldValues>({
   };
 
   const onSubmitError: SubmitErrorHandler<T> = (errors) => {
-    console.error("Form Validation Errors:", errors);
     const entries = Object.entries(errors);
     if (entries.length > 0) {
       const [fieldName, error] = entries[0];
