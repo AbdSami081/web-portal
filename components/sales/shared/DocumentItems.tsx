@@ -42,7 +42,7 @@ export function DocumentItems() {
 
   const { vatGroups, warehouses } = useMasterDataStore();
   const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
-
+  
   const handleOnSelectItems = (items: Item[]) => {
     items.forEach((item) => {
       const price = getCustomerPrice(item.Prices || []);

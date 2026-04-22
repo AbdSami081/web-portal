@@ -40,7 +40,6 @@ export default function ReceiptFromProductionPage() {
 
       let uploadedAttachments: any[] = [];
 
-      // 3️⃣ Upload new attachments
       if (newAttachments.length > 0) {
         try {
           const filesToUpload = newAttachments.map(att => att.File as File);

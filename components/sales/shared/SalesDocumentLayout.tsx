@@ -215,6 +215,19 @@ export function SalesDocumentLayout<T extends FieldValues>({
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            
+            // Validation: Check if all lines have a WarehouseCode
+            const { lines } = useSalesDocument.getState();
+            const missingWarehouse = lines.some(line => !line.WarehouseCode || line.WarehouseCode.trim() === "");
+            
+            if (missingWarehouse) {
+              toast.error("Please fill warehouse for all items before submitting.", {
+                description: "One or more line items are missing a warehouse selection.",
+                duration: 4000,
+              });
+              return; // Abort submission
+            }
+
             handleSubmit(async (data) => {
               try {
                 await onSubmit(data as unknown as T);
