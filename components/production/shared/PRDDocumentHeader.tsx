@@ -230,18 +230,24 @@ export function PRDDocumentHeader() {
           setValue("Comments", documentData.Remarks, { shouldDirty: true });
           setValue("PostingDate", documentData.PostingDate?.split("T")[0], { shouldDirty: true });
 
+          // Set all identifiers for stability
+          setValue("DocNum", documentData.DocNum || documentData.DocumentNumber, { shouldDirty: true });
+          setValue("DocEntry", documentData.DocEntry || documentData.AbsoluteEntry, { shouldDirty: true });
+          setValue("AbsoluteEntry", documentData.AbsoluteEntry || documentData.DocEntry, { shouldDirty: true });
+
           // Use setTimeout with a slight delay to ensure the Select options render before setting value
           setTimeout(() => {
             setValue("ProductionOrderStatus", documentData.ProductionOrderStatus, { shouldDirty: true });
           }, 100);
         } else {
-          setValue("DocNum", documentData.DocNum);
-          setValue("DocEntry", documentData.DocEntry);
-          setValue("DocDate", documentData.DocDate?.split("T")[0]);
-          setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
-          setValue("TaxDate", documentData.TaxDate?.split("T")[0]);
-          setValue("Comments", documentData.Comments);
-          setValue("JournalMemo", documentData.JournalMemo);
+          setValue("DocNum", documentData.DocNum || documentData.DocNumber, { shouldDirty: true });
+          setValue("DocEntry", documentData.DocEntry || documentData.AbsoluteEntry, { shouldDirty: true });
+          setValue("AbsoluteEntry", documentData.AbsoluteEntry || documentData.DocEntry, { shouldDirty: true });
+          setValue("DocDate", documentData.DocDate?.split("T")[0], { shouldDirty: true });
+          setValue("DocDueDate", documentData.DocDueDate?.split("T")[0], { shouldDirty: true });
+          setValue("TaxDate", documentData.TaxDate?.split("T")[0], { shouldDirty: true });
+          setValue("Comments", documentData.Comments, { shouldDirty: true });
+          setValue("JournalMemo", documentData.JournalMemo, { shouldDirty: true });
         }
 
         toast.success(`Document #${baseRef} loaded successfully.`);
@@ -540,12 +546,28 @@ export function PRDDocumentHeader() {
                     <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="boposPlanned">Planned</SelectItem>
-                    {(!!watch("AbsoluteEntry") || field.value === "boposReleased" || field.value === "boposClosed") && (
-                      <SelectItem value="boposReleased">Released</SelectItem>
+                    {field.value === "boposPlanned" && (
+                      <>
+                        <SelectItem value="boposPlanned">Planned</SelectItem>
+                        <SelectItem value="boposReleased">Released</SelectItem>
+                      </>
                     )}
-                    {(!!watch("AbsoluteEntry") || field.value === "boposClosed") && (
+                    {field.value === "boposReleased" && (
+                      <>
+                        <SelectItem value="boposReleased">Released</SelectItem>
+                        <SelectItem value="boposClosed">Closed</SelectItem>
+                      </>
+                    )}
+                    {field.value === "boposClosed" && (
                       <SelectItem value="boposClosed">Closed</SelectItem>
+                    )}
+                    {/* Fallback for when data is loading or value is empty */}
+                    {!field.value && (
+                      <>
+                        <SelectItem value="boposPlanned">Planned</SelectItem>
+                        <SelectItem value="boposReleased">Released</SelectItem>
+                        <SelectItem value="boposClosed">Closed</SelectItem>
+                      </>
                     )}
                   </SelectContent>
                 </Select>

@@ -151,20 +151,62 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         });
       }
 
-      const attachments = doc.Attachments_Lines?.Attachments2_Lines?.map((att: any) => ({
-        LineNum: att.LineNum,
-        SourcePath: att.SourcePath || att.TargetPath || "",
-        FileName: att.FileExtension ? `${att.FileName}.${att.FileExtension}` : att.FileName,
-        AttachmentDate: att.AttachmentDate ? att.AttachmentDate.split("T")[0] : new Date().toISOString().split("T")[0],
-        FreeText: att.FreeText || "",
-        CopyToTarget: att.CopyToTarget === "tYES" || att.CopyToTargetDoc === "tYES",
-      })) || [];
+      // Dynamic Attachment Discovery: Scans for any key containing "attachment" that is an array
+      let rawAttachments: any[] = [];
+      
+      // 1. Check known high-priority paths
+      if (doc.Attachments_Lines && Array.isArray(doc.Attachments_Lines.Attachments2_Lines)) {
+        rawAttachments = doc.Attachments_Lines.Attachments2_Lines;
+      } else if (Array.isArray(doc.Attachments2_Lines)) {
+        rawAttachments = doc.Attachments2_Lines;
+      } else if (Array.isArray(doc.Attachments_Lines)) {
+        rawAttachments = doc.Attachments_Lines;
+      } else if (doc.Attachments && Array.isArray(doc.Attachments.Attachments2_Lines)) {
+        rawAttachments = doc.Attachments.Attachments2_Lines;
+      } else {
+        // 2. Scan all keys for anything related to "attachment"
+        for (const key in doc) {
+          const lowerKey = key.toLowerCase();
+          if (lowerKey.includes("attachment") && Array.isArray(doc[key])) {
+            rawAttachments = doc[key];
+            break;
+          } else if (lowerKey.includes("attachment") && typeof doc[key] === 'object' && doc[key] !== null) {
+            // Handle nested objects like doc.Attachments.Attachments2_Lines
+            for (const subKey in doc[key]) {
+              if (subKey.toLowerCase().includes("line") && Array.isArray(doc[key][subKey])) {
+                rawAttachments = doc[key][subKey];
+                break;
+              }
+            }
+            if (rawAttachments.length > 0) break;
+          }
+        }
+      }
+
+      const attachments = rawAttachments.map((att: any, idx: number) => {
+        const fileName = att.FileName || "";
+        const fileExt = att.FileExtension || "";
+        let finalName = fileName;
+        // Only append extension if it's not already at the end of the filename
+        if (fileExt && !fileName.toLowerCase().endsWith(`.${fileExt.toLowerCase()}`)) {
+          finalName = `${fileName}.${fileExt}`;
+        }
+
+        return {
+          LineNum: att.LineNum !== undefined ? att.LineNum : (idx + 1),
+          SourcePath: att.SourcePath || att.TargetPath || "",
+          FileName: finalName || "Unknown File",
+          AttachmentDate: att.AttachmentDate ? att.AttachmentDate.split("T")[0] : new Date().toISOString().split("T")[0],
+          FreeText: att.FreeText || "",
+          CopyToTarget: att.CopyToTarget === "tYES" || att.CopyToTargetDoc === "tYES",
+        };
+      });
 
       set({
         lines: mappedLines,
         docType: currentDocType,
         attachments: isCopy ? [] : attachments,
-        DocNum: isCopy ? 0 : (doc.DocNum || doc.DocumentNumber || 0),
+        DocNum: isCopy ? 0 : (doc.DocNum || doc.DocumentNumber || doc.DocNumber || 0),
         ProductionOrderStatus: doc.ProductionOrderStatus || "boposPlanned",
         initialStatus: doc.ProductionOrderStatus || "boposPlanned",
       });

@@ -50,19 +50,36 @@ export const patchReceiptFromProduction = async (docEntry: number, payload: any)
   return res.data;
 };
 
+const mapAttachmentForSAP = (att: any) => {
+  const sourcePath = att.SourcePath || "";
+  const storedFileName = att.FileName || "";
+
+  const BACKSLASH = String.fromCharCode(92);
+  const lastSep = Math.max(sourcePath.lastIndexOf("/"), sourcePath.lastIndexOf(BACKSLASH));
+  const fileInPath = lastSep > -1 ? sourcePath.substring(lastSep + 1) : "";
+  const folderPath = lastSep > -1 ? sourcePath.substring(0, lastSep) : sourcePath;
+
+  const fileWithExt = (fileInPath && fileInPath.includes(".")) ? fileInPath : storedFileName;
+
+  const lastDot = fileWithExt.lastIndexOf(".");
+  const baseName = lastDot > -1 ? fileWithExt.substring(0, lastDot) : fileWithExt;
+  const ext = lastDot > -1 ? fileWithExt.substring(lastDot + 1) : "";
+
+  return {
+    FileName: baseName,
+    FileExtension: ext,
+    SourcePath: folderPath,
+    FreeText: att.FreeText || "",
+  };
+};
+
 export const saveProductionDocument = async (docType: DocumentType, data: any, lines: any[], attachments: any[]): Promise<any> => {
   if (docType === DocumentType.ProductionOrder) {
     const payload: any = {
       ItemNo: data.ItemNo,
       Remarks: data.Remarks || data.Comments,
       ProductionOrderStatus: data.ProductionOrderStatus || "boposPlanned",
-      Attachments2_Lines: attachments.map((att) => ({
-        FileName: att.FileName,
-        File: att.File,
-        SourcePath: att.SourcePath,
-        FreeText: att.FreeText,
-        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-      })),
+      Attachments2_Lines: attachments.map((att) => mapAttachmentForSAP(att)),
     };
 
     if (data.AbsoluteEntry && data.AbsoluteEntry > 0) {
@@ -111,13 +128,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
         }
         return linePayload;
       }),
-      Attachments2_Lines: attachments.map(att => ({
-        FileName: att.FileName,
-        File: att.File,
-        SourcePath: att.SourcePath,
-        FreeText: att.FreeText,
-        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-      }))
+      Attachments2_Lines: attachments.map(att => mapAttachmentForSAP(att))
     };
 
     if (data.DocEntry && data.DocEntry > 0) {

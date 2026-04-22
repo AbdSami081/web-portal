@@ -11,6 +11,7 @@ import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { FilePlus2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
@@ -52,14 +53,19 @@ export function PRDDocumentLayout<T extends FieldValues>({
   // Reset store and form when docType changes (navigation between pages)
   useEffect(() => {
     const currentValues = methods.getValues();
-    const isDocumentLoaded = (currentValues as any).AbsoluteEntry > 0 || (currentValues as any).DocEntry > 0;
-    
-    // If we're switching page and no doc is loaded, reset everything
-    if (!isDocumentLoaded) {
+    const isDocumentLoaded = 
+      Number((currentValues as any).AbsoluteEntry || 0) > 0 || 
+      Number((currentValues as any).DocEntry || 0) > 0 ||
+      Number((currentValues as any).DocNum || 0) > 0 ||
+      Number((currentValues as any).DocumentNumber || 0) > 0;
+    const hasStoreContent = lines.length > 0 || attachments.length > 0;
+
+    // If we're switching page and no doc is loaded AND store is empty, reset everything
+    if (!isDocumentLoaded && !hasStoreContent) {
       lineReset();
       reset(defaultValues as any);
     }
-  }, [docType, lineReset, reset, defaultValues]);
+  }, [docType, lineReset, reset, defaultValues, lines.length, attachments.length]);
 
   useEffect(() => {
     const currentValues = methods.getValues();
@@ -94,16 +100,21 @@ export function PRDDocumentLayout<T extends FieldValues>({
     lineReset();
   };
 
-  const getSubmitButtonText = () => {
-    if (isSubmitting) return "Saving...";
-    return "Submit";
+  const onSubmitError: SubmitErrorHandler<T> = (errors) => {
+    console.error("Form Validation Errors:", errors);
+    const entries = Object.entries(errors);
+    if (entries.length > 0) {
+      const [fieldName, error] = entries[0];
+      const message = (error as any).message || "Please check this field";
+      toast.error(`Validation Error on [${fieldName}]: ${message}`);
+    }
   };
 
   return (
     <PRDDocContext.Provider value={config}>
       <FormProvider {...methods}>
 
-        <form onSubmit={handleSubmit((data) => onSubmit(data as any))} className="flex flex-col min-h-screen bg-background">
+        <form onSubmit={handleSubmit((data) => onSubmit(data as any), onSubmitError)} className="flex flex-col min-h-screen bg-background">
 
 
           <HeaderActionPortal>
