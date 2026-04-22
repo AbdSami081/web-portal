@@ -57,6 +57,19 @@ export function InvDocumentLayout<T extends FieldValues>({
   const { reset: resetStore, DocEntry, loadFromDocument, setIsCopyingTo } = useInventoryDocument();
   const store = useInventoryDocument();
 
+  // Reset store and form when docType changes (e.g., navigating from Transfer to Transfer Request)
+  useEffect(() => {
+    const currentValues = methods.getValues();
+    const isDocumentLoaded = (currentValues as any).DocEntry > 0 || (currentValues as any).DocNum > 0;
+    const state = useInventoryDocument.getState();
+
+    // Only reset if no document is loaded in the current form and we're not copying
+    if (!state.isCopyingTo && !isDocumentLoaded) {
+      resetStore();
+      reset(defaultValues as any);
+    }
+  }, [docType, resetStore, reset, defaultValues]); // Trigger on docType change
+
   const isInitialMount = React.useRef(true);
 
   // Handle store state on mount:

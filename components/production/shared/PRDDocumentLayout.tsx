@@ -49,6 +49,18 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const { watch, reset, handleSubmit, formState: { isSubmitting, isDirty } } = methods;
   const { lines, attachments, reset: lineReset, initialStatus } = useIFPRDDocument();
 
+  // Reset store and form when docType changes (navigation between pages)
+  useEffect(() => {
+    const currentValues = methods.getValues();
+    const isDocumentLoaded = (currentValues as any).AbsoluteEntry > 0 || (currentValues as any).DocEntry > 0;
+    
+    // If we're switching page and no doc is loaded, reset everything
+    if (!isDocumentLoaded) {
+      lineReset();
+      reset(defaultValues as any);
+    }
+  }, [docType, lineReset, reset, defaultValues]);
+
   useEffect(() => {
     const currentValues = methods.getValues();
     const isDocumentLoaded =
