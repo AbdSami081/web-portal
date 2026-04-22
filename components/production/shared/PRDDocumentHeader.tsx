@@ -82,6 +82,9 @@ export function PRDDocumentHeader() {
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [listSkip, setListSkip] = useState(0);
   const [listHasMore, setListHasMore] = useState(true);
+  // Captures the status of the currently loaded document — used to control which options show in the Status dropdown.
+  // This is a local state so it NEVER changes when the user picks a different value from the dropdown.
+  const [loadedStatus, setLoadedStatus] = useState<string>("");
   const LIST_PAGE_SIZE = 20;
 
   const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus } = useIFPRDDocument();
@@ -121,6 +124,15 @@ export function PRDDocumentHeader() {
   }, [watchedPlannedQty]);
 
   const docNum = watch("DocNum");
+  const absEntry = watch("AbsoluteEntry");
+
+  // Reset loadedStatus when the form is cleared (new document)
+  useEffect(() => {
+    if (!absEntry || Number(absEntry) === 0) {
+      setLoadedStatus("");
+    }
+  }, [absEntry]);
+
   useEffect(() => {
     if (docNum) {
       setSearchValue(docNum.toString());
@@ -234,6 +246,9 @@ export function PRDDocumentHeader() {
           setValue("DocNum", documentData.DocNum || documentData.DocumentNumber, { shouldDirty: true });
           setValue("DocEntry", documentData.DocEntry || documentData.AbsoluteEntry, { shouldDirty: true });
           setValue("AbsoluteEntry", documentData.AbsoluteEntry || documentData.DocEntry, { shouldDirty: true });
+
+          // Capture the loaded status locally so dropdown options stay stable regardless of selection
+          setLoadedStatus(documentData.ProductionOrderStatus || "boposPlanned");
 
           // Use setTimeout with a slight delay to ensure the Select options render before setting value
           setTimeout(() => {
@@ -546,28 +561,27 @@ export function PRDDocumentHeader() {
                     <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {field.value === "boposPlanned" && (
+                    {/* For new documents (no doc loaded): show all transitions from Planned */}
+                    {!loadedStatus && (
                       <>
                         <SelectItem value="boposPlanned">Planned</SelectItem>
                         <SelectItem value="boposReleased">Released</SelectItem>
                       </>
                     )}
-                    {field.value === "boposReleased" && (
+                    {loadedStatus === "boposPlanned" && (
+                      <>
+                        <SelectItem value="boposPlanned">Planned</SelectItem>
+                        <SelectItem value="boposReleased">Released</SelectItem>
+                      </>
+                    )}
+                    {loadedStatus === "boposReleased" && (
                       <>
                         <SelectItem value="boposReleased">Released</SelectItem>
                         <SelectItem value="boposClosed">Closed</SelectItem>
                       </>
                     )}
-                    {field.value === "boposClosed" && (
+                    {loadedStatus === "boposClosed" && (
                       <SelectItem value="boposClosed">Closed</SelectItem>
-                    )}
-                    {/* Fallback for when data is loading or value is empty */}
-                    {!field.value && (
-                      <>
-                        <SelectItem value="boposPlanned">Planned</SelectItem>
-                        <SelectItem value="boposReleased">Released</SelectItem>
-                        <SelectItem value="boposClosed">Closed</SelectItem>
-                      </>
                     )}
                   </SelectContent>
                 </Select>
