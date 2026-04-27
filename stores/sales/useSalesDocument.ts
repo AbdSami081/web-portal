@@ -198,7 +198,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
 
     calculateTotals: () => {
       const { lines, freight, rounding, additionalExpenses, discSum } = get();
-      const { vatGroups } = useMasterDataStore.getState();
+      const { vatGroups, freightsWithCharges } = useMasterDataStore.getState();
 
       let overallTotalBeforeDiscount = 0;
       let overallLineFreightAmount = 0;
@@ -220,9 +220,9 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         const itemTaxAmount = lineAmountAfterDiscount * (itemTaxRate / 100);
 
         // 4. Line-Level Freight Calculations
-        const f1 = calculateFreightTax(parseSafe(line.Freight1LCAmount), line.Freight1TaxGroup || "", vatGroups);
-        const f2 = calculateFreightTax(parseSafe(line.Freight2LCAmount), line.Freight2TaxGroup || "", vatGroups);
-        const f3 = calculateFreightTax(parseSafe(line.Freight3LCAmount), line.Freight3TaxGroup || "", vatGroups);
+        const f1 = calculateFreightTax(parseSafe(line.Freight1LCAmount), line.Freight1TaxGroup || "", freightsWithCharges);
+        const f2 = calculateFreightTax(parseSafe(line.Freight2LCAmount), line.Freight2TaxGroup || "", freightsWithCharges);
+        const f3 = calculateFreightTax(parseSafe(line.Freight3LCAmount), line.Freight3TaxGroup || "", freightsWithCharges);
 
         const lineFreightSubtotal = parseSafe(line.Freight1LCAmount) + parseSafe(line.Freight2LCAmount) + parseSafe(line.Freight3LCAmount);
         const lineFreightTaxTotal = f1.taxAmount + f2.taxAmount + f3.taxAmount;
