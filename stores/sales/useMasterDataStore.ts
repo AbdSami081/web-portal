@@ -5,6 +5,8 @@ import { UoM } from "@/types/sales/UoM.type";
 import axios from "axios";
 import { create } from "zustand";
 import { Warehouse } from "@/types/warehouse.type";
+import { getFreightTypes, fetchFreightWithCharges } from "@/api+/sap/master-data/freight";
+import { getVatGroups } from "@/api+/sap/master-data/tax-codes";
 
 interface MasterDataStore {
   items: Record<number, Item[]>;
@@ -13,11 +15,14 @@ interface MasterDataStore {
   priceLists: [];
   vatGroups: VatGroup[];
   uoms: UoM[];
+  freightTypes: any[];
+  freightsWithCharges: any[];
   itemSearch: string;
   itemLoading: boolean;
   currentItemPage: number;
 
   loadMasterData: () => Promise<void>;
+  loadExternalMasterData: () => Promise<void>;
   loadItemPage: (page: number) => Promise<void>;
   loadMoreItemPages: () => Promise<void>;
   setItemSearch: (value: string) => void;
@@ -32,13 +37,29 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   priceLists: [],
   vatGroups: [],
   uoms: [],
+  freightTypes: [],
+  freightsWithCharges: [],
   itemSearch: "",
   itemLoading: false,
   currentItemPage: 1,
 
+  async loadExternalMasterData() {
+    const results = await Promise.allSettled([
+      getFreightTypes(),
+      fetchFreightWithCharges("O"),
+    ]);
+
+    const updates: Partial<MasterDataStore> = {};
+    if (results[0].status === "fulfilled") updates.freightTypes = results[0].value;
+    if (results[1].status === "fulfilled") updates.freightsWithCharges = results[1].value;
+
+    set(updates);
+  },
+
   async loadMasterData() {
     set({ itemLoading: true });
     try {
+      await get().loadExternalMasterData();
       const res = await axios.get("/api/sap/master-data");
       const data = res.data;
 
@@ -46,19 +67,22 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
       const customers = data.customers || data.Customers || [];
       const warehouses = data.warehouses || data.Warehouses || [];
       const priceLists = data.priceLists || data.PriceLists || [];
-      const vatGroups = data.vatGroups || data.VatGroups || [];
+      // If vatGroups is empty from external call, try fallback from internal
+      const fallbackVatGroups = data.vatGroups || data.VatGroups || [];
       const uoms = data.uoms || data.UoMs || [];
 
-      set({
+      set((state) => ({
         items: { 1: items },
         customers,
         warehouses,
         priceLists,
-        vatGroups,
         uoms,
+        freightTypes: state.freightTypes,            
+        freightsWithCharges: state.freightsWithCharges, 
+        vatGroups: fallbackVatGroups,
         currentItemPage: 1,
         itemLoading: false,
-      });
+      }));
     } catch (error) {
       console.error("Failed to load master data", error);
       set({ itemLoading: false });
@@ -110,6 +134,8 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
       priceLists: [],
       vatGroups: [],
       uoms: [],
+      freightTypes: [],
+      freightsWithCharges: [],
       itemSearch: "",
       itemLoading: false,
       currentItemPage: 1,
