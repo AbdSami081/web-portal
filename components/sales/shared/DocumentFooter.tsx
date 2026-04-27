@@ -21,9 +21,11 @@ export default function DocumentFooter() {
     setFreight,
     setRounding,
     setDiscountPercent,
+    setDiscountSum,
     setTaxTotal,
     setComments,
-    TotalFreight = 0
+    TotalFreight = 0,
+    discSum = 0
   } = useSalesDocument();
 
   const docStatus = watch("DocStatus");
@@ -76,22 +78,26 @@ export default function DocumentFooter() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 items-center">
-            <AppLabel>Discount (%)</AppLabel>
-            <Input
-              type="number"
-              className="h-6 text-right"
-              value={discountPercent}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-
-                if (value > 100) {
-                  toast.error("Discount cannot exceed 100%.");
-                }
-
-                setDiscountPercent(Math.min(value, 100));
-              }}
-              disabled={isFooterDisabled}
-            />
+            <AppLabel>Discount</AppLabel>
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-[1.5]">
+                <Input
+                  type="number"
+                  className="h-6 text-right pr-6"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                  disabled={isFooterDisabled}
+                />
+                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">%</span>
+              </div>
+              <Input
+                type="number"
+                className="h-6 text-right flex-[2.5]"
+                value={discSum}
+                onChange={(e) => setDiscountSum(Number(e.target.value))}
+                disabled={isFooterDisabled}
+              />
+            </div>
           </div>
 
           <div className="border-t border-gray-300 pt-4 text-right space-y-1">

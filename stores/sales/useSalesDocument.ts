@@ -53,6 +53,7 @@ interface SalesDocumentStore {
   setFreight: (f: number) => void;
   setRounding: (r: number) => void;
   setDiscountPercent: (p: number) => void;
+  setDiscountSum: (s: number) => void;
   setCurrency: (c: DocCurrency) => void;
 
   setDocTotal: (dt: number) => void;
@@ -130,7 +131,17 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       get().calculateTotals();
     },
     setDiscountPercent: (p) => {
-      set({ discountPercent: parseSafe(p) });
+      const percent = parseSafe(p);
+      const { TotalBeforeDiscount } = get();
+      const amount = (TotalBeforeDiscount * percent) / 100;
+      set({ discountPercent: percent, discSum: amount });
+      get().calculateTotals();
+    },
+    setDiscountSum: (amount: number) => {
+      const amt = parseSafe(amount);
+      const { TotalBeforeDiscount } = get();
+      const percent = TotalBeforeDiscount > 0 ? (amt / TotalBeforeDiscount) * 100 : 0;
+      set({ discSum: amt, discountPercent: percent });
       get().calculateTotals();
     },
     setCurrency: (c) => set({ currency: c }),
@@ -186,7 +197,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     },
 
     calculateTotals: () => {
-      const { lines, freight, rounding, discountPercent, additionalExpenses } = get();
+      const { lines, freight, rounding, discountPercent, additionalExpenses, discSum } = get();
       const { vatGroups } = useMasterDataStore.getState();
 
       let totalBeforeDiscount = 0;
@@ -227,20 +238,19 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         0
       );
 
-      const docDiscountFactor = 1 - (parseSafe(discountPercent) / 100);
-      const finalBeforeDiscount = parseSafe(totalBeforeDiscount) * docDiscountFactor;
-
       const taxTotal = discountedLines.reduce((sum, line) => sum + line.TaxAmount, 0);
 
       const headerFreight = parseSafe(freight);
       const totalFreightCalculated = headerFreight + totalLineFreight;
 
+      // Apply discount to the total (as requested: total - discountAmount)
       const docTotal =
-        finalBeforeDiscount +
+        totalBeforeDiscount +
         taxTotal +
         totalFreightCalculated +
         parseSafe(rounding) +
-        expensesTotal;
+        expensesTotal -
+        parseSafe(discSum);
 
       set({
         lines: discountedLines,

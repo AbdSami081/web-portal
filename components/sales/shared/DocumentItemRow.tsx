@@ -10,7 +10,7 @@ import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
 import { distribtionLstOCRCO2, distribtionLstOCRCO3, distribtionLstOCRCO4 } from "@/app/data/cogsData";
-import { taxcCodeGrp, freightTypes, uomOptions, calculateFreightTax } from "@/utils/taxCalculations";
+import { taxcCodeGrp, freightTypes, uomOptions, calculateFreightTax, calculateLineTax } from "@/utils/taxCalculations";
 
 interface Props {
   index: number;
@@ -59,7 +59,12 @@ export function DocumentLineRow({ index, line }: Props) {
     const discount = Number(lineData.DiscountPercent) || 0;
 
     const selectedTax = vatGroups.find(t => (t.Code || (t as any).code) === lineData.TaxCode);
-    const itemTaxRate = Number(selectedTax?.VatGroups_Lines?.[0]?.Rate || 0);
+    let itemTaxRate = Number(selectedTax?.VatGroups_Lines?.[0]?.Rate || 0);
+
+    if (!selectedTax) {
+      const staticTax = taxcCodeGrp.find(t => t.Value === lineData.TaxCode);
+      if (staticTax) itemTaxRate = staticTax.Rate;
+    }
 
     const subtotal = quantity * price;
     const discounted = subtotal * (1 - discount / 100);
@@ -158,6 +163,19 @@ export function DocumentLineRow({ index, line }: Props) {
             const val = Number(e.target.value);
             setDraftLine({ ...draftLine, Quantity: val < 1 ? 1 : val });
           }}
+        />
+      </td>
+
+      <td>
+        <Input
+          className="h-6 w-24 text-right bg-neutral-100"
+          value={calculateLineTax(
+            Number(draftLine.Quantity) || 0,
+            Number(draftLine.Price) || 0,
+            Number(draftLine.DiscountPercent) || 0,
+            Number(draftLine.TaxRate) || 0
+          )}
+          disabled
         />
       </td>
 
