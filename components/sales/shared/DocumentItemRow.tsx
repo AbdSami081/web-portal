@@ -222,7 +222,7 @@ export function DocumentLineRow({ index, line }: Props) {
           <SelectContent>
             {taxcCodeGrp.map((grp, index) => (
               <SelectItem key={index} value={grp.Value} className="text-xs">
-                {grp.Title}
+                {grp.Value} - {grp.Title}
               </SelectItem>
             ))}
           </SelectContent>
@@ -235,7 +235,6 @@ export function DocumentLineRow({ index, line }: Props) {
       </td>
 
       {/* Freight 1 */}
-      {/*
       <td>
         <Select
           value={draftLine.Freight1Type || ""}
@@ -302,10 +301,8 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight1TaxLCAmount || 0} disabled />
       </td>
-      */}
 
       {/* Freight 2 */}
-      {/*
       <td>
         <Select
           value={draftLine.Freight2Type || ""}
@@ -372,10 +369,8 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight2TaxLCAmount || 0} disabled />
       </td>
-      */}
 
       {/* Freight 3 */}
-      {/*
       <td>
         <Select
           value={draftLine.Freight3Type || ""}
@@ -443,7 +438,6 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight3TaxLCAmount || 0} disabled />
       </td>
-      */}
       <WarehouseSelectorDialog
         open={whDialogOpen}
         onClose={() => setWhDialogOpen(false)}

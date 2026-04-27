@@ -133,7 +133,6 @@ export function DocumentItems() {
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Code</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Line Total</TableHead>
                       
-                      {/*
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1 Type</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1 (LC)</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Group</TableHead>
@@ -151,7 +150,6 @@ export function DocumentItems() {
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Group</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax %</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Amt (LC)</TableHead>
-                      */}
                     </TableRow>
                   </TableHeader>
 

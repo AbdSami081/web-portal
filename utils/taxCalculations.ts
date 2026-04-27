@@ -1,10 +1,11 @@
 export const taxcCodeGrp = [
   { Value: "SE", Title: "AU Sales - Export Supplies", Rate: 0 },
   { Value: "S2", Title: "AU Sales - GST Exempt/GST Free", Rate: 0 },
-  { Value: "S1", Title: "AU Sales - GST Liable", Rate: 10 },
+  { Value: "S1", Title: "AU Sales - GST Liable", Rate: 18 },
   { Value: "GST-EO", Title: "NZ GST - Exempt", Rate: 0 },
   { Value: "GSTO", Title: "NZ GST - Output", Rate: 15 },
   { Value: "GSTO-ZRO", Title: "NZ GST - Zero Rated", Rate: 0 },
+  { Value: "SR", Title: "AU TAX 22%", Rate: 22 },
   { Value: "S4", Title: "Tax 4%", Rate: 4 },
 ];
 
