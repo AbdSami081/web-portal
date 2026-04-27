@@ -37,7 +37,6 @@ export function BusinessPartnerSelectorDialog({
     const skip = (pageNum - 1) * top;
 
     const data = await getCustomers(searchText, skip, top);
-    console.log("Fetched business partners:", data);
     
     if (data && data.length > 0) {
       setItems((prev) => (append ? [...prev, ...data] : [...data]));
