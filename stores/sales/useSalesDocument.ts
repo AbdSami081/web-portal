@@ -197,67 +197,75 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     },
 
     calculateTotals: () => {
-      const { lines, freight, rounding, discountPercent, additionalExpenses, discSum } = get();
+      const { lines, freight, rounding, additionalExpenses, discSum } = get();
       const { vatGroups } = useMasterDataStore.getState();
 
-      let totalBeforeDiscount = 0;
-      let totalLineFreight = 0;
+      let overallTotalBeforeDiscount = 0;
+      let overallLineFreightAmount = 0;
 
-      const discountedLines = lines.map((line: SalesDocumentLine) => {
-        const qty = parseSafe(line.Quantity);
-        const price = parseSafe(line.Price);
-        const discount = parseSafe(line.DiscountPercent);
-        const taxRate = parseSafe(line.TaxRate);
+        const processedLines = lines.map((line: SalesDocumentLine) => {
+        
+          // 1. Basic Line Values
+        const quantity = parseSafe(line.Quantity);
+        const unitPrice = parseSafe(line.Price);
+        const lineDiscountPercent = parseSafe(line.DiscountPercent);
+        const itemTaxRate = parseSafe(line.TaxRate);
 
-        const lineSubtotal = qty * price;
-        const discountAmount = (lineSubtotal * discount) / 100;
-        const itemTax = (lineSubtotal - discountAmount) * (taxRate / 100);
+        // 2. Line Subtotal and Item Discount
+        const lineSubtotal = quantity * unitPrice;
+        const lineDiscountAmount = (lineSubtotal * lineDiscountPercent) / 100;
+        const lineAmountAfterDiscount = lineSubtotal - lineDiscountAmount;
 
-        // Calculate line-level freight taxes
-        const f1 = calculateFreightTax(parseSafe(line.Freight1LCAmount), line.Freight1TaxGroup || "S2", vatGroups);
-        const f2 = calculateFreightTax(parseSafe(line.Freight2LCAmount), line.Freight2TaxGroup || "S2", vatGroups);
-        const f3 = calculateFreightTax(parseSafe(line.Freight3LCAmount), line.Freight3TaxGroup || "S2", vatGroups);
+        // 3. Item Tax Calculation
+        const itemTaxAmount = lineAmountAfterDiscount * (itemTaxRate / 100);
 
-        const lineFreightTotal = parseSafe(line.Freight1LCAmount) + parseSafe(line.Freight2LCAmount) + parseSafe(line.Freight3LCAmount);
+        // 4. Line-Level Freight Calculations
+        const f1 = calculateFreightTax(parseSafe(line.Freight1LCAmount), line.Freight1TaxGroup || "", vatGroups);
+        const f2 = calculateFreightTax(parseSafe(line.Freight2LCAmount), line.Freight2TaxGroup || "", vatGroups);
+        const f3 = calculateFreightTax(parseSafe(line.Freight3LCAmount), line.Freight3TaxGroup || "", vatGroups);
+
+        const lineFreightSubtotal = parseSafe(line.Freight1LCAmount) + parseSafe(line.Freight2LCAmount) + parseSafe(line.Freight3LCAmount);
         const lineFreightTaxTotal = f1.taxAmount + f2.taxAmount + f3.taxAmount;
 
-        totalBeforeDiscount += (lineSubtotal - discountAmount);
-        totalLineFreight += lineFreightTotal;
+        // 5. Accumulate Document-Level Totals
+        overallTotalBeforeDiscount += lineAmountAfterDiscount;
+        overallLineFreightAmount += lineFreightSubtotal;
 
+        // 6. Return Updated Line with Calculated Fields
         return {
           ...line,
-          Quantity: qty,
-          Price: price,
-          TaxAmount: Number((itemTax + lineFreightTaxTotal).toFixed(2)) || 0,
-          LineTotal: Number((lineSubtotal - discountAmount + lineFreightTotal + itemTax + lineFreightTaxTotal).toFixed(2)) || 0,
+          Quantity: quantity,
+          Price: unitPrice,
+          TaxAmount: Number((itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
+          LineTotal: Number((lineAmountAfterDiscount + lineFreightSubtotal + itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
         };
       });
 
-      const expensesTotal = additionalExpenses.reduce(
+      // 7. Header Level Expenses and Freight
+      const totalAdditionalExpenses = additionalExpenses.reduce(
         (sum, e) => sum + parseSafe(e.LineTotal),
         0
       );
 
-      const taxTotal = discountedLines.reduce((sum, line) => sum + line.TaxAmount, 0);
+      const totalTaxAmount = processedLines.reduce((sum, line) => sum + (line.TaxAmount || 0), 0);
+      const totalFreightAmount = parseSafe(freight) + overallLineFreightAmount;
 
-      const headerFreight = parseSafe(freight);
-      const totalFreightCalculated = headerFreight + totalLineFreight;
-
-      // Apply discount to the total (as requested: total - discountAmount)
-      const docTotal =
-        totalBeforeDiscount +
-        taxTotal +
-        totalFreightCalculated +
+      // 8. Final Document Total Calculation
+      // Formula: (Subtotal + Tax + Freight + Rounding + Expenses) - Header Discount
+      const finalDocTotal =
+        overallTotalBeforeDiscount +
+        totalTaxAmount +
+        totalFreightAmount +
         parseSafe(rounding) +
-        expensesTotal -
+        totalAdditionalExpenses -
         parseSafe(discSum);
 
       set({
-        lines: discountedLines,
-        TotalBeforeDiscount: parseSafe(totalBeforeDiscount),
-        TaxTotal: parseSafe(taxTotal),
-        TotalFreight: totalFreightCalculated,
-        DocTotal: parseSafe(docTotal),
+        lines: processedLines,
+        TotalBeforeDiscount: parseSafe(overallTotalBeforeDiscount),
+        TaxTotal: parseSafe(totalTaxAmount),
+        TotalFreight: totalFreightAmount,
+        DocTotal: parseSafe(finalDocTotal),
       });
     },
 

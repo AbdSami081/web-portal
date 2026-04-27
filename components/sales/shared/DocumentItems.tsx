@@ -127,11 +127,12 @@ export function DocumentItems() {
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Item Code</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Item Description</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Qty</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-center">Tax Amount (LC)</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">UoM</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-center">Whs</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Price</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Disc %</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Code</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-center">Tax Amount (LC)</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-center">Whs</TableHead>
+                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">UoM</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Line Total</TableHead>
                       
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1 Type</TableHead>

@@ -168,63 +168,27 @@ export function DocumentLineRow({ index, line }: Props) {
 
       <td>
         <Input
-          className="h-6 w-24 text-right bg-neutral-100"
-          value={calculateLineTax(
-            Number(draftLine.Quantity) || 0,
-            Number(draftLine.Price) || 0,
-            Number(draftLine.DiscountPercent) || 0,
-            Number(draftLine.TaxRate) || 0
-          )}
-          disabled
+          className="h-6 w-24 text-right"
+          type="number"
+          min={0}
+          value={draftLine.Price}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            setDraftLine({ ...draftLine, Price: val });
+          }}
         />
       </td>
 
       <td>
-        <Select
-          value={draftLine.UoMCode || ""}
-          onValueChange={(val) => setDraftLine({ ...draftLine, UoMCode: val })}
-        >
-          <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
-            <SelectValue placeholder="Select UoM" />
-          </SelectTrigger>
-          <SelectContent>
-            {uomOptions.map((uom) => (
-              <SelectItem key={uom} value={uom} className="text-xs">
-                {uom}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </td>
-
-      <td className="py-2 px-4">
-        <div className="flex items-center gap-1 w-full justify-center">
-          <Input
-            className="h-6 w-16 bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
-            value={draftLine.WarehouseCode || ""}
-            disabled
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={() => setWhDialogOpen(true)}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-        </div>
-      </td>
-
-      <td>
         <Input
-          className="h-6 w-24 text-right"
+          className="h-6 w-16 text-right"
           type="number"
-          min={1}
-          value={draftLine.Price}
+          min={0}
+          max={100}
+          value={draftLine.DiscountPercent || 0}
           onChange={(e) => {
             const val = Number(e.target.value);
-            setDraftLine({ ...draftLine, Price: val < 1 ? 1 : val });
+            setDraftLine({ ...draftLine, DiscountPercent: val > 100 ? 100 : val });
           }}
         />
       </td>
@@ -247,6 +211,55 @@ export function DocumentLineRow({ index, line }: Props) {
         </Select>
       </td>
 
+      <td>
+        <Input
+          className="h-6 w-24 text-right bg-neutral-100"
+          value={calculateLineTax(
+            Number(draftLine.Quantity) || 0,
+            Number(draftLine.Price) || 0,
+            Number(draftLine.DiscountPercent) || 0,
+            Number(draftLine.TaxRate) || 0
+          )}
+          disabled
+        />
+      </td>
+
+      <td className="py-2 px-4">
+        <div className="flex items-center gap-1 w-full justify-center">
+          <Input
+            className="h-6 w-16 bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
+            value={draftLine.WarehouseCode || ""}
+            disabled
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={() => setWhDialogOpen(true)}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        </div>
+      </td>
+
+      <td>
+        <Select
+          value={draftLine.UoMCode || ""}
+          onValueChange={(val) => setDraftLine({ ...draftLine, UoMCode: val })}
+        >
+          <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
+            <SelectValue placeholder="Select UoM" />
+          </SelectTrigger>
+          <SelectContent>
+            {uomOptions.map((uom) => (
+              <SelectItem key={uom} value={uom} className="text-xs">
+                {uom}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </td>
 
       <td>
         <Input className="h-6 w-24 text-right" value={draftLine.LineTotal || 0} disabled />
