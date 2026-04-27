@@ -19,6 +19,7 @@ interface MasterDataStore {
   freightsWithCharges: any[];
   itemSearch: string;
   itemLoading: boolean;
+  masterDataLoaded: boolean;
   currentItemPage: number;
 
   loadMasterData: () => Promise<void>;
@@ -41,6 +42,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   freightsWithCharges: [],
   itemSearch: "",
   itemLoading: false,
+  masterDataLoaded: false,
   currentItemPage: 1,
 
   async loadExternalMasterData() {
@@ -57,6 +59,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   },
 
   async loadMasterData() {
+    if (get().masterDataLoaded) return;
     set({ itemLoading: true });
     try {
       await get().loadExternalMasterData();
@@ -80,6 +83,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
         freightTypes: state.freightTypes,            
         freightsWithCharges: state.freightsWithCharges, 
         vatGroups: fallbackVatGroups,
+        masterDataLoaded: true,
         currentItemPage: 1,
         itemLoading: false,
       }));

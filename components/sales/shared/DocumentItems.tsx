@@ -40,7 +40,7 @@ export function DocumentItems() {
   const docStatus = watch("DocStatus");
   const isTableDisabled = config.isDisabledTable(customer?.DocumentStatus!);
 
-  const { vatGroups, freightsWithCharges, warehouses, loadMasterData } = useMasterDataStore();
+  const { freightsWithCharges, warehouses, loadMasterData } = useMasterDataStore();
   const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
 
   useEffect(() => {
@@ -54,8 +54,8 @@ export function DocumentItems() {
       const isItem = item.Category === 'I' || item.ItemType === 'itItems';
       const targetTaxCode = isItem ? item.VatGourpPu : item.VatGourpSa;
 
-      const selectedTax = vatGroups.find(t => t.Code === targetTaxCode);
-      const taxRate = Number(selectedTax?.VatGroups_Lines?.[0]?.Rate || 0);
+      const selectedTax = freightsWithCharges.find(t => t.Code === targetTaxCode);
+      const taxRate = Number(selectedTax?.Rate || 0);
       const defaultWhsLine = item.DefaultWhse || firstWhs;
 
       addLine({
