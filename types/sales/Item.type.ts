@@ -17,16 +17,16 @@ export type Item = {
   Frozen?: "tYES" | "tNO";
   User_Text?: string;
   OnHand?: number;
-  VatGourpSa?: string; // Matching API typo
+  VatGourpSa?: string;
+  VatGourpPu?: string; 
+  Category?: string; 
   Prices?: {
     PriceList: number;
-    PriceAmount: number; // Matching API name
+    PriceAmount: number; 
     Currency: string;
   }[];
 
-  // Optional: Add more fields as needed
-  // Custom fields / UDFs
-  [key: string]: any; // Allow UDFs like U_MyCustomField
+  [key: string]: any;
 };
 
 export type ItemGroup = {
@@ -35,7 +35,7 @@ export type ItemGroup = {
 };
 export type UserDefinedField = {
   Name: string;
-  Type: string; // e.g., "db_Alpha", "db_Numeric", etc.
+  Type: string;
   Description: string;
   Length: number;
   Mandatory: boolean;
