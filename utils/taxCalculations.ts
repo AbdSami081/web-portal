@@ -37,7 +37,7 @@ export function calculateFreightTax(
   // Fallback to dynamic vatGroups if provided
   if (vatGroups) {
     const tax = vatGroups.find((t) => (t.Code || (t as any).code) === taxCode);
-    const rate = Number(tax?.VatGroups_Lines?.[0]?.Rate || 0);
+    const rate = Number(tax?.Rate ?? tax?.rate ?? tax?.VatGroups_Lines?.[0]?.Rate ?? 0);
     const taxAmount = (amount * rate) / 100;
     return { rate, taxAmount: Number(taxAmount.toFixed(2)) };
   }
