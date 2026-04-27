@@ -25,7 +25,7 @@ interface Record {
 export function DocumentLineRow({ index, line }: Props) {
   const { watch } = useFormContext();
   const { updateLine, removeLine, lines } = useSalesDocument();
-  const { vatGroups } = useMasterDataStore();
+  const { vatGroups, freightsWithCharges, freightTypes } = useMasterDataStore();
 
   const [draftLine, setDraftLine] = useState(line);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
@@ -50,7 +50,7 @@ export function DocumentLineRow({ index, line }: Props) {
     draftLine.Freight2TaxGroup,
     draftLine.Freight3LCAmount,
     draftLine.Freight3TaxGroup,
-    vatGroups,
+    freightsWithCharges,
   ]);
 
   const calculateAndUpdate = (lineData: SalesDocumentLine) => {
@@ -58,21 +58,17 @@ export function DocumentLineRow({ index, line }: Props) {
     const price = Number(lineData.Price) || 0;
     const discount = Number(lineData.DiscountPercent) || 0;
 
-    const selectedTax = vatGroups.find(t => (t.Code || (t as any).code) === lineData.TaxCode);
-    let itemTaxRate = Number(selectedTax?.VatGroups_Lines?.[0]?.Rate || 0);
-
-    if (!selectedTax) {
-      const staticTax = taxcCodeGrp.find(t => t.Value === lineData.TaxCode);
-      if (staticTax) itemTaxRate = staticTax.Rate;
-    }
+    const selectedTax = freightsWithCharges.find(t => (t.Code || (t as any).code) === lineData.TaxCode);
+   
+    let itemTaxRate = Number(selectedTax?.Rate || 0);
 
     const subtotal = quantity * price;
     const discounted = subtotal * (1 - discount / 100);
     const itemTax = (discounted * itemTaxRate) / 100;
 
-    const f1 = calculateFreightTax(Number(lineData.Freight1LCAmount || 0), lineData.Freight1TaxGroup || "S2", vatGroups);
-    const f2 = calculateFreightTax(Number(lineData.Freight2LCAmount || 0), lineData.Freight2TaxGroup || "S2", vatGroups);
-    const f3 = calculateFreightTax(Number(lineData.Freight3LCAmount || 0), lineData.Freight3TaxGroup || "S2", vatGroups);
+    const f1 = calculateFreightTax(Number(lineData.Freight1LCAmount || 0), lineData.Freight1TaxGroup || "", freightsWithCharges);
+    const f2 = calculateFreightTax(Number(lineData.Freight2LCAmount || 0), lineData.Freight2TaxGroup || "", freightsWithCharges);
+    const f3 = calculateFreightTax(Number(lineData.Freight3LCAmount || 0), lineData.Freight3TaxGroup || "", freightsWithCharges);
 
     const totalTax = itemTax + f1.taxAmount + f2.taxAmount + f3.taxAmount;
 
@@ -91,6 +87,7 @@ export function DocumentLineRow({ index, line }: Props) {
 
     updateLine(line.ItemCode, updatedLine);
   };
+
 
 
   const openCogsModal = (field: "CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4") => {
@@ -202,11 +199,15 @@ export function DocumentLineRow({ index, line }: Props) {
             <SelectValue placeholder="Select Tax" />
           </SelectTrigger>
           <SelectContent>
-            {taxcCodeGrp.map((grp, index) => (
-              <SelectItem key={index} value={grp.Value} className="text-xs">
-                {grp.Value} - {grp.Title}
-              </SelectItem>
-            ))}
+            {freightsWithCharges?.map((grp: any) => {
+              const code = grp.Code ;
+              const name = grp.Name;
+              return (
+                <SelectItem key={code} value={code} className="text-xs">
+                  {code} - {name || code}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </td>
@@ -269,17 +270,27 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Select
           value={draftLine.Freight1Type || ""}
-          onValueChange={(val) => setDraftLine({ ...draftLine, Freight1Type: val })}
+          onValueChange={(val) => {
+            const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
+            const defaultTax = selectedType?.VatGroupO || "";
+            const updated = { ...draftLine, Freight1Type: val, Freight1TaxGroup: defaultTax };
+            setDraftLine(updated);
+            calculateAndUpdate(updated);
+          }}
         >
           <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
             <SelectValue placeholder="Select Type" />
           </SelectTrigger>
           <SelectContent>
-            {freightTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value} className="text-xs">
-                {type.label}
-              </SelectItem>
-            ))}
+            {freightTypes?.map((type: any) => {
+              const code = type.ExpnsCode;
+              const name = type.ExpnsName;
+              return (
+                <SelectItem key={code} value={code?.toString()} className="text-xs">
+                  {name}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </td>
@@ -294,29 +305,32 @@ export function DocumentLineRow({ index, line }: Props) {
             const value = Number(e.target.value);
             setDraftLine(prev => ({ ...prev, Freight1LCAmount: value }));
           }}
+          onBlur={() => calculateAndUpdate(draftLine)}
         />
       </td>
 
       <td>
         <Select
           value={draftLine.Freight1TaxGroup || ""}
-          onValueChange={(val) => setDraftLine({ ...draftLine, Freight1TaxGroup: val })}
+          onValueChange={(val) => {
+            const updated = { ...draftLine, Freight1TaxGroup: val };
+            setDraftLine(updated);
+            calculateAndUpdate(updated);
+          }}
         >
           <SelectTrigger className="h-6 w-28 text-xs">
             <SelectValue placeholder="Select Tax" />
           </SelectTrigger>
           <SelectContent>
-            {taxcCodeGrp.map((grp) => (
-              <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
-                {grp.Value} - {grp.Title}
-              </SelectItem>
-            ))}
-            {vatGroups.length > 0 && <div className="h-px bg-neutral-200 my-1" />}
-            {vatGroups.map((grp) => (
-              <SelectItem key={grp.Code} value={grp.Code} className="text-xs">
-                {grp.Code} - {grp.Name || grp.Code}
-              </SelectItem>
-            ))}
+            {freightsWithCharges?.map((grp: any) => {
+              const code = grp.Code || grp.code;
+              const name = grp.Name || grp.name;
+              return (
+                <SelectItem key={code} value={code} className="text-xs">
+                  {code} - {name || code}
+                </SelectItem>
+              );
+            })}
             <div className="h-px bg-neutral-200 my-1" />
             <SelectItem value="DEFINE_NEW" className="text-xs font-semibold">
               Define New
@@ -337,17 +351,27 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Select
           value={draftLine.Freight2Type || ""}
-          onValueChange={(val) => setDraftLine({ ...draftLine, Freight2Type: val })}
+          onValueChange={(val) => {
+            const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
+            const defaultTax = selectedType?.VatGroupO || "";
+            const updated = { ...draftLine, Freight2Type: val, Freight2TaxGroup: defaultTax };
+            setDraftLine(updated);
+            calculateAndUpdate(updated);
+          }}
         >
           <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
             <SelectValue placeholder="Select Type" />
           </SelectTrigger>
           <SelectContent>
-            {freightTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value} className="text-xs">
-                {type.label}
-              </SelectItem>
-            ))}
+            {freightTypes?.map((type: any) => {
+              const code = type.ExpnsCode;
+              const name = type.ExpnsName;
+              return (
+                <SelectItem key={code} value={code?.toString()} className="text-xs">
+                  {name}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </td>
@@ -362,29 +386,32 @@ export function DocumentLineRow({ index, line }: Props) {
             const value = Number(e.target.value);
             setDraftLine(prev => ({ ...prev, Freight2LCAmount: value }));
           }}
+          onBlur={() => calculateAndUpdate(draftLine)}
         />
       </td>
 
       <td>
         <Select
           value={draftLine.Freight2TaxGroup || ""}
-          onValueChange={(val) => setDraftLine({ ...draftLine, Freight2TaxGroup: val })}
+          onValueChange={(val) => {
+            const updated = { ...draftLine, Freight2TaxGroup: val };
+            setDraftLine(updated);
+            calculateAndUpdate(updated);
+          }}
         >
           <SelectTrigger className="h-6 w-28 text-xs">
             <SelectValue placeholder="Select Tax" />
           </SelectTrigger>
           <SelectContent>
-            {taxcCodeGrp.map((grp) => (
-              <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
-                {grp.Value} - {grp.Title}
-              </SelectItem>
-            ))}
-            {vatGroups.length > 0 && <div className="h-px bg-neutral-200 my-1" />}
-            {vatGroups.map((grp) => (
-              <SelectItem key={grp.Code} value={grp.Code} className="text-xs">
-                {grp.Code} - {grp.Name || grp.Code}
-              </SelectItem>
-            ))}
+            {freightsWithCharges?.map((grp: any) => {
+              const code = grp.Code || grp.code;
+              const name = grp.Name || grp.name;
+              return (
+                <SelectItem key={code} value={code} className="text-xs">
+                  {code} - {name || code}
+                </SelectItem>
+              );
+            })}
             <div className="h-px bg-neutral-200 my-1" />
             <SelectItem value="DEFINE_NEW" className="text-xs font-semibold">
               Define New
@@ -405,17 +432,27 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Select
           value={draftLine.Freight3Type || ""}
-          onValueChange={(val) => setDraftLine({ ...draftLine, Freight3Type: val })}
+          onValueChange={(val) => {
+            const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
+            const defaultTax = selectedType?.VatGroupO || "";
+            const updated = { ...draftLine, Freight3Type: val, Freight3TaxGroup: defaultTax };
+            setDraftLine(updated);
+            calculateAndUpdate(updated);
+          }}
         >
           <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
             <SelectValue placeholder="Select Type" />
           </SelectTrigger>
           <SelectContent>
-            {freightTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value} className="text-xs">
-                {type.label}
-              </SelectItem>
-            ))}
+            {freightTypes?.map((type: any) => {
+              const code = type.ExpnsCode;
+              const name = type.ExpnsName;
+              return (
+                <SelectItem key={code} value={code?.toString()} className="text-xs">
+                  {name}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </td>
@@ -437,23 +474,25 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Select
           value={draftLine.Freight3TaxGroup || ""}
-          onValueChange={(val) => setDraftLine({ ...draftLine, Freight3TaxGroup: val })}
+          onValueChange={(val) => {
+            const updated = { ...draftLine, Freight3TaxGroup: val };
+            setDraftLine(updated);
+            calculateAndUpdate(updated);
+          }}
         >
           <SelectTrigger className="h-6 w-28 text-xs">
             <SelectValue placeholder="Select Tax" />
           </SelectTrigger>
           <SelectContent>
-            {taxcCodeGrp.map((grp) => (
-              <SelectItem key={grp.Value} value={grp.Value} className="text-xs">
-                {grp.Value} - {grp.Title}
-              </SelectItem>
-            ))}
-            {vatGroups.length > 0 && <div className="h-px bg-neutral-200 my-1" />}
-            {vatGroups.map((grp) => (
-              <SelectItem key={grp.Code} value={grp.Code} className="text-xs">
-                {grp.Code} - {grp.Name || grp.Code}
-              </SelectItem>
-            ))}
+            {freightsWithCharges?.map((grp: any) => {
+              const code = grp.Code || grp.code;
+              const name = grp.Name || grp.name;
+              return (
+                <SelectItem key={code} value={code} className="text-xs">
+                  {code} - {name || code}
+                </SelectItem>
+              );
+            })}
             <div className="h-px bg-neutral-200 my-1" />
             <SelectItem value="DEFINE_NEW" className="text-xs font-semibold">
               Define New
