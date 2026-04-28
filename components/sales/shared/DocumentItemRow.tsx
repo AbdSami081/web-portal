@@ -25,7 +25,7 @@ interface Record {
 export function DocumentLineRow({ index, line }: Props) {
   const { watch } = useFormContext();
   const { updateLine, removeLine, lines } = useSalesDocument();
-  const { vatGroups, freightsWithCharges, freightTypes } = useMasterDataStore();
+  const {  freightsWithCharges, freightTypes } = useMasterDataStore();
 
   const [draftLine, setDraftLine] = useState(line);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
