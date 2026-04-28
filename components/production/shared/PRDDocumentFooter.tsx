@@ -32,22 +32,11 @@ export default function PRDDocumentFooter() {
     setIsLoadingOrders(true);
     setShowOrderModal(true);
     try {
-      let data = await getReleasedProductionOrders();
-
-      if (config.type === DocumentType.ReceiptFromProduction) {
-        data = data.filter((order: any) => (order.CompletedQuantity || 0) < (order.PlannedQuantity || 0));
-      } else if (config.type === DocumentType.IssueForProduction) {
-        data = data.filter((order: any) => {
-          const manualLines = order.ProductionOrderLines?.filter((l: any) => l.ProductionOrderIssueType === "im_Manual") || [];
-          return manualLines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
-        });
-      }
+      let data = await getReleasedProductionOrders(0, config.type);
 
       const processedOrders = data.map((order: any) => ({
         ...order,
-        DisplayType: order.ProductionOrderType === "bopotStandard" ? "Standard" :
-          order.ProductionOrderType === "bopotSpecial" ? "Special" :
-            order.ProductionOrderType === "bopotAssembly" ? "Assembly" : order.ProductionOrderType
+        DisplayType: order.ProductionOrderType?.replace("bopot", "") || order.ProductionOrderType
       }));
       setProductionOrders(processedOrders);
     } catch (error) {
