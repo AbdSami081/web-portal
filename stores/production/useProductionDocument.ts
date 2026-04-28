@@ -103,8 +103,6 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
       const currentDocType = type || get().docType;
       
-      // If we are loading a Production Order (202) into a Receipt (59), we want the PARENT item
-      // In SAP, Receipt From Production targets the Finished Good, not components.
       let mappedLines = [];
       const isSourceProductionOrder = !!(doc.ProductionOrderLines || doc.AbsoluteEntry);
 
