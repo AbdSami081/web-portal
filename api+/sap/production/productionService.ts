@@ -18,8 +18,9 @@ export const patchProductionOrder = async (docEntry: number, payload: any): Prom
   return res.data;
 };
 
-export const getReleasedProductionOrders = async (skip: number = 0, top: number = 20): Promise<any[]> => {
-  const res = await apiClient.get(`api/Production/GetReleasedProductionOrders?skip=${skip}&top=${top}`);
+export const getReleasedProductionOrders = async (skip: number = 0, docType?: number): Promise<any[]> => {
+  const url = `api/Production/GetReleasedProductionOrders?skip=${skip}${docType ? `&docType=${docType}` : ''}`;
+  const res = await apiClient.get(url);
   const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
   return data?.value || (Array.isArray(data) ? data : []);
 };
