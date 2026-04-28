@@ -323,19 +323,10 @@ export function PRDDocumentHeader() {
       if (productionOrderType === "bopotDisassembly") {
         data = await getDisassembleProductionOrders(currentSkip, 20);
       } else {
-        data = await getReleasedProductionOrders(currentSkip, 20);
+        data = await getReleasedProductionOrders(currentSkip, docType);
       }
 
       const originalLength = data.length;
-
-      if (docType === SAPDocumentType.ReceiptFromProduction) {
-        data = data.filter((order: any) => (order.CompletedQuantity || 0) < (order.PlannedQuantity || 0));
-      } else if (docType === SAPDocumentType.IssueForProduction) {
-        data = data.filter((order: any) => {
-          const manualLines = order.ProductionOrderLines?.filter((l: any) => l.ProductionOrderIssueType === "im_Manual") || [];
-          return manualLines.some((l: any) => (l.IssuedQuantity || 0) < (l.PlannedQuantity || 0));
-        });
-      }
 
       if (isReset) {
         setDataList(data);
