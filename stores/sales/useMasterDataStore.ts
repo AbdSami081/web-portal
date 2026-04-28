@@ -13,7 +13,6 @@ interface MasterDataStore {
   customers: BusinessPartner[];
   warehouses: Warehouse[];
   priceLists: [];
-  vatGroups: VatGroup[];
   uoms: UoM[];
   freightTypes: any[];
   freightsWithCharges: any[];
@@ -36,7 +35,6 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   customers: [],
   warehouses: [],
   priceLists: [],
-  vatGroups: [],
   uoms: [],
   freightTypes: [],
   freightsWithCharges: [],
@@ -82,7 +80,6 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
         uoms,
         freightTypes: state.freightTypes,            
         freightsWithCharges: state.freightsWithCharges, 
-        vatGroups: fallbackVatGroups,
         masterDataLoaded: true,
         currentItemPage: 1,
         itemLoading: false,
@@ -136,7 +133,6 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
       customers: [],
       warehouses: [],
       priceLists: [],
-      vatGroups: [],
       uoms: [],
       freightTypes: [],
       freightsWithCharges: [],
