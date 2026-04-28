@@ -76,7 +76,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
     const hasStoreContent = storeLines.length > 0 || storeAttachments.length > 0;
 
     if (!isDirty && !isDocumentLoaded && !hasStoreContent) {
-      ResetForm();
+      ResetForm(); 
     }
   }, [defaultValues, isDirty]);
 
