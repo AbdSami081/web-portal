@@ -198,7 +198,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
 
     calculateTotals: () => {
       const { lines, freight, rounding, additionalExpenses, discSum } = get();
-      const { vatGroups, freightsWithCharges } = useMasterDataStore.getState();
+      const { freightsWithCharges } = useMasterDataStore.getState();
 
       let overallTotalBeforeDiscount = 0;
       let overallLineFreightAmount = 0;
@@ -313,7 +313,8 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       const mappedLines = rawLines.map((line: any, index: number) => {
         const qty = parseSafe(line.Quantity);
         const price = parseSafe(line.UnitPrice || line.Price);
-        const discount = parseSafe(line.DiscountPercent);
+        let discount = parseSafe(line.DiscountPercent);
+        if (discount < 0) discount = 0; // Prevent negative discount
         const taxRate = parseSafe(line.TaxPercentagePerRow || line.VatPrcnt);
 
         const lineSubtotal = qty * price;
