@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { ReactJsxRuntime } from "next/dist/server/route-modules/app-page/vendored/rsc/entrypoints";
 
 export default function NewQuotationPage() {
   const loadFromDocument = useSalesDocument((state) => state.loadFromDocument);
@@ -111,6 +112,8 @@ export default function NewQuotationPage() {
     };
     try {
       const documentData = await postQuotation(payload);
+      console.log(documentData)
+      return;
       if (!documentData?.DocEntry) {
         throw new Error("Failed to create quotation");
       }
