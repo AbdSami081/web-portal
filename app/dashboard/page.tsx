@@ -152,36 +152,36 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardCard
-          title="Total Revenue"
-          amount="$45,231.89"
+          title="Total Sales"
+          amount="$452.10"
           trend="up"
-          trendValue="+20.1%"
+          trendValue="+8.2%"
           icon={DollarSign}
-          description="from last month"
+          description="Revenue from all channels"
         />
         <DashboardCard
-          title="Active Accounts"
-          amount="+2350"
+          title="Total Purchases"
+          amount="$310.50"
           trend="up"
-          trendValue="+180.1%"
-          icon={Users}
-          description="since last week"
+          trendValue="+5.4%"
+          icon={ShoppingCart}
+          description="Inventory procurement cost"
         />
         <DashboardCard
-          title="Sales Growth"
-          amount="+12.5%"
+          title="Net Profit"
+          amount="$141.60"
           trend="up"
-          trendValue="+19%"
-          icon={CreditCard}
-          description="from last month"
-        />
-        <DashboardCard
-          title="Active Sessions"
-          amount="+573"
-          trend="down"
-          trendValue="-2.1%"
+          trendValue="+4.1%"
           icon={Activity}
-          description="since last hour"
+          description="Earnings after cost of sales"
+        />
+        <DashboardCard
+          title="Inventory Value"
+          amount="$495.00"
+          trend="down"
+          trendValue="-1.2%"
+          icon={Package}
+          description="Total asset value in stock"
         />
       </div>
 
