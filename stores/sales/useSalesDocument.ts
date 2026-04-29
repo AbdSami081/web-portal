@@ -338,6 +338,18 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           BaseEntry: line.BaseEntry,
           BaseLine: line.BaseLine,
           Comments: line.Comments,
+          // Map line-level freight from SAP collection to UI flat fields
+          Freight1Type: line.DocumentLineAdditionalExpenses?.[0]?.ExpenseCode?.toString() || "",
+          Freight1LCAmount: parseSafe(line.DocumentLineAdditionalExpenses?.[0]?.LineTotal),
+          Freight1TaxGroup: line.DocumentLineAdditionalExpenses?.[0]?.TaxCode || line.DocumentLineAdditionalExpenses?.[0]?.VatGroup || "",
+          
+          Freight2Type: line.DocumentLineAdditionalExpenses?.[1]?.ExpenseCode?.toString() || "",
+          Freight2LCAmount: parseSafe(line.DocumentLineAdditionalExpenses?.[1]?.LineTotal),
+          Freight2TaxGroup: line.DocumentLineAdditionalExpenses?.[1]?.TaxCode || line.DocumentLineAdditionalExpenses?.[1]?.VatGroup || "",
+          
+          Freight3Type: line.DocumentLineAdditionalExpenses?.[2]?.ExpenseCode?.toString() || "",
+          Freight3LCAmount: parseSafe(line.DocumentLineAdditionalExpenses?.[2]?.LineTotal),
+          Freight3TaxGroup: line.DocumentLineAdditionalExpenses?.[2]?.TaxCode || line.DocumentLineAdditionalExpenses?.[2]?.VatGroup || "",
         };
       });
 
