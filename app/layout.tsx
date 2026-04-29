@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
 };
 
-import { SessionExpiredModal } from "@/modals/SessionExpiredModal";
+import { SessionWatcher } from "@/components/shared/SessionWatcher";
 
 export default function RootLayout({
   children,
@@ -42,7 +42,7 @@ export default function RootLayout({
         >
           {children}
           <Toaster position="top-right" richColors /> {/* Sonner container */}
-          <SessionExpiredModal />
+          <SessionWatcher />
         </body>
       </AuthProvider>
     </html>
