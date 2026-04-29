@@ -7,6 +7,9 @@ import { create } from "zustand";
 import { Warehouse } from "@/types/warehouse.type";
 import { getFreightTypes, fetchFreightWithCharges } from "@/api+/sap/master-data/freight";
 import { getVatGroups } from "@/api+/sap/master-data/tax-codes";
+import { getItemsList } from "@/api+/sap/master-data/items";
+import { getCustomers } from "@/api+/sap/master-data/business-partners";
+import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 
 interface MasterDataStore {
   items: Record<number, Item[]>;
@@ -60,30 +63,29 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
     if (get().masterDataLoaded) return;
     set({ itemLoading: true });
     try {
+      // Parallelize all master data calls to the backend
+      const [items, customers, rawWarehouses] = await Promise.all([
+        getItemsList("", 0, 20),
+        getCustomers("", 0, 20),
+        getwarehouses()
+      ]);
+
+      const warehouses = rawWarehouses.map((w: any) => ({
+        WarehouseCode: w.WhsCode || w.WarehouseCode,
+        WarehouseName: w.WhsName || w.WarehouseName
+      }));
+
+      // Also load external freight data
       await get().loadExternalMasterData();
-      const res = await axios.get("/api/sap/master-data");
-      const data = res.data;
 
-      const items = data.items || data.Items || [];
-      const customers = data.customers || data.Customers || [];
-      const warehouses = data.warehouses || data.Warehouses || [];
-      const priceLists = data.priceLists || data.PriceLists || [];
-      // If vatGroups is empty from external call, try fallback from internal
-      const fallbackVatGroups = data.vatGroups || data.VatGroups || [];
-      const uoms = data.uoms || data.UoMs || [];
-
-      set((state) => ({
+      set({
         items: { 1: items },
         customers,
         warehouses,
-        priceLists,
-        uoms,
-        freightTypes: state.freightTypes,            
-        freightsWithCharges: state.freightsWithCharges, 
         masterDataLoaded: true,
         currentItemPage: 1,
         itemLoading: false,
-      }));
+      });
     } catch (error) {
       console.error("Failed to load master data", error);
       set({ itemLoading: false });
