@@ -58,7 +58,6 @@ const errorInterceptor = (error: any) => {
 apiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
 apiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
 
-reportingApiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
 reportingApiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
 
 export default apiClient;
