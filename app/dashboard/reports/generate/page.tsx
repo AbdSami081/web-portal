@@ -88,12 +88,11 @@ export default function ReportGeneratePage() {
     setSelectedReportName(report.U_FileName || "Report");
     
     try {
-      const pdfUrl = await downloadReport({
-        ReportFileName: "PNLREPORT",
-        Parameters: {
-          FromDate: "2025-08-04",
-          ToDate: "2026-08-04"
-        }
+      // Concatenate Path and FileName (using backslash for Windows paths stored in DB)
+      const fullPath = `${report.U_FilePath}\\${report.U_FileName}`;
+      
+      const pdfUrl = await downloadReport(fullPath, {
+        // Dynamic parameters will be integrated here later
       });
       
       setViewerUrl(pdfUrl);
