@@ -5,7 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/authContext";
-import { getReportFolders, importReport, ReportFolderItem } from "@/api+/sap/reporting/reportingService";
+import { 
+  getReportFolders, 
+  importReport, 
+  getReportParameters,
+  ReportFolderItem 
+} from "@/api+/sap/reporting/reportingService";
 import { toast } from "sonner";
 import { 
   Loader2, 
@@ -17,9 +22,28 @@ import {
   Database,
   FileCode,
   UserCheck,
-  ChevronDown
+  ChevronDown,
+  Calendar,
+  Type,
+  ListFilter
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 export default function ReportsManagePage() {
   const { user: currentUser } = useAuth();
@@ -31,6 +55,13 @@ export default function ReportsManagePage() {
   // Selection State
   const [selectedItems, setSelectedItems] = useState<Set<ReportFolderItem>>(new Set());
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  // Parameter Modal State
+  const [showParamModal, setShowParamModal] = useState(false);
+  const [pendingImportPayloads, setPendingImportPayloads] = useState<any[]>([]);
+  const [currentReportParams, setCurrentReportParams] = useState<any[]>([]);
+  const [paramConfigs, setParamConfigs] = useState<Record<string, { componentType: string }>>({});
+  const [fetchingParams, setFetchingParams] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,55 +98,70 @@ export default function ReportsManagePage() {
       return;
     }
 
-    setImporting(true);
+    setFetchingParams(true);
     try {
       const payloads = Array.from(selectedItems).map(item => {
-        const pathParts = item.path.split('/').filter(Boolean);
-        const moduleName = pathParts[0] || "General";
-        const subModule = pathParts.length > 2 ? pathParts[1] : undefined;
-        
-        let objectCode = "";
-        const targetName = (subModule || moduleName).toLowerCase();
-        const parentName = moduleName.toLowerCase();
-        
-        if (targetName.includes("quotation")) objectCode = "23";
-        else if (targetName.includes("sale") && targetName.includes("order")) objectCode = "17";
-        else if (targetName.includes("purchase") && targetName.includes("order")) objectCode = "22";
-        else if (targetName.includes("delivery")) objectCode = "15";
-        else if (targetName.includes("invoice") && (targetName.includes("ap") || parentName.includes("purchase"))) objectCode = "18";
-        else if (targetName.includes("invoice") && (targetName.includes("ar") || parentName.includes("sale"))) objectCode = "13";
-        else if (targetName.includes("goods receipt po") || targetName.includes("grpo")) objectCode = "20";
-        else if (targetName.includes("return") && parentName.includes("sale")) objectCode = "16";
-        else if (targetName.includes("production")) objectCode = "202";
-        else if (targetName.includes("inventory transfer") || targetName.includes("transfer")) objectCode = "67";
-        else if (targetName.includes("goods receipt") || targetName.includes("receipt")) objectCode = "59";
-        else if (targetName.includes("goods issue") || targetName.includes("issue")) objectCode = "60";
-        else if (targetName.includes("business partner") || targetName.includes("bp")) objectCode = "2";
-        else if (targetName.includes("item") || targetName.includes("master")) objectCode = "4";
-        
-        // If not recognized, we can send "0" or leave empty
-        if (!objectCode) objectCode = "0";
-
         return {
           reportName: item.name.replace(".rpt", ""),
-          module: objectCode,  // now passing the number instead of string
-          subModule: subModule,
           fileName: item.name,
           filePath: item.path,
           userCode: currentUser?.empId || "",
-          userName: currentUser?.userName || ""
+          userName: currentUser?.userName || "",
+          parameters: []
         };
       });
 
-      await importReport(payloads);
+      setPendingImportPayloads(payloads);
 
-      toast.success("Reports Imported Successfully", {
-        description: `Imported ${selectedItems.size} reports.`
-      });
+      const firstReport = payloads[0];
+
+      const paramsData = await getReportParameters(firstReport.filePath);
+ 
+      const paramsArray = Object.entries(paramsData || {}).map(([name, type]) => ({
+        name,
+        type: String(type),
+        promptText: name.replace(/[@?]/g, '')
+      }));
       
+      if (paramsArray.length > 0) {
+        setCurrentReportParams(paramsArray);
+        const initialConfigs: any = {};
+        paramsArray.forEach((p: any) => {
+          initialConfigs[p.name] = {
+            componentType: "Input"
+          };
+        });
+        setParamConfigs(initialConfigs);
+        setShowParamModal(true);
+      } else {
+        await importReport(payloads);
+        toast.success("Reports Imported Successfully");
+        setSelectedItems(new Set());
+      }
+    } catch (error) {
+      console.error("Import Error:", error);
+    } finally {
+      setFetchingParams(false);
+    }
+  };
+
+  const confirmImportWithParams = async () => {
+    setImporting(true);
+    try {
+      const finalPayloads = pendingImportPayloads.map(payload => ({
+        ...payload,
+        parameters: currentReportParams.map(p => ({
+          name: p.name,
+          type: p.type,
+          componentType: paramConfigs[p.name]?.componentType || "Input"
+        }))
+      }));
+
+      await importReport(finalPayloads);
+      toast.success("Reports Imported with Parameters");
+      setShowParamModal(false);
       setSelectedItems(new Set());
     } catch (error) {
-      // Error handled by interceptor
     } finally {
       setImporting(false);
     }
@@ -136,7 +182,7 @@ export default function ReportsManagePage() {
             else toggleFolder(item.path);
           }}
           className={cn(
-            "flex items-center gap-2 py-2 px-4 cursor-pointer hover:bg-slate-100 transition-colors rounded-sm text-[13px]",
+            "flex items-center gap-2 py-2 px-4 cursor-pointer hover:bg-slate-100 transition-colors rounded-sm text-[13px] min-w-0",
             isSelected ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600",
             depth > 0 && "ml-4 border-l border-slate-100"
           )}
@@ -160,7 +206,7 @@ export default function ReportsManagePage() {
           )}
           
           {!isFile && <FolderOpen className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />}
-          <span>{item.name}</span>
+          <span className="truncate" title={item.name}>{item.name}</span>
         </div>
 
         {isExpanded && item.children && (
@@ -231,9 +277,9 @@ export default function ReportsManagePage() {
                   {Array.from(selectedItems).map((item, idx) => (
                     <div key={idx} className="flex items-center gap-3 bg-white p-3 rounded-lg border shadow-sm">
                       <FileCode className="h-5 w-5 text-blue-600 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-900">{item.name}</span>
-                        <span className="text-xs text-slate-500 font-mono truncate">{item.path}</span>
+                      <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+                        <span className="text-sm font-bold text-slate-900 truncate block max-w-[400px]" title={item.name}>{item.name}</span>
+                        <span className="text-xs text-slate-500 font-mono truncate block max-w-[400px]" title={item.path}>{item.path}</span>
                       </div>
                     </div>
                   ))}
@@ -244,13 +290,18 @@ export default function ReportsManagePage() {
                 <div className="pt-2">
                   <Button 
                     onClick={handleImport}
-                    disabled={importing}
+                    disabled={importing || fetchingParams}
                     className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white shadow-sm font-semibold"
                   >
-                    {importing ? (
+                    {fetchingParams ? (
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Importing {selectedItems.size} Reports...
+                        Analyzing Parameters...
+                      </div>
+                    ) : importing ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Importing...
                       </div>
                     ) : (
                       `Import ${selectedItems.size} Selected Reports`
@@ -262,6 +313,109 @@ export default function ReportsManagePage() {
           )}
         </main>
       </div>
+
+      {/* Parameter Configuration Modal */}
+      <Dialog open={showParamModal} onOpenChange={setShowParamModal}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col p-0 border-none shadow-2xl">
+          <div className="bg-slate-900 p-6 text-white relative">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Settings2 size={80} />
+            </div>
+            <DialogHeader className="relative z-10">
+              <DialogTitle className="text-2xl font-black tracking-tighter flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
+                  <ListFilter className="w-4 h-4 text-white" />
+                </span>
+                Configure Parameters
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 font-medium">
+                We detected {currentReportParams.length} parameters. Choose how they should appear to the user.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <ListFilter className="w-4 h-4 text-slate-400" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Report Parameters</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+              {currentReportParams.map((param, index) => (
+                <div key={index} className="space-y-3 p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                      {index + 1}
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 truncate max-w-[120px]" title={param.name}>{param.name}</span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] bg-white text-slate-500 border-slate-200 font-mono">
+                    {param.type}
+                  </Badge>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Component Type</Label>
+                    <Select 
+                      value={paramConfigs[param.name]?.componentType} 
+                      onValueChange={(val) => setParamConfigs(prev => ({
+                        ...prev,
+                        [param.name]: { ...prev[param.name], componentType: val }
+                      }))}
+                    >
+                      <SelectTrigger className="h-10 bg-white rounded-lg border-slate-200 text-xs">
+                        <SelectValue placeholder="Select Type" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="Input" className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <Type className="w-3.5 h-3.5" />
+                            <span>Standard Input</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="Date" className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>Date Picker</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            ))}
+            </div>
+            </div>
+          </div>
+
+          <DialogFooter className="p-6 bg-slate-50 border-t gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowParamModal(false)}
+              className="h-11 rounded-xl font-bold border-slate-200"
+            >
+              CANCEL
+            </Button>
+            <Button 
+              onClick={confirmImportWithParams}
+              disabled={importing}
+              className="h-11 bg-slate-900 hover:bg-black text-white rounded-xl font-bold transition-all px-8"
+            >
+              {importing ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Importing...
+                </div>
+              ) : (
+                "CONFIRM IMPORT"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
