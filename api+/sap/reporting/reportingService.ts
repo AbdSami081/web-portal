@@ -1,4 +1,5 @@
 import apiClient, { reportingApiClient } from "@/lib/apiClient";
+import reportingClient from "@/lib/reportingClient";
 import axios from "axios";
 
 export interface ReportData {
@@ -25,18 +26,22 @@ export interface ReportFolderItem {
 
 export interface ImportReportPayload {
   reportName: string;
-  module: string;
-  subModule?: string;
   fileName: string;
   filePath: string;
   userCode: string;
   userName: string;
+  parameters: any[];
 }
 
 export interface ReportAccessPayload {
   userCode: string;
   reportCodes: string[];
 }
+
+export const getReportParameters = async (filePath: string) => {
+  const response = await reportingClient.get(`reports/GetReportParameters?filePath=${encodeURIComponent(filePath)}`);
+  return response.data;
+};
 
 export const getReportFolders = async (): Promise<ReportFolderItem[]> => {
   try {
@@ -49,7 +54,7 @@ export const getReportFolders = async (): Promise<ReportFolderItem[]> => {
 };
 
 export const importReport = async (payload: ImportReportPayload[]) => {
-  const response = await apiClient.post("api/ReportingAPI/Import", payload);
+  const response = await apiClient.post("api/ReportingAPI/ImportReports", payload);
   return response.data;
 };
 
@@ -87,10 +92,13 @@ export const getReports = async (employeeId?: string): Promise<ReportData[]> => 
   return response.data || [];
 };
 
-export const downloadReport = async (params: any) => {
-  const response = await reportingApiClient.post(
-    "api/reports/render",
-    params,
+export const downloadReport = async (reportPath: string, params: any) => {
+  const response = await reportingClient.post(
+    "reports/render",
+    {
+      ReportPath: reportPath,
+      Parameters: params
+    },
     { responseType: "blob" }
   );
 
