@@ -314,50 +314,34 @@ export default function ReportsManagePage() {
         </main>
       </div>
 
-      {/* Parameter Configuration Modal */}
       <Dialog open={showParamModal} onOpenChange={setShowParamModal}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col p-0 border-none shadow-2xl">
-          <div className="bg-slate-900 p-6 text-white relative">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Settings2 size={80} />
-            </div>
-            <DialogHeader className="relative z-10">
-              <DialogTitle className="text-2xl font-black tracking-tighter flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
-                  <ListFilter className="w-4 h-4 text-white" />
-                </span>
-                Configure Parameters
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-lg shadow-2xl border border-slate-300">
+          <div className="p-6 border-b border-slate-300 bg-slate-50/80">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-slate-900">
+                Configure Report Parameters
               </DialogTitle>
-              <DialogDescription className="text-slate-400 font-medium">
-                We detected {currentReportParams.length} parameters. Choose how they should appear to the user.
+              <DialogDescription className="text-slate-600">
+                Define the component type for {currentReportParams.length} parameters found in the report.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <ListFilter className="w-4 h-4 text-slate-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Report Parameters</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+          <div className="flex-1 overflow-y-auto p-6 bg-white">
+            <div className="grid grid-cols-2 gap-4">
               {currentReportParams.map((param, index) => (
-                <div key={index} className="space-y-3 p-4 rounded-xl border border-slate-100 bg-slate-50/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">
-                      {index + 1}
-                    </div>
-                    <span className="text-sm font-bold text-slate-900 truncate max-w-[120px]" title={param.name}>{param.name}</span>
+                <div key={index} className="p-4 rounded-lg border border-slate-300 bg-white shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                    <span className="text-sm font-bold text-slate-800 truncate max-w-[150px]" title={param.name}>
+                      {param.name}
+                    </span>
+                    <Badge variant="secondary" className="text-[10px] uppercase font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                      {param.type}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="text-[10px] bg-white text-slate-500 border-slate-200 font-mono">
-                    {param.type}
-                  </Badge>
-                </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Component Type</Label>
+                  <div className="space-y-2">
+                    <Label className="text-[11px] font-bold text-slate-600 uppercase tracking-tight">Input Type</Label>
                     <Select 
                       value={paramConfigs[param.name]?.componentType} 
                       onValueChange={(val) => setParamConfigs(prev => ({
@@ -365,53 +349,34 @@ export default function ReportsManagePage() {
                         [param.name]: { ...prev[param.name], componentType: val }
                       }))}
                     >
-                      <SelectTrigger className="h-10 bg-white rounded-lg border-slate-200 text-xs">
+                      <SelectTrigger className="h-9 bg-white border-slate-300 text-xs focus:ring-slate-400">
                         <SelectValue placeholder="Select Type" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="Input" className="text-xs">
-                          <div className="flex items-center gap-2">
-                            <Type className="w-3.5 h-3.5" />
-                            <span>Standard Input</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Date" className="text-xs">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-3.5 h-3.5" />
-                            <span>Date Picker</span>
-                          </div>
-                        </SelectItem>
+                      <SelectContent>
+                        <SelectItem value="Input" className="text-xs">Standard Input</SelectItem>
+                        <SelectItem value="Date" className="text-xs">Date Picker</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-              </div>
-            ))}
-            </div>
+              ))}
             </div>
           </div>
 
-          <DialogFooter className="p-6 bg-slate-50 border-t gap-3">
+          <DialogFooter className="p-4 bg-slate-50 border-t border-slate-300 flex justify-end gap-2">
             <Button 
-              variant="outline" 
+              variant="ghost" 
               onClick={() => setShowParamModal(false)}
-              className="h-11 rounded-xl font-bold border-slate-200"
+              className="px-6 font-bold text-slate-600 hover:bg-slate-200"
             >
-              CANCEL
+              Cancel
             </Button>
             <Button 
               onClick={confirmImportWithParams}
               disabled={importing}
-              className="h-11 bg-slate-900 hover:bg-black text-white rounded-xl font-bold transition-all px-8"
+              className="px-8 bg-slate-900 hover:bg-black text-white font-bold shadow-md transition-all active:scale-95"
             >
-              {importing ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Importing...
-                </div>
-              ) : (
-                "CONFIRM IMPORT"
-              )}
+              {importing ? "Importing..." : "Confirm Import"}
             </Button>
           </DialogFooter>
         </DialogContent>
