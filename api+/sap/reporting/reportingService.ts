@@ -1,5 +1,4 @@
 import apiClient, { reportingApiClient } from "@/lib/apiClient";
-import reportingClient from "@/lib/reportingClient";
 import axios from "axios";
 
 export interface ReportData {
@@ -39,7 +38,7 @@ export interface ReportAccessPayload {
 }
 
 export const getReportParameters = async (filePath: string) => {
-  const response = await reportingClient.get(`reports/GetReportParameters?filePath=${encodeURIComponent(filePath)}`);
+  const response = await axios.get(`/api/reports/GetReportParameters?filePath=${encodeURIComponent(filePath)}`);
   return response.data;
 };
 
@@ -93,8 +92,8 @@ export const getReports = async (employeeId?: string): Promise<ReportData[]> => 
 };
 
 export const downloadReport = async (reportPath: string, params: any) => {
-  const response = await reportingClient.post(
-    "reports/render",
+  const response = await axios.post(
+    "/api/reports/render",
     {
       ReportPath: reportPath,
       Parameters: params
