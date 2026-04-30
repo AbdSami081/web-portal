@@ -24,11 +24,13 @@ const responseInterceptor = (response: any) => response;
 const errorInterceptor = (error: any) => {
     if (axios.isAxiosError(error)) {
         if (error.response) {
-            console.error('API Error Response:', {
-                status: error.response.status,
-                data: error.response.data,
-                url: error.config?.url
-            });
+            if (error.response.status !== 404) {
+                console.error('API Error Response:', {
+                    status: error.response.status,
+                    data: error.response.data,
+                    url: error.config?.url
+                });
+            }
 
             if (error.response.status === 401) {
                 useAuthStore.getState().setSessionExpired(true);
