@@ -200,7 +200,11 @@ export function InvDocumentHeader() {
         toast.error("Document not found.");
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred while fetching the document.");
+      if (error.response?.status === 404) {
+        toast.info("Document not found.");
+      } else {
+        toast.error(error.message || "An error occurred while fetching the document.");
+      }
     } finally {
       setIsLoading(false);
     }

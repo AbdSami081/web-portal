@@ -175,8 +175,12 @@ export function DocumentHeader() {
         setValue("Comments", documentData.Comments);
         toast.success(`Document ${documentData.DocNum} loaded successfully.`);
       }
-    } catch (error) {
-      toast.error("An error occurred while fetching the document.");
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        toast.info("Document not found.");
+      } else {
+        toast.error(error.message || "An error occurred while fetching the document.");
+      }
     } finally {
       setIsLoading(false);
     }

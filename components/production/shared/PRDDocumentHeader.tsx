@@ -270,8 +270,11 @@ export function PRDDocumentHeader() {
         toast.info(`Document number ${baseRef} not found.`);
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred while fetching the document.");
-      console.error(error);
+      if (error.response?.status === 404) {
+        toast.info("Document not found.");
+      } else {
+        toast.error(error.message || "An error occurred while fetching the document.");
+      }
     } finally {
       setIsLoading(false);
     }
