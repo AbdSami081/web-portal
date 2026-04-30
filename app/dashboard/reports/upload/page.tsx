@@ -100,46 +100,60 @@ export default function ReportsManagePage() {
 
     setFetchingParams(true);
     try {
-      const payloads = Array.from(selectedItems).map(item => {
-        return {
+      const payloads: any[] = [];
+      const allReportParams: any[] = [];
+      const initialConfigs: any = { ...paramConfigs };
+
+      for (const item of Array.from(selectedItems)) {
+        const paramsData = await getReportParameters(item.path);
+        const paramsArray = Object.entries(paramsData || {}).map(([name, type]) => ({
+          name,
+          type: String(type)
+        }));
+
+        payloads.push({
           reportName: item.name.replace(".rpt", ""),
           fileName: item.name,
           filePath: item.path,
           userCode: currentUser?.empId || "",
           userName: currentUser?.userName || "",
-          parameters: []
-        };
-      });
+          parameters: paramsArray
+        });
+
+        paramsArray.forEach(p => {
+          const configKey = `${item.name}_${p.name}`;
+          if (!initialConfigs[configKey]) {
+            initialConfigs[configKey] = { componentType: "Input" };
+          }
+        });
+      }
 
       setPendingImportPayloads(payloads);
+      setParamConfigs(initialConfigs);
 
-      const firstReport = payloads[0];
-
-      const paramsData = await getReportParameters(firstReport.filePath);
- 
-      const paramsArray = Object.entries(paramsData || {}).map(([name, type]) => ({
-        name,
-        type: String(type),
-        promptText: name.replace(/[@?]/g, '')
-      }));
-      
-      if (paramsArray.length > 0) {
-        setCurrentReportParams(paramsArray);
-        const initialConfigs: any = {};
-        paramsArray.forEach((p: any) => {
-          initialConfigs[p.name] = {
-            componentType: "Input"
-          };
-        });
-        setParamConfigs(initialConfigs);
+      const hasParams = payloads.some(p => p.parameters.length > 0);
+      if (hasParams) {
         setShowParamModal(true);
       } else {
-        await importReport(payloads);
-        toast.success("Reports Imported Successfully");
+        const response = await importReport(payloads);
+        
+        if (response.skipped > 0 && response.imported > 0) {
+          toast.info(`Imported ${response.imported} reports. ${response.skipped} were already assigned.`);
+        } else if (response.skipped > 0 && response.imported === 0) {
+          if (payloads.length === 1) {
+            toast.info(`Report "${payloads[0].reportName}" is already assigned.`);
+          } else {
+            toast.info("All selected reports are already assigned.");
+          }
+        } else {
+          toast.success("Reports Imported Successfully");
+        }
+        
         setSelectedItems(new Set());
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Import Error:", error);
+      toast.error("Import failed");
     } finally {
       setFetchingParams(false);
     }
@@ -150,18 +164,32 @@ export default function ReportsManagePage() {
     try {
       const finalPayloads = pendingImportPayloads.map(payload => ({
         ...payload,
-        parameters: currentReportParams.map(p => ({
+        parameters: payload.parameters.map((p: any) => ({
           name: p.name,
           type: p.type,
-          componentType: paramConfigs[p.name]?.componentType || "Input"
+          componentType: paramConfigs[`${payload.fileName}_${p.name}`]?.componentType || "Input"
         }))
       }));
 
-      await importReport(finalPayloads);
-      toast.success("Reports Imported with Parameters");
+      const response = await importReport(finalPayloads);
+
+      if (response.skipped > 0 && response.imported > 0) {
+        toast.info(`Imported ${response.imported} reports. ${response.skipped} were already assigned.`);
+      } else if (response.skipped > 0 && response.imported === 0) {
+        if (finalPayloads.length === 1) {
+          toast.info(`Report "${finalPayloads[0].reportName}" is already assigned.`);
+        } else {
+          toast.info("All selected reports are already assigned.");
+        }
+      } else {
+        toast.success("Reports Imported with Parameters");
+      }
+
       setShowParamModal(false);
       setSelectedItems(new Set());
-    } catch (error) {
+    } catch (error: any) {
+        console.error("Import Error:", error);
+        toast.error("Import failed");
     } finally {
       setImporting(false);
     }
@@ -327,40 +355,57 @@ export default function ReportsManagePage() {
             </DialogHeader>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 bg-white">
-            <div className="grid grid-cols-2 gap-4">
-              {currentReportParams.map((param, index) => (
-                <div key={index} className="p-4 rounded-lg border border-slate-300 bg-white shadow-sm space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
-                    <span className="text-sm font-bold text-slate-800 truncate max-w-[150px]" title={param.name}>
-                      {param.name}
-                    </span>
-                    <Badge variant="secondary" className="text-[10px] uppercase font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                      {param.type}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-[11px] font-bold text-slate-600 uppercase tracking-tight">Input Type</Label>
-                    <Select 
-                      value={paramConfigs[param.name]?.componentType} 
-                      onValueChange={(val) => setParamConfigs(prev => ({
-                        ...prev,
-                        [param.name]: { ...prev[param.name], componentType: val }
-                      }))}
-                    >
-                      <SelectTrigger className="h-9 bg-white border-slate-300 text-xs focus:ring-slate-400">
-                        <SelectValue placeholder="Select Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Input" className="text-xs">Standard Input</SelectItem>
-                        <SelectItem value="Date" className="text-xs">Date Picker</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+          <div className="flex-1 overflow-y-auto p-6 bg-white space-y-8">
+            {pendingImportPayloads.filter(p => p.parameters.length > 0).map((report, rIndex) => (
+              <div key={rIndex} className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-200 pb-2 mb-4">
+                  <FileCode className="w-5 h-5 text-slate-600" />
+                  <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-700">
+                    {report.reportName}
+                  </h3>
+                  <Badge variant="outline" className="ml-auto text-[10px] border-slate-300">
+                    {report.parameters.length} Parameters
+                  </Badge>
                 </div>
-              ))}
-            </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {report.parameters.map((param: any, pIndex: any) => {
+                    const configKey = `${report.fileName}_${param.name}`;
+                    return (
+                      <div key={pIndex} className="p-4 rounded-lg border border-slate-300 bg-white shadow-sm space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                          <span className="text-sm font-bold text-slate-800 truncate max-w-[150px]" title={param.name}>
+                            {param.name}
+                          </span>
+                          <Badge variant="secondary" className="text-[10px] uppercase font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                            {param.type}
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-[11px] font-bold text-slate-600 uppercase tracking-tight">Input Type</Label>
+                          <Select 
+                            value={paramConfigs[configKey]?.componentType} 
+                            onValueChange={(val) => setParamConfigs(prev => ({
+                              ...prev,
+                              [configKey]: { ...prev[configKey], componentType: val }
+                            }))}
+                          >
+                            <SelectTrigger className="h-9 bg-white border-slate-300 text-xs focus:ring-slate-400">
+                              <SelectValue placeholder="Select Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Input" className="text-xs">Standard Input</SelectItem>
+                              <SelectItem value="Date" className="text-xs">Date Picker</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
 
           <DialogFooter className="p-4 bg-slate-50 border-t border-slate-300 flex justify-end gap-2">
