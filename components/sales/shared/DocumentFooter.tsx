@@ -18,6 +18,7 @@ export default function DocumentFooter() {
     freight = 0,
     rounding = 0,
     discountPercent = 0,
+    currency,
     setFreight,
     setRounding,
     setDiscountPercent,
@@ -32,6 +33,18 @@ export default function DocumentFooter() {
   const docEntry = watch("DocEntry");
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isFooterDisabled = isLoadedDocument && docStatus === "bost_Close";
+
+  // Live calculation of discount amount whenever total or percent changes
+  useEffect(() => {
+    if (discountPercent > 0 && TotalBeforeDiscount > 0) {
+      const amount = (TotalBeforeDiscount * discountPercent) / 100;
+      if (Math.abs(amount - discSum) > 0.01) {
+        setDiscountSum(amount);
+      }
+    } else if (discountPercent === 0 && discSum !== 0) {
+        setDiscountSum(0);
+    }
+  }, [discountPercent, TotalBeforeDiscount]);
 
 
 
@@ -58,23 +71,15 @@ export default function DocumentFooter() {
 
         <div className={`space-y-3 bg-slate-100 p-4 rounded-lg text-sm -mt-12`}>
           <div className="grid grid-cols-2 gap-2 items-center">
-            <AppLabel>Freight</AppLabel>
-            <Input
-              className="h-6 text-right bg-slate-200"
-              value={TotalFreight}
-              disabled={true}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 items-center">
-            <AppLabel>Rounding</AppLabel>
-            <Input
-              type="number"
-              className="h-6 text-right"
-              value={rounding}
-              onChange={(e) => setRounding(Number(e.target.value))}
-              disabled={isFooterDisabled}
-            />
+            <AppLabel>Total Before Discount</AppLabel>
+            <div className="relative">
+               <Input
+                className="h-6 text-right bg-slate-200 pr-10"
+                value={formatCurrency(TotalBeforeDiscount).replace(/[^\d.-]/g, '')}
+                disabled={true}
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 items-center">
@@ -90,28 +95,75 @@ export default function DocumentFooter() {
                 />
                 <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">%</span>
               </div>
-              <Input
-                type="number"
-                className="h-6 text-right flex-[2.5]"
-                value={discSum}
-                onChange={(e) => setDiscountSum(Number(e.target.value))}
-                disabled={isFooterDisabled}
-              />
+              <div className="relative flex-[2.5]">
+                <Input
+                  type="number"
+                  className="h-6 text-right pr-10"
+                  value={discSum.toFixed(2)}
+                  onChange={(e) => setDiscountSum(Number(e.target.value))}
+                  disabled={isFooterDisabled}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+              </div>
             </div>
           </div>
 
-          <div className="border-t border-gray-300 pt-4 text-right space-y-1">
-            <div className="flex justify-between font-medium">
-              <span>Total Before Discount:</span>
-              <span>{formatCurrency(TotalBeforeDiscount)}</span>
+          {/* 3. Freight */}
+          <div className="grid grid-cols-2 gap-2 items-center">
+            <div className="flex items-center gap-1">
+              <AppLabel>Freight</AppLabel>
             </div>
-            <div className="flex justify-between font-medium">
-              <span>Tax:</span>
-              <span>{formatCurrency(TaxTotal)}</span>
+            <div className="relative">
+              <Input
+                className="h-6 text-right bg-slate-200 pr-10"
+                value={TotalFreight.toFixed(2)}
+                disabled={true}
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
-            <div className="flex justify-between font-bold text-lg">
-              <span>Document Total:</span>
-              <span>{formatCurrency(DocTotal)}</span>
+          </div>
+
+          {/* 4. Rounding */}
+          <div className="grid grid-cols-2 gap-2 items-center">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" className="h-3 w-3" disabled={isFooterDisabled} />
+              <AppLabel className="cursor-pointer">Rounding</AppLabel>
+            </div>
+            <div className="relative">
+              <Input
+                type="number"
+                className="h-6 text-right pr-10"
+                value={rounding}
+                onChange={(e) => setRounding(Number(e.target.value))}
+                disabled={isFooterDisabled}
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+            </div>
+          </div>
+
+          {/* 5. Tax */}
+          <div className="grid grid-cols-2 gap-2 items-center">
+            <AppLabel>Tax</AppLabel>
+            <div className="relative">
+              <Input
+                className="h-6 text-right bg-slate-200 pr-10"
+                value={TaxTotal.toFixed(2)}
+                disabled={true}
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+            </div>
+          </div>
+
+          {/* 6. Total */}
+          <div className="grid grid-cols-2 gap-2 items-center border-t border-gray-300 pt-2">
+            <AppLabel className="font-bold text-sm">Total</AppLabel>
+            <div className="relative">
+              <Input
+                className="h-7 text-right bg-white font-bold pr-10 border-slate-400"
+                value={DocTotal.toFixed(2)}
+                disabled={true}
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-900 font-black">{currency}</span>
             </div>
           </div>
         </div>
