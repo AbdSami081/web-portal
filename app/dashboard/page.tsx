@@ -110,7 +110,6 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-// --- COMPONENTS ---
 
 const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, description }: any) => {
   const isPositive = trend === "up";
@@ -126,7 +125,7 @@ const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, descripti
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-zinc-900">{amount}</div>
+        <div className="text-4xl font-bold text-zinc-900">{amount}</div>
         {(hasTrend || hasDescription) && (
           <div className="flex items-center mt-1">
             {hasTrend && (
