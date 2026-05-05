@@ -63,12 +63,6 @@ export const SERVER_MENUS: MenuItem[] = [
         isActive: true,
         items: [
             {
-                id: "de84e459-9cc0-463d-b5d1-a5c17fbb2b6c",
-                title: "Purchase Request",
-                url: "/dashboard/purchase/request/new",
-                objectCode: 1470000113,
-            },
-            {
                 id: "8a4b1eed-bb98-4ce2-ade2-63cf9f77ec37",
                 title: "Purchase Quotation",
                 url: "/dashboard/purchase/quotation/new",
