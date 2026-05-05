@@ -114,6 +114,9 @@ const chartConfig = {
 
 const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, description }: any) => {
   const isPositive = trend === "up";
+  const hasTrend = Boolean(trendValue);
+  const hasDescription = Boolean(description);
+
   return (
     <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-zinc-200 hover:border-zinc-400 transition-all duration-300">
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -124,13 +127,19 @@ const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, descripti
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold text-zinc-900">{amount}</div>
-        <div className="flex items-center mt-1">
-          <span className={`flex items-center text-xs font-medium ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {isPositive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
-            {trendValue}
-          </span>
-          <span className="text-xs text-muted-foreground ml-2">{description}</span>
-        </div>
+        {(hasTrend || hasDescription) && (
+          <div className="flex items-center mt-1">
+            {hasTrend && (
+              <span className={`flex items-center text-xs font-medium ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {isPositive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+                {trendValue}
+              </span>
+            )}
+            {hasDescription && (
+              <span className={`text-xs text-muted-foreground ${hasTrend ? 'ml-2' : ''}`}>{description}</span>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -152,36 +161,36 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardCard
-          title="Total Sales"
-          amount="$452.10"
+          title="My Open Inv. Transfer"
+          amount="10"
           trend="up"
-          trendValue="+8.2%"
+          trendValue=""
           icon={DollarSign}
-          description="Revenue from all channels"
+          description=""
         />
         <DashboardCard
-          title="Total Purchases"
-          amount="$310.50"
+          title="My Purchase Order"
+          amount="12"
           trend="up"
-          trendValue="+5.4%"
+          trendValue=""
           icon={ShoppingCart}
-          description="Inventory procurement cost"
+          description=""
         />
         <DashboardCard
-          title="Net Profit"
-          amount="$141.60"
+          title="My Open A/R Invoice"
+          amount="14"
           trend="up"
-          trendValue="+4.1%"
+          trendValue=""
           icon={Activity}
-          description="Earnings after cost of sales"
+          description=""
         />
         <DashboardCard
-          title="Inventory Value"
-          amount="$495.00"
+          title="My Sales Order"
+          amount="32"
           trend="down"
-          trendValue="-1.2%"
+          trendValue=""
           icon={Package}
-          description="Total asset value in stock"
+          description=""
         />
       </div>
 

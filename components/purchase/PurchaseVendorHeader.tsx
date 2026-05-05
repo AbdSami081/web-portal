@@ -86,7 +86,6 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
       {/* Right Column */}
       <div className="space-y-4">
-        {/* Search — same level as Vendor */}
         <div className="flex items-center justify-end gap-2">
           <Input
             type="text"
