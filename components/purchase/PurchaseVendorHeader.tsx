@@ -68,20 +68,6 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
             <Input {...register("CardName")} />
           </div>
         </div>
-
-        <div className="grid grid-cols-3 items-center gap-4">
-          <AppLabel>Contact Person</AppLabel>
-          <div className="col-span-2">
-            <Input {...register("ContactPersonCode")} placeholder="" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 items-center gap-4">
-          <AppLabel>Vendor Ref. No.</AppLabel>
-          <div className="col-span-2">
-            <Input {...register("NumAtCard")} />
-          </div>
-        </div>
       </div>
 
       {/* Right Column */}
