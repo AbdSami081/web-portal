@@ -9,9 +9,8 @@ import { NavUser } from "./sidenav-user"
 import { useAuth } from "@/context/authContext";
 import { useEffect, useState } from "react";
 import { getFilteredMenu } from "@/actions/menu";
-import { BadgeDollarSign, Factory, FileText, LayoutDashboardIcon, Package, ShieldCheck, LucideIcon } from "lucide-react";
+import { BadgeDollarSign, Factory, FileText, LayoutDashboardIcon, Package, ShieldCheck, ShoppingCart, LucideIcon } from "lucide-react";
 
-// Map for string icons to components
 const ICON_MAP: Record<string, LucideIcon> = {
   "LayoutDashboardIcon": LayoutDashboardIcon,
   "BadgeDollarSign": BadgeDollarSign,
@@ -19,7 +18,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   "Factory": Factory,
   "FileText": FileText,
   "ShieldCheck": ShieldCheck,
-  "Settings": ShieldCheck // Using ShieldCheck for Administration as well
+  "ShoppingCart": ShoppingCart,
+  "Settings": ShieldCheck 
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -34,7 +34,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           
           const mapped = filtered
             .filter(item => {
-              // Strictly only show Administration to SuperAdmins
               if (item.url === "#" && item.title === "Administration") {
                 return user.isSuperAdmin;
               }

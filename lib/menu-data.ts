@@ -56,6 +56,45 @@ export const SERVER_MENUS: MenuItem[] = [
         ],
     },
     {
+        id: "b7cf9fca-1d1d-4ce5-8ae6-09a7bafd13ce",
+        title: "Purchasing",
+        url: "#",
+        iconName: "ShoppingCart",
+        isActive: true,
+        items: [
+            {
+                id: "de84e459-9cc0-463d-b5d1-a5c17fbb2b6c",
+                title: "Purchase Request",
+                url: "/dashboard/purchase/request/new",
+                objectCode: 1470000113,
+            },
+            {
+                id: "8a4b1eed-bb98-4ce2-ade2-63cf9f77ec37",
+                title: "Purchase Quotation",
+                url: "/dashboard/purchase/quotation/new",
+                objectCode: 54,
+            },
+            {
+                id: "a234f19e-11e6-42b8-b982-76d987948bcd",
+                title: "Purchase Order",
+                url: "/dashboard/purchase/order/new",
+                objectCode: 22,
+            },
+            {
+                id: "2294ad1e-c1fd-44c0-ad1e-e1320ca7c0e7",
+                title: "Goods Receipt PO",
+                url: "/dashboard/purchase/grpo/new",
+                objectCode: 20,
+            },
+            {
+                id: "e9abfe0b-c738-4942-a643-3e3ca2db5016",
+                title: "A/P Invoice",
+                url: "/dashboard/purchase/invoice/new",
+                objectCode: 18,
+            }
+        ],
+    },
+    {
         id: "9ba8eab6-540c-4603-8dab-85b1641c8400",
         title: "Inventory",
         url: "#",

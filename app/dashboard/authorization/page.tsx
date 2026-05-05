@@ -26,6 +26,7 @@ import {
   Factory,
   FileText,
   BadgeDollarSign,
+  ShoppingCart,
   LayoutDashboardIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -205,6 +206,7 @@ export default function AuthorizationPage() {
     "Package": Package,
     "Factory": Factory,
     "FileText": FileText,
+    "ShoppingCart": ShoppingCart,
     "Settings": Settings
   };
 
