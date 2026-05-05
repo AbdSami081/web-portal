@@ -122,6 +122,3 @@ export function PurchaseItems() {
     </div>
   );
 }
-
-// Ensure TableCell is imported here if used in fallback, adding a simple fallback above:
-// Wait, TableCell is used above but not imported. I'll fix the import.

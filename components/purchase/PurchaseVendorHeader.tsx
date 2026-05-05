@@ -41,7 +41,6 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     if (!value) return;
     setIsLoading(true);
     try {
-      // TODO: fetch document by DocNum
       console.log(`Fetch ${docType} DocNum:`, value);
     } finally {
       setIsLoading(false);
@@ -50,7 +49,6 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
   const dueDateLabel = dateLabel2[docType] || "Valid Until";
 
-  // A/P Invoice has no DocDueDate shown
   const showDueDate = docType !== PurchaseDocumentType.APInvoice;
 
   return (

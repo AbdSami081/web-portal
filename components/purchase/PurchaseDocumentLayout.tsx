@@ -88,12 +88,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             await onSubmit(data as unknown as T);
             ResetForm();
           } catch (error) {
-            // Error handled in onSubmit
           }
         })}
         className="flex flex-col min-h-screen bg-background"
       >
-        {/* New button injected into top header bar — same as Sales */}
         <HeaderActionPortal>
           <TooltipProvider>
             <Tooltip>

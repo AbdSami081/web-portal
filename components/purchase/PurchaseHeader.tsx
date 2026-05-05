@@ -29,7 +29,6 @@ export function PurchaseHeader() {
     if (!value) return;
     setIsLoading(true);
     try {
-      // TODO: fetch purchase request by DocNum
       console.log("Fetch Purchase Request DocNum:", value);
     } finally {
       setIsLoading(false);
