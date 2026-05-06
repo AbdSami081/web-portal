@@ -33,36 +33,36 @@ export default function NewQuotationPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocTotal, freight, TaxTotal, additionalExpenses, DocEntry, lastLoadedDocType, attachments } = useSalesDocument.getState();
+    const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses } = useSalesDocument.getState();
 
-    // 1. First, identify which attachments need uploading
+    if (lines.length === 0) {
+      toast.error("Please add at least one item.");
+      return;
+    }
+
     const newAttachments = attachments.filter(att => att.File);
     const existingAttachments = attachments.filter(att => !att.File);
-
     let uploadedAttachments: any[] = [];
+
     if (newAttachments.length > 0) {
       try {
         const filesToUpload = newAttachments.map(att => att.File as File);
         const uploadResults = await uploadAttachments(filesToUpload, "SalesQuotation");
-        
         toast.success(`${uploadResults.length} attachments uploaded successfully`);
-
-        // Map the results back to the attachment structure
         uploadedAttachments = newAttachments.map((att, index) => ({
           ...att,
           SourcePath: uploadResults[index].path,
         }));
       } catch (error) {
-        console.error("Failed to upload attachments", error);
         toast.error("Failed to upload attachments");
-        return; // Stop if upload fails
+        return;
       }
     }
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Quotation) {
-      const payload = {
+      const patchPayload = {
         Comments: data.Comments,
         Attachments2_Lines: processedAttachments.map((att) => ({
           FileExtension: att.FileName.split('.').pop(),
@@ -72,9 +72,8 @@ export default function NewQuotationPage() {
           CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
         }))
       };
-
       try {
-        await patchQuotation(Number(DocEntry), payload);
+        await patchQuotation(Number(DocEntry), patchPayload);
         const docNum = useSalesDocument.getState().DocNum;
         toast.success(`Quotation #${docNum || DocEntry} updated successfully`);
       } catch (error) {
@@ -84,39 +83,64 @@ export default function NewQuotationPage() {
     }
 
     const payload = {
-      ...data,
-      DocTotal,
-      DocumentLines: lines.map(line => {
-        const lineData: any = { ...line };
+      CardCode: data.CardCode,
+      CardName: data.CardName,
+      DocDate: data.DocDate,
+      DocDueDate: data.DocDueDate,
+      TaxDate: data.TaxDate,
+      Comments: data.Comments,
+      DiscountPercent: discountPercent || 0,
+      DocumentLines: lines.map((line, index) => {
+        const baseFields: any = {
+          ItemCode: line.ItemCode,
+          Quantity: Number(line.Quantity) || 1,
+          UnitPrice: Number(line.Price) || 0,
+          DiscountPercent: Number(line.DiscountPercent) || 0,
+          VatGroup: line.TaxCode || "",
+          WarehouseCode: line.WarehouseCode || "",
+          UoMCode: line.UoMCode || "",
+        };
         if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Quotation) {
-          lineData.BaseType = lastLoadedDocType;
-          lineData.BaseEntry = DocEntry;
-          lineData.BaseLine = line.LineNum;
-        } else {
-          lineData.BaseType = -1;
-          lineData.BaseEntry = null;
-          lineData.BaseLine = null;
+          baseFields.BaseType = lastLoadedDocType;
+          baseFields.BaseEntry = DocEntry;
+          baseFields.BaseLine = line.LineNum;
         }
-        return lineData;
+        // Line-level freight
+        const lineExpenses: any[] = [];
+        if (line.Freight1Type && Number(line.Freight1LCAmount) > 0) {
+          lineExpenses.push({ ExpenseCode: Number(line.Freight1Type), LineTotal: Number(line.Freight1LCAmount), VatGroup: line.Freight1TaxGroup || "" });
+        }
+        if (line.Freight2Type && Number(line.Freight2LCAmount) > 0) {
+          lineExpenses.push({ ExpenseCode: Number(line.Freight2Type), LineTotal: Number(line.Freight2LCAmount), VatGroup: line.Freight2TaxGroup || "" });
+        }
+        if (line.Freight3Type && Number(line.Freight3LCAmount) > 0) {
+          lineExpenses.push({ ExpenseCode: Number(line.Freight3Type), LineTotal: Number(line.Freight3LCAmount), VatGroup: line.Freight3TaxGroup || "" });
+        }
+        if (lineExpenses.length > 0) baseFields.DocumentLineAdditionalExpenses = lineExpenses;
+        return baseFields;
       }),
-      Freight: freight,
-      TaxTotal: TaxTotal,
-      DocumentLineAdditionalExpenses: additionalExpenses,
-      Attachments2_Lines: processedAttachments.map((att) => ({
-        FileExtension: att.FileName.split('.').pop(),
-        FileName: att.FileName.split('.').slice(0, -1).join('.'),
-        SourcePath: att.SourcePath,
-        UserID: "1",
-        FreeText: att.FreeText
-      }))
+      ...(additionalExpenses.length > 0 && {
+        DocumentAdditionalExpenses: additionalExpenses.map(e => ({
+          ExpenseCode: e.ExpenseCode,
+          LineTotal: e.LineTotal,
+          VatGroup: e.VatGroup || e.TaxCode || "",
+        }))
+      }),
+      ...(freight > 0 && { Freight: freight }),
+      ...(processedAttachments.length > 0 && {
+        Attachments2_Lines: processedAttachments.map((att) => ({
+          FileExtension: att.FileName.split('.').pop(),
+          FileName: att.FileName.split('.').slice(0, -1).join('.'),
+          SourcePath: att.SourcePath,
+          FreeText: att.FreeText,
+        }))
+      }),
     };
+
+
     try {
       const documentData = await postQuotation(payload);
-      console.log(documentData)
-      return;
-      if (!documentData?.DocEntry) {
-        throw new Error("Failed to create quotation");
-      }
+      if (!documentData?.DocEntry) throw new Error("Failed to create quotation");
       loadFromDocument(documentData, DocumentType.Quotation);
       toast.success(`Quotation #${documentData.DocNum} created successfully`);
     } catch (error: any) {
