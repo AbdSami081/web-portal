@@ -23,6 +23,21 @@ export const SERVER_MENUS: MenuItem[] = [
         iconName: "LayoutDashboardIcon",
     },
     {
+        id: "05057fb5-59d0-4084-85ef-b79248a401a4",
+        title: "Analytics",
+        url: "#",
+        isMain: true,
+        iconName: "BarChart2",
+        isActive: true,
+        items: [
+            {
+                id: "fff64255-b781-4c97-be4b-ef87ae8ca013",
+                title: "Inventory Dashboard",
+                url: "/dashboard/analytics/inventory",
+            },
+        ],
+    },
+    {
         id: "135e11d0-4f7a-4290-840c-102486b4bd78",
         title: "Sales",
         url: "/dashboard/sales",
@@ -158,6 +173,7 @@ export const SERVER_MENUS: MenuItem[] = [
     {
         id: "debc3362-4bc4-4664-9726-a143aea26ec2",
         title: "Administration",
+
         url: "#",
         iconName: "Settings",
         isActive: true,

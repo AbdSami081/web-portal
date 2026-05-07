@@ -133,7 +133,37 @@
   border-width: 2px !important;
 }
 
-/* Target only span inside the element with specific data-slot */
 span.w-100.h-100 {
   width: unset !important;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar {
+  width: 7px;
+}
+[data-sidebar="content"]::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+}
+[data-sidebar="content"]::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 9999px;
+}
+[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: oklch(0.93 0 0);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.6 0 0 / 55%);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.4 0 0 / 75%);
 }
