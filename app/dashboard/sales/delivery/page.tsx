@@ -10,11 +10,12 @@ import {
   quotationSchema,
 } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { postDelivery, patchDeliveryNote } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { UDFLayout } from "@/components/shared/UDFSheet";
+import { DocumentType } from "@/types/master/DocumentType";
 
 export default function DeliveryPage() {
   const router = useRouter();
@@ -132,6 +133,7 @@ export default function DeliveryPage() {
     >
       <DocumentHeader />
       <DocumentItems />
+      <UDFLayout docType={DocumentType.Delivery} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

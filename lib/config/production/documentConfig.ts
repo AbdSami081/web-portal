@@ -1,5 +1,5 @@
+import { DocumentType } from "@/types/master/DocumentType";
 
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 
 export interface DocumentConfig {
   type: DocumentType;

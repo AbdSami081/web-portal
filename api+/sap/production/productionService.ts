@@ -1,6 +1,6 @@
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import apiClient from "@/lib/apiClient";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { DocumentType } from "@/types/master/DocumentType";
 
 export const getBOMList = async (isMultiBom: boolean = false, search: string = "", skip: number = 0, top: number = 100): Promise<any[]> => {
   const res = await apiClient.get(`api/Production/GetBOMForProduction?isMultiBom=${isMultiBom}&search=${search}&skip=${skip}&top=${top}`);

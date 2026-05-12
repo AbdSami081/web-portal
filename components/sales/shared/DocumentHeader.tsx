@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,12 @@ import { Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { toast } from "sonner";
 import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument } from "@/api+/sap/sales/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
 import { List } from "lucide-react";
+import { DocumentType } from "@/types/master/DocumentType";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -79,9 +79,12 @@ export function DocumentHeader() {
     }
   };
 
-  const fetchDocumentsList = async (isLoadMore = false) => {
+  const fetchDocumentsList = useCallback(async (isLoadMore = false) => {
     const resourceName = getResourceName(config.type);
-    if (!resourceName) return;
+    if (!resourceName) {
+      console.error("Resource name not found for docType:", config.type);
+      return;
+    }
 
     const currentSkip = isLoadMore ? skip + PAGE_SIZE : 0;
 
@@ -99,28 +102,36 @@ export function DocumentHeader() {
       } else {
         setDocumentsList(newDocs);
         setSkip(0);
-        setDocListModalOpen(true);
       }
-
       setHasMore(newDocs.length === PAGE_SIZE);
+
     } catch (error) {
       toast.error("Failed to fetch documents list.");
     } finally {
       setIsLoadingList(false);
     }
-  };
+  }, [config.type, skip, PAGE_SIZE]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         e.stopPropagation();
+        setDocListModalOpen(true);
         fetchDocumentsList(false);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [config.type]);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [fetchDocumentsList]);
+
+  useEffect(() => {
+    if (!docListModalOpen) {
+      setDocumentsList([]); 
+    }
+  }, [docListModalOpen]);
 
 
   const handleSelectBP = (bp: BusinessPartner) => {
@@ -129,6 +140,8 @@ export function DocumentHeader() {
 
     setModalOpen(false);
   };
+
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const fetchDocument = async (docNum: string) => {
     var documentData;
@@ -186,18 +199,23 @@ export function DocumentHeader() {
     }
   };
 
+  const handleManualSearch = () => {
+    const val = searchInputRef.current?.value || searchValue;
+    fetchDocument(val);
+  };
+
 
   const getDateLabel = (type: number) => {
     switch (type) {
-      case 17:
+      case DocumentType.Order:
         return 'Delivery Date';
-      case 23:
+      case DocumentType.Quotation:
         return 'Valid Until';
-      case 13:
+      case DocumentType.ARInvoice:
         return 'Due Date';
-      case 15:
+      case DocumentType.Delivery:
         return 'Delivery Date';
-      case 16:
+      case DocumentType.SalesReturn:
         return 'Due Date';
       default:
         return 'Date';
@@ -236,6 +254,7 @@ export function DocumentHeader() {
 
         <div className="flex items-center gap-2">
           <Input
+            ref={searchInputRef}
             type="text"
             placeholder="Search document..."
             className="h-8 w-38"
@@ -244,7 +263,7 @@ export function DocumentHeader() {
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                fetchDocument(searchValue);
+                handleManualSearch();
               }
             }}
           />
@@ -253,7 +272,7 @@ export function DocumentHeader() {
             variant="outline"
             size="icon"
             className="h-8 w-8 cursor-pointer"
-            onClick={() => fetchDocument(searchValue)}
+            onClick={handleManualSearch}
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -266,7 +285,11 @@ export function DocumentHeader() {
             variant="outline"
             size="icon"
             className="h-8 w-8 cursor-pointer"
-            onClick={() => fetchDocumentsList(false)}
+            onClick={() => {
+              setDocumentsList([]); 
+              setDocListModalOpen(true);
+              fetchDocumentsList(false);
+            }}
             title="List documents (Ctrl+F)"
           >
             {isLoadingList ? (

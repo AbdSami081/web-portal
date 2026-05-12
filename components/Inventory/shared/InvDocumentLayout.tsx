@@ -4,7 +4,6 @@ import { FieldValues, FormProvider, useForm, DefaultValues } from "react-hook-fo
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/inventory/documentConfig";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +14,7 @@ import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/
 import { FilePlus2, Loader2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DocumentType } from "@/types/master/DocumentType";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 

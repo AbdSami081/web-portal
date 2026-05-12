@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 
 import {
   BadgeCheck,
@@ -32,10 +33,14 @@ import { useAuth } from "@/context/authContext";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
-  // const firstLetter = user.name.charAt(0);
-  // const lastLetter = user.name.charAt(7);
-  // const FL = `${firstLetter}${lastLetter}`;
   const { user, logout } = useAuth();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <SidebarMenu>

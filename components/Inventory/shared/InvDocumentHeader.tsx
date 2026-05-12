@@ -11,7 +11,6 @@ import { List } from "lucide-react";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { useInvDocConfig } from "./InvDocumentLayout";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
@@ -19,6 +18,7 @@ import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
 import { GenericModal } from "@/modals/GenericModal";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
+import { DocumentType } from "@/types/master/DocumentType";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",

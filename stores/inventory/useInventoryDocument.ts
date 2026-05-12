@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 
 interface IOPRDDocumentStore {

@@ -10,9 +10,9 @@ import { InvDocumentItems } from "@/components/Inventory/shared/InvDocumentItems
 import InvDocumentFooter from "@/components/Inventory/shared/InvDocumentFooter";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { useMemo, useEffect } from "react";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useRouter } from "next/navigation";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { DocumentType } from "@/types/master/DocumentType";
 
 const schema = quotationSchema.extend({
   CardCode: z.string().optional(),

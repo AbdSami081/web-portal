@@ -8,10 +8,11 @@ import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchem
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { postQuotation, patchQuotation } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 import { ReactJsxRuntime } from "next/dist/server/route-modules/app-page/vendored/rsc/entrypoints";
+import { UDFLayout } from "@/components/shared/UDFSheet";
+import { DocumentType } from "@/types/master/DocumentType";
 
 export default function NewQuotationPage() {
   const loadFromDocument = useSalesDocument((state) => state.loadFromDocument);
@@ -158,6 +159,7 @@ export default function NewQuotationPage() {
     >
       <DocumentHeader />
       <DocumentItems />
+      <UDFLayout docType={DocumentType.Quotation} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

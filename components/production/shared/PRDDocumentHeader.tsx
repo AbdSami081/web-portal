@@ -14,7 +14,7 @@ import { Warehouse } from "@/types/warehouse/warehouse";
 import { GenericModal } from "@/modals/GenericModal";
 import { getBOMList, getDisassembleProductionOrders, getIssueForProduction, getProductionOrder, getReceiptFromProduction, getReleasedProductionOrders } from "@/api+/sap/production/productionService";
 import { getItemsList } from "@/api+/sap/master-data/items";
-import { DocumentType as SAPDocumentType } from "@/types/sales/salesDocuments.type";
+import { DocumentType as SAPDocumentType } from "@/types/master/DocumentType";
 import { Controller } from "react-hook-form";
 import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { Item } from "@/types/sales/Item.type";

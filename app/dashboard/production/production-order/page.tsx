@@ -5,12 +5,12 @@ import { PRDDocumentLayout } from "@/components/production/shared/PRDDocumentLay
 import { PRDDocumentHeader } from "@/components/production/shared/PRDDocumentHeader";
 import { PRDDocumentItems } from "@/components/production/shared/PRDDocumentItems";
 import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useMemo, useEffect } from "react";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { saveProductionDocument } from "@/api+/sap/production/productionService";
 import { toast } from "sonner";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { DocumentType } from "@/types/master/DocumentType";
 
 export default function ProductionOrderPage() {
     const { reset: resetStore } = useIFPRDDocument();

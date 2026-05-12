@@ -10,8 +10,8 @@ import { saveProductionDocument } from "@/api+/sap/production/productionService"
 import { toast } from "sonner";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { useRouter } from "next/navigation";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { DocumentType } from "@/types/master/DocumentType";
 
 export default function ReceiptFromProductionPage() {
   const defaultValues: Partial<ProductionFormData> = useMemo(() => ({

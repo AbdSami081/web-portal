@@ -5,13 +5,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/production/documentConfig";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { FilePlus2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { DocumentType } from "@/types/master/DocumentType";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 

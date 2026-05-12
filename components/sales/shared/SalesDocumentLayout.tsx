@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/sales/documentConfig";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -16,6 +15,7 @@ import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotation
 import { FilePlus2, Loader2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DocumentType } from "@/types/master/DocumentType";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -44,7 +44,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   docType,
 }: SalesDocumentLayoutProps<T>) {
 
-  const config = getDocumentConfig(docType);
+  const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
 
   const methods = useForm<T>({
     resolver: zodResolver(schema as any),
@@ -141,6 +141,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
         DiscountPercent: state.discountPercent,
         Freight: state.freight,
         Rounding: state.rounding,
+        ...state.udfs,
       } as unknown as DefaultValues<T>);
 
       setIsCopying(false);

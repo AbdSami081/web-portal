@@ -22,7 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { DocumentType } from "@/types/master/DocumentType";
 
 
 export function PRDDocumentItems() {

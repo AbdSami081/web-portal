@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "../../types/sales/businessPartner.type";
-import { BaseSalesDocument, DocCurrency, SalesDocumentLine, DocumentType } from "@/types/sales/salesDocuments.type";
+import { BaseSalesDocument, DocCurrency, SalesDocumentLine } from "@/types/sales/salesDocuments.type";
 import { calculateFreightTax } from "@/utils/taxCalculations";
 import { useMasterDataStore } from "./useMasterDataStore";
+import { DocumentType } from "@/types/master/DocumentType";
 
 
 interface SalesDocumentStore {
@@ -41,6 +42,7 @@ interface SalesDocumentStore {
     CopyToTarget: boolean;
     File?: File;
   }[];
+  udfs: Record<string, any>;
   isCopying: boolean;
   lastLoadedDocType: number | null; // Track original doc type
   setIsCopying: (val: boolean) => void;
@@ -114,6 +116,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     lastLoadedDocType: null,
     additionalExpenses: [],
     attachments: [],
+    udfs: {},
     isCopying: false,
 
     setIsCopying: (val) => set({ isCopying: val }),
@@ -291,6 +294,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         currency: "USD",
         additionalExpenses: [],
         attachments: [],
+        udfs: {},
         isCopying: false,
       }),
 
@@ -353,6 +357,13 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         };
       });
 
+      const udfValues: Record<string, any> = {};
+      Object.keys(doc).forEach(key => {
+        if (key.startsWith("U_")) {
+          udfValues[key] = doc[key];
+        }
+      });
+
       set({
         customer: doc.customer || {
           CardCode: doc.CardCode,
@@ -395,6 +406,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           FreeText: line.FreeText || "",
           CopyToTarget: line.CopyToTargetDoc === "tYES",
         })),
+        udfs: udfValues,
       });
 
       get().calculateTotals();

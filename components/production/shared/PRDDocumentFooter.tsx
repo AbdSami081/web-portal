@@ -10,7 +10,8 @@ import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { GenericModal } from "@/modals/GenericModal";
 import { getReleasedProductionOrders, getDisassembleProductionOrders } from "@/api+/sap/production/productionService";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
+import { DocumentType } from "@/types/master/DocumentType";
+
 
 export default function PRDDocumentFooter() {
   const { watch, register, setValue } = useFormContext();

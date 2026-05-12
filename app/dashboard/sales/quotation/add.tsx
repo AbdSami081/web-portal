@@ -2,7 +2,6 @@
 
 import React from "react";
 import axios from "axios";
-import { DocumentType } from "@/types/sales/salesDocuments.type";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentHeader } from "@/components/sales/shared/DocumentHeader";
 import { DocumentItems } from "@/components/sales/shared/DocumentItems";
@@ -10,6 +9,7 @@ import DocumentFooter from "@/components/sales/shared/DocumentFooter";
 import { SalesDocumentLayout } from "@/components/sales/shared/SalesDocumentLayout";
 import { useRouter } from "next/navigation";
 import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
+import { DocumentType } from "@/types/master/DocumentType";
 
 
 export default function NewQuotationPage() {
