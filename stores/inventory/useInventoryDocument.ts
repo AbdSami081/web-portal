@@ -17,6 +17,7 @@ interface IOPRDDocumentStore {
   docDate: string;
   docStatus: string;
   isCopyingTo: boolean;
+  udfs: Record<string, any>;
 
   setCustomer: (customer: BusinessPartner | null) => void;
   setWarehouses: (warehouses: any[]) => void;
@@ -67,6 +68,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     docStatus: "",
     isCopyingTo: false,
     attachments: [],
+    udfs: {},
 
     setCustomer: (customer) => set({ customer }),
     setWarehouses: (warehouses) => set({ warehouses }),
@@ -156,6 +158,13 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         CopyToTarget: att.CopyToTarget === "tYES" || att.CopyToTargetDoc === "tYES",
       })) || [];
 
+      const udfValues: Record<string, any> = {};
+      Object.keys(doc).forEach(key => {
+        if (key.startsWith("U_")) {
+          udfValues[key] = doc[key];
+        }
+      });
+
       set({
         lines,
         DocEntry: isCopy ? 0 : (doc.DocEntry || 0),
@@ -168,6 +177,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         docDate: isCopy ? today() : (doc.TaxDate ? doc.TaxDate.split("T")[0] : today()),
         docStatus: isCopy ? "" : (doc.DocumentStatus || ""),
         attachments: isCopy ? [] : attachments,
+        udfs: udfValues,
         customer: doc.CardCode
           ? { CardCode: doc.CardCode, CardName: doc.CardName || "", CardType: "cCustomer", Balance: 0, Phone1: "", Email: "" }
           : null,
@@ -194,6 +204,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         docStatus: "",
         isCopyingTo: false,
         attachments: [],
+        udfs: {},
       });
     },
   }))

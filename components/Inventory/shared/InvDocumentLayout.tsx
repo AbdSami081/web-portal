@@ -15,6 +15,8 @@ import { FilePlus2, Loader2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useUDFStore } from "@/stores/useUDFStore";
+import { UDFLayout } from "@/components/shared/UDFSheet";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -46,6 +48,11 @@ export function InvDocumentLayout<T extends FieldValues>({
 
   const config = getDocumentConfig(docType);
   const router = useRouter();
+  const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
+
+  useEffect(() => {
+    fetchUdfDefinitions(docType);
+  }, [docType, fetchUdfDefinitions]);
 
   const methods = useForm<T>({
     resolver: zodResolver(schema as any),
@@ -358,6 +365,7 @@ export function InvDocumentLayout<T extends FieldValues>({
             getSelectValue={(item: any) => item.DocNum}
             isLoading={isLoadingCopyFrom}
           />
+          <UDFLayout docType={docType} values={store.udfs} />
         </form>
       </FormProvider>
     </InvDocContext.Provider>

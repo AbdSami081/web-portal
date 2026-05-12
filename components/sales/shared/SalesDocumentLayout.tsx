@@ -1,13 +1,12 @@
 "use client"
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { FieldValues, FormProvider, useForm, DefaultValues, SubmitErrorHandler } from "react-hook-form";
+import { FieldValues, FormProvider, useForm, DefaultValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/sales/documentConfig";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
@@ -16,6 +15,9 @@ import { FilePlus2, Loader2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useUDFStore } from "@/stores/useUDFStore";
+import { DocumentHeader } from "./DocumentHeader";
+import { UDFLayout } from "@/components/shared/UDFSheet";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -45,6 +47,11 @@ export function SalesDocumentLayout<T extends FieldValues>({
 }: SalesDocumentLayoutProps<T>) {
 
   const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
+  const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
+
+  React.useEffect(() => {
+    fetchUdfDefinitions(docType);
+  }, [docType, fetchUdfDefinitions]);
 
   const methods = useForm<T>({
     resolver: zodResolver(schema as any),
@@ -53,7 +60,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   });
 
   const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty } } = methods;
-  const { reset: lineReset, customer } = useSalesDocument();
+  const { reset: lineReset, customer, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs } = useSalesDocument();
 
   const docStatus = watch("DocStatus" as any);
   const docEntry = watch("DocEntry" as any);
@@ -61,11 +68,8 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const isEditMode = docEntry && Number(docEntry) > 0;
   const shouldHideSubmit = isEditMode && docStatus === "bost_Close";
   const router = useRouter();
-  const { DocEntry, loadFromDocument } = useSalesDocument();
+  
   const [selectedCopyTo, setSelectedCopyTo] = useState<string>("");
-
-  const { isCopying, setIsCopying } = useSalesDocument();
-
   const [copyFromOpen, setCopyFromOpen] = useState(false);
   const [copyFromType, setCopyFromType] = useState<DocumentType | null>(null);
   const [copyFromData, setCopyFromData] = useState<any[]>([]);
@@ -85,7 +89,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
     if (!customer?.CardCode) return;
     setIsLoadingCopyFrom(true);
     try {
-
       let data: any[] | null = [];
       if (type === DocumentType.Quotation) {
         data = await getQuotationByBP(customer.CardCode);
@@ -214,30 +217,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
     <SalesDocContext.Provider value={config}>
       <FormProvider {...methods}>
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            
-            // Validation: Check if all lines have a WarehouseCode
-            const { lines } = useSalesDocument.getState();
-            const missingWarehouse = lines.some(line => !line.WarehouseCode || line.WarehouseCode.trim() === "");
-            
-            if (missingWarehouse) {
-              toast.error("Please fill warehouse for all items before submitting.", {
-                description: "One or more line items are missing a warehouse selection.",
-                duration: 4000,
-              });
-              return; // Abort submission
+          onSubmit={handleSubmit(async (data) => {
+            try {
+              await onSubmit(data as unknown as T);
+              ResetForm();
+            } catch (error) {
+              // Error handled in onSubmit
             }
-
-            handleSubmit(async (data) => {
-              try {
-                await onSubmit(data as unknown as T);
-                ResetForm();
-              } catch (error) {
-                // Error handled in onSubmit
-              }
-            })();
-          }}
+          })}
           className="flex flex-col min-h-screen bg-background"
         >
 
@@ -268,20 +255,22 @@ export function SalesDocumentLayout<T extends FieldValues>({
             </TooltipProvider>
           </HeaderActionPortal>
 
-          <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
+          <div className="flex justify-between items-center px-6 py-3 border-b bg-muted shrink-0">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold">{config.title}</h1>
             </div>
             {actions && <div>{actions}</div>}
           </div>
 
-          <div className="flex-1 flex flex-col gap-4 p-6 overflow-y-auto overflow-x-auto w-full">
-            {children}
+          <div className="flex flex-col min-h-0 overflow-hidden px-6 py-4 flex-1">
+             <DocumentHeader />
+             <div className="flex-1 overflow-auto mt-4 scrollbar-thin scrollbar-thumb-gray-300">
+               {children}
+             </div>
           </div>
 
           {!shouldHideSubmit && (
-            <div className="border-t px-6 py-4 flex justify-end bg-white shadow-md">
-
+            <div className="border-t px-6 py-4 flex justify-end bg-white shadow-md gap-4 shrink-0">
               <div className="flex items-center gap-3">
                 <Select
                   value={selectedCopyFrom}
@@ -314,9 +303,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-              </div>
 
-              <div className="flex items-center gap-3">
                 <Select
                   value={selectedCopyTo}
                   disabled={copyToOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom || isLoadingCopyTo}
@@ -354,13 +341,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+
                 <Button type="submit" disabled={isSubmitting || isLoadingDocument}>
                   {isLoadingDocument ? "Loading..." : getSubmitButtonText()}
                 </Button>
               </div>
-
             </div>
           )}
+          
           <GenericModal
             title={`Select ${copyFromType === DocumentType.Quotation ? 'Quotation' : copyFromType === DocumentType.Order ? 'Order' : 'Delivery'}`}
             open={copyFromOpen}
@@ -376,9 +364,9 @@ export function SalesDocumentLayout<T extends FieldValues>({
             getSelectValue={(item) => item.DocNum}
             isLoading={isLoadingCopyFrom}
           />
+          <UDFLayout docType={docType} values={storeUdfs} />
         </form>
       </FormProvider>
     </SalesDocContext.Provider>
   );
-
 }

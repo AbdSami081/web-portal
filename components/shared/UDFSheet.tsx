@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
+  SheetFooter,
+  SheetClose
 } from "@/components/ui/sheet";
 
 import { Button } from "@/components/ui/button";
@@ -26,12 +26,11 @@ import {
 } from "@/components/ui/select";
 
 import { DocumentType } from "@/types/master/DocumentType";
-import { getMasterTable } from "@/types/master/DocumentTables";
-import { getDocumentUDFs } from "@/api+/sap/master-data";
-import { useSalesDocument } from "@/stores/sales/useSalesDocument";
+import { useUDFStore } from "@/stores/useUDFStore";
 
 interface DocumentUDFList<T extends FieldValues> {
   docType: DocumentType;
+  values?: Record<string, any>;
 }
 
 interface UDF {
@@ -49,87 +48,36 @@ interface UDF {
 
 export function UDFLayout<T extends FieldValues>({
   docType,
+  values,
 }: DocumentUDFList<T>) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [udfs, setUdfs] = useState<UDF[]>([]);
-  const { register, control, setValue, watch } = useFormContext();
-  const storeUdfs = useSalesDocument((state) => state.udfs);
+  const { control, setValue, register } = useFormContext<T>();
+  
+  const definitions = useUDFStore(state => state.definitions[docType]);
+  const isLoading = useUDFStore(state => state.isLoading[docType]);
 
   useEffect(() => {
-    if (udfs.length > 0 && storeUdfs) {
-      udfs.forEach((udf) => {
-        const fieldName = `U_${udf.Name}`;
-        if (storeUdfs[fieldName] !== undefined) {
-          setValue(fieldName, storeUdfs[fieldName]);
-        }
+    if (values && Object.keys(values).length > 0) {
+      Object.entries(values).forEach(([key, value]) => {
+        setValue(key as any, value);
       });
     }
-  }, [udfs, storeUdfs, setValue]);
-
-  const fetchUdfs = async () => {
-    setLoading(true);
-    try {
-      const result = await getDocumentUDFs(getMasterTable(docType));
-      const udfList = Array.isArray(result) 
-        ? result 
-        : (result as any)?.value ?? (result as any)?.[0]?.values ?? [];
-      setUdfs(udfList);
-    } catch (error) {
-      console.error("Failed to fetch UDFs:", error);
-      setUdfs([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [values, setValue]);
 
   useEffect(() => {
-    if (open) {
-      fetchUdfs();
-    } else {
-      setUdfs([]); 
-    }
-  }, [open, docType]); 
-
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "u") {
         e.preventDefault();
         e.stopPropagation();
-
         setOpen(true);
-
-        if (udfs.length > 0) {
-          return;
-        }
-
-        setLoading(true);
-
-        try {
-          const result = await getDocumentUDFs(
-            getMasterTable(docType)
-          );
-
-          const udfList =
-            (result as any)?.value ||
-            (result as any)?.[0]?.values ||
-            (Array.isArray(result) ? result : []);
-
-          setUdfs(udfList);
-        } catch (error) {
-          console.error("Failed to fetch UDFs:", error);
-        } finally {
-          setLoading(false);
-        }
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
-
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [docType, udfs]);
+  }, []);
 
   const renderField = (udf: UDF) => {
     const fieldName = `U_${udf.Name}`;
@@ -139,7 +87,7 @@ export function UDFLayout<T extends FieldValues>({
         <div className="flex items-center space-x-2 py-2">
           <Controller
             control={control}
-            name={fieldName}
+            name={fieldName as any}
             render={({ field }) => (
               <Checkbox
                 id={fieldName}
@@ -163,9 +111,9 @@ export function UDFLayout<T extends FieldValues>({
           <Label htmlFor={fieldName}>{udf.Description}</Label>
           <Controller
             control={control}
-            name={fieldName}
+            name={fieldName as any}
             render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value || ""}>
+              <Select onValueChange={field.onChange} value={(field.value as string) || ""}>
                 <SelectTrigger id={fieldName}>
                   <SelectValue placeholder={`Select ${udf.Description}`} />
                 </SelectTrigger>
@@ -189,7 +137,7 @@ export function UDFLayout<T extends FieldValues>({
           <Label htmlFor={fieldName}>{udf.Description}</Label>
           <Textarea
             id={fieldName}
-            {...register(fieldName)}
+            {...register(fieldName as any)}
             placeholder={`Enter ${udf.Description}`}
             className="min-h-[100px]"
           />
@@ -205,7 +153,7 @@ export function UDFLayout<T extends FieldValues>({
         <Input
           id={fieldName}
           type={isNumeric ? "number" : "text"}
-          {...register(fieldName)}
+          {...register(fieldName as any)}
           placeholder={`Enter ${udf.Description}`}
         />
       </div>
@@ -230,15 +178,15 @@ export function UDFLayout<T extends FieldValues>({
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {loading ? (
+          {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground animate-pulse">Fetching field definitions...</p>
             </div>
           ) : (
             <div className="grid gap-6">
-              {udfs.length > 0 ? (
-                udfs.map((udf) => (
+              {definitions && definitions.length > 0 ? (
+                definitions.map((udf) => (
                   <div key={udf.FieldID} className="py-2">
                     {renderField(udf)}
                   </div>
@@ -249,8 +197,8 @@ export function UDFLayout<T extends FieldValues>({
                     <Settings2 className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <div className="text-center">
-                    <p className="font-medium">No UDFs loaded</p>
-                    <p className="text-sm text-muted-foreground">Press <kbd className="px-1.5 py-0.5 rounded border bg-background text-xs font-sans">Ctrl + Shift + U</kbd> to load fields</p>
+                    <p className="font-medium">No UDFs defined for this document</p>
+                    <p className="text-sm text-muted-foreground">User defined fields will appear here once loaded.</p>
                   </div>
                 </div>
               )}
@@ -259,6 +207,11 @@ export function UDFLayout<T extends FieldValues>({
         </div>
 
         <SheetFooter className="p-6 border-t bg-muted/50">
+          <SheetClose asChild>
+            <Button type="button" className="w-full">
+              Done
+            </Button>
+          </SheetClose>
         </SheetFooter>
       </SheetContent>
     </Sheet>

@@ -19,6 +19,7 @@ import { getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/in
 import { GenericModal } from "@/modals/GenericModal";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useUDFStore } from "@/stores/useUDFStore";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -70,6 +71,7 @@ export function InvDocumentHeader() {
   const LIST_PAGE_SIZE = 20;
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const config = useInvDocConfig();
+  const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
   const [syncDialog, setSyncDialog] = useState<{
     open: boolean;
     type: "from" | "to" | null;
@@ -195,6 +197,9 @@ export function InvDocumentHeader() {
       }
 
       if (documentData) {
+        // Trigger UDF metadata refresh when a document is loaded
+        fetchUdfDefinitions(config.type, true);
+
         applyDocumentData(documentData, config.type);
       } else {
         toast.error("Document not found.");

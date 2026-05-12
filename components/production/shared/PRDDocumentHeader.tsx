@@ -22,6 +22,7 @@ import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { List } from "lucide-react";
+import { useUDFStore } from "@/stores/useUDFStore";
 
 const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className, id }: any) => {
   const [localValue, setLocalValue] = useState(value ? value.toString() : "");
@@ -91,6 +92,7 @@ export function PRDDocumentHeader() {
   const { allowMultiBom: allowMultiBomConfig } = useAuthStore();
   const config = usePRDDocConfig();
   const docType = config.type;
+  const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
   const watchedPlannedQty = watch("PlannedQuantity");
 
   useEffect(() => {
@@ -264,6 +266,9 @@ export function PRDDocumentHeader() {
           setValue("Comments", documentData.Comments, { shouldDirty: true });
           setValue("JournalMemo", documentData.JournalMemo, { shouldDirty: true });
         }
+
+        // Trigger UDF metadata refresh when a document is loaded
+        fetchUdfDefinitions(docType, true);
 
         toast.success(`Document #${baseRef} loaded successfully.`);
       } else {

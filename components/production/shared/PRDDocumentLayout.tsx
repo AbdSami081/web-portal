@@ -13,6 +13,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { DocumentType } from "@/types/master/DocumentType";
 
+import { useUDFStore } from "@/stores/useUDFStore";
+import { UDFLayout } from "@/components/shared/UDFSheet";
+
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
 export const usePRDDocConfig = () => {
@@ -40,6 +43,11 @@ export function PRDDocumentLayout<T extends FieldValues>({
 }: PRDDocumentLayoutProps<T>) {
 
   const config = getDocumentConfig(docType);
+  const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
+
+  useEffect(() => {
+    fetchUdfDefinitions(docType);
+  }, [docType, fetchUdfDefinitions]);
 
   const methods = useForm<T>({
     resolver: zodResolver(schema as any),
@@ -48,7 +56,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
   });
 
   const { watch, reset, handleSubmit, formState: { isSubmitting, isDirty } } = methods;
-  const { lines, attachments, reset: lineReset, initialStatus } = useIFPRDDocument();
+  const { lines, attachments, reset: lineReset, initialStatus, udfs } = useIFPRDDocument();
 
   // Reset store and form when docType changes (navigation between pages)
   useEffect(() => {
@@ -155,13 +163,10 @@ export function PRDDocumentLayout<T extends FieldValues>({
             {children}
           </div>
 
-          <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
-            {initialStatus !== "boposClosed" && (
-              <Button type="submit" disabled={isSubmitting || (docType === DocumentType.IssueForProduction && lines.length === 0)}>
-                {isSubmitting ? "Saving..." : ((watch("AbsoluteEntry" as any) || watch("DocEntry" as any)) ? "Update" : "Submit")}
               </Button>
             )}
           </div>
+          <UDFLayout docType={docType} values={udfs} />
         </form>
 
       </FormProvider>

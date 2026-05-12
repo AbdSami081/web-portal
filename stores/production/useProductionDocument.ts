@@ -22,6 +22,7 @@ interface IFPRDDocumentStore {
     CopyToTarget: boolean;
     File?: File;
   }[];
+  udfs: Record<string, any>;
   addAttachment: (file: File) => void;
   removeAttachment: (lineNum: number) => void;
   updateAttachment: (lineNum: number, updated: Partial<IFPRDDocumentStore["attachments"][0]>) => void;
@@ -50,6 +51,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     ProductionOrderStatus: "boposPlanned",
     initialStatus: "boposPlanned",
     attachments: [],
+    udfs: {},
 
     setWarehouses: (warehouses) => set({ warehouses }),
     setCustomer: (customer) => set({ customer }),
@@ -200,6 +202,13 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         };
       });
 
+      const udfValues: Record<string, any> = {};
+      Object.keys(doc).forEach(key => {
+        if (key.startsWith("U_")) {
+          udfValues[key] = doc[key];
+        }
+      });
+
       set({
         lines: mappedLines,
         docType: currentDocType,
@@ -207,6 +216,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         DocNum: isCopy ? 0 : (doc.DocNum || doc.DocumentNumber || doc.DocNumber || 0),
         ProductionOrderStatus: doc.ProductionOrderStatus || "boposPlanned",
         initialStatus: doc.ProductionOrderStatus || "boposPlanned",
+        udfs: udfValues,
       });
     },
     loadFromBOM: (bom: any, plannedQty: number = 0) => {
@@ -243,6 +253,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         ProductionOrderStatus: "boposPlanned",
         initialStatus: "boposPlanned",
         attachments: [],
+        udfs: {},
       }),
     recalculateFromHeader: (headerPlannedQty: number) => {
       set((state) => ({

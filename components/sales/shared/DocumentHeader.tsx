@@ -14,6 +14,7 @@ import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorD
 import { GenericModal } from "@/modals/GenericModal";
 import { List } from "lucide-react";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useUDFStore } from "@/stores/useUDFStore";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -142,6 +143,7 @@ export function DocumentHeader() {
   };
 
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
   const fetchDocument = async (docNum: string) => {
     var documentData;
@@ -175,6 +177,9 @@ export function DocumentHeader() {
       if (!documentData?.DocEntry) {
         toast.info(`Document number ${docNumInt} not found.`);
       } else {
+        // Trigger UDF metadata refresh when a document is loaded
+        fetchUdfDefinitions(config.type, true);
+
         loadFromDocument(documentData, config.type);
         setValue("DocDate", documentData.DocDate?.split("T")[0]);
         setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
