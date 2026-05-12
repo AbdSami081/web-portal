@@ -33,7 +33,7 @@ export function DocumentHeader() {
   const [modalOpen, setModalOpen] = useState(false);
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { customer, setCustomer, loadFromDocument, clearLines, reset, setDocDate, setDocDueDate, setTaxDate } = useSalesDocument();
+  const { customer, setCustomer, loadFromDocument, clearLines, reset, setDocDate, setDocDueDate, setTaxDate, setCurrency } = useSalesDocument();
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const docEntry = watch("DocEntry");
   const config = useSalesDocConfig();
@@ -138,6 +138,11 @@ export function DocumentHeader() {
   const handleSelectBP = (bp: BusinessPartner) => {
     setCustomer(bp);
     setValue("listNum", bp.PriceListNum);
+    
+    // Set currency from selected customer
+    if (bp.Currency) {
+      setCurrency(bp.Currency as any);
+    }
 
     setModalOpen(false);
   };

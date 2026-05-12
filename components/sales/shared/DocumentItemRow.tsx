@@ -248,21 +248,11 @@ export function DocumentLineRow({ index, line }: Props) {
       </td>
 
       <td>
-        <Select
+        <Input
+          className="h-6 w-28 text-center bg-neutral-100"
           value={draftLine.UoMCode || ""}
-          onValueChange={(val) => setDraftLine({ ...draftLine, UoMCode: val })}
-        >
-          <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
-            <SelectValue placeholder="Select UoM" />
-          </SelectTrigger>
-          <SelectContent>
-            {uomOptions.map((uom) => (
-              <SelectItem key={uom} value={uom} className="text-xs">
-                {uom}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          disabled
+        />
       </td>
 
       <td>

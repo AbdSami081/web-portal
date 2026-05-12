@@ -65,7 +65,8 @@ export function DocumentItems() {
         Price: price,
         TaxCode: targetTaxCode,
         TaxRate: taxRate,
-        WarehouseCode: defaultWhsLine
+        WarehouseCode: defaultWhsLine,
+        UoMCode: item.UoM || ""
       });
     });
   };
