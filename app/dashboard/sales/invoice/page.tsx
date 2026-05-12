@@ -121,6 +121,7 @@ export default function InvoicePage() {
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create AR Invoice. Please try again.");
+      throw error;
     }
   };
 

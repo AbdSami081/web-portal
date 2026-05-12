@@ -123,6 +123,7 @@ export default function OrderPage() {
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create Sales Order. Please try again.");
+      throw error;
     }
   };
 

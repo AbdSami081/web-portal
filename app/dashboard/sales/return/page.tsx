@@ -55,6 +55,7 @@ export default function ReturnPage() {
         toast.success(`Sales Return #${docNum || DocEntry} updated successfully`);
       } catch (error) {
         toast.error("Failed to update Sales Return");
+        throw error;
       }
       return;
     }
@@ -94,6 +95,7 @@ export default function ReturnPage() {
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create Sales Return. Please try again.");
+      throw error;
     }
   };
 

@@ -121,6 +121,7 @@ export default function DeliveryPage() {
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create Delivery Note. Please try again.");
+      throw error;
     }
   };
 

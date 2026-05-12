@@ -10,6 +10,7 @@ import { SalesDocumentLayout } from "@/components/sales/shared/SalesDocumentLayo
 import { useRouter } from "next/navigation";
 import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
 import { DocumentType } from "@/types/master/DocumentType";
+import { toast } from "sonner";
 
 
 export default function NewQuotationPage() {
@@ -50,7 +51,8 @@ export default function NewQuotationPage() {
       const doc = res.data?.data;
 
     } catch (error: any) {
-      console.error("Error creating quotation:", error);
+      toast.error("Failed to create quotation. Please try again.");
+      throw error;
     }
   };
 

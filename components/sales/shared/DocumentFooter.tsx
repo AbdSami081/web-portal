@@ -88,6 +88,7 @@ export default function DocumentFooter() {
               <div className="relative flex-[1.5]">
                 <Input
                   type="number"
+                  step="any"
                   className="h-6 text-right pr-6"
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(Number(e.target.value))}
@@ -98,6 +99,7 @@ export default function DocumentFooter() {
               <div className="relative flex-[2.5]">
                 <Input
                   type="number"
+                  step="any"
                   className="h-6 text-right pr-10"
                   value={discSum.toFixed(2)}
                   onChange={(e) => setDiscountSum(Number(e.target.value))}
@@ -132,6 +134,7 @@ export default function DocumentFooter() {
             <div className="relative">
               <Input
                 type="number"
+                step="any"
                 className="h-6 text-right pr-10"
                 value={rounding}
                 onChange={(e) => setRounding(Number(e.target.value))}

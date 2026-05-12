@@ -154,6 +154,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <Input
           className="h-6 w-20 text-right"
           type="number"
+          step="any"
           min={1}
           value={draftLine.Quantity}
           onChange={(e) => {
@@ -167,6 +168,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <Input
           className="h-6 w-24 text-right"
           type="number"
+          step="any"
           min={0}
           value={draftLine.Price}
           onChange={(e) => {
@@ -180,6 +182,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <Input
           className="h-6 w-16 text-right"
           type="number"
+          step="any"
           min={0}
           max={100}
           value={draftLine.DiscountPercent || 0}
@@ -300,6 +303,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <Input
           className="h-6 w-24 text-right"
           type="number"
+          step="any"
           value={draftLine.Freight1LCAmount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
@@ -381,6 +385,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <Input
           className="h-6 w-24 text-right"
           type="number"
+          step="any"
           value={draftLine.Freight2LCAmount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
@@ -462,6 +467,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <Input
           className="h-6 w-24 text-right"
           type="number"
+          step="any"
           value={draftLine.Freight3LCAmount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);

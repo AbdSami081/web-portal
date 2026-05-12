@@ -79,6 +79,7 @@ export default function NewQuotationPage() {
         toast.success(`Quotation #${docNum || DocEntry} updated successfully`);
       } catch (error) {
         toast.error("Failed to update quotation");
+        throw error;
       }
       return;
     }
@@ -147,6 +148,7 @@ export default function NewQuotationPage() {
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create quotation. Please try again.");
+      throw error;
     }
   };
 
