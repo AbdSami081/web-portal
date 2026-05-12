@@ -69,7 +69,7 @@ export default function DocumentFooter() {
           />
         </div>
 
-        <div className={`space-y-3 bg-slate-100 p-4 rounded-lg text-sm -mt-12`}>
+        <div className={`mt-2 space-y-3 bg-slate-100 p-4 rounded-lg text-sm -mt-12`}>
           <div className="grid grid-cols-2 gap-2 items-center">
             <AppLabel>Total Before Discount</AppLabel>
             <div className="relative">
