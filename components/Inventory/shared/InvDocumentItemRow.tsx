@@ -120,6 +120,7 @@ export function InvDocumentLineRow({ index, line }: Props) {
           name={`Qty-${index}`}
           className="h-6 w-full text-right"
           type="number"
+          step="any"
           min={1}
           value={draftLine.Quantity || 1}
           onChange={(e) => {

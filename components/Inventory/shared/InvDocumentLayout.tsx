@@ -97,9 +97,9 @@ export function InvDocumentLayout<T extends FieldValues>({
       setValue("Comments" as any, state.comments as any);
       setValue("JournalMemo" as any, state.journalMemo as any);
       setValue("TaxDate" as any, state.docDate as any);
+      setValue("DocumentLines" as any, state.lines as any);
 
-      // Consume flag manually
-      setIsCopyingTo(false);
+      // Flag will be consumed by store.reset() which is called in the other useEffect or manually
     } else {
       // Normal entry, reset store (only if not viewing an existing document)
       if (!DocEntry || DocEntry === 0) {

@@ -149,6 +149,7 @@ export default function InvTransferPage() {
 
   } catch (error: any) {
     toast.error(error.message || "Failed to create transfer");
+    throw error;
   }
 };
 
