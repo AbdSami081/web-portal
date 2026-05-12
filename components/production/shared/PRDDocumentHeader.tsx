@@ -267,7 +267,6 @@ export function PRDDocumentHeader() {
           setValue("JournalMemo", documentData.JournalMemo, { shouldDirty: true });
         }
 
-        // Trigger UDF metadata refresh when a document is loaded
         fetchUdfDefinitions(docType, true);
 
         toast.success(`Document #${baseRef} loaded successfully.`);

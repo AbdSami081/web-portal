@@ -309,7 +309,7 @@ export function DocumentLineRow({ index, line }: Props) {
         />
       </td>
 
-      <td>
+      {/* <td>
         <Select
           value={draftLine.Freight1TaxGroup || ""}
           onValueChange={(val) => {
@@ -337,15 +337,15 @@ export function DocumentLineRow({ index, line }: Props) {
             </SelectItem>
           </SelectContent>
         </Select>
-      </td>
+      </td> */}
 
-      <td>
+      {/* <td>
         <Input className="h-6 w-16 text-right bg-neutral-100" value={draftLine.Freight1TaxRate || 0} disabled />
       </td>
 
       <td>
         <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight1TaxLCAmount || 0} disabled />
-      </td>
+      </td> */}
 
       {/* Freight 2 */}
       <td>
@@ -390,7 +390,7 @@ export function DocumentLineRow({ index, line }: Props) {
         />
       </td>
 
-      <td>
+      {/* <td>
         <Select
           value={draftLine.Freight2TaxGroup || ""}
           onValueChange={(val) => {
@@ -418,15 +418,15 @@ export function DocumentLineRow({ index, line }: Props) {
             </SelectItem>
           </SelectContent>
         </Select>
-      </td>
+      </td> */}
 
-      <td>
+      {/* <td>
         <Input className="h-6 w-16 text-right bg-neutral-100" value={draftLine.Freight2TaxRate || 0} disabled />
       </td>
 
       <td>
         <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight2TaxLCAmount || 0} disabled />
-      </td>
+      </td> */}
 
       {/* Freight 3 */}
       <td>
@@ -471,7 +471,7 @@ export function DocumentLineRow({ index, line }: Props) {
         />
       </td>
 
-      <td>
+      {/* <td>
         <Select
           value={draftLine.Freight3TaxGroup || ""}
           onValueChange={(val) => {
@@ -507,7 +507,8 @@ export function DocumentLineRow({ index, line }: Props) {
 
       <td>
         <Input className="h-6 w-20 text-right bg-neutral-100" value={draftLine.Freight3TaxLCAmount || 0} disabled />
-      </td>
+      </td> */}
+
       <WarehouseSelectorDialog
         open={whDialogOpen}
         onClose={() => setWhDialogOpen(false)}

@@ -19,7 +19,7 @@ interface UDF {
 interface UDFStore {
   definitions: Record<number, UDF[]>;
   isLoading: Record<number, boolean>;
-  fetchDefinitions: (docType: number) => Promise<void>;
+  fetchDefinitions: (docType: number, force?: boolean) => Promise<void>;
 }
 
 export const useUDFStore = create<UDFStore>()(

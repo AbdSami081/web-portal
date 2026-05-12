@@ -162,7 +162,10 @@ export function PRDDocumentLayout<T extends FieldValues>({
           <div className="flex-1 flex flex-col gap-4 p-6 w-full">
             {children}
           </div>
-
+          <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
+            {initialStatus !== "boposClosed" && (
+              <Button type="submit" disabled={isSubmitting || (docType === DocumentType.IssueForProduction && lines.length === 0)}>
+                {isSubmitting ? "Saving..." : ((watch("AbsoluteEntry" as any) || watch("DocEntry" as any)) ? "Update" : "Submit")}
               </Button>
             )}
           </div>

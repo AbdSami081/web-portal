@@ -263,10 +263,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
           </div>
 
           <div className="flex flex-col min-h-0 overflow-hidden px-6 py-4 flex-1">
-             <DocumentHeader />
-             <div className="flex-1 overflow-auto mt-4 scrollbar-thin scrollbar-thumb-gray-300">
-               {children}
-             </div>
+             {children}
           </div>
 
           {!shouldHideSubmit && (

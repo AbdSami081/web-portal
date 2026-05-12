@@ -177,7 +177,6 @@ export function DocumentHeader() {
       if (!documentData?.DocEntry) {
         toast.info(`Document number ${docNumInt} not found.`);
       } else {
-        // Trigger UDF metadata refresh when a document is loaded
         fetchUdfDefinitions(config.type, true);
 
         loadFromDocument(documentData, config.type);
