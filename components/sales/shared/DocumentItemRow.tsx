@@ -203,8 +203,8 @@ export function DocumentLineRow({ index, line }: Props) {
           </SelectTrigger>
           <SelectContent>
             {freightsWithCharges?.map((grp: any) => {
-              const code = grp.Code ;
-              const name = grp.Name;
+              const code = grp.Code || grp.code;
+              const name = grp.Name || grp.name;
               return (
                 <SelectItem key={code} value={code} className="text-xs">
                   {code} - {name || code}

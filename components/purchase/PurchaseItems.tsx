@@ -81,23 +81,23 @@ export function PurchaseItems() {
                   <TableHeader className="sticky top-0 bg-neutral-900 z-10">
                     <TableRow className="border-neutral-600">
                       <TableHead className="text-gray-300 px-4 py-2 border-r border-neutral-700 w-[60px] text-center">Actions</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Item Code</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Vendor</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Required Date</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-right">Required Qty.</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-right">Info Price</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-right">Discount %</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Code</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-right">Total (LC)</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">UoM Code</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Country Org</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Item Code</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Vendor</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Required Date</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">Required Qty.</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">Info Price</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">Discount %</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Tax Code</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">Total (LC)</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">UoM Code</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Country Org</TableHead>
                       
                       {/* Custom FBR Fields */}
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">FBR UoM</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-right">FBR Qty</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-right">FBR Rate</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-right">FBR LineTotal</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-right">FBR SalesTax</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">FBR UoM</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">FBR Qty</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">FBR Rate</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">FBR LineTotal</TableHead>
+                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">FBR SalesTax</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
