@@ -24,8 +24,8 @@ interface MasterDataStore {
   masterDataLoaded: boolean;
   currentItemPage: number;
 
-  loadMasterData: () => Promise<void>;
-  loadExternalMasterData: () => Promise<void>;
+  loadMasterData: (cardType?: string, freightCategory?: string) => Promise<void>;
+  loadExternalMasterData: (category?: string) => Promise<void>;
   loadItemPage: (page: number) => Promise<void>;
   loadMoreItemPages: () => Promise<void>;
   setItemSearch: (value: string) => void;
@@ -46,10 +46,10 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   masterDataLoaded: false,
   currentItemPage: 1,
 
-  async loadExternalMasterData() {
+  async loadExternalMasterData(category = "") {
     const results = await Promise.allSettled([
       getFreightTypes(),
-      fetchFreightWithCharges("O"),
+      fetchFreightWithCharges(category),
     ]);
 
     const updates: Partial<MasterDataStore> = {};
@@ -59,14 +59,13 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
     set(updates);
   },
 
-  async loadMasterData() {
+  async loadMasterData(cardType = "", freightCategory = "") {
     if (get().masterDataLoaded) return;
     set({ itemLoading: true });
     try {
-      // Parallelize all master data calls to the backend
       const [items, customers, rawWarehouses] = await Promise.all([
         getItemsList("", 0, 20),
-        getCustomers("", 0, 20),
+        getCustomers("", 0, 20, cardType),
         getwarehouses()
       ]);
 
@@ -75,8 +74,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
         WarehouseName: w.WhsName || w.WarehouseName
       }));
 
-      // Also load external freight data
-      await get().loadExternalMasterData();
+      await get().loadExternalMasterData(freightCategory);
 
       set({
         items: { 1: items },

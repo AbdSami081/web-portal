@@ -44,7 +44,7 @@ export function DocumentItems() {
   const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
 
   useEffect(() => {
-    loadMasterData();
+    loadMasterData("C", "O");
   }, [loadMasterData]);
   
   const handleOnSelectItems = (items: Item[]) => {

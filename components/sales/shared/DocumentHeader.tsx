@@ -382,6 +382,7 @@ export function DocumentHeader() {
             handleSelectBP(bp);
             setModalOpen(false);
           }}
+          cardType="C"
         />
         <GenericModal
           title={`Select ${getResourceName(config.type).replace(/([A-Z])/g, ' $1').trim()}`}

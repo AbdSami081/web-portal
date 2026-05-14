@@ -13,10 +13,16 @@ import {
 import { PurchaseItemRow } from "./PurchaseItemRow";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 
 export function PurchaseItems() {
   const { lines, addLine } = usePurchaseDocument();
+  const { loadMasterData } = useMasterDataStore();
   const [activeTab, setActiveTab] = useState("content");
+
+  useEffect(() => {
+    loadMasterData("S", "P");
+  }, [loadMasterData]);
 
   const handleAddLine = () => {
     addLine({
