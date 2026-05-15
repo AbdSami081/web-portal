@@ -12,6 +12,7 @@ export type Item = {
   VatLiable?: "tYES" | "tNO";
   PriceList?: number;
   ManageSerialNumbers?: "tYES" | "tNO";
+  ManSerNum?: string;
   ManageBatchNumbers?: "tYES" | "tNO";
   Valid?: "tYES" | "tNO";
   Frozen?: "tYES" | "tNO";

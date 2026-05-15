@@ -28,7 +28,6 @@ export const useUDFStore = create<UDFStore>()(
     isLoading: {},
 
     fetchDefinitions: async (docType: number, force = false) => {
-      // Don't refetch if already exists or loading, unless forced
       if (!force && (get().definitions[docType] || get().isLoading[docType])) return;
 
       set((state) => ({

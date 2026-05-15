@@ -26,6 +26,7 @@ interface SalesDocumentStore {
   discSum: number;
   DocTotal: number;
   TotalFreight: number;
+  DocumentStatus: string;
   additionalExpenses: {
     ExpenseCode: number;
     LineTotal: number;
@@ -62,6 +63,8 @@ interface SalesDocumentStore {
 
   addLine: (line: SalesDocumentLine) => void;
   updateLine: (itemCode: string, updated: Partial<SalesDocumentLine>) => void;
+  setLineSerials: (itemCode: string, serials: { InternalSerialNumber: string }[]) => void;
+  setLineBatches: (itemCode: string, batches: { BatchNumber: string; Quantity: number }[]) => void;
   removeLine: (itemCode: string) => void;
 
 
@@ -111,6 +114,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     discSum: 0,
     DocTotal: 0,
     TotalFreight: 0,
+    DocumentStatus: "bost_Open",
     DocEntry: 0,
     DocNum: 0,
     lastLoadedDocType: null,
@@ -185,6 +189,30 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         "updateLine"
       );
       get().calculateTotals();
+    },
+
+    setLineSerials: (itemCode, serials) => {
+      set(
+        (s) => ({
+          lines: s.lines.map((line) =>
+            line.ItemCode === itemCode ? { ...line, SerialNumbers: serials } : line
+          ),
+        }),
+        false,
+        "setLineSerials"
+      );
+    },
+
+    setLineBatches: (itemCode, batches) => {
+      set(
+        (s) => ({
+          lines: s.lines.map((line) =>
+            line.ItemCode === itemCode ? { ...line, BatchNumbers: batches } : line
+          ),
+        }),
+        false,
+        "setLineBatches"
+      );
     },
 
     removeLine: (itemCode) => {
@@ -289,6 +317,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         DocTotal: 0,
         DocEntry: 0,
         DocNum: 0,
+        DocumentStatus: "bost_Open",
         docType: DocumentType.Quotation,
         lastLoadedDocType: null,
         currency: "USD",
@@ -334,6 +363,8 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           DiscountPercent: discount,
           TaxRate: taxRate,
           LineTotal: parseSafe(line.LineTotal) || (lineSubtotal - discountAmount + calculatedTax),
+          ManSerNum: line.ManSerNum || "",
+          ManBatNum: line.ManBatNum || "",
           WarehouseCode: line.WarehouseCode || "",
           TaxAmount: parseSafe(line.TaxTotal || line.TaxSum) || calculatedTax,
           UoMCode: line.UoMCode,
@@ -386,6 +417,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         currency: doc.DocCurrency || doc.Currency || "USD",
         DocEntry: isCopy ? 0 : parseSafe(doc.DocEntry),
         DocNum: isCopy ? 0 : parseSafe(doc.DocNum),
+        DocumentStatus: doc.DocumentStatus || doc.DocStatus || "bost_Open",
         lastLoadedDocType: type || null,
         DocTotal: parseSafe(doc.DocTotal || doc.docTotal),
         TaxTotal: parseSafe(doc.TaxTotal || doc.taxTotal),

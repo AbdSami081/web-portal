@@ -57,3 +57,13 @@ export const patchInventoryTransfer = async (docEntry: number, payload: any) => 
     const response = await apiClient.patch(`api/Inventory/InventoryTransfer/${docEntry}`, payload);
     return response.data;
 };
+
+export const getSerialsByItemCodes = async (itemCodes: string[]) => {
+    const response = await apiClient.get(`api/Inventory/items/stock/ManageBySerials?itemCodes=${itemCodes.join(',')}`);
+    return response.data;
+};
+
+export const getBatchesByItemCodes = async (itemCodes: string[]) => {
+    const response = await apiClient.get(`api/Inventory/items/stock/ManageByBatches?itemCodes=${itemCodes.join(',')}`);
+    return response.data;
+};
