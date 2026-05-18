@@ -2,9 +2,11 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { PurchaseDocumentLine, PurchaseDocumentType } from "@/types/purchase/purchaseDocuments.type";
 
+import { BusinessPartner } from "../../types/sales/businessPartner.type";
+
 interface PurchaseDocumentStore {
   docType: PurchaseDocumentType;
-  
+  vendor: BusinessPartner | null;
   requester: string;
   requesterName: string;
   branch: string;
@@ -49,6 +51,7 @@ interface PurchaseDocumentStore {
   }[];
 
   // Setters
+  setVendor: (v: BusinessPartner) => void;
   setRequester: (r: string) => void;
   setRequesterName: (rn: string) => void;
   setBranch: (b: string) => void;
@@ -113,8 +116,10 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     DocTotal: 0,
     TotalFreight: 0,
     additionalExpenses: [],
+    vendor: null,
     attachments: [],
 
+    setVendor: (v) => set({ vendor: v }),
     setRequester: (r) => set({ requester: r }),
     setRequesterName: (rn) => set({ requesterName: rn }),
     setBranch: (b) => set({ branch: b }),

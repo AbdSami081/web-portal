@@ -39,7 +39,6 @@ export default function DeliveryPage() {
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = useSalesDocument.getState();
     
-    // 1. First, identify which attachments need uploading
     const newAttachments = attachments.filter(att => att.File);
     const existingAttachments = attachments.filter(att => !att.File);
 
@@ -64,28 +63,6 @@ export default function DeliveryPage() {
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
     
-    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Delivery) {
-      const payload = {
-        Comments: data.Comments,
-        Attachments2_Lines: processedAttachments.map((att) => ({
-          FileExtension: att.FileName.split('.').pop(),
-          FileName: att.FileName.split('.').slice(0, -1).join('.'),
-          SourcePath: att.SourcePath,
-          FreeText: att.FreeText,
-          CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-        }))
-      };
-
-      try {
-        await patchDeliveryNote(Number(DocEntry), payload);
-        const docNum = useSalesDocument.getState().DocNum;
-        toast.success(`Delivery Note #${docNum || DocEntry} updated successfully`);
-      } catch (error) {
-        toast.error("Failed to update Delivery Note");
-      }
-      return;
-    }
-
     const payload = {
       ...data,
       DocumentLines: lines.map((line) => {
@@ -95,7 +72,7 @@ export default function DeliveryPage() {
           lineData.BaseType = lastLoadedDocType;
           lineData.BaseEntry = DocEntry;
           lineData.BaseLine = line.LineNum;
-        } else {
+        } else if (!(DocEntry && Number(DocEntry) > 0)) {
           lineData.BaseType = -1;
           lineData.BaseEntry = null;
           lineData.BaseLine = null;
@@ -107,12 +84,27 @@ export default function DeliveryPage() {
         FileName: att.FileName.split('.').slice(0, -1).join('.'),
         SourcePath: att.SourcePath,
         UserID: "1",
-        FreeText: att.FreeText
+        FreeText: att.FreeText,
+        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
       }))
     };
 
+    console.log("Final Delivery Payload:", JSON.stringify(payload, null, 2));
+
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Delivery) {
+      try {
+        await patchDeliveryNote(Number(DocEntry), payload);
+        const docNum = useSalesDocument.getState().DocNum;
+        toast.success(`Delivery Note #${docNum || DocEntry} updated successfully`);
+      } catch (error) {
+        toast.error("Failed to update Delivery Note");
+      }
+      return;
+    }
+
     try {
       const response = await postDelivery(payload);
+   
       if (response?.DocEntry) {
         toast.success(`Delivery Note #${response.DocNum} created successfully!`);
       } else {

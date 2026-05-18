@@ -215,7 +215,9 @@ export function GenericModal<T>({
                         // Format SAP ISO dates to YYYY-MM-DD
                         const displayVal = typeof rawVal === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(rawVal)
                           ? rawVal.split('T')[0]
-                          : rawVal;
+                          : (typeof rawVal === 'object' && rawVal !== null) 
+                            ? JSON.stringify(rawVal) 
+                            : rawVal;
 
                         return (
                           <TableCell key={col.key} className="px-4 py-2">

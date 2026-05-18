@@ -18,6 +18,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { DocumentHeader } from "./DocumentHeader";
 import { UDFLayout } from "@/components/shared/UDFSheet";
+import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -59,14 +60,22 @@ export function SalesDocumentLayout<T extends FieldValues>({
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty } } = methods;
+  const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty, errors } } = methods;
   const { reset: lineReset, customer, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs } = useSalesDocument();
+
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      const errorFields = Object.keys(errors).join(", ");
+      toast.error(`Please fix validation errors in: ${errorFields}`);
+    }
+  }, [errors]);
 
   const docStatus = watch("DocStatus" as any);
   const docEntry = watch("DocEntry" as any);
 
   const isEditMode = docEntry && Number(docEntry) > 0;
-  const shouldHideSubmit = isEditMode && docStatus === "bost_Close";
+  const normalizedStatus = docStatus?.toString().replace("bost_", "");
+  const shouldHideSubmit = isEditMode && normalizedStatus === "Close";
   const router = useRouter();
   
   const [selectedCopyTo, setSelectedCopyTo] = useState<string>("");
@@ -77,6 +86,8 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [selectedCopyFrom, setSelectedCopyFrom] = useState<string>("");
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
+  const [serialModalOpen, setSerialModalOpen] = useState(false);
+  const [pendingData, setPendingData] = useState<T | null>(null);
 
   const copyFromOptions = (() => {
     if (docType === DocumentType.Order) return [DocumentType.Quotation];
@@ -171,9 +182,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
   const getSubmitButtonText = () => {
     if (isSubmitting) return "Saving...";
-    if (docEntry === "0" || !isEditMode) return "Submit";
-    if (isEditMode && docStatus === "bost_Open") return "Update";
-    return "";
+    if (isLoadingDocument) return "Loading...";
+    
+    const normalizedStatus = docStatus?.toString().replace("bost_", "");
+    
+    if (!isEditMode || docEntry === "0") return "Submit";
+    if (normalizedStatus === "Open") return "Update";
+    
+    return "Submit"; // Fallback
   };
 
   const copyToOptions = (() => {
@@ -218,10 +234,39 @@ export function SalesDocumentLayout<T extends FieldValues>({
       <FormProvider {...methods}>
         <form
           onSubmit={handleSubmit(async (data) => {
+            console.log("Submit Clicked. Data:", data);
+            const state = useSalesDocument.getState();
+            const needsStockManagement = (docType === DocumentType.Delivery || docType === DocumentType.ARInvoice) && 
+                                state.lines.some(l => {
+                                  const isSerial = l.ManSerNum === 'Y' || l.ManSerNum === 'tYES';
+                                  const isBatch = l.ManBatNum === 'Y' || l.ManBatNum === 'tYES';
+                                  
+                                  if (isSerial) {
+                                    return !l.SerialNumbers || l.SerialNumbers.length < l.Quantity;
+                                  }
+                                  if (isBatch) {
+                                    const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
+                                    return totalBatch < l.Quantity;
+                                  }
+                                  return false;
+                                });
+
+            console.log("Needs Stock Management:", needsStockManagement, "Lines:", state.lines);
+
+            if (needsStockManagement) {
+              console.log("Opening Stock Management Modal...");
+              setPendingData(data as unknown as T);
+              setSerialModalOpen(true);
+              return;
+            }
+
             try {
+              console.log("Proceeding with onSubmit...");
               await onSubmit(data as unknown as T);
+              console.log("onSubmit finished. Resetting form...");
               ResetForm();
             } catch (error) {
+              console.error("Submit Error:", error);
               // Error handled in onSubmit
             }
           })}
@@ -339,8 +384,12 @@ export function SalesDocumentLayout<T extends FieldValues>({
                   </SelectContent>
                 </Select>
 
-                <Button type="submit" disabled={isSubmitting || isLoadingDocument}>
-                  {isLoadingDocument ? "Loading..." : getSubmitButtonText()}
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting || isLoadingDocument || (isEditMode && normalizedStatus === "Close")}
+                  className="min-w-[100px]"
+                >
+                  {getSubmitButtonText()}
                 </Button>
               </div>
             </div>
@@ -362,6 +411,33 @@ export function SalesDocumentLayout<T extends FieldValues>({
             isLoading={isLoadingCopyFrom}
           />
           <UDFLayout docType={docType} values={storeUdfs} />
+
+          <SerialNumberSelectionDialog
+            open={serialModalOpen}
+            onClose={() => setSerialModalOpen(false)}
+            onConfirm={async (selections) => {
+              if (pendingData) {
+                const state = useSalesDocument.getState();
+                
+                if (selections.serials) {
+                  Object.entries(selections.serials).forEach(([itemCode, serials]) => {
+                    state.setLineSerials(itemCode, serials);
+                  });
+                }
+
+                if (selections.batches) {
+                  Object.entries(selections.batches).forEach(([itemCode, batches]) => {
+                    state.setLineBatches(itemCode, batches);
+                  });
+                }
+                
+                // User explicitly requested to NOT auto-submit here. 
+                // They will click "Submit" again manually.
+                setPendingData(null);
+              }
+            }}
+            lines={useSalesDocument.getState().lines}
+          />
         </form>
       </FormProvider>
     </SalesDocContext.Provider>

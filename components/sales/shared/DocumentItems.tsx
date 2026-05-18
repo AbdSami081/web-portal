@@ -44,7 +44,7 @@ export function DocumentItems() {
   const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
 
   useEffect(() => {
-    loadMasterData();
+    loadMasterData("C", "O");
   }, [loadMasterData]);
   
   const handleOnSelectItems = (items: Item[]) => {
@@ -65,7 +65,10 @@ export function DocumentItems() {
         Price: price,
         TaxCode: targetTaxCode,
         TaxRate: taxRate,
-        WarehouseCode: defaultWhsLine
+        WarehouseCode: defaultWhsLine,
+        UoMCode: item.UoM || "",
+        ManSerNum: item.ManSerNum,
+        ManBatNum: item.ManageBatchNumbers || (item as any).ManBatNum
       });
     });
   };

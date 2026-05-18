@@ -83,8 +83,8 @@ export function PRDDocumentHeader() {
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [listSkip, setListSkip] = useState(0);
   const [listHasMore, setListHasMore] = useState(true);
-  // Captures the status of the currently loaded document — used to control which options show in the Status dropdown.
-  // This is a local state so it NEVER changes when the user picks a different value from the dropdown.
+  const [selectedMultiBomHeader, setSelectedMultiBomHeader] = useState<any | null>(null);
+  const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [loadedStatus, setLoadedStatus] = useState<string>("");
   const LIST_PAGE_SIZE = 20;
 
@@ -359,22 +359,55 @@ export function PRDDocumentHeader() {
       return;
     }
 
-    const type = getValues("ProductionOrderType");
-    if (!isMultiBom && type === "bopotSpecial") {
-      setValue("ItemNo", item.ItemCode || item.ItemNo || "", { shouldDirty: true, shouldValidate: true });
-      setValue("ProductDescription", item.ItemName || item.Dscription || item.ProductDescription || "", { shouldDirty: true, shouldValidate: true });
-      resetStore();
+    if (isMultiBom) {
+      setSelectedMultiBomHeader(item);
+      setVariantModalOpen(true);
     } else {
-      // Use U_PCode/U_Name as fallback for Multi-BOM
-      const itemCode = item.TreeCode || item.ItemCode || item.U_PCode;
-      const itemName = item.ProductDescription || item.ItemName || item.U_Name || "";
-      setValue("ItemNo", itemCode, { shouldDirty: true, shouldValidate: true });
-      setValue("ProductDescription", itemName, { shouldDirty: true, shouldValidate: true });
-      const currentPlannedQty = watch("PlannedQuantity");
-      const plannedQty = currentPlannedQty ? Number(currentPlannedQty) : 0;
-      loadFromBOM(item, plannedQty);
+      const type = getValues("ProductionOrderType");
+      if (type === "bopotSpecial") {
+        setValue("ItemNo", item.ItemCode || item.ItemNo || "", { shouldDirty: true, shouldValidate: true });
+        setValue("ProductDescription", item.ItemName || item.Dscription || item.ProductDescription || "", { shouldDirty: true, shouldValidate: true });
+        resetStore();
+      } else {
+        const itemCode = item.TreeCode || item.ItemCode || item.U_PCode;
+        const itemName = item.ProductDescription || item.ItemName || item.U_Name || "";
+        setValue("ItemNo", itemCode, { shouldDirty: true, shouldValidate: true });
+        setValue("ProductDescription", itemName, { shouldDirty: true, shouldValidate: true });
+        const currentPlannedQty = watch("PlannedQuantity");
+        const plannedQty = currentPlannedQty ? Number(currentPlannedQty) : 0;
+        loadFromBOM(item, plannedQty);
+      }
     }
     setBomModalOpen(false);
+  };
+
+  const handleSelectVariants = (selectedLines: any[]) => {
+    if (!selectedMultiBomHeader) return;
+
+    const itemCode = selectedMultiBomHeader.TreeCode || selectedMultiBomHeader.ItemCode || selectedMultiBomHeader.U_PCode;
+    const itemName = selectedMultiBomHeader.ProductDescription || selectedMultiBomHeader.ItemName || selectedMultiBomHeader.U_Name || "";
+    
+    setValue("ItemNo", itemCode, { shouldDirty: true, shouldValidate: true });
+    setValue("ProductDescription", itemName, { shouldDirty: true, shouldValidate: true });
+
+    const currentPlannedQty = watch("PlannedQuantity");
+    const plannedQty = currentPlannedQty ? Number(currentPlannedQty) : 0;
+
+    // Create a modified BOM object with only selected lines
+    const modifiedBOM = {
+      ...selectedMultiBomHeader,
+      ProductTreeLines: selectedLines.map(line => ({
+        ...line,
+        // Map fields if necessary for loadFromBOM
+        ItemCode: line.ComponentCode || line.ItemCode,
+        ItemName: line.ComponentName || line.ItemName,
+        Quantity: line.Quantity || line.U_Qty
+      }))
+    };
+
+    loadFromBOM(modifiedBOM, plannedQty);
+    setVariantModalOpen(false);
+    setSelectedMultiBomHeader(null);
   };
 
   const handleTypeChange = (newType: string) => {
@@ -680,6 +713,21 @@ export function PRDDocumentHeader() {
           { key: "WhsName", label: "Warehouse Name" },
         ]}
         getSelectValue={(item) => item}
+      />
+      
+      <GenericModal
+        title="Select Variants (Multi BOM)"
+        open={variantModalOpen}
+        onClose={() => setVariantModalOpen(false)}
+        onSelect={handleSelectVariants}
+        data={selectedMultiBomHeader?.ProductTreeLines || []}
+        columns={[
+          { key: "ComponentCode", label: "Variant Code" },
+          { key: "ComponentName", label: "Variant Name" },
+          { key: "Quantity", label: "Qty" },
+        ]}
+        getSelectValue={(item) => item}
+        multiple={true}
       />
 
       <GenericModal

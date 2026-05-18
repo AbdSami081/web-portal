@@ -17,12 +17,14 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSelect: (bp: BusinessPartner) => void;
+  cardType?: string;
 }
 
 export function BusinessPartnerSelectorDialog({
   open,
   onClose,
   onSelect,
+  cardType = ""
 }: Props) {
   const [items, setItems] = useState<BusinessPartner[]>([]);
   const [search, setSearch] = useState("");
@@ -36,7 +38,7 @@ export function BusinessPartnerSelectorDialog({
     const top = 20;
     const skip = (pageNum - 1) * top;
 
-    const data = await getCustomers(searchText, skip, top);
+    const data = await getCustomers(searchText, skip, top, cardType);
     
     if (data && data.length > 0) {
       setItems((prev) => (append ? [...prev, ...data] : [...data]));

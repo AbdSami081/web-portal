@@ -31,9 +31,11 @@ export const getFreightTypes = async (): Promise<FreightType[]> => {
   }
 };
 
-export const fetchFreightWithCharges = async (category: string = "O"): Promise<FreightWithCharges[]> => {
+export const fetchFreightWithCharges = async (category: string = ""): Promise<FreightWithCharges[]> => {
   try {
-    const res = await apiClient.get(`api/Master/FetchFreightWithCharges?category=${category}`);
+    const res = await apiClient.get(`api/Master/FetchFreightWithCharges`, {
+      params: { category }
+    });
     const data = res.data?.value || res.data;
     return Array.isArray(data) ? data : [];
   } catch (error) {

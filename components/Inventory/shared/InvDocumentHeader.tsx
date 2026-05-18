@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { toast } from "sonner";
@@ -69,6 +69,8 @@ export function InvDocumentHeader() {
   const [listSkip, setListSkip] = useState(0);
   const [listHasMore, setListHasMore] = useState(true);
   const LIST_PAGE_SIZE = 20;
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isFetchingRef = useRef(false);
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const config = useInvDocConfig();
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
@@ -181,11 +183,20 @@ export function InvDocumentHeader() {
   };
 
   const fetchDocument = async (overrideNum?: string) => {
-    const docNumInt = parseInt(overrideNum || docNumSearch);
+    const rawNum = overrideNum || docNumSearch;
+    const docNumInt = parseInt(rawNum);
     if (isNaN(docNumInt) || docNumInt <= 0) {
       toast.error("Please enter a valid document number to load.");
       return;
     }
+
+    if (isFetchingRef.current) {
+      abortControllerRef.current?.abort();
+    }
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    isFetchingRef.current = true;
     setIsLoading(true);
 
     try {
@@ -196,22 +207,26 @@ export function InvDocumentHeader() {
         documentData = await getInventoryTransfer(docNumInt);
       }
 
-      if (documentData) {
-        // Trigger UDF metadata refresh when a document is loaded
-        fetchUdfDefinitions(config.type, true);
+      if (abortController.signal.aborted) return;
 
+      if (documentData) {
+        fetchUdfDefinitions(config.type, true);
         applyDocumentData(documentData, config.type);
       } else {
         toast.error("Document not found.");
       }
     } catch (error: any) {
+      if (abortController.signal.aborted) return;
       if (error.response?.status === 404) {
         toast.info("Document not found.");
       } else {
         toast.error(error.message || "An error occurred while fetching the document.");
       }
     } finally {
-      setIsLoading(false);
+      if (!abortController.signal.aborted) {
+        setIsLoading(false);
+        isFetchingRef.current = false;
+      }
     }
   };
 

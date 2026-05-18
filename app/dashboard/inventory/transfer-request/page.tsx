@@ -140,6 +140,7 @@ export default function InvTransferRequestPage() {
 
     } catch (error: any) {
       toast.error(error.message || "Failed to create request");
+      throw error;
     }
   };
 
