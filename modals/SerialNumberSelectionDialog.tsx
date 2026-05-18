@@ -180,7 +180,7 @@ export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines }:
             <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2">
                Rows from Documents
             </h3>
-            <div className="rounded-lg bg-white border border-neutral-200 shadow-sm h-[180px] overflow-y-auto shrink-0">
+            <div className="rounded-lg bg-white border border-neutral-200 shadow-sm max-h-[130px] min-h-[80px] overflow-y-auto shrink-0">
                 <table className="w-full text-xs border-collapse">
                   <thead className="bg-neutral-50 sticky top-0 z-10 border-b border-neutral-200">
                     <tr className="text-neutral-500">
@@ -223,8 +223,8 @@ export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines }:
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 flex-1 min-h-0">
-            <div className="flex flex-col gap-4 overflow-hidden">
+          <div className="flex flex-row gap-6 flex-1 min-h-0">
+            <div className="flex-1 flex flex-col gap-3 overflow-hidden">
               <div className="flex flex-col gap-2">
                 <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">
                   Available Serials
@@ -275,21 +275,21 @@ export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines }:
               </div>
             </div>
 
-             <div className="flex-[0.6] flex flex-col gap-4 overflow-hidden border border-neutral-200 rounded-lg bg-white shadow-sm p-4">
-                <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
+             <div className="flex-[0.6] flex flex-col gap-2 overflow-hidden border border-neutral-200 rounded-lg bg-white shadow-sm p-3">
+                <div className="flex items-center justify-between">
                   <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2">
                     Selected Serials
                   </h3>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                      <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest whitespace-nowrap">Selected:</span>
-                     <span className="text-lg font-black text-blue-600">
+                     <span className="text-base font-black text-blue-600">
                         {(selectedSerialsByItem[currentItem?.ItemCode] || []).length}
                      </span>
                   </div>
                 </div>
-                <div className="flex gap-2 justify-end mb-2">
-                  <Button size="sm" variant="ghost" onClick={() => handleRemove()} className="text-red-500 hover:text-red-600 text-[10px] font-black uppercase">Remove All</Button>
-                  <Button size="sm" onClick={handleAutoSelect} className="bg-neutral-900 text-white text-[10px] font-black uppercase shadow-sm">Auto Select</Button>
+                <div className="flex gap-2 justify-end pb-1">
+                  <Button size="sm" variant="ghost" onClick={() => handleRemove()} className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 text-[10px] font-black uppercase">Remove All</Button>
+                  <Button size="sm" onClick={handleAutoSelect} className="h-7 px-3 bg-neutral-900 hover:bg-neutral-800 text-white text-[10px] font-black uppercase shadow-sm rounded-md">Auto Select</Button>
                 </div>
               <div className="rounded-lg bg-white overflow-auto border border-neutral-200 shadow-sm flex-1 min-h-0">
                   <table className="w-full text-xs border-collapse">
