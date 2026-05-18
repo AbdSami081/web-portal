@@ -236,21 +236,17 @@ export const useSalesDocument = create<SalesDocumentStore>()(
 
         const processedLines = lines.map((line: SalesDocumentLine) => {
         
-          // 1. Basic Line Values
         const quantity = parseSafe(line.Quantity);
         const unitPrice = parseSafe(line.Price);
         const lineDiscountPercent = parseSafe(line.DiscountPercent);
         const itemTaxRate = parseSafe(line.TaxRate);
 
-        // 2. Line Subtotal and Item Discount
         const lineSubtotal = quantity * unitPrice;
         const lineDiscountAmount = (lineSubtotal * lineDiscountPercent) / 100;
         const lineAmountAfterDiscount = lineSubtotal - lineDiscountAmount;
 
-        // 3. Item Tax Calculation
         const itemTaxAmount = lineAmountAfterDiscount * (itemTaxRate / 100);
 
-        // 4. Line-Level Freight Calculations
         const f1 = calculateFreightTax(parseSafe(line.Freight1LCAmount), line.Freight1TaxGroup || "", freightsWithCharges);
         const f2 = calculateFreightTax(parseSafe(line.Freight2LCAmount), line.Freight2TaxGroup || "", freightsWithCharges);
         const f3 = calculateFreightTax(parseSafe(line.Freight3LCAmount), line.Freight3TaxGroup || "", freightsWithCharges);
@@ -258,11 +254,9 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         const lineFreightSubtotal = parseSafe(line.Freight1LCAmount) + parseSafe(line.Freight2LCAmount) + parseSafe(line.Freight3LCAmount);
         const lineFreightTaxTotal = f1.taxAmount + f2.taxAmount + f3.taxAmount;
 
-        // 5. Accumulate Document-Level Totals
         overallTotalBeforeDiscount += lineAmountAfterDiscount;
         overallLineFreightAmount += lineFreightSubtotal;
 
-        // 6. Return Updated Line with Calculated Fields
         return {
           ...line,
           Quantity: quantity,
@@ -272,7 +266,6 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         };
       });
 
-      // 7. Header Level Expenses and Freight
       const totalAdditionalExpenses = additionalExpenses.reduce(
         (sum, e) => sum + parseSafe(e.LineTotal),
         0
@@ -281,9 +274,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       const totalTaxAmount = processedLines.reduce((sum, line) => sum + (line.TaxAmount || 0), 0);
       const totalFreightAmount = parseSafe(freight) + overallLineFreightAmount;
 
-      // 8. Final Document Total Calculation
-      // Formula: (Subtotal + Tax + Freight + Rounding + Expenses) - Header Discount
-      const finalDocTotal =
+     const finalDocTotal =
         overallTotalBeforeDiscount +
         totalTaxAmount +
         totalFreightAmount +
@@ -363,8 +354,8 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           DiscountPercent: discount,
           TaxRate: taxRate,
           LineTotal: parseSafe(line.LineTotal) || (lineSubtotal - discountAmount + calculatedTax),
-          ManSerNum: line.ManSerNum || "",
-          ManBatNum: line.ManBatNum || "",
+          ManSerNum: line.ManBtchNum || "",
+          ManBtchNum: line.ManBtchNum || "",
           WarehouseCode: line.WarehouseCode || "",
           TaxAmount: parseSafe(line.TaxTotal || line.TaxSum) || calculatedTax,
           UoMCode: line.UoMCode,
@@ -373,7 +364,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           BaseEntry: line.BaseEntry,
           BaseLine: line.BaseLine,
           Comments: line.Comments,
-          // Map line-level freight from SAP collection to UI flat fields
+         
           Freight1Type: line.DocumentLineAdditionalExpenses?.[0]?.ExpenseCode?.toString() || "",
           Freight1LCAmount: parseSafe(line.DocumentLineAdditionalExpenses?.[0]?.LineTotal),
           Freight1TaxGroup: line.DocumentLineAdditionalExpenses?.[0]?.TaxCode || line.DocumentLineAdditionalExpenses?.[0]?.VatGroup || "",
@@ -450,7 +441,6 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       const newLineNum = attachments.length > 0 ? Math.max(...attachments.map(a => a.LineNum)) + 1 : 1;
 
       let sourcePath = process.env.NEXT_PUBLIC_ATTACHMENT_SOURCE_PATH || "";
-      // Try to get path from various possible properties if available (e.g. Electron, specific browser setups)
       const fullPath = (file as any).path || (file as any).webkitRelativePath || "";
 
       if (fullPath) {

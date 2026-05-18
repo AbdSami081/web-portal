@@ -53,7 +53,7 @@ export interface SalesDocumentLine {
   ItemName?: string;
   ItemDescription?: string;
   ManSerNum?: string;
-  ManBatNum?: string;
+  ManBtchNum?: string;
   SerialNumbers?: { InternalSerialNumber: string }[];
   BatchNumbers?: { BatchNumber: string; Quantity: number }[];
   Quantity: number;

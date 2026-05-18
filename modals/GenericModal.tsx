@@ -212,7 +212,6 @@ export function GenericModal<T>({
                           ? index + 1
                           : (item as any)[col.key] ?? (item as any)[col.key.charAt(0).toLowerCase() + col.key.slice(1)] ?? (item as any)[col.key.toUpperCase()] ?? "";
 
-                        // Format SAP ISO dates to YYYY-MM-DD
                         const displayVal = typeof rawVal === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(rawVal)
                           ? rawVal.split('T')[0]
                           : (typeof rawVal === 'object' && rawVal !== null) 

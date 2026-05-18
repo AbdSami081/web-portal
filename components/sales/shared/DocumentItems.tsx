@@ -68,7 +68,7 @@ export function DocumentItems() {
         WarehouseCode: defaultWhsLine,
         UoMCode: item.UoM || "",
         ManSerNum: item.ManSerNum,
-        ManBatNum: item.ManageBatchNumbers || (item as any).ManBatNum
+        ManBtchNum: item.ManBtchNum
       });
     });
   };

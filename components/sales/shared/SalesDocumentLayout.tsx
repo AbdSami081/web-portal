@@ -19,6 +19,7 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { DocumentHeader } from "./DocumentHeader";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
+import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -87,6 +88,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
   const [serialModalOpen, setSerialModalOpen] = useState(false);
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<T | null>(null);
 
   const copyFromOptions = (() => {
@@ -234,29 +236,34 @@ export function SalesDocumentLayout<T extends FieldValues>({
       <FormProvider {...methods}>
         <form
           onSubmit={handleSubmit(async (data) => {
-            console.log("Submit Clicked. Data:", data);
             const state = useSalesDocument.getState();
-            const needsStockManagement = (docType === DocumentType.Delivery || docType === DocumentType.ARInvoice) && 
+            const needsSerialManagement = (docType === DocumentType.Delivery || docType === DocumentType.ARInvoice) && 
                                 state.lines.some(l => {
                                   const isSerial = l.ManSerNum === 'Y' || l.ManSerNum === 'tYES';
-                                  const isBatch = l.ManBatNum === 'Y' || l.ManBatNum === 'tYES';
-                                  
                                   if (isSerial) {
                                     return !l.SerialNumbers || l.SerialNumbers.length < l.Quantity;
                                   }
+                                  return false;
+                                });
+
+            const needsBatchManagement = (docType === DocumentType.Delivery || docType === DocumentType.ARInvoice) && 
+                                state.lines.some(l => {
+                                  const isBatch = String(l.ManBtchNum).toLowerCase() === 'y' || String(l.ManBtchNum).toLowerCase() === 'tyes';
                                   if (isBatch) {
                                     const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
                                     return totalBatch < l.Quantity;
                                   }
                                   return false;
                                 });
-
-            console.log("Needs Stock Management:", needsStockManagement, "Lines:", state.lines);
-
-            if (needsStockManagement) {
-              console.log("Opening Stock Management Modal...");
+            if (needsSerialManagement) {
               setPendingData(data as unknown as T);
               setSerialModalOpen(true);
+              return;
+            }
+
+            if (needsBatchManagement) {
+              setPendingData(data as unknown as T);
+              setBatchModalOpen(true);
               return;
             }
 
@@ -425,14 +432,38 @@ export function SalesDocumentLayout<T extends FieldValues>({
                   });
                 }
 
+                const needsBatchManagement = state.lines.some(l => {
+                  const isBatch = l.ManBtchNum === 'Y' || l.ManBtchNum === 'tYES';
+                  if (isBatch) {
+                    const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
+                    return totalBatch < l.Quantity;
+                  }
+                  return false;
+                });
+
+                if (needsBatchManagement) {
+                  setBatchModalOpen(true);
+                } else {
+                  setPendingData(null);
+                }
+              }
+            }}
+            lines={useSalesDocument.getState().lines}
+          />
+
+          <BatchNumberSelectionDialog
+            open={batchModalOpen}
+            onClose={() => setBatchModalOpen(false)}
+            onConfirm={async (selections) => {
+              if (pendingData) {
+                const state = useSalesDocument.getState();
+                
                 if (selections.batches) {
                   Object.entries(selections.batches).forEach(([itemCode, batches]) => {
                     state.setLineBatches(itemCode, batches);
                   });
                 }
                 
-                // User explicitly requested to NOT auto-submit here. 
-                // They will click "Submit" again manually.
                 setPendingData(null);
               }
             }}
