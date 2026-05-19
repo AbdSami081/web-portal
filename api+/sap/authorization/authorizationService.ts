@@ -52,3 +52,19 @@ export const saveUserAccess = async (payload: UserAccessSavePayload): Promise<vo
     permissions: payload.permissions,
   });
 };
+
+export interface WebPortalConfigEntry {
+  code: string;
+  name: string;
+  modules?: string;
+  Code?: string;
+  Name?: string;
+}
+
+export const getModules = async (companyDB: string): Promise<WebPortalConfigEntry[]> => {
+  const response = await apiClient.get<{ success: boolean; data: WebPortalConfigEntry[] }>(
+    `api/Authorization/GetModules`,
+    { params: { companyDB } }
+  );
+  return response.data.data ?? [];
+};

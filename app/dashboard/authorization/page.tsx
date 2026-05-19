@@ -7,8 +7,10 @@ import {
   getUsers, 
   getUserAccess, 
   saveUserAccess, 
+  getModules,
   OhemUser, 
-  UserAccessEntry 
+  UserAccessEntry,
+  WebPortalConfigEntry
 } from "@/api+/sap/authorization/authorizationService";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -59,6 +61,39 @@ export default function AuthorizationPage() {
   const [saving, setSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  const [portalConfig, setPortalConfig] = useState<WebPortalConfigEntry[]>([]);
+  const [loadingConfig, setLoadingConfig] = useState(false);
+
+  const configuredModuleIds = useMemo(() => {
+    const ids = new Set<string>();
+    portalConfig.forEach(cfg => {
+      const mid = cfg.modules || cfg.Code || cfg.code;
+      if (mid) {
+        mid.split(',').forEach(m => {
+          const trimmed = m.trim().toLowerCase();
+          if (trimmed) ids.add(trimmed);
+        });
+      }
+    });
+    return ids;
+  }, [portalConfig]);
+
+  const filteredMenus = useMemo(() => {
+    if (portalConfig.length === 0) return [];
+
+    return SERVER_MENUS.map(menu => {
+      const newMenu = { ...menu };
+      if (newMenu.items && newMenu.items.length > 0) {
+        newMenu.items = newMenu.items.filter(child => 
+          configuredModuleIds.has(child.id.toLowerCase())
+        );
+      }
+      return newMenu;
+    }).filter(menu => {
+      return configuredModuleIds.has(menu.id.toLowerCase()) || (menu.items && menu.items.length > 0);
+    });
+  }, [configuredModuleIds, portalConfig]);
+
   useEffect(() => {
     if (user?.companyDB) {
       setSelectedCompany(user.companyDB);
@@ -72,12 +107,27 @@ export default function AuthorizationPage() {
     );
   }, [users, searchQuery]);
   
+  const loadPortalConfig = async () => {
+    setLoadingConfig(true);
+    try {
+      const data = await getModules(selectedCompany);
+      setPortalConfig(data);
+    } catch (error: any) {
+      console.error("Failed to load portal config:", error);
+      setPortalConfig([]);
+    } finally {
+      setLoadingConfig(false);
+    }
+  };
+
   useEffect(() => {
     if (selectedCompany) {
       loadUsers();
+      loadPortalConfig();
     } else {
       setUsers([]);
       setSelectedUsers([]);
+      setPortalConfig([]);
     }
   }, [selectedCompany]);
 
@@ -134,9 +184,8 @@ export default function AuthorizationPage() {
       const isChecking = !prev[key];
       const newState = { ...prev, [key]: isChecking };
       
-   
       if (!componentId) {
-        SERVER_MENUS.forEach(menu => {
+        filteredMenus.forEach(menu => {
           if (menu.id === moduleId && menu.items) {
             menu.items.forEach(item => {
               newState[`${moduleId}|${item.id}`] = isChecking;
@@ -371,11 +420,13 @@ export default function AuthorizationPage() {
             </div>
 
             <div className="flex-1 p-6 relative">
-              {loadingAccess && (
+              {(loadingAccess || loadingConfig) && (
                 <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex items-center justify-center p-12">
                    <div className="flex flex-col items-center gap-3">
                         <Loader2 className="w-8 h-8 animate-spin text-slate-900" />
-                        <span className="text-xs font-bold text-slate-500">Retrieving Access List...</span>
+                        <span className="text-xs font-bold text-slate-500">
+                          {loadingConfig ? "Loading configurations..." : "Retrieving Access List..."}
+                        </span>
                    </div>
                 </div>
               )}
@@ -388,9 +439,19 @@ export default function AuthorizationPage() {
                     <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Select a user to begin</p>
                     <p className="text-xs mt-2 font-medium max-w-[240px]">Access configurations are loaded in real-time for each individual user.</p>
                 </div>
+              ) : filteredMenus.length === 0 ? (
+                <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center py-12">
+                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center border border-red-100 mb-4 text-red-500 animate-pulse">
+                        <X className="w-8 h-8" />
+                    </div>
+                    <p className="text-sm font-black text-slate-900 uppercase tracking-widest text-red-500">No Modules Found</p>
+                    <p className="text-xs mt-2 font-medium max-w-[320px] text-slate-500 leading-relaxed">
+                      No active modules found.
+                    </p>
+                </div>
               ) : (
                 <div className="columns-1 md:columns-2 gap-12 space-y-10 opacity-100 transition-opacity duration-300">
-                    {SERVER_MENUS.map((menu) => {
+                    {filteredMenus.map((menu) => {
                         const Icon = ICON_MAP[menu.iconName || ""] || LayoutDashboard;
                         return (
                           <div key={menu.id} className="break-inside-avoid space-y-4">
@@ -427,7 +488,7 @@ export default function AuthorizationPage() {
                                               <div className="flex items-center gap-2">
                                                   <ChevronRight className={cn(
                                                       "w-3.5 h-3.5 transition-colors",
-                                                      selectedPermissions[`${menu.id}|${item.id}`] ? "text-slate-900" : "text-slate-300"
+                                                      selectedPermissions[`${menu.id}|${item.id}`] ? "text-slate-900 font-bold" : "text-slate-300"
                                                   )} />
                                                   <span className={cn(
                                                       "text-xs font-medium",
