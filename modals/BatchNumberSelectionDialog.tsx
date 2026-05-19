@@ -17,6 +17,7 @@ interface Props {
     batches: Record<string, { BatchNumber: string; Quantity: number }[]>;
   }) => void;
   lines: SalesDocumentLine[];
+  initialItemCode?: string;
 }
 
 interface BatchInfo {
@@ -26,7 +27,7 @@ interface BatchInfo {
   Quantity: number;
 }
 
-export function BatchNumberSelectionDialog({ open, onClose, onConfirm, lines }: Props) {
+export function BatchNumberSelectionDialog({ open, onClose, onConfirm, lines, initialItemCode }: Props) {
   const [itemsToProcess, setItemsToProcess] = useState<SalesDocumentLine[]>([]);
   const [selectedItemIndex, setSelectedItemIndex] = useState(0);
   const [availableStock, setAvailableStock] = useState<Record<string, BatchInfo[]>>({});
@@ -43,7 +44,15 @@ export function BatchNumberSelectionDialog({ open, onClose, onConfirm, lines }: 
         String(l.ManBtchNum).toLowerCase() === 'y' || String(l.ManBtchNum).toLowerCase() === 'tyes'
       );
       setItemsToProcess(managedLines);
-      setSelectedItemIndex(0);
+      
+      let initialIndex = 0;
+      if (initialItemCode) {
+        const foundIndex = managedLines.findIndex(l => l.ItemCode === initialItemCode);
+        if (foundIndex !== -1) {
+          initialIndex = foundIndex;
+        }
+      }
+      setSelectedItemIndex(initialIndex);
       
       const batchItems = managedLines.map(l => l.ItemCode);
       fetchData(batchItems);
@@ -58,7 +67,7 @@ export function BatchNumberSelectionDialog({ open, onClose, onConfirm, lines }: 
       setInputQuantities({});
       setSearch("");
     }
-  }, [open, lines]);
+  }, [open, lines, initialItemCode]);
 
   const fetchData = async (batchItems: string[]) => {
     if (!batchItems.length) return;

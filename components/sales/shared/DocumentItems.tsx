@@ -6,6 +6,7 @@ import { DocumentLineRow } from "./DocumentItemRow";
 import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
 import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
+import { DocumentType } from "@/types/master/DocumentType";
 import {
   Table,
   TableBody,
@@ -27,6 +28,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
+import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 
 
 export function DocumentItems() {
@@ -39,14 +42,22 @@ export function DocumentItems() {
   const config = useSalesDocConfig();
   const docStatus = watch("DocStatus");
   const isTableDisabled = config.isDisabledTable(customer?.DocumentStatus!);
-
   const { freightsWithCharges, warehouses, loadMasterData } = useMasterDataStore();
   const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    line?: any;
+  } | null>(null);
+
+  const [selectedLineForModal, setSelectedLineForModal] = useState<any | null>(null);
+  const [serialModalOpen, setSerialModalOpen] = useState(false);
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
 
   useEffect(() => {
     loadMasterData("C", "O");
   }, [loadMasterData]);
-  
+
   const handleOnSelectItems = (items: Item[]) => {
     items.forEach((item) => {
       const price = getCustomerPrice(item.Prices || []);
@@ -73,6 +84,27 @@ export function DocumentItems() {
     });
   };
 
+  const handleRowContextMenu = (
+    e: React.MouseEvent,
+    line: any
+  ) => {
+    e.preventDefault();
+
+    const isDeliveryOrInvoice = config.type === DocumentType.Delivery || config.type === DocumentType.ARInvoice;
+    if (!isDeliveryOrInvoice) return;
+
+    const isSerial = String(line.ManSerNum).toLowerCase() === 'y' || String(line.ManSerNum).toLowerCase() === 'tyes';
+    const isBatch = String(line.ManBtchNum).toLowerCase() === 'y' || String(line.ManBtchNum).toLowerCase() === 'tyes';
+    const isSerialBatchItem = isSerial || isBatch;
+
+    if (!isSerialBatchItem) return;
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      line,
+    });
+  };
 
   return (
     <div className="grid w-full relative pt-2 overflow-visible">
@@ -144,7 +176,7 @@ export function DocumentItems() {
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-center">Whs</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">UoM</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Line Total</TableHead>
-                      
+
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1 Type</TableHead>
                       <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1 (LC)</TableHead>
                       {/* <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Group</TableHead>
@@ -174,13 +206,55 @@ export function DocumentItems() {
                       </TableRow>
                     ) : (
                       lines.map((line, idx) => (
-                        <TableRow key={idx}>
+                        <TableRow
+                          key={idx}
+                          onContextMenu={(e) => handleRowContextMenu(e, line)}
+                        >
                           <DocumentLineRow index={idx} line={line} />
                         </TableRow>
                       ))
                     )}
                   </TableBody>
                 </Table>
+                {contextMenu && (
+                  <div
+                    className="fixed z-50 bg-white border border-neutral-200/80 shadow-lg rounded-lg w-52 p-1 select-none animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-150 ease-out"
+                    style={{
+                      top: contextMenu.y,
+                      left: contextMenu.x,
+                    }}
+                    onMouseLeave={() => setContextMenu(null)}
+                  >
+                    <button
+                      className="w-full text-left px-3 py-2 hover:bg-neutral-100 active:bg-neutral-200 rounded text-sm font-semibold flex items-center gap-2 text-neutral-800 transition-colors"
+                      onClick={() => {
+                        const isBatch = String(contextMenu.line.ManBtchNum).toLowerCase() === 'y' || String(contextMenu.line.ManBtchNum).toLowerCase() === 'tyes';
+                        setSelectedLineForModal(contextMenu.line);
+                        if (isBatch) {
+                          setBatchModalOpen(true);
+                        } else {
+                          setSerialModalOpen(true);
+                        }
+                        setContextMenu(null);
+                      }}
+                    >
+                      {(() => {
+                        const isBatch = String(contextMenu.line.ManBtchNum).toLowerCase() === 'y' || String(contextMenu.line.ManBtchNum).toLowerCase() === 'tyes';
+                        return isBatch ? (
+                          <>
+                            <FileText className="h-4 w-4 text-blue-500 stroke-[2]" />
+                            <span>Batch Number Transactions Report</span>
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 text-emerald-500 stroke-[2]" />
+                            <span>Serial Number Transactions Report</span>
+                          </>
+                        );
+                      })()}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -202,6 +276,48 @@ export function DocumentItems() {
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
       />
+      {selectedLineForModal && (
+        <SerialNumberSelectionDialog
+          open={serialModalOpen}
+          onClose={() => {
+            setSerialModalOpen(false);
+            setSelectedLineForModal(null);
+          }}
+          onConfirm={(selections) => {
+            const state = useSalesDocument.getState();
+            if (selections.serials) {
+              Object.entries(selections.serials).forEach(([itemCode, serials]) => {
+                state.setLineSerials(itemCode, serials);
+              });
+              toast.success("Serial numbers allocated successfully");
+            }
+          }}
+          lines={lines}
+          initialItemCode={selectedLineForModal.ItemCode}
+        />
+      )}
+
+      {selectedLineForModal && (
+        <BatchNumberSelectionDialog
+          open={batchModalOpen}
+          onClose={() => {
+            setBatchModalOpen(false);
+            setSelectedLineForModal(null);
+          }}
+          onConfirm={(selections) => {
+            const state = useSalesDocument.getState();
+            if (selections.batches) {
+              Object.entries(selections.batches).forEach(([itemCode, batches]) => {
+                state.setLineBatches(itemCode, batches);
+              });
+              toast.success("Batch numbers allocated successfully");
+            }
+          }}
+          lines={lines}
+          initialItemCode={selectedLineForModal.ItemCode}
+        />
+      )}
+
     </div >
   );
 }

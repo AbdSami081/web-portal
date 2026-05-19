@@ -21,6 +21,7 @@ interface Props {
     serials?: Record<string, { InternalSerialNumber: string }[]>;
   }) => void;
   lines: SalesDocumentLine[];
+  initialItemCode?: string;
 }
 
 interface StockInfo {
@@ -31,7 +32,7 @@ interface StockInfo {
   [key: string]: any;
 }
 
-export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines }: Props) {
+export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines, initialItemCode }: Props) {
   const [itemsToProcess, setItemsToProcess] = useState<SalesDocumentLine[]>([]);
   const [selectedItemIndex, setSelectedItemIndex] = useState(0);
   const [availableStock, setAvailableStock] = useState<Record<string, StockInfo[]>>({});
@@ -47,13 +48,21 @@ export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines }:
         String(l.ManSerNum).toLowerCase() === 'y' || String(l.ManSerNum).toLowerCase() === 'tyes'
       );
       setItemsToProcess(managedLines);
-      setSelectedItemIndex(0);
+      
+      let initialIndex = 0;
+      if (initialItemCode) {
+        const foundIndex = managedLines.findIndex(l => l.ItemCode === initialItemCode);
+        if (foundIndex !== -1) {
+          initialIndex = foundIndex;
+        }
+      }
+      setSelectedItemIndex(initialIndex);
       
       const serialItems = managedLines.map(l => l.ItemCode);
       
       fetchData(serialItems);
     }
-  }, [open, lines]);
+  }, [open, lines, initialItemCode]);
 
   const fetchData = async (serialItems: string[]) => {
     if (!serialItems.length) return;
