@@ -13,6 +13,8 @@ const STANDALONE_ROOT = path.join(__dirname, '.next', 'standalone');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const STATIC_DIR = path.join(__dirname, '.next', 'static');
 const TEMP_DIR = path.join(__dirname, 'temp_build_folder');
+const WEBCONFIG_PATH = path.join(__dirname, 'web.config'); // <-- Path to your local web.config
+
 
 async function automate() {
     try {
@@ -66,6 +68,16 @@ async function automate() {
         const destStatic = path.join(TEMP_DIR, '.next', 'static');
         fs.ensureDirSync(destStatic);
         fs.copySync(STATIC_DIR, destStatic);
+
+
+          // --- NEW STEP: COPY WEB.CONFIG ---
+        if (fs.existsSync(WEBCONFIG_PATH)) {
+            console.log('📄 Copying web.config to deployment directory...');
+            fs.copySync(WEBCONFIG_PATH, path.join(TEMP_DIR, 'web.config'));
+        } else {
+            console.warn('⚠️  Warning: web.config was not found in the root directory!');
+        }
+        
 
         // 5. Create ZIP
         console.log('🗜️  Creating final ZIP file...');
