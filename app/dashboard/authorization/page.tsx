@@ -210,7 +210,7 @@ export default function AuthorizationPage() {
     "Settings": Settings
   };
 
-  if (user?.role?.toLowerCase() !== "admin") {
+  if (user?.role?.toLowerCase() !== "admin" && !user?.isSuperAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <div className="p-4 bg-orange-50 border border-orange-100 rounded-full text-orange-600">
