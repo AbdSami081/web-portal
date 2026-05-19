@@ -218,7 +218,7 @@ export function DocumentItems() {
                 </Table>
                 {contextMenu && (
                   <div
-                    className="fixed z-50 bg-white border border-neutral-200/80 shadow-lg rounded-lg w-52 p-1 select-none animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-150 ease-out"
+                    className="fixed z-50 bg-white border border-neutral-200/80 shadow-lg rounded-lg w-72 p-1 select-none animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-150 ease-out"
                     style={{
                       top: contextMenu.y,
                       left: contextMenu.x,
@@ -226,7 +226,7 @@ export function DocumentItems() {
                     onMouseLeave={() => setContextMenu(null)}
                   >
                     <button
-                      className="w-full text-left px-3 py-2 hover:bg-neutral-100 active:bg-neutral-200 rounded text-sm font-semibold flex items-center gap-2 text-neutral-800 transition-colors"
+                      className="cursor-pointer w-full text-left px-3 py-2 hover:bg-neutral-100 active:bg-neutral-200 rounded text-sm font-semibold flex items-center gap-2 text-neutral-800 transition-colors"
                       onClick={() => {
                         const isBatch = String(contextMenu.line.ManBtchNum).toLowerCase() === 'y' || String(contextMenu.line.ManBtchNum).toLowerCase() === 'tyes';
                         setSelectedLineForModal(contextMenu.line);

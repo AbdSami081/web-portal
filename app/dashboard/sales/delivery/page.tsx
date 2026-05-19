@@ -89,7 +89,6 @@ export default function DeliveryPage() {
       }))
     };
 
-    console.log("Final Delivery Payload:", JSON.stringify(payload, null, 2));
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Delivery) {
       try {
