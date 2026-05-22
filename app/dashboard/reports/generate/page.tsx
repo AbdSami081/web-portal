@@ -3,28 +3,27 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { 
   Loader2, 
   Search, 
   FileText,
   Printer,
-  BarChart3,
-  ArrowUpDown,
-  LayoutGrid,
-  List as ListIcon
+  Settings2,
+  X
 } from "lucide-react";
 import { useAuth } from "@/context/authContext";
-import { getAuthorizedReports, getReports, downloadReport, ReportData } from "@/api+/sap/reporting/reportingService";
+import { getAuthorizedReports, getReports, downloadReport, ReportData, ReportParameter } from "@/api+/sap/reporting/reportingService";
 import ReportViewer from "@/components/reporting/ReportViewer";
 import { cn } from "@/lib/utils";
+import ReportParameterModal from "@/modals/ReportParameterModal";
 
 type SortOrder = "asc" | "desc";
 
 export default function ReportGeneratePage() {
   const { user } = useAuth();
   
-  // State
   const [reports, setReports] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(true);
   const [printingId, setPrintingId] = useState<string | null>(null);
@@ -32,9 +31,13 @@ export default function ReportGeneratePage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // Viewer State
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [selectedReportName, setSelectedReportName] = useState("");
+
+  const [showParamModal, setShowParamModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<ReportData | null>(null);
+  const [paramValues, setParamValues] = useState<Record<string, string>>({});
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     if (user?.empId) {
@@ -42,19 +45,19 @@ export default function ReportGeneratePage() {
         setLoading(true);
         try {
           const [allReports, rights] = await Promise.all([
-            getReports(),
+            getReports(user.empId),
             getAuthorizedReports(user.empId)
           ]);
 
           const authorizedCodes = new Set(
-            rights.map((r: any) => String(r.U_ReportCode || r.u_reportcode || r.Code || "").trim().toLowerCase())
+            rights.map((r: any) => String(r.U_ReportCode || "").trim().toLowerCase())
           );
 
           const filtered = allReports.filter(report => {
-            const reportCode = String(report.Code || "").trim().toLowerCase();
+            const reportCode = String(report.U_ReportCode || "").trim().toLowerCase();
             return authorizedCodes.has(reportCode);
           });
-
+          
           setReports(filtered);
         } catch (error) {
           toast.error("Could not load authorized reports");
@@ -83,27 +86,103 @@ export default function ReportGeneratePage() {
 
   const handleGenerate = async (report: ReportData) => {
     if (!report.Code) return;
-    
-    setPrintingId(report.Code);
-    setSelectedReportName(report.U_FileName || "Report");
-    
-    try {
-      // Concatenate Path and FileName (using backslash for Windows paths stored in DB)
-      const fullPath = `${report.U_FilePath}\\${report.U_FileName}`;
+
+    if (report.Parameters && report.Parameters.length > 0) {
+      setSelectedReport(report);
       
-      const pdfUrl = await downloadReport(fullPath, {
-        // Dynamic parameters will be integrated here later
+      const initialValues: Record<string, string> = {};
+      report.Parameters.forEach(p => {
+        initialValues[p.U_ParamName] = "";
       });
+      setParamValues(initialValues);
+      setShowParamModal(true);
+      return;
+    }
+    
+    await generateReport(report, {});
+  };
+
+  const generateReport = async (
+      report: ReportData,
+      parameters: Record<string, string> = {}
+    ) => {
+      setPrintingId(report.Code!);
+      setSelectedReportName(report.U_FileName || "Report");
+
+      try {
+        const fullPath = `${report.U_FilePath}\\${report.U_ActualFileName}`;
+
+        const payload = {
+          FilePath: fullPath,
+          ReportFileName: report.U_ActualFileName,
+          FileType: 0,
+          Parameters: parameters,
+        };
+
+        const pdfUrl = await downloadReport(payload);
+
+        setViewerUrl(pdfUrl);
+      } catch (error) {
+        toast.error("Generation Failed", {
+          description: "Check reporting service logs",
+        });
+      } finally {
+        setPrintingId(null);
+      }
+    };
+
+  const handleParamSubmit = async () => {
+    if (!selectedReport) return;
+
+    const parametersObject: Record<string, string> = {};
+
+    (selectedReport.Parameters || []).forEach((p) => {
+      parametersObject[p.U_ParamName] = paramValues[p.U_ParamName] || "";
+    });
+
+    const hasEmpty = Object.values(parametersObject).some(
+      (value) => !String(value).trim()
+    );
+
+    if (hasEmpty) {
+      toast.error("Please fill all parameter values");
+      return;
+    }
+
+    setGenerating(true);
+    setShowParamModal(false);
+
+    try {
+      setSelectedReportName(selectedReport.U_FileName || "Report");
+
+      const fullPath = `${selectedReport.U_FilePath}\\${selectedReport.U_ActualFileName}`;
+
+      const payload = {
+        FilePath: fullPath,
+        ReportFileName: selectedReport.U_ActualFileName,
+        FileType: 0,
+        Parameters: parametersObject,
+      };
       
+      const pdfUrl = await downloadReport(payload);
+
       setViewerUrl(pdfUrl);
     } catch (error) {
       toast.error("Generation Failed", {
-        description: "Check reporting service logs"
+        description: "Check reporting service logs",
       });
     } finally {
-      setPrintingId(null);
+      setGenerating(false);
+      setSelectedReport(null);
+      setParamValues({});
     }
   };
+
+    const closeParamModal = () => {
+      setShowParamModal(false);
+      setSelectedReport(null);
+      setParamValues({});
+    };
 
   const toggleSort = () => setSortOrder(prev => prev === "asc" ? "desc" : "asc");
 
@@ -191,6 +270,12 @@ export default function ReportGeneratePage() {
                        <span className="h-5 px-2 rounded bg-slate-100 text-[9px] font-bold text-slate-500 flex items-center uppercase tracking-wider">
                         {report.U_ExtType || ".rpt"}
                       </span>
+                      {report.Parameters && report.Parameters.length > 0 && (
+                        <span className="h-5 px-2 rounded bg-blue-50 text-[9px] font-bold text-blue-600 flex items-center gap-1 uppercase tracking-wider">
+                          <Settings2 className="h-3 w-3" />
+                          {report.Parameters.length} Params
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -218,6 +303,16 @@ export default function ReportGeneratePage() {
         </div>
         )}
       </main>
+    
+      <ReportParameterModal
+        open={showParamModal}
+        onClose={closeParamModal}
+        selectedReport={selectedReport}
+        paramValues={paramValues}
+        setParamValues={setParamValues}
+        generating={generating}
+        onSubmit={handleParamSubmit}
+      />
     </div>
   );
 }

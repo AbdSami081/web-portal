@@ -39,7 +39,7 @@ export default function ReportAccessPage() {
       try {
         const [u, r] = await Promise.all([
           getUsers(currentUser.companyDB),
-          getReports()
+          getReports(currentUser.empId)
         ]);
         setUsers(u);
         setReports(r);
@@ -52,29 +52,32 @@ export default function ReportAccessPage() {
     fetchData();
   }, [currentUser?.companyDB]);
 
-  useEffect(() => {
-    if (selectedUser) {
-      const fetchPermissions = async () => {
-        try {
-          const authReports = await getAuthorizedReports(selectedUser.empId);
-          const mapping: Record<string, boolean> = {};
-          
-          authReports.forEach(r => {
-            const code = r.U_ReportCode || r.Code; // In case the mock data still uses Code
-            if (code) {
-              mapping[code] = true;
-            }
-          });
-          setPermissions(mapping);
-        } catch (error) {
-          setPermissions({});
-        }
-      };
-      fetchPermissions();
-    } else {
-      setPermissions({});
-    }
-  }, [selectedUser]);
+ useEffect(() => {
+  if (selectedUser) {
+    const fetchPermissions = async () => {
+      try {
+        const authReports = await getAuthorizedReports(selectedUser.empId);
+
+        const mapping: Record<string, boolean> = {};
+
+        authReports.forEach((r: any) => {
+          const reportCode = String(r.U_ReportCode || "").trim();
+          if (reportCode) {
+            mapping[reportCode] = true;
+          }
+        });
+
+        setPermissions(mapping);
+      } catch (error) {
+        setPermissions({});
+      }
+    };
+
+    fetchPermissions();
+  } else {
+    setPermissions({});
+  }
+}, [selectedUser]);
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => 
@@ -242,8 +245,8 @@ export default function ReportAccessPage() {
                             Grant Access
                           </p>
                           <Switch 
-                            checked={permissions[report.Code!] || false}
-                            onCheckedChange={() => togglePermission(report.Code!)}
+                            checked={permissions[report.U_ReportCode!] || false}
+                            onCheckedChange={() => togglePermission(report.U_ReportCode!)}
                           />
                         </div>
                       </div>

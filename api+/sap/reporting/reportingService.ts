@@ -1,6 +1,12 @@
 import apiClient, { reportingApiClient } from "@/lib/apiClient";
 import axios from "axios";
 
+export interface ReportParameter {
+  U_ParamName: string;
+  U_ComponentType: string;
+  U_ParamType: string;
+}
+
 export interface ReportData {
   Code?: string;
   Name?: string;
@@ -14,6 +20,7 @@ export interface ReportData {
   U_ReportCode?: string;
   U_CanView?: string | boolean;
   U_CanPrint?: string | boolean;
+  Parameters?: ReportParameter[];
 }
 
 export interface ReportFolderItem {
@@ -38,7 +45,7 @@ export interface ReportAccessPayload {
 }
 
 export const getReportParameters = async (filePath: string) => {
-  const response = await axios.get(`/api/reports/GetReportParameters?filePath=${encodeURIComponent(filePath)}`);
+  const response = await reportingApiClient.get(`/api/reports/GetReportParameters?filePath=${encodeURIComponent(filePath)}`);
   return response.data;
 };
 
@@ -83,21 +90,16 @@ export const uploadReport = async (formData: FormData) => {
   return response.data;
 };
 
-export const getReports = async (employeeId?: string): Promise<ReportData[]> => {
-  const url = employeeId
-    ? `api/ReportingAPI/GetReports?employeeId=${encodeURIComponent(employeeId)}`
-    : "api/ReportingAPI/GetReports";
+export const getReports = async (employeeId: string): Promise<ReportData[]> => {
+  const url = `api/ReportingAPI/GetReports?employeeId=${employeeId}`
   const response = await apiClient.get(url);
   return response.data || [];
 };
 
-export const downloadReport = async (reportPath: string, params: any) => {
-  const response = await axios.post(
+export const downloadReport = async (payload: any) => {
+  const response = await reportingApiClient.post(
     "/api/reports/render",
-    {
-      ReportPath: reportPath,
-      Parameters: params
-    },
+    payload,
     { responseType: "blob" }
   );
 

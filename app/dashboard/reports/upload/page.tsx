@@ -103,14 +103,14 @@ export default function ReportsManagePage() {
       const payloads: any[] = [];
       const allReportParams: any[] = [];
       const initialConfigs: any = { ...paramConfigs };
-
+      
       for (const item of Array.from(selectedItems)) {
         const paramsData = await getReportParameters(item.path);
         const paramsArray = Object.entries(paramsData || {}).map(([name, type]) => ({
           name,
           type: String(type)
         }));
-
+        
         payloads.push({
           reportName: item.name.replace(".rpt", ""),
           fileName: item.name,
