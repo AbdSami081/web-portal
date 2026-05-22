@@ -11,8 +11,10 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotationDocument, getSalesOrderDocument, getSalesDeliveryDocument } from "@/api+/sap/sales/salesService";
-import { FilePlus2, Loader2 } from "lucide-react";
+import { FilePlus2, Loader2, Keyboard } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
+import { HeaderModalAction } from "@/components/header-modal-action";
+import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
@@ -305,6 +307,15 @@ export function SalesDocumentLayout<T extends FieldValues>({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+
+            <HeaderModalAction
+              triggerIcon={Keyboard}
+              triggerTooltip="Shortcut Keys"
+              modalTitle="Keyboard Shortcuts"
+              modalDescription="Quick reference for available keyboard shortcuts in the portal."
+            >
+              <KeyboardShortcutsContent />
+            </HeaderModalAction>
           </HeaderActionPortal>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted shrink-0">
