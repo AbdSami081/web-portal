@@ -6,8 +6,10 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { PurchaseDocumentType } from "@/types/purchase/purchaseDocuments.type";
-import { FilePlus2, Loader2 } from "lucide-react";
+import { FilePlus2, Loader2, Keyboard } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
+import { HeaderModalAction } from "@/components/header-modal-action";
+import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PurchaseDocumentLayoutProps<T extends FieldValues> {
@@ -116,6 +118,15 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          <HeaderModalAction
+            triggerIcon={Keyboard}
+            triggerTooltip="Shortcut Keys"
+            modalTitle="Keyboard Shortcuts"
+            modalDescription="Quick reference for available keyboard shortcuts in the portal."
+          >
+            <KeyboardShortcutsContent />
+          </HeaderModalAction>
         </HeaderActionPortal>
 
         {/* Title bar — same as Sales */}

@@ -86,7 +86,7 @@ export default function ReportGeneratePage() {
 
   const handleGenerate = async (report: ReportData) => {
     if (!report.Code) return;
-
+    
     if (report.Parameters && report.Parameters.length > 0) {
       setSelectedReport(report);
       
@@ -106,7 +106,7 @@ export default function ReportGeneratePage() {
       report: ReportData,
       parameters: Record<string, string> = {}
     ) => {
-      setPrintingId(report.Code!);
+      setPrintingId(selectedReport?.U_ReportCode!);
       setSelectedReportName(report.U_FileName || "Report");
 
       try {
@@ -150,6 +150,7 @@ export default function ReportGeneratePage() {
     }
 
     setGenerating(true);
+    setPrintingId(selectedReport.U_ReportCode!);
     setShowParamModal(false);
 
     try {
@@ -175,6 +176,7 @@ export default function ReportGeneratePage() {
       setGenerating(false);
       setSelectedReport(null);
       setParamValues({});
+      setPrintingId(null);
     }
   };
 
@@ -286,7 +288,7 @@ export default function ReportGeneratePage() {
                     disabled={!!printingId}
                     className="flex-1 h-9 bg-slate-900 hover:bg-slate-800 text-white font-bold text-[10px] rounded-md px-4"
                   >
-                    {printingId === report.Code ? (
+                    {printingId === report.U_ReportCode ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <>
