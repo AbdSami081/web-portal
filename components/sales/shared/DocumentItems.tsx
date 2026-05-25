@@ -319,7 +319,7 @@ export function DocumentItems() {
 
         <TabsContent
           value="content"
-          className="mt-0 pt-6"
+          className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto"
         >
           <div className="relative overflow-visible">
             <div className="absolute -top-6 left-2 z-50">
@@ -357,13 +357,16 @@ export function DocumentItems() {
                           true
                         );
                       }}
-                      className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
                     >
                       <Plus className="h-5 w-5 stroke-[2.5px]" />
                     </Button>
                   </TooltipTrigger>
 
-                  <TooltipContent side="right">
+                  <TooltipContent
+                    side="right"
+                    className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
+                  >
                     Add Item
                   </TooltipContent>
                 </Tooltip>
