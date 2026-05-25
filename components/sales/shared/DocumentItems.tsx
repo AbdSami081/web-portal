@@ -7,79 +7,139 @@ import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
 import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
 import { DocumentType } from "@/types/master/DocumentType";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { AppLabel } from "@/components/Custom/AppLabel";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Trash2, ExternalLink, FolderOpen, FileUp, Plus, Download, Globe, FileText } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import {
+  Plus,
+  FileText,
+} from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
-
+import { ResizableTable } from "@/components/Custom/ResizableTable";
 
 export function DocumentItems() {
-  const { watch, register } = useFormContext();
-  const selectedCardCode = watch("CardCode");
-  const { lines, addLine, customer, clearLines, attachments, addAttachment, removeAttachment, updateAttachment } = useSalesDocument();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selected, setSelected] = useState<string>("Select Type");
-  const [activeTab, setActiveTab] = useState("content");
-  const config = useSalesDocConfig();
-  const docStatus = watch("DocStatus");
-  const isTableDisabled = config.isDisabledTable(customer?.DocumentStatus!);
-  const { freightsWithCharges, warehouses, loadMasterData } = useMasterDataStore();
-  const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    line?: any;
-  } | null>(null);
+  const { watch } = useFormContext();
 
-  const [selectedLineForModal, setSelectedLineForModal] = useState<any | null>(null);
-  const [serialModalOpen, setSerialModalOpen] = useState(false);
-  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const selectedCardCode =
+    watch("CardCode");
+
+  const {
+    lines,
+    addLine,
+    customer,
+
+    attachments,
+    addAttachment,
+    removeAttachment,
+    updateAttachment,
+  } = useSalesDocument();
+
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+
+  const [activeTab, setActiveTab] =
+    useState("content");
+
+  const config = useSalesDocConfig();
+
+  const isTableDisabled =
+    config.isDisabledTable(
+      customer?.DocumentStatus!
+    );
+
+  const {
+    freightsWithCharges,
+    warehouses,
+    loadMasterData,
+  } = useMasterDataStore();
+
+  const firstWhs =
+    warehouses.length > 0
+      ? warehouses[0].WarehouseCode
+      : "";
+
+  const [contextMenu, setContextMenu] =
+    useState<{
+      x: number;
+      y: number;
+      line?: any;
+    } | null>(null);
+
+  const [
+    selectedLineForModal,
+    setSelectedLineForModal,
+  ] = useState<any | null>(null);
+
+  const [
+    serialModalOpen,
+    setSerialModalOpen,
+  ] = useState(false);
+
+  const [
+    batchModalOpen,
+    setBatchModalOpen,
+  ] = useState(false);
 
   useEffect(() => {
     loadMasterData("C", "O");
   }, [loadMasterData]);
 
-  const handleOnSelectItems = (items: Item[]) => {
+  const handleOnSelectItems = (
+    items: Item[]
+  ) => {
     items.forEach((item) => {
-      const price = getCustomerPrice(item.Prices || []);
+      const price =
+        getCustomerPrice(
+          item.Prices || []
+        );
 
-      const isItem = item.Category === 'I' || item.ItemType === 'itItems';
-      const targetTaxCode = isItem ? item.VatGourpPu : item.VatGourpSa;
+      const isItem =
+        item.Category === "I" ||
+        item.ItemType === "itItems";
 
-      const selectedTax = freightsWithCharges.find(t => t.Code === targetTaxCode);
-      const taxRate = Number(selectedTax?.Rate || 0);
-      const defaultWhsLine = item.DefaultWhse || firstWhs;
+      const targetTaxCode = isItem
+        ? item.VatGourpPu
+        : item.VatGourpSa;
+
+      const selectedTax =
+        freightsWithCharges.find(
+          (t) =>
+            t.Code === targetTaxCode
+        );
+
+      const taxRate = Number(
+        selectedTax?.Rate || 0
+      );
+
+      const defaultWhsLine =
+        item.DefaultWhse || firstWhs;
 
       addLine({
         ItemCode: item.ItemCode,
-        ItemName: item.ItemName || item.ItemDescription || "",
+        ItemName:
+          item.ItemName ||
+          item.ItemDescription ||
+          "",
         Quantity: 1,
         Price: price,
         TaxCode: targetTaxCode,
         TaxRate: taxRate,
-        WarehouseCode: defaultWhsLine,
+        WarehouseCode:
+          defaultWhsLine,
         UoMCode: item.UoM || "",
-        ManSerNum: item.ManSerNum,
-        ManBtchNum: item.ManBtchNum
+        ManSerNum:
+          item.ManSerNum,
+        ManBtchNum:
+          item.ManBtchNum,
       });
     });
   };
@@ -90,14 +150,36 @@ export function DocumentItems() {
   ) => {
     e.preventDefault();
 
-    const isDeliveryOrInvoice = config.type === DocumentType.Delivery || config.type === DocumentType.ARInvoice;
-    if (!isDeliveryOrInvoice) return;
+    const isDeliveryOrInvoice =
+      config.type ===
+        DocumentType.Delivery ||
+      config.type ===
+        DocumentType.ARInvoice;
 
-    const isSerial = String(line.ManSerNum).toLowerCase() === 'y' || String(line.ManSerNum).toLowerCase() === 'tyes';
-    const isBatch = String(line.ManBtchNum).toLowerCase() === 'y' || String(line.ManBtchNum).toLowerCase() === 'tyes';
-    const isSerialBatchItem = isSerial || isBatch;
+    if (!isDeliveryOrInvoice)
+      return;
 
-    if (!isSerialBatchItem) return;
+    const isSerial =
+      String(
+        line.ManSerNum
+      ).toLowerCase() === "y" ||
+      String(
+        line.ManSerNum
+      ).toLowerCase() === "tyes";
+
+    const isBatch =
+      String(
+        line.ManBtchNum
+      ).toLowerCase() === "y" ||
+      String(
+        line.ManBtchNum
+      ).toLowerCase() === "tyes";
+
+    const isSerialBatchItem =
+      isSerial || isBatch;
+
+    if (!isSerialBatchItem)
+      return;
 
     setContextMenu({
       x: e.clientX,
@@ -106,25 +188,139 @@ export function DocumentItems() {
     });
   };
 
+  const columns = [
+    {
+      key: "actions",
+      title: "Actions",
+      width: 80,
+    },
+
+    {
+      key: "ItemCode",
+      title: "Item Code",
+      width: 180,
+    },
+
+    {
+      key: "ItemName",
+      title: "Item Description",
+      width: 300,
+    },
+
+    {
+      key: "Quantity",
+      title: "Qty",
+      width: 100,
+    },
+
+    {
+      key: "Price",
+      title: "Price",
+      width: 120,
+    },
+
+    {
+      key: "DiscountPercent",
+      title: "Disc %",
+      width: 120,
+    },
+
+    {
+      key: "TaxCode",
+      title: "Tax Code",
+      width: 140,
+    },
+
+    {
+      key: "TaxAmount",
+      title: "Tax Amount (LC)",
+      width: 180,
+    },
+
+    {
+      key: "WarehouseCode",
+      title: "Whs",
+      width: 120,
+    },
+
+    {
+      key: "UoMCode",
+      title: "UoM",
+      width: 120,
+    },
+
+    {
+      key: "LineTotal",
+      title: "Line Total",
+      width: 180,
+    },
+
+    {
+      key: "Freight1Type",
+      title: "Freight 1 Type",
+      width: 180,
+    },
+
+    {
+      key: "Freight1LCAmount",
+      title: "Freight 1 (LC)",
+      width: 180,
+    },
+
+    {
+      key: "Freight2Type",
+      title: "Freight 2 Type",
+      width: 180,
+    },
+
+    {
+      key: "Freight2LCAmount",
+      title: "Freight 2 (LC)",
+      width: 180,
+    },
+
+    {
+      key: "Freight3Type",
+      title: "Freight 3 Type",
+      width: 180,
+    },
+
+    {
+      key: "Freight3LCAmount",
+      title: "Freight 3 (LC)",
+      width: 180,
+    },
+  ];
+
   return (
     <div className="grid w-full relative pt-2 overflow-visible">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-1 overflow-x-auto">
+      <Tabs
+        value={activeTab}
+        onValueChange={
+          setActiveTab
+        }
+        className="w-full pt-1 overflow-x-auto"
+      >
         <TabsList className="grid w-[240px] grid-cols-2 mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800">
           <TabsTrigger
             value="content"
-            className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
+            className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400"
           >
             Content
           </TabsTrigger>
+
           <TabsTrigger
             value="attachments"
-            className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
+            className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400"
           >
             Attachments
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="content" className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto">
+        <TabsContent
+          value="content"
+          className="mt-0 pt-6"
+        >
           <div className="relative overflow-visible">
             <div className="absolute -top-6 left-2 z-50">
               <TooltipProvider>
@@ -134,124 +330,146 @@ export function DocumentItems() {
                       type="button"
                       size="icon"
                       onClick={() => {
-                        if (!selectedCardCode) {
-                          const field = document.getElementById("card-code-field");
+                        if (
+                          !selectedCardCode
+                        ) {
+                          const field =
+                            document.getElementById(
+                              "card-code-field"
+                            );
+
                           if (field) {
-                            field.classList.add("animate-glow-red-blink");
+                            field.classList.add(
+                              "animate-glow-red-blink"
+                            );
+
                             setTimeout(() => {
-                              field.classList.remove("animate-glow-red-blink");
+                              field.classList.remove(
+                                "animate-glow-red-blink"
+                              );
                             }, 3000);
                           }
+
                           return;
                         }
-                        setDialogOpen(true);
+
+                        setDialogOpen(
+                          true
+                        );
                       }}
-                      className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
+                      className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white"
                     >
                       <Plus className="h-5 w-5 stroke-[2.5px]" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent
-                    side="right"
-                    className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
-                  >
+
+                  <TooltipContent side="right">
                     Add Item
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
+
             <div className="relative border rounded overflow-x-auto">
-              <div className={`w-full overflow-x-auto pb-2 ${isTableDisabled ? "opacity-80 pointer-events-none" : ""}`}>
-                <Table className="text-xs min-w-[1600px]">
-                  <TableHeader className="sticky top-0 bg-neutral-900 z-10">
-                    <TableRow className="border-neutral-600">
-                      <TableHead className="text-gray-300 px-4 py-2 border-r border-neutral-700 w-[60px] text-center">Actions</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Item Code</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Item Description</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Qty</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Price</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Disc %</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Code</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-center">Tax Amount (LC)</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap text-center">Whs</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">UoM</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Line Total</TableHead>
+              <div
+                className={`w-full overflow-x-auto pb-2 ${
+                  isTableDisabled
+                    ? "opacity-80 pointer-events-none"
+                    : ""
+                }`}
+              >
+                <ResizableTable
+                  columns={columns}
+                  data={lines}
+                  emptyMessage="No items added yet."
+                  onRowContextMenu={(
+                    e,
+                    line
+                  ) =>
+                    handleRowContextMenu(
+                      e,
+                      line
+                    )
+                  }
+                  renderRow={(
+                    line,
+                    idx
+                  ) => (
+                    <DocumentLineRow
+                      index={idx}
+                      line={line}
+                    />
+                  )}
+                />
 
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1 Type</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 1 (LC)</TableHead>
-                      {/* <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Group</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax %</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Amt (LC)</TableHead> */}
-
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 2 Type</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 2 (LC)</TableHead>
-                      {/* <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Group</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax %</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Amt (LC)</TableHead> */}
-
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 3 Type</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Freight 3 (LC)</TableHead>
-                      {/* <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Group</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax %</TableHead>
-                      <TableHead className="text-gray-300 px-12 py-2 whitespace-nowrap">Tax Amt (LC)</TableHead> */}
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody className="text-center">
-                    {lines.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={26} className="text-left text-gray-500 py-4">
-                          No items added yet.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      lines.map((line, idx) => (
-                        <TableRow
-                          key={idx}
-                          onContextMenu={(e) => handleRowContextMenu(e, line)}
-                        >
-                          <DocumentLineRow index={idx} line={line} />
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
                 {contextMenu && (
                   <div
-                    className="fixed z-50 bg-white border border-neutral-200/80 shadow-lg rounded-lg w-72 p-1 select-none animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-150 ease-out"
+                    className="fixed z-50 bg-white border border-neutral-200/80 shadow-lg rounded-lg w-72 p-1"
                     style={{
                       top: contextMenu.y,
-                      left: contextMenu.x,
+                      left:
+                        contextMenu.x,
                     }}
-                    onMouseLeave={() => setContextMenu(null)}
+                    onMouseLeave={() =>
+                      setContextMenu(
+                        null
+                      )
+                    }
                   >
                     <button
-                      className="cursor-pointer w-full text-left px-3 py-2 hover:bg-neutral-100 active:bg-neutral-200 rounded text-sm font-semibold flex items-center gap-2 text-neutral-800 transition-colors"
+                      className="cursor-pointer w-full text-left px-3 py-2 hover:bg-neutral-100 rounded text-sm font-semibold flex items-center gap-2 text-neutral-800"
                       onClick={() => {
-                        const isBatch = String(contextMenu.line.ManBtchNum).toLowerCase() === 'y' || String(contextMenu.line.ManBtchNum).toLowerCase() === 'tyes';
-                        setSelectedLineForModal(contextMenu.line);
+                        const isBatch =
+                          String(
+                            contextMenu
+                              .line
+                              .ManBtchNum
+                          ).toLowerCase() ===
+                            "y" ||
+                          String(
+                            contextMenu
+                              .line
+                              .ManBtchNum
+                          ).toLowerCase() ===
+                            "tyes";
+
+                        setSelectedLineForModal(
+                          contextMenu.line
+                        );
+
                         if (isBatch) {
-                          setBatchModalOpen(true);
+                          setBatchModalOpen(
+                            true
+                          );
                         } else {
-                          setSerialModalOpen(true);
+                          setSerialModalOpen(
+                            true
+                          );
                         }
-                        setContextMenu(null);
+
+                        setContextMenu(
+                          null
+                        );
                       }}
                     >
-                      {(() => {
-                        const isBatch = String(contextMenu.line.ManBtchNum).toLowerCase() === 'y' || String(contextMenu.line.ManBtchNum).toLowerCase() === 'tyes';
-                        return isBatch ? (
-                          <>
-                            <FileText className="h-4 w-4 text-blue-500 stroke-[2]" />
-                            <span>Batch Number Transactions Report</span>
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="h-4 w-4 text-emerald-500 stroke-[2]" />
-                            <span>Serial Number Transactions Report</span>
-                          </>
-                        );
-                      })()}
+                      <FileText className="h-4 w-4" />
+
+                      <span>
+                        {String(
+                          contextMenu
+                            .line
+                            .ManBtchNum
+                        ).toLowerCase() ===
+                          "y" ||
+                        String(
+                          contextMenu
+                            .line
+                            .ManBtchNum
+                        ).toLowerCase() ===
+                          "tyes"
+                          ? "Batch Number Transactions Report"
+                          : "Serial Number Transactions Report"}
+                      </span>
                     </button>
                   </div>
                 )}
@@ -260,40 +478,84 @@ export function DocumentItems() {
           </div>
         </TabsContent>
 
-
-        <TabsContent value="attachments" className="overflow-hidden mt-0">
+        <TabsContent
+          value="attachments"
+          className="overflow-hidden mt-0"
+        >
           <AttachmentsTab
-            attachments={attachments}
-            addAttachment={addAttachment}
-            removeAttachment={removeAttachment}
-            updateAttachment={updateAttachment}
-            isTableDisabled={isTableDisabled}
+            attachments={
+              attachments
+            }
+            addAttachment={
+              addAttachment
+            }
+            removeAttachment={
+              removeAttachment
+            }
+            updateAttachment={
+              updateAttachment
+            }
+            isTableDisabled={
+              isTableDisabled
+            }
           />
         </TabsContent>
       </Tabs>
+
       <ItemSelectorDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onSelectItems={handleOnSelectItems}
+        onClose={() =>
+          setDialogOpen(false)
+        }
+        onSelectItems={
+          handleOnSelectItems
+        }
       />
+
       {selectedLineForModal && (
         <SerialNumberSelectionDialog
           open={serialModalOpen}
           onClose={() => {
-            setSerialModalOpen(false);
-            setSelectedLineForModal(null);
+            setSerialModalOpen(
+              false
+            );
+
+            setSelectedLineForModal(
+              null
+            );
           }}
-          onConfirm={(selections) => {
-            const state = useSalesDocument.getState();
-            if (selections.serials) {
-              Object.entries(selections.serials).forEach(([itemCode, serials]) => {
-                state.setLineSerials(itemCode, serials);
-              });
-              toast.success("Serial numbers allocated successfully");
+          onConfirm={(
+            selections
+          ) => {
+            const state =
+              useSalesDocument.getState();
+
+            if (
+              selections.serials
+            ) {
+              Object.entries(
+                selections.serials
+              ).forEach(
+                ([
+                  itemCode,
+                  serials,
+                ]) => {
+                  state.setLineSerials(
+                    itemCode,
+                    serials
+                  );
+                }
+              );
+
+              toast.success(
+                "Serial numbers allocated successfully"
+              );
             }
           }}
           lines={lines}
-          initialItemCode={selectedLineForModal.ItemCode}
+          initialItemCode={
+            selectedLineForModal.ItemCode
+          }
         />
       )}
 
@@ -301,23 +563,48 @@ export function DocumentItems() {
         <BatchNumberSelectionDialog
           open={batchModalOpen}
           onClose={() => {
-            setBatchModalOpen(false);
-            setSelectedLineForModal(null);
+            setBatchModalOpen(
+              false
+            );
+
+            setSelectedLineForModal(
+              null
+            );
           }}
-          onConfirm={(selections) => {
-            const state = useSalesDocument.getState();
-            if (selections.batches) {
-              Object.entries(selections.batches).forEach(([itemCode, batches]) => {
-                state.setLineBatches(itemCode, batches);
-              });
-              toast.success("Batch numbers allocated successfully");
+          onConfirm={(
+            selections
+          ) => {
+            const state =
+              useSalesDocument.getState();
+
+            if (
+              selections.batches
+            ) {
+              Object.entries(
+                selections.batches
+              ).forEach(
+                ([
+                  itemCode,
+                  batches,
+                ]) => {
+                  state.setLineBatches(
+                    itemCode,
+                    batches
+                  );
+                }
+              );
+
+              toast.success(
+                "Batch numbers allocated successfully"
+              );
             }
           }}
           lines={lines}
-          initialItemCode={selectedLineForModal.ItemCode}
+          initialItemCode={
+            selectedLineForModal.ItemCode
+          }
         />
       )}
-
-    </div >
+    </div>
   );
 }

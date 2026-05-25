@@ -1,5 +1,5 @@
 "use client"
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useRef } from "react";
 import { FieldValues, FormProvider, useForm, DefaultValues, SubmitErrorHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -58,24 +58,28 @@ export function PRDDocumentLayout<T extends FieldValues>({
   });
 
   const { watch, reset, handleSubmit, formState: { isSubmitting, isDirty } } = methods;
-  const { lines, attachments, reset: lineReset, initialStatus, udfs } = useIFPRDDocument();
+  const { lines, attachments, reset: lineReset, initialStatus, udfs, setDocType } = useIFPRDDocument();
+  const previousDocType = useRef<DocumentType | null>(null);
 
   // Reset store and form when docType changes (navigation between pages)
   useEffect(() => {
-    const currentValues = methods.getValues();
-    const isDocumentLoaded = 
-      Number((currentValues as any).AbsoluteEntry || 0) > 0 || 
-      Number((currentValues as any).DocEntry || 0) > 0 ||
-      Number((currentValues as any).DocNum || 0) > 0 ||
-      Number((currentValues as any).DocumentNumber || 0) > 0;
-    const hasStoreContent = lines.length > 0 || attachments.length > 0;
+    const storeDocType =
+      useIFPRDDocument.getState().docType;
 
-    // If we're switching page and no doc is loaded AND store is empty, reset everything
-    if (!isDocumentLoaded && !hasStoreContent) {
-      lineReset();
+    const isDocTypeChange =
+      storeDocType !== docType ||
+      previousDocType.current !== null &&
+      previousDocType.current !== docType;
+
+    if (isDocTypeChange) {
+      lineReset(docType);
       reset(defaultValues as any);
+    } else {
+      setDocType(docType);
     }
-  }, [docType, lineReset, reset, defaultValues, lines.length, attachments.length]);
+
+    previousDocType.current = docType;
+  }, [docType, setDocType, lineReset, reset, defaultValues]);
 
   useEffect(() => {
     const currentValues = methods.getValues();

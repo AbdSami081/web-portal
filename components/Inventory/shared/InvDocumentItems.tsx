@@ -2,20 +2,10 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
-import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { InvDocumentLineRow } from "./InvDocumentItemRow";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 
 
 import { Plus } from "lucide-react";
@@ -23,9 +13,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
+import { ResizableTable } from "@/components/Custom/ResizableTable";
 
 export function InvDocumentItems() {
-  const { watch, register } = useFormContext();
+  const { watch } = useFormContext();
   const selectedCardCode = watch("CardCode");
   const { lines, addLine, customer, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment } = useInventoryDocument();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -43,6 +34,44 @@ export function InvDocumentItems() {
     setSelected(value);
     console.log("Selected:", value);
   }
+
+  const columns = [
+    {
+      key: "actions",
+      title: "Actions",
+      width: 80,
+    },
+    {
+      key: "ItemCode",
+      title: "Item",
+      width: 180,
+    },
+    {
+      key: "Dscription",
+      title: "Description",
+      width: 300,
+    },
+    {
+      key: "FromWhsCode",
+      title: "From Whs",
+      width: 180,
+    },
+    {
+      key: "WhsCode",
+      title: "To Whs",
+      width: 180,
+    },
+    {
+      key: "Quantity",
+      title: "Quantity",
+      width: 140,
+    },
+    {
+      key: "UomCode",
+      title: "UoM Code",
+      width: 140,
+    },
+  ];
 
   const handleOnSelectItems = (items: Item[]) => {
     const firstWhs = warehouses.length > 0 ? warehouses[0].WhsCode : "";
@@ -123,35 +152,14 @@ export function InvDocumentItems() {
             </div>
             <div className="relative border rounded overflow-hidden">
               <div className="overflow-x-auto pb-2">
-                <Table className="text-xs min-w-full">
-                  <TableHeader className="sticky top-0 bg-neutral-900 z-10">
-                    <TableRow className="border-neutral-600">
-                      <TableHead className="text-gray-300 px-4 py-2 border-r border-neutral-700 w-[60px] text-center">Actions</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Item</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Description</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">From Whs</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">To Whs</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Quantity</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">UoM Code</TableHead>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody className="text-center">
-                    {lines.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-left text-gray-500 py-4">
-                          No items added yet.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      lines.map((line, idx) => (
-                        <TableRow key={idx}>
-                          <InvDocumentLineRow index={idx} line={line} />
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                <ResizableTable
+                  columns={columns}
+                  data={lines}
+                  emptyMessage="No items added yet."
+                  renderRow={(line, idx) => (
+                    <InvDocumentLineRow index={idx} line={line} />
+                  )}
+                />
               </div>
             </div>
           </div>

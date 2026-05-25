@@ -146,8 +146,8 @@ export function DocumentLineRow({ index, line }: Props) {
         <span className="font-medium">{line.ItemCode}</span>
       </td>
 
-      <td className="px-12 py-2">
-        <Input className="h-6 w-32" value={draftLine.ItemName || ""} disabled />
+      <td className="px-2 py-2">
+        <span className="block text-left">{draftLine.ItemName}</span>
       </td>
 
       <td>

@@ -1,17 +1,7 @@
-import { useEffect, useState } from "react";
-import { useSalesDocument } from "@/stores/sales/useSalesDocument";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
-import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IFPRDDocumentLineRow } from "./PRDDocumentRow";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
@@ -23,10 +13,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { DocumentType } from "@/types/master/DocumentType";
+import { ResizableTable } from "@/components/Custom/ResizableTable";
 
 
 export function PRDDocumentItems() {
-  const { watch, register } = useFormContext();
+  const { watch } = useFormContext();
   const productionOrderType = watch("ProductionOrderType");
   const headerWarehouse = watch("Warehouse");
   const itemNo = watch("ItemNo");
@@ -52,6 +43,83 @@ export function PRDDocumentItems() {
       });
     });
   };
+
+  const columns = [
+    config.itemColumns.actions && {
+      key: "actions",
+      title: "Actions",
+      width: 80,
+    },
+    config.itemColumns.orderNumber && {
+      key: "OrderNumber",
+      title: "Order Number",
+      width: 140,
+    },
+    config.itemColumns.type && {
+      key: "ItemType",
+      title: "Type",
+      width: 120,
+    },
+    config.itemColumns.itemCode && {
+      key: "ItemNo",
+      title: "Item No",
+      width: 180,
+    },
+    config.itemColumns.itemDescription && {
+      key: "ItemName",
+      title: "Item Description",
+      width: 260,
+    },
+    config.itemColumns.baseQty && {
+      key: "BaseQuantity",
+      title: "Base Qty",
+      width: 130,
+    },
+    config.itemColumns.baseRatio && {
+      key: "BaseRatio",
+      title: "Base Ratio",
+      width: 130,
+    },
+    config.itemColumns.plannedQty && {
+      key: "PlannedQuantity",
+      title: "Planned Qty",
+      width: 140,
+    },
+    config.itemColumns.issued && {
+      key: "IssuedQuantity",
+      title: "Issued",
+      width: 120,
+    },
+    config.itemColumns.openQty && {
+      key: "OpenQuantity",
+      title: "Open Qty",
+      width: 120,
+    },
+    config.itemColumns.available && {
+      key: "AvailableQuantity",
+      title: "Available",
+      width: 120,
+    },
+    config.itemColumns.uomCode && {
+      key: "UoMCode",
+      title: "UoM Code",
+      width: 130,
+    },
+    config.itemColumns.warehouse && {
+      key: "Warehouse",
+      title: "Warehouse",
+      width: 180,
+    },
+    config.itemColumns.issueMethod && {
+      key: "ProductionOrderIssueType",
+      title: "Issue Method",
+      width: 170,
+    },
+  ].filter(Boolean) as {
+    key: string;
+    title: string;
+    width: number;
+  }[];
 
   return (
     <div className="grid w-full relative pt-2 overflow-visible">
@@ -111,42 +179,18 @@ export function PRDDocumentItems() {
             </div>
             <div className={`relative border rounded ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? '' : 'overflow-x-auto'}`}>
               <div className={`w-full pb-2 ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? '' : 'overflow-x-auto'}`}>
-                <Table className={`text-xs ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? 'w-full' : 'min-w-[1600px]'}`}>
-                  <TableHeader className="sticky top-0 bg-neutral-900 z-10">
-                    <TableRow className="border-neutral-600">
-                      {config.itemColumns.actions && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[50px]">Actions</TableHead>}
-                      {config.itemColumns.orderNumber && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[120px]">Order Number</TableHead>}
-                      {config.itemColumns.type && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Type</TableHead>}
-                      {config.itemColumns.itemCode && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[150px]">Item No</TableHead>}
-                      {config.itemColumns.itemDescription && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[200px] max-w-[250px] truncate">Item Description</TableHead>}
-                      {config.itemColumns.baseQty && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Base Qty</TableHead>}
-                      {config.itemColumns.baseRatio && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Base Ratio</TableHead>}
-                      {config.itemColumns.plannedQty && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[120px]">Planned Qty</TableHead>}
-                      {config.itemColumns.issued && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Issued</TableHead>}
-                      {config.itemColumns.openQty && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Open Qty</TableHead>}
-                      {config.itemColumns.available && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">Available</TableHead>}
-                      {config.itemColumns.uomCode && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[100px]">UoM Code</TableHead>}
-                      {config.itemColumns.warehouse && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[180px]">Warehouse</TableHead>}
-                      {config.itemColumns.issueMethod && <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap min-w-[150px]">Issue Method</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody className="text-center">
-                    {lines.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={32} className="text-left text-gray-500 py-4">
-                          No items added yet.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      lines.map((line, idx) => (
-                        <TableRow key={idx}>
-                          <IFPRDDocumentLineRow index={idx} line={line} warehouses={warehouses} />
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                <ResizableTable
+                  columns={columns}
+                  data={lines}
+                  emptyMessage="No items added yet."
+                  renderRow={(line, idx) => (
+                    <IFPRDDocumentLineRow
+                      index={idx}
+                      line={line}
+                      warehouses={warehouses}
+                    />
+                  )}
+                />
               </div>
             </div>
           </div>

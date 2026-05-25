@@ -226,6 +226,7 @@ export function PRDDocumentHeader() {
       }
 
       if (documentData && (documentData.DocEntry || documentData.AbsoluteEntry)) {
+        resetStore();
         loadFromDocument(documentData, docType);
         // Map header fields to form
         if (docType === SAPDocumentType.ProductionOrder) {
@@ -271,6 +272,15 @@ export function PRDDocumentHeader() {
 
         toast.success(`Document #${baseRef} loaded successfully.`);
       } else {
+        resetStore();
+        setLoadedStatus("");
+        setValue("DocNum", 0, { shouldDirty: false });
+        setValue("DocEntry", 0, { shouldDirty: false });
+        setValue("AbsoluteEntry", 0, { shouldDirty: false });
+        setValue("ItemNo", "", { shouldDirty: false });
+        setValue("ProductDescription", "", { shouldDirty: false });
+        setValue("Comments", "", { shouldDirty: false });
+        setValue("JournalMemo", "", { shouldDirty: false });
         toast.info(`Document number ${baseRef} not found.`);
       }
     } catch (error: any) {
