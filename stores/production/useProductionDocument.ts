@@ -36,7 +36,7 @@ interface IFPRDDocumentStore {
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   updateLine: (index: number, updated: Partial<PRDDocumentLine>) => void;
   loadFromBOM: (bom: any, plannedQty: number) => void;
-  reset: () => void;
+  reset: (docType?: DocumentType) => void;
   recalculateFromHeader: (headerPlannedQty: number) => void;
 }
 
@@ -244,17 +244,17 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         lines: mappedLines,
       });
     },
-    reset: () =>
-      set({
+    reset: (docType?: DocumentType) =>
+      set((state) => ({
         customer: null,
         lines: [],
-        docType: DocumentType.IssueForProduction,
+        docType: docType ?? state.docType,
         DocNum: 0,
         ProductionOrderStatus: "boposPlanned",
         initialStatus: "boposPlanned",
         attachments: [],
         udfs: {},
-      }),
+      })),
     recalculateFromHeader: (headerPlannedQty: number) => {
       set((state) => ({
         lines: state.lines.map((line) => ({
