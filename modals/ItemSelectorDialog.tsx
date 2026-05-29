@@ -8,9 +8,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Item } from "@/types/sales/Item.type";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getItemsList } from "@/api+/sap/master-data/items";
+import { getResourcesList } from "@/api+/sap/master-data/resources";
 
 interface Props {
   open: boolean;
@@ -19,8 +21,11 @@ interface Props {
   multiple?: boolean;
 }
 
+type SelectorType = "item" | "resource";
+
 export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = true }: Props) {
   const [items, setItems] = useState<Item[]>([]);
+  const [selectorType, setSelectorType] = useState<SelectorType>("item");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -33,15 +38,38 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
 
   const top = 20;
 
-  const fetchItems = async (search: string, page: number, append = true) => {
+  const normalizeResource = (resource: any): Item => ({
+    ...resource,
+    ItemCode: resource.ItemCode || resource.Code || resource.VisCode || "",
+    ItemName: resource.ItemName || resource.Name || resource.ItemDescription || "",
+    ItemDescription: resource.ItemDescription || resource.Name || resource.ItemName || "",
+    SelectorType: "resource",
+  });
+
+  const fetchItems = async (search: string, page: number, append = true, type: SelectorType = selectorType) => {
     setLoading(true);
     const skip = (page - 1) * top;
     try {
-      const res = await getItemsList(search, skip, top);
-      setItems((prev) => (append ? [...prev, ...res] : res));
-      setHasMore(res.length === top);
+      if (type === "resource") {
+        const resources = await getResourcesList();
+        const query = search.trim().toLowerCase();
+        const filteredResources = query
+          ? resources.filter((resource: any) => {
+            const code = String(resource.Code || resource.VisCode || resource.ItemCode || "").toLowerCase();
+            const name = String(resource.Name || resource.ItemName || resource.ItemDescription || "").toLowerCase();
+            return code.includes(query) || name.includes(query);
+          })
+          : resources;
+        const normalizedResources = filteredResources.map(normalizeResource);
+        setItems(normalizedResources);
+        setHasMore(false);
+      } else {
+        const res = await getItemsList(search, skip, top);
+        setItems((prev) => (append ? [...prev, ...res] : res));
+        setHasMore(res.length === top);
+      }
     } catch (err) {
-      console.error("Failed to fetch items", err);
+      console.error(`Failed to fetch ${type === "resource" ? "resources" : "items"}`, err);
     } finally {
       setLoading(false);
     }
@@ -82,12 +110,24 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
     }
   }, [open]);
 
+  const handleSelectorTypeChange = (value: SelectorType) => {
+    setSelectorType(value);
+    setSelectedCodes([]);
+    setSearch("");
+    setItems([]);
+    setPage(1);
+    setHasMore(true);
+    setLastSelectedIndex(null);
+    fetchItems("", 1, false, value);
+  };
+
   const handleClose = () => {
     setSelectedCodes([]);
     setSearch("");
     setItems([]);
     setPage(1);
     setHasMore(true);
+    setSelectorType("item");
     setLastSelectedIndex(null);
     hasFetchedRef.current = false;
     onClose();
@@ -126,12 +166,21 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
         style={{ maxHeight: "none" }}
       >
         <DialogHeader>
-          <DialogTitle>Select Items</DialogTitle>
+          <DialogTitle>{selectorType === "resource" ? "Select Resources" : "Select Items"}</DialogTitle>
         </DialogHeader>
 
         <div className="flex gap-2 mb-2">
+          <Select value={selectorType} onValueChange={(value: SelectorType) => handleSelectorTypeChange(value)}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="item">Item</SelectItem>
+              <SelectItem value="resource">Resource</SelectItem>
+            </SelectContent>
+          </Select>
           <Input
-            placeholder="Search items..."
+            placeholder={selectorType === "resource" ? "Search resources..." : "Search items..."}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -145,9 +194,9 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
             <thead className="bg-gray-100 sticky top-0">
               <tr>
                 {multiple && <th className="p-2 text-left w-10">Select</th>}
-                <th className="p-2 text-left">Item Code</th>
-                <th className="p-2 text-left">Item Description</th>
-                <th className="p-2 text-left">In Stock</th>
+                <th className="p-2 text-left">{selectorType === "resource" ? "Resource Code" : "Item Code"}</th>
+                <th className="p-2 text-left">{selectorType === "resource" ? "Resource Name" : "Item Description"}</th>
+                <th className="p-2 text-left">{selectorType === "resource" ? "Type" : "In Stock"}</th>
               </tr>
             </thead>
             <tbody>
@@ -170,7 +219,19 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
                   )}
                   <td className="p-2">{item.ItemCode}</td>
                   <td className="p-2">{item.ItemName}</td>
-                  <td className="p-2">{item.OnHand}</td>
+                  <td className="p-2">
+                    {
+                    selectorType === "resource"
+                      ? item.Type === "rtLabor"
+                        ? "Labour"
+                        : item.Type === "rtMachine"
+                        ? "Machine"
+                        : item.Type === "rtOther"
+                        ? "Other"
+                        : item.Type
+                      : item.OnHand
+                    }
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -193,7 +254,7 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
         <div className="flex justify-end mt-4 gap-2">
           <div>
             <span className="text-sm text-muted-foreground align-middle">
-              {items.length} items
+              {items.length} {selectorType === "resource" ? "resources" : "items"}
             </span>
           </div>
           <Button type="button" variant="outline" onClick={handleClose}>
@@ -204,7 +265,7 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
             onClick={handleConfirm}
             disabled={selectedCodes.length === 0}
           >
-            {submitting ? `Adding...` : multiple ? `Add ${selectedCodes.length} Item(s)` : `Add Item`}
+            {submitting ? `Adding...` : multiple ? `Add ${selectedCodes.length} ${selectorType === "resource" ? "Resource(s)" : "Item(s)"}` : `Add ${selectorType === "resource" ? "Resource" : "Item"}`}
           </Button>
         </div>
       </DialogContent>

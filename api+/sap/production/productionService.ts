@@ -101,8 +101,11 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
         PlannedQuantity: line.PlannedQuantity || 0,
         IssuedQuantity: line.IssuedQuantity || 0,
         ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
-        Warehouse: line.Warehouse || data.Warehouse
+        Warehouse: line.Warehouse || data.Warehouse,
+        ItemType: line.ItemType
       }));
+
+      console.log(payload);            
       return await postProductionOrder(payload);
     }
   } else if (docType === DocumentType.IssueForProduction || docType === DocumentType.ReceiptFromProduction) {

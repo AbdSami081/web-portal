@@ -28,18 +28,22 @@ export function PRDDocumentItems() {
 
   const handleOnSelectItems = (items: Item[]) => {
     items.forEach((item: Item) => {
+      const isResource = item.SelectorType === "resource";
+      const resourceWarehouses = Array.isArray(item.ResourceWarehouses) ? item.ResourceWarehouses : [];
+      const issueType = item.IssueMethod === "rimBackflush" ? "im_Backflush" : "im_Manual";
+
       addLine({
         ItemNo: item.ItemCode,
         ItemName: item.ItemName || item.ItemDescription || "",
         PlannedQuantity: 1,
-        Warehouse: headerWarehouse || (warehouses.length > 0 ? warehouses[0].WhsCode : ""),
-        ItemType: "pit_Item",
+        Warehouse: headerWarehouse || resourceWarehouses[0]?.Warehouse || (warehouses.length > 0 ? warehouses[0].WhsCode : ""),
+        ItemType: isResource ? "pit_Resource" : "pit_Item",
         BaseQuantity: 1,
         BaseRatio: 0,
         IssuedQuantity: 0,
         AvailableQuantity: 0,
-        UoMCode: item.UoMGroupEntry?.toString() || "", // Adjusting based on Item.type.ts
-        ProductionOrderIssueType: "im_Manual"
+        UoMCode: isResource ? (item.UnitOfMeasure || "") : (item.UoMGroupEntry?.toString() || ""), 
+        ProductionOrderIssueType: isResource ? issueType : "im_Manual"
       });
     });
   };
