@@ -137,11 +137,23 @@ export function InvDocumentLineRow({ index, line }: Props) {
         />
       </td>
 
-      {/* UoM Code */}
+      {/* Qty In Whs */}
+      <td className="py-2 px-4">
+        <Input
+          className="h-6 w-full text-right bg-slate-50 cursor-not-allowed"
+          type="number"
+          step="any"
+          value={draftLine.OnHand ?? 0}
+          disabled
+          readOnly
+        />
+      </td>
+
+      {/* UoM */}
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full bg-slate-50 cursor-not-allowed"
-          value={draftLine.UomCode || ""}
+          value={draftLine.unitMsr || draftLine.UomCode || ""}
           disabled
           readOnly
         />

@@ -130,6 +130,7 @@ export function DocumentItems() {
           item.ItemDescription ||
           "",
         Quantity: 1,
+        OnHand: item.OnHand!,
         Price: price,
         TaxCode: targetTaxCode,
         TaxRate: taxRate,
@@ -212,7 +213,11 @@ export function DocumentItems() {
       title: "Qty",
       width: 100,
     },
-
+    {
+      key: "OnHand",
+      title: "Qty In Whs",
+      width: 100,
+    },
     {
       key: "Price",
       title: "Price",

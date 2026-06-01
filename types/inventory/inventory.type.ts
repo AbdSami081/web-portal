@@ -19,6 +19,7 @@ export interface InventoryDocumentLine {
     ToBinLoc?: string;
     FisrtBin?: string;
     Quantity: number;
+    OnHand?: number;
     ItemCost?: number;
     UomCode?: string;
     unitMsr?: string;

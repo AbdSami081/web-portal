@@ -7,13 +7,16 @@ import { Button } from "@/components/ui/button";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/production/documentConfig";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
-import { FilePlus2, Keyboard } from "lucide-react";
+import { FilePlus2, Keyboard, Loader2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { HeaderModalAction } from "@/components/header-modal-action";
 import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { DocumentType } from "@/types/master/DocumentType";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
+import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 
 import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
@@ -45,7 +48,9 @@ export function PRDDocumentLayout<T extends FieldValues>({
 }: PRDDocumentLayoutProps<T>) {
 
   const config = getDocumentConfig(docType);
+  const router = useRouter();
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
+  const [isCopyingToInventory, setIsCopyingToInventory] = React.useState(false);
 
   useEffect(() => {
     fetchUdfDefinitions(docType);
@@ -114,6 +119,67 @@ export function PRDDocumentLayout<T extends FieldValues>({
     lineReset();
   };
 
+  const handleCopyFrom = (selected: string) => {
+    if (selected !== DocumentType.InvTransfer.toString()) return;
+
+    const currentValues = methods.getValues() as any;
+    const state = useIFPRDDocument.getState();
+
+    if (state.lines.length === 0) {
+      toast.error("Please add production order lines first.");
+      return;
+    }
+
+    setIsCopyingToInventory(true);
+
+    const headerWarehouse = currentValues.Warehouse || "";
+    const mappedLines = state.lines.map((line: any, index: number) => {
+      const sourceWarehouse = line.Warehouse || headerWarehouse || "";
+
+      return {
+        ItemCode: line.ItemNo || line.ItemCode || "",
+        Dscription: line.ItemName || line.ItemDescription || "",
+        FromWhsCode: sourceWarehouse,
+        FromBinLoc: "",
+        ToBinLoc: "",
+        FisrtBin: "",
+        WhsCode: headerWarehouse || sourceWarehouse,
+        Quantity: Number(line.PlannedQuantity || line.BaseQuantity || 1),
+        ItemCost: 0,
+        LineTotal: 0,
+        UomCode: line.UoMCode || "",
+        unitMsr: "",
+        PlPaWght: 0,
+        U_LastPrice: 0,
+        OcrCode2: "",
+        OcrCode3: "",
+        OcrCode4: "",
+        U_OQCR: "",
+        U_OQDC: "",
+        U_FBRQty: 0,
+        U_SaleType: "Retail",
+        U_FurtherTax: 0,
+        LineNum: index,
+      };
+    });
+
+    useInventoryDocument.setState({
+      lines: mappedLines,
+      fromWarehouse: mappedLines[0]?.FromWhsCode || headerWarehouse || "",
+      toWarehouse: mappedLines[0]?.WhsCode || headerWarehouse || "",
+      comments: `Copied from Production Order ${currentValues.DocNum || currentValues.AbsoluteEntry || currentValues.ItemNo || ""}`.trim(),
+      journalMemo: "Inventory Transfer",
+      DocEntry: 0,
+      DocNum: 0,
+      docDate: new Date().toISOString().split("T")[0],
+      customer: null,
+      attachments: [],
+      isCopyingTo: true,
+    });
+
+    router.push("/dashboard/inventory/transfer");
+  };
+
   const onSubmitError: SubmitErrorHandler<T> = (errors) => {
     const entries = Object.entries(errors);
     if (entries.length > 0) {
@@ -178,6 +244,29 @@ export function PRDDocumentLayout<T extends FieldValues>({
             {children}
           </div>
           <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
+            {docType === DocumentType.ProductionOrder  && (
+              <Select
+                value=""
+                onValueChange={handleCopyFrom}
+              >
+                <SelectTrigger
+                  className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0"
+                  disabled={isCopyingToInventory}
+                >
+                  <div className="flex items-center gap-2">
+                    {isCopyingToInventory && <Loader2 className="w-4 h-4 animate-spin text-white" />}
+                    <SelectValue placeholder="Copy From" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value={DocumentType.InvTransfer.toString()}>
+                      Inventory Transfer
+                    </SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            )}
             {initialStatus !== "boposClosed" && (
               <Button type="submit" disabled={isSubmitting || (docType === DocumentType.IssueForProduction && lines.length === 0)}>
                 {isSubmitting ? "Saving..." : ((watch("AbsoluteEntry" as any) || watch("DocEntry" as any)) ? "Update" : "Submit")}

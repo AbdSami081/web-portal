@@ -5,6 +5,8 @@ export interface InventoryTransferLine {
     ItemCode: string;
     Quantity: number;
     UnitPrice?: number;
+    UoMCode?: string;
+    MeasureUnit?: string;
     WarehouseCode?: string;
     FromWarehouseCode?: string;
     BaseType?: number;

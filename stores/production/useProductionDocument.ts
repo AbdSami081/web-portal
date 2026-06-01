@@ -119,7 +119,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
           BOMHeaderQty: 1,
           BaseRatio: 1,
           IssuedQuantity: 0,
-          AvailableQuantity: 0,
+          OnHand: 0,
           UoMCode: doc.UoMCode || "",
           ProductionOrderIssueType: "im_Manual",
           OrderNumber: doc.AbsoluteEntry || doc.DocEntry,
@@ -142,7 +142,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
                 ? ((line.BaseQuantity ?? line.PlannedQuantity) / doc.PlannedQuantity)
                 : 0),
             IssuedQuantity: line.IssuedQuantity,
-            AvailableQuantity: line.AvailableQuantity,
+            OnHand: line.OnHand,
             UoMCode: line.UoMCode,
             ProductionOrderIssueType: line.ProductionOrderIssueType,
             OrderNumber: line.BaseEntry || (isSourceProductionOrder ? (doc.AbsoluteEntry || doc.DocEntry) : undefined),

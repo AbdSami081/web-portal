@@ -41,6 +41,7 @@ export function DocumentLineRow({ index, line }: Props) {
     calculateAndUpdate(draftLine);
   }, [
     draftLine.Quantity,
+    draftLine.OnHand,
     draftLine.Price,
     draftLine.DiscountPercent,
     draftLine.TaxCode,
@@ -161,6 +162,21 @@ export function DocumentLineRow({ index, line }: Props) {
             const val = Number(e.target.value);
             setDraftLine({ ...draftLine, Quantity: val < 1 ? 1 : val });
           }}
+        />
+      </td>
+
+      <td>
+        <Input
+          className="h-6 w-25 text-right"
+          type="number"
+          step="any"
+          min={1}
+          value={line.OnHand}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            setDraftLine({ ...draftLine, OnHand: val });
+          }}
+          disabled
         />
       </td>
 

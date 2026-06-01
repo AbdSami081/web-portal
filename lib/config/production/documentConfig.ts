@@ -115,7 +115,7 @@ export const PRDOrderConfig: DocumentConfig = {
     baseRatio: true,
     plannedQty: true,
     issued: true,
-    available: true,
+    available: false,
     uomCode: true,
     warehouse: true,
     issueMethod: true,

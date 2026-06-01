@@ -116,6 +116,8 @@ export default function InvTransferPage() {
             ItemCode: line.ItemCode,
             Quantity: line.Quantity,
             UnitPrice: line.ItemCost || 0,
+            UoMCode: line.UomCode || line.unitMsr || "",
+            MeasureUnit: line.unitMsr || line.UomCode || "",
             WarehouseCode: line.WhsCode || toWarehouse || "",
             FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
           };

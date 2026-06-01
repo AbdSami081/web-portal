@@ -104,7 +104,7 @@ export function ResizableTable<T>({
   };
 
   return (
-    <div className="overflow-auto w-full">
+    <div className="overflow-auto w-full max-w-full min-w-0">
       <Table
         className="table-fixed text-xs"
         style={{ minWidth: tableWidth }}

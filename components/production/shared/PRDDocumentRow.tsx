@@ -181,12 +181,6 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
-      {config.itemColumns.available && (
-        <td className="py-2 px-4 text-center text-gray-700">
-          <span>{line.AvailableQuantity || 0}</span>
-        </td>
-      )}
-
       {config.itemColumns.uomCode && (
         <td className="py-2 px-4 text-center text-gray-700">
           <span>{line.UoMCode}</span>

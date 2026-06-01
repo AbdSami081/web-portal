@@ -74,6 +74,24 @@ const mapAttachment = (att: any) => {
   };
 };
 
+const mapProductionOrderLine = (line: any, data: any, includeLineNumber = false) => {
+  const linePayload: any = {
+    ItemNo: line.ItemNo,
+    BaseQuantity: line.BaseQuantity || 1,
+    PlannedQuantity: line.PlannedQuantity || 0,
+    IssuedQuantity: line.IssuedQuantity || 0,
+    ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
+    Warehouse: line.Warehouse || data.Warehouse,
+    ItemType: line.ItemType,
+  };
+
+  if (includeLineNumber && line.LineNumber !== undefined && line.LineNumber !== null) {
+    linePayload.LineNumber = line.LineNumber;
+  }
+
+  return linePayload;
+};
+
 export const saveProductionDocument = async (docType: DocumentType, data: any, lines: any[], attachments: any[]): Promise<any> => {
   if (docType === DocumentType.ProductionOrder) {
     const payload: any = {
@@ -84,6 +102,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
     };
 
     if (data.AbsoluteEntry && data.AbsoluteEntry > 0) {
+      payload.ProductionOrderLines = lines.map(line => mapProductionOrderLine(line, data, true));
       return await patchProductionOrder(data.AbsoluteEntry, payload);
     } else {
       payload.ItemNo = data.ItemNo;
@@ -95,15 +114,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
       payload.Priority = data.Priority;
       payload.ProductionOrderType = data.ProductionOrderType || "bopotStandard";
       payload.PickRemarks = data.PickRmrk || "Created via Web Portal";
-      payload.ProductionOrderLines = lines.map(line => ({
-        ItemNo: line.ItemNo,
-        BaseQuantity: line.BaseQuantity || 1,
-        PlannedQuantity: line.PlannedQuantity || 0,
-        IssuedQuantity: line.IssuedQuantity || 0,
-        ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
-        Warehouse: line.Warehouse || data.Warehouse,
-        ItemType: line.ItemType
-      }));
+      payload.ProductionOrderLines = lines.map(line => mapProductionOrderLine(line, data));
 
       console.log(payload);            
       return await postProductionOrder(payload);

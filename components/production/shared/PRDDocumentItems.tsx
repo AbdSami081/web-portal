@@ -41,7 +41,6 @@ export function PRDDocumentItems() {
         BaseQuantity: 1,
         BaseRatio: 0,
         IssuedQuantity: 0,
-        AvailableQuantity: 0,
         UoMCode: isResource ? (item.UnitOfMeasure || "") : (item.UoMGroupEntry?.toString() || ""), 
         ProductionOrderIssueType: isResource ? issueType : "im_Manual"
       });

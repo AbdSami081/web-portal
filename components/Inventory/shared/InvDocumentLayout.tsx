@@ -254,7 +254,7 @@ export function InvDocumentLayout<T extends FieldValues>({
   return (
     <InvDocContext.Provider value={config}>
       <FormProvider {...methods}>
-        <form onSubmit={handleSubmit((data) => onSubmit(data as unknown as T))} className="flex flex-col min-h-screen bg-background">
+        <form onSubmit={handleSubmit((data) => onSubmit(data as unknown as T))} className="flex flex-col min-h-screen bg-background overflow-x-hidden">
 
           <HeaderActionPortal>
             <TooltipProvider>
@@ -297,7 +297,7 @@ export function InvDocumentLayout<T extends FieldValues>({
             {actions && <div>{actions}</div>}
           </div>
 
-          <div className="flex-1 flex flex-col gap-4 p-6 overflow-auto w-full">
+          <div className="flex-1 flex flex-col gap-4 p-6 overflow-y-auto overflow-x-hidden w-full min-w-0">
             {children}
           </div>
 

@@ -67,8 +67,13 @@ export function InvDocumentItems() {
       width: 140,
     },
     {
+      key: "OnHand",
+      title: "Qty In Whs",
+      width: 120,
+    },
+    {
       key: "UomCode",
-      title: "UoM Code",
+      title: "UoM",
       width: 140,
     },
   ];
@@ -90,10 +95,11 @@ export function InvDocumentItems() {
         FisrtBin: "",
         WhsCode: toWarehouse || defaultWhsLine,
         Quantity: quantity,
+        OnHand: Number(item.OnHand || 0),
         ItemCost: price,
         LineTotal: quantity * price,
-        UomCode: item.UoMGroupEntry?.toString() || "", 
-        unitMsr: "",
+        UomCode: item.UoM || item.UoMCode || item.InventoryUOM || item.SalesUnit || item.PurchaseUnit || "",
+        unitMsr: item.UoM || item.UoMCode || item.InventoryUOM || item.SalesUnit || item.PurchaseUnit || "",
         PlPaWght: 0,
         U_LastPrice: price,
         OcrCode2: "",
@@ -109,8 +115,8 @@ export function InvDocumentItems() {
   };
 
   return (
-    <div className="grid w-full relative pt-2 overflow-visible">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-1 overflow-visible">
+    <div className="grid w-full min-w-0 relative pt-2 overflow-visible">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0 pt-1 overflow-visible">
         <TabsList className="grid w-[240px] grid-cols-2 mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800">
           <TabsTrigger
             value="content"
@@ -126,8 +132,8 @@ export function InvDocumentItems() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="content" className="overflow-visible mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6">
-          <div className="relative overflow-visible">
+        <TabsContent value="content" className="min-w-0 overflow-visible mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6">
+          <div className="relative min-w-0 overflow-visible">
             <div className="absolute -top-7 left-2 z-50">
               <TooltipProvider>
                 <Tooltip>
@@ -150,8 +156,8 @@ export function InvDocumentItems() {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="relative border rounded overflow-hidden">
-              <div className="overflow-x-auto pb-2">
+            <div className="relative border rounded overflow-hidden max-w-full min-w-0">
+              <div className="overflow-x-auto pb-2 max-w-full min-w-0">
                 <ResizableTable
                   columns={columns}
                   data={lines}

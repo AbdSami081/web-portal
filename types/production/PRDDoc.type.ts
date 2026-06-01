@@ -29,7 +29,7 @@ export interface PRDDocumentLine {
     BaseQuantity?: number;
     BaseRatio?: number;
     IssuedQuantity?: number;
-    AvailableQuantity?: number;
+    OnHand?: number;
     UoMCode?: string;
     ProductionOrderIssueType?: "im_Manual" | "im_Backflush";
     OrderNumber?: number;

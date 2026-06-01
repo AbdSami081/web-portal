@@ -143,6 +143,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         Quantity: Number(line.Quantity) || 0,
         ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
         UomCode: line.UoMCode || line.UomCode || "",
+        unitMsr: line.MeasureUnit || line.UnitMsr || line.unitMsr || line.UoMCode || line.UomCode || "",
         LineNum: line.LineNum ?? idx,
         BaseType: line.BaseType ?? (isCopy ? type : undefined),
         BaseEntry: line.BaseEntry ?? (isCopy ? doc.DocEntry : undefined),

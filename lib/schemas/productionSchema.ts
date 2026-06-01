@@ -9,7 +9,7 @@ export const productionLineSchema = z.object({
     BaseQuantity: z.number().optional(),
     BaseRatio: z.number().optional(),
     IssuedQuantity: z.number().optional(),
-    AvailableQuantity: z.number().optional(),
+    OnHand: z.number().optional(),
     UoMCode: z.string().optional(),
     ProductionOrderIssueType: z.enum(["im_Manual", "im_Backflush"]).optional(),
     OrderNumber: z.number().optional(),
