@@ -98,8 +98,11 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
       ItemNo: data.ItemNo,
       Remarks: data.Remarks || data.Comments,
       ProductionOrderStatus: data.ProductionOrderStatus || "boposPlanned",
-      Attachments2_Lines: attachments.map((att) => mapAttachment(att)),
     };
+
+    if (attachments.length > 0) {
+      payload.Attachments2_Lines = attachments.map((att) => mapAttachment(att));
+    }
 
     if (data.AbsoluteEntry && data.AbsoluteEntry > 0) {
       payload.ProductionOrderLines = lines.map(line => mapProductionOrderLine(line, data, true));
@@ -121,7 +124,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
     }
   } else if (docType === DocumentType.IssueForProduction || docType === DocumentType.ReceiptFromProduction) {
     const isUpdate = !!(data.DocEntry && data.DocEntry > 0);
-    const payload = {
+    const payload: any = {
       Comments: data.Comments || data.Remarks,
       JournalMemo: data.JournalMemo,
       DocumentLines: lines.map(line => {
@@ -131,11 +134,8 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
         };
 
         if (isUpdate) {
-          // For updates, we need LineNum to identify the line, 
-          // but we MUST omit read-only reference fields (BaseType, BaseEntry, BaseLine, ItemCode)
           linePayload.LineNum = line.LineNumber;
         } else {
-          // For new documents, we include the references
           linePayload.ItemCode = line.OrderNumber ? undefined : (line.ItemNo || line.ItemCode);
           linePayload.BaseType = line.OrderNumber ? 202 : undefined;
           linePayload.BaseEntry = line.OrderNumber;
@@ -143,8 +143,11 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
         }
         return linePayload;
       }),
-      Attachments2_Lines: attachments.map(att => mapAttachment(att))
     };
+
+    if (attachments.length > 0) {
+      payload.Attachments2_Lines = attachments.map(att => mapAttachment(att));
+    }
 
     if (data.DocEntry && data.DocEntry > 0) {
       if (docType === DocumentType.IssueForProduction) {

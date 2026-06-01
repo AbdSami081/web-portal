@@ -9,7 +9,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { postQuotation, patchQuotation } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
-import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { ReactJsxRuntime } from "next/dist/server/route-modules/app-page/vendored/rsc/entrypoints";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { DocumentType } from "@/types/master/DocumentType";
@@ -41,40 +41,24 @@ export default function NewQuotationPage() {
       return;
     }
 
-    const newAttachments = attachments.filter(att => att.File);
-    const existingAttachments = attachments.filter(att => !att.File);
-    let uploadedAttachments: any[] = [];
-
-    if (newAttachments.length > 0) {
-      try {
-        const filesToUpload = newAttachments.map(att => att.File as File);
-        const uploadResults = await uploadAttachments(filesToUpload, "SalesQuotation");
-        toast.success(`${uploadResults.length} attachments uploaded successfully`);
-        uploadedAttachments = newAttachments.map((att, index) => ({
-          ...att,
-          SourcePath: uploadResults[index].path,
-        }));
-      } catch (error) {
-        toast.error("Failed to upload attachments");
-        return;
-      }
-    }
-
-    const processedAttachments = [...existingAttachments, ...uploadedAttachments];
-
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Quotation) {
       const patchPayload = {
         Comments: data.Comments,
-        Attachments2_Lines: processedAttachments.map((att) => ({
-          FileExtension: att.FileName.split('.').pop(),
-          FileName: att.FileName.split('.').slice(0, -1).join('.'),
-          SourcePath: att.SourcePath,
-          FreeText: att.FreeText,
-          CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-        }))
       };
       try {
         await patchQuotation(Number(DocEntry), patchPayload);
+        if (attachments.length > 0) {
+          const attachmentResult = await uploadAndPatchAttachments(
+            attachments,
+            "SalesQuotation",
+            Number(DocEntry),
+            patchQuotation
+          );
+
+          if (attachmentResult.uploadedCount > 0) {
+            toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+          }
+        }
         const docNum = useSalesDocument.getState().DocNum;
         toast.success(`Quotation #${docNum || DocEntry} updated successfully`);
       } catch (error) {
@@ -129,20 +113,24 @@ export default function NewQuotationPage() {
         }))
       }),
       ...(freight > 0 && { Freight: freight }),
-      ...(processedAttachments.length > 0 && {
-        Attachments2_Lines: processedAttachments.map((att) => ({
-          FileExtension: att.FileName.split('.').pop(),
-          FileName: att.FileName.split('.').slice(0, -1).join('.'),
-          SourcePath: att.SourcePath,
-          FreeText: att.FreeText,
-        }))
-      }),
     };
 
 
     try {
       const documentData = await postQuotation(payload);
       if (!documentData?.DocEntry) throw new Error("Failed to create quotation");
+      if (attachments.length > 0) {
+        const attachmentResult = await uploadAndPatchAttachments(
+          attachments,
+          "SalesQuotation",
+          Number(documentData.DocEntry),
+          patchQuotation
+        );
+
+        if (attachmentResult.uploadedCount > 0) {
+          toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+        }
+      }
       loadFromDocument(documentData, DocumentType.Quotation);
       toast.success(`Quotation #${documentData.DocNum} created successfully`);
     } catch (error: any) {

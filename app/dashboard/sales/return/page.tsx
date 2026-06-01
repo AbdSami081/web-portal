@@ -14,6 +14,7 @@ import { postSalesReturn, patchSalesReturn } from "@/api+/sap/sales/salesService
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { DocumentType } from "@/types/master/DocumentType";
+import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 
 export default function ReturnPage() {
   const router = useRouter();
@@ -40,17 +41,22 @@ export default function ReturnPage() {
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.SalesReturn) {
       const patchPayload = {
         Comments: data.Comments,
-        Attachments2_Lines: attachments.map((att) => ({
-          FileExtension: att.FileName.split('.').pop(),
-          FileName: att.FileName.split('.').slice(0, -1).join('.'),
-          SourcePath: att.SourcePath,
-          FreeText: att.FreeText,
-          CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-        }))
       };
 
       try {
         await patchSalesReturn(Number(DocEntry), patchPayload);
+        if (attachments.length > 0) {
+          const attachmentResult = await uploadAndPatchAttachments(
+            attachments,
+            "SalesReturn",
+            Number(DocEntry),
+            patchSalesReturn
+          );
+
+          if (attachmentResult.uploadedCount > 0) {
+            toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+          }
+        }
         const docNum = useSalesDocument.getState().DocNum;
         toast.success(`Sales Return #${docNum || DocEntry} updated successfully`);
       } catch (error) {
@@ -76,18 +82,23 @@ export default function ReturnPage() {
         }
         return lineData;
       }),
-      Attachments2_Lines: attachments.map((att) => ({
-        FileExtension: att.FileName.split('.').pop(),
-        FileName: att.FileName.split('.').slice(0, -1).join('.'),
-        SourcePath: att.SourcePath,
-        FreeText: att.FreeText,
-        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-      }))
     };
 
     try {
       const response = await postSalesReturn(payload);
       if (response?.DocEntry) {
+        if (attachments.length > 0) {
+          const attachmentResult = await uploadAndPatchAttachments(
+            attachments,
+            "SalesReturn",
+            Number(response.DocEntry),
+            patchSalesReturn
+          );
+
+          if (attachmentResult.uploadedCount > 0) {
+            toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+          }
+        }
         toast.success(`Sales Return #${response.DocNum} created successfully!`);
       } else {
         throw new Error("Failed to create Sales Return");

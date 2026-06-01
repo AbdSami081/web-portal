@@ -11,7 +11,7 @@ import InvDocumentFooter from "@/components/Inventory/shared/InvDocumentFooter";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { DocumentType } from "@/types/master/DocumentType";
 
 const schema = quotationSchema.extend({
@@ -61,43 +61,9 @@ export default function InvTransferRequestPage() {
 
   const handleSubmit = async (data: FormData) => {
     try {
-      const newAttachments = attachments.filter(att => att.File);
-      const existingAttachments = attachments.filter(att => !att.File);
-
-      let uploadedAttachments: any[] = [];
-
-      if (newAttachments.length > 0) {
-        try {
-          const filesToUpload = newAttachments.map(att => att.File as File);
-
-          const uploadResults = await uploadAttachments(filesToUpload, "InventoryTransferRequest");
-
-          toast.success(`${uploadResults.length} attachments uploaded successfully`);
-
-          uploadedAttachments = newAttachments.map((att, index) => ({
-            ...att,
-            SourcePath: uploadResults[index].path,
-          }));
-
-        } catch (error) {
-          console.error("Attachment upload failed", error);
-          toast.error("Failed to upload attachments");
-          return;
-        }
-      }
-
-      const processedAttachments = [...existingAttachments, ...uploadedAttachments];
-
       const basePayload: any = {
         Comments: comments,
         JournalMemo: journalMemo,
-        Attachments2_Lines: processedAttachments.map((att) => ({
-          FileExtension: att.FileName.split('.').pop(),
-          FileName: att.FileName.split('.').slice(0, -1).join('.'),
-          SourcePath: att.SourcePath,
-          FreeText: att.FreeText,
-          CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-        })),
       };
 
       let result;
@@ -134,6 +100,21 @@ export default function InvTransferRequestPage() {
       }
 
       if (result || (DocEntry && DocEntry > 0)) {
+        const savedDocEntry = Number(DocEntry || result?.DocEntry || 0);
+
+        if (savedDocEntry > 0 && attachments.length > 0) {
+          const attachmentResult = await uploadAndPatchAttachments(
+            attachments,
+            "InventoryTransferRequest",
+            savedDocEntry,
+            patchInventoryTransferRequest
+          );
+
+          if (attachmentResult.uploadedCount > 0) {
+            toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+          }
+        }
+
         resetStore();
         router.push("/dashboard/inventory/transfer-request");
       } else {

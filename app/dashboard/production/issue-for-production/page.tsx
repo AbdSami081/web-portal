@@ -5,11 +5,11 @@ import { PRDDocumentLayout } from "@/components/production/shared/PRDDocumentLay
 import { PRDDocumentHeader } from "@/components/production/shared/PRDDocumentHeader";
 import { PRDDocumentItems } from "@/components/production/shared/PRDDocumentItems";
 import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter";
-import { saveProductionDocument } from "@/api+/sap/production/productionService";
+import { patchIssueForProduction, saveProductionDocument } from "@/api+/sap/production/productionService";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { toast } from "sonner";
 import { useMemo } from "react";
-import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { DocumentType } from "@/types/master/DocumentType";
 
 export default function IssueForProductionPage() {
@@ -33,38 +33,27 @@ export default function IssueForProductionPage() {
         return;
       }
 
-      const newAttachments = attachments.filter(att => att.File);
-      const existingAttachments = attachments.filter(att => !att.File);
-
-      let uploadedAttachments: any[] = [];
-
-      if (newAttachments.length > 0) {
-        try {
-          const filesToUpload = newAttachments.map(att => att.File as File);
-
-          const uploadResults = await uploadAttachments(filesToUpload, "IssueForProduction");
-
-          toast.success(`${uploadResults.length} attachments uploaded successfully`);
-
-          uploadedAttachments = newAttachments.map((att, index) => ({
-            ...att,
-            SourcePath: uploadResults[index].path, 
-          }));
-        } catch (error) {
-          console.error("Attachment upload failed", error);
-          toast.error("Failed to upload attachments");
-          return; 
-        }
-      }
-
-      const processedAttachments = [...existingAttachments, ...uploadedAttachments];
-
       const result = await saveProductionDocument(
         DocumentType.IssueForProduction,
         data,
         lines,
-        processedAttachments
+        []
       );
+
+      const savedDocEntry = Number(data.DocEntry || result?.DocEntry || 0);
+
+      if (savedDocEntry > 0 && attachments.length > 0) {
+        const attachmentResult = await uploadAndPatchAttachments(
+          attachments,
+          "IssueForProduction",
+          savedDocEntry,
+          patchIssueForProduction
+        );
+
+        if (attachmentResult.uploadedCount > 0) {
+          toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+        }
+      }
 
       const isUpdate = !!data.DocEntry;
       const docNum = result?.DocNum || data.DocNum || "";

@@ -13,7 +13,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { postDelivery, patchDeliveryNote } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
-import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { DocumentType } from "@/types/master/DocumentType";
 
@@ -39,30 +39,6 @@ export default function DeliveryPage() {
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = useSalesDocument.getState();
     
-    const newAttachments = attachments.filter(att => att.File);
-    const existingAttachments = attachments.filter(att => !att.File);
-
-    let uploadedAttachments: any[] = [];
-    if (newAttachments.length > 0) {
-      try {
-        const filesToUpload = newAttachments.map(att => att.File as File);
-        const uploadResults = await uploadAttachments(filesToUpload, "Delivery");
-        
-        toast.success(`${uploadResults.length} attachments uploaded successfully`);
-
-        uploadedAttachments = newAttachments.map((att, index) => ({
-          ...att,
-          SourcePath: uploadResults[index].path,
-        }));
-      } catch (error) {
-        console.error("Failed to upload attachments", error);
-        toast.error("Failed to upload attachments");
-        return; 
-      }
-    }
-
-    const processedAttachments = [...existingAttachments, ...uploadedAttachments];
-    
     const payload = {
       ...data,
       DocumentLines: lines.map((line) => {
@@ -79,20 +55,24 @@ export default function DeliveryPage() {
         }
         return lineData;
       }),
-      Attachments2_Lines: processedAttachments.map((att) => ({
-        FileExtension: att.FileName.split('.').pop(),
-        FileName: att.FileName.split('.').slice(0, -1).join('.'),
-        SourcePath: att.SourcePath,
-        UserID: "1",
-        FreeText: att.FreeText,
-        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-      }))
     };
 
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Delivery) {
       try {
         await patchDeliveryNote(Number(DocEntry), payload);
+        if (attachments.length > 0) {
+          const attachmentResult = await uploadAndPatchAttachments(
+            attachments,
+            "Delivery",
+            Number(DocEntry),
+            patchDeliveryNote
+          );
+
+          if (attachmentResult.uploadedCount > 0) {
+            toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+          }
+        }
         const docNum = useSalesDocument.getState().DocNum;
         toast.success(`Delivery Note #${docNum || DocEntry} updated successfully`);
       } catch (error) {
@@ -105,6 +85,18 @@ export default function DeliveryPage() {
       const response = await postDelivery(payload);
    
       if (response?.DocEntry) {
+        if (attachments.length > 0) {
+          const attachmentResult = await uploadAndPatchAttachments(
+            attachments,
+            "Delivery",
+            Number(response.DocEntry),
+            patchDeliveryNote
+          );
+
+          if (attachmentResult.uploadedCount > 0) {
+            toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+          }
+        }
         toast.success(`Delivery Note #${response.DocNum} created successfully!`);
       } else {
         throw new Error("Failed to create Delivery Note");

@@ -7,9 +7,9 @@ import { PRDDocumentItems } from "@/components/production/shared/PRDDocumentItem
 import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter";
 import { useMemo, useEffect } from "react";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
-import { saveProductionDocument } from "@/api+/sap/production/productionService";
+import { patchProductionOrder, saveProductionDocument } from "@/api+/sap/production/productionService";
 import { toast } from "sonner";
-import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { DocumentType } from "@/types/master/DocumentType";
 
 export default function ProductionOrderPage() {
@@ -43,38 +43,32 @@ export default function ProductionOrderPage() {
         const { lines, attachments } = useIFPRDDocument.getState();
 
         try {
-            const newAttachments = attachments.filter(att => att.File);
-            const existingAttachments = attachments.filter(att => !att.File);
-
-            let uploadedAttachments: any[] = [];
-
-            if (newAttachments.length > 0) {
-                try {
-                    const filesToUpload = newAttachments.map(att => att.File as File);
-
-                    const uploadResults = await uploadAttachments(filesToUpload, "ProductionOrder");
-
-                    toast.success(`${uploadResults.length} attachments uploaded successfully`);
-
-                    uploadedAttachments = newAttachments.map((att, index) => ({
-                        ...att,
-                        SourcePath: uploadResults[index].path, 
-                    }));
-                } catch (error) {
-                    console.error("Attachment upload failed", error);
-                    toast.error("Failed to upload attachments");
-                    return;
-                }
-            }
-
-            const processedAttachments = [...existingAttachments, ...uploadedAttachments];
-
             const result = await saveProductionDocument(
                 DocumentType.ProductionOrder,
                 data,
                 lines,
-                processedAttachments
+                []
             );
+
+            const savedDocEntry = Number(data.AbsoluteEntry || result?.AbsoluteEntry || result?.DocEntry || 0);
+
+            if (savedDocEntry > 0 && attachments.length > 0) {
+                const attachmentResult = await uploadAndPatchAttachments(
+                    attachments,
+                    "ProductionOrder",
+                    savedDocEntry,
+                    (docEntry, payload) => patchProductionOrder(docEntry, {
+                        ItemNo: data.ItemNo,
+                        Remarks: data.Remarks || data.Comments,
+                        ProductionOrderStatus: data.ProductionOrderStatus || "boposPlanned",
+                        ...payload,
+                    })
+                );
+
+                if (attachmentResult.uploadedCount > 0) {
+                    toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+                }
+            }
 
             const docNum = useIFPRDDocument.getState().DocNum;
 
