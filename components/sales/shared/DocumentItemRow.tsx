@@ -11,6 +11,10 @@ import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
 import { distribtionLstOCRCO2, distribtionLstOCRCO3, distribtionLstOCRCO4 } from "@/app/data/cogsData";
 import { taxcCodeGrp, freightTypes, uomOptions, calculateFreightTax, calculateLineTax } from "@/utils/taxCalculations";
+import { getClientSettings } from "@/lib/config/Client/clientSettings";
+import { useSalesDocConfig } from "./SalesDocumentLayout";
+import { DocumentType } from "@/types/master/DocumentType";
+
 
 interface Props {
   index: number;
@@ -23,7 +27,12 @@ interface Record {
 }
 
 export function DocumentLineRow({ index, line }: Props) {
+  const settings = getClientSettings();
   const { watch } = useFormContext();
+  const config = useSalesDocConfig();
+  const disablePriceFields =
+  config.type === DocumentType.Delivery &&
+  settings.disablePriceFields;
   const { updateLine, removeLine, lines } = useSalesDocument();
   const {  freightsWithCharges, freightTypes } = useMasterDataStore();
 
@@ -185,6 +194,7 @@ export function DocumentLineRow({ index, line }: Props) {
           className="h-6 w-24 text-right"
           type="number"
           step="any"
+          disabled={disablePriceFields}
           min={0}
           value={draftLine.Price}
           onChange={(e) => {
@@ -201,6 +211,7 @@ export function DocumentLineRow({ index, line }: Props) {
           step="any"
           min={0}
           max={100}
+          disabled={disablePriceFields}
           value={draftLine.DiscountPercent || 0}
           onChange={(e) => {
             const val = Number(e.target.value);
@@ -212,6 +223,7 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Select
           value={draftLine.TaxCode || ""}
+          disabled={disablePriceFields}
           onValueChange={(val) => setDraftLine({ ...draftLine, TaxCode: val })}
         >
           <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
@@ -279,6 +291,7 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Select
           value={draftLine.Freight1Type || ""}
+          disabled={disablePriceFields}
           onValueChange={(val) => {
             const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
             const defaultTax = selectedType?.VatGroupO || "";
@@ -310,6 +323,7 @@ export function DocumentLineRow({ index, line }: Props) {
           className="h-6 w-24 text-right"
           type="number"
           step="any"
+          disabled={disablePriceFields}
           value={draftLine.Freight1LCAmount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
@@ -361,6 +375,7 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Select
           value={draftLine.Freight2Type || ""}
+          disabled={disablePriceFields}
           onValueChange={(val) => {
             const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
             const defaultTax = selectedType?.VatGroupO || "";
@@ -392,6 +407,7 @@ export function DocumentLineRow({ index, line }: Props) {
           className="h-6 w-24 text-right"
           type="number"
           step="any"
+          disabled={disablePriceFields}
           value={draftLine.Freight2LCAmount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);
@@ -443,6 +459,7 @@ export function DocumentLineRow({ index, line }: Props) {
       <td>
         <Select
           value={draftLine.Freight3Type || ""}
+          disabled={disablePriceFields}
           onValueChange={(val) => {
             const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
             const defaultTax = selectedType?.VatGroupO || "";
@@ -474,6 +491,7 @@ export function DocumentLineRow({ index, line }: Props) {
           className="h-6 w-24 text-right"
           type="number"
           step="any"
+          disabled={disablePriceFields}
           value={draftLine.Freight3LCAmount || 0}
           onChange={(e) => {
             const value = Number(e.target.value);

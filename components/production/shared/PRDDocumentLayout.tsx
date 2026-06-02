@@ -120,7 +120,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
   };
 
   const handleCopyFrom = (selected: string) => {
-    if (selected !== DocumentType.InvTransfer.toString()) return;
+    if (selected !== DocumentType.InvTransferReq.toString()) return;
 
     const currentValues = methods.getValues() as any;
     const state = useIFPRDDocument.getState();
@@ -177,7 +177,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
       isCopyingTo: true,
     });
 
-    router.push("/dashboard/inventory/transfer");
+    router.push("/dashboard/inventory/transfer-request");
   };
 
   const onSubmitError: SubmitErrorHandler<T> = (errors) => {
@@ -255,13 +255,13 @@ export function PRDDocumentLayout<T extends FieldValues>({
                 >
                   <div className="flex items-center gap-2">
                     {isCopyingToInventory && <Loader2 className="w-4 h-4 animate-spin text-white" />}
-                    <SelectValue placeholder="Copy From" />
+                    <SelectValue placeholder="Copy To" />
                   </div>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value={DocumentType.InvTransfer.toString()}>
-                      Inventory Transfer
+                    <SelectItem value={DocumentType.InvTransferReq.toString()}>
+                      Inventory Transfer Request
                     </SelectItem>
                   </SelectGroup>
                 </SelectContent>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,28 +6,32 @@ import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { useFormContext } from "react-hook-form";
-import { toast } from "sonner";
+import { getClientSettings } from "@/lib/config/Client/clientSettings";
+import { DocumentType } from "@/types/master/DocumentType";
 
 export default function DocumentFooter() {
-  const { watch } = useFormContext();
+  const { watch, register, setValue } = useFormContext();
+  const config = useSalesDocConfig();
   const {
     DocTotal,
     TaxTotal,
-    lines,
     TotalBeforeDiscount,
-    freight = 0,
     rounding = 0,
     discountPercent = 0,
     currency,
-    setFreight,
     setRounding,
     setDiscountPercent,
     setDiscountSum,
-    setTaxTotal,
     setComments,
     TotalFreight = 0,
     discSum = 0
   } = useSalesDocument();
+
+  const settings = getClientSettings();
+
+  const disablePriceFields =
+    config.type === DocumentType.Delivery &&
+    settings?.disablePriceFields;
 
   const docStatus = watch("DocStatus");
   const docEntry = watch("DocEntry");
@@ -42,11 +46,11 @@ export default function DocumentFooter() {
         setDiscountSum(amount);
       }
     } else if (discountPercent === 0 && discSum !== 0) {
-        setDiscountSum(0);
+      setDiscountSum(0);
     }
-  }, [discountPercent, TotalBeforeDiscount]);
+  }, [discountPercent, TotalBeforeDiscount, discSum, setDiscountSum]);
 
-
+  const commentsField = register("Comments");
 
   return (
     <>
@@ -59,9 +63,9 @@ export default function DocumentFooter() {
           <Textarea
             id="Comments"
             className="h-24 mt-4 max-w-95"
-            {...useFormContext().register("Comments")}
+            {...commentsField}
             onChange={(e) => {
-              useFormContext().setValue("Comments", e.target.value);
+              setValue("Comments", e.target.value, { shouldDirty: true });
               setComments(e.target.value);
             }}
             placeholder="Enter remarks or comments..."
@@ -92,7 +96,7 @@ export default function DocumentFooter() {
                   className="h-6 text-right pr-6"
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                  disabled={isFooterDisabled}
+                  disabled={isFooterDisabled || disablePriceFields}
                 />
                 <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">%</span>
               </div>
@@ -103,7 +107,7 @@ export default function DocumentFooter() {
                   className="h-6 text-right pr-10"
                   value={discSum.toFixed(2)}
                   onChange={(e) => setDiscountSum(Number(e.target.value))}
-                  disabled={isFooterDisabled}
+                  disabled={isFooterDisabled || disablePriceFields}
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
               </div>
@@ -128,7 +132,7 @@ export default function DocumentFooter() {
           {/* 4. Rounding */}
           <div className="grid grid-cols-2 gap-2 items-center">
             <div className="flex items-center gap-2">
-              <input type="checkbox" className="h-3 w-3" disabled={isFooterDisabled} />
+              <input type="checkbox" className="h-3 w-3" disabled={isFooterDisabled || disablePriceFields} />
               <AppLabel className="cursor-pointer">Rounding</AppLabel>
             </div>
             <div className="relative">
@@ -138,7 +142,9 @@ export default function DocumentFooter() {
                 className="h-6 text-right pr-10"
                 value={rounding}
                 onChange={(e) => setRounding(Number(e.target.value))}
-                disabled={isFooterDisabled}
+                disabled={
+                isFooterDisabled || disablePriceFields
+                } 
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
@@ -164,7 +170,7 @@ export default function DocumentFooter() {
               <Input
                 className="h-7 text-right bg-white font-bold pr-10 border-slate-400"
                 value={DocTotal.toFixed(2)}
-                disabled={true}
+                disabled={isFooterDisabled || disablePriceFields}
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-900 font-black">{currency}</span>
             </div>
