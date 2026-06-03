@@ -143,7 +143,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
                 : 0),
             IssuedQuantity: line.IssuedQuantity,
             OnHand: line.OnHand,
-            UoMCode: line.UoMCode,
+            UoMCode: line.UoMCode || line.UoM || "",
             ProductionOrderIssueType: line.ProductionOrderIssueType,
             OrderNumber: line.BaseEntry || (isSourceProductionOrder ? (doc.AbsoluteEntry || doc.DocEntry) : undefined),
             LineNumber: (currentDocType === type && !isCopy) ? line.LineNum : (line.BaseLine ?? line.LineNum),
@@ -151,10 +151,8 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         });
       }
 
-      // Dynamic Attachment Discovery: Scans for any key containing "attachment" that is an array
       let rawAttachments: any[] = [];
       
-      // 1. Check known high-priority paths
       if (doc.Attachments_Lines && Array.isArray(doc.Attachments_Lines.Attachments2_Lines)) {
         rawAttachments = doc.Attachments_Lines.Attachments2_Lines;
       } else if (Array.isArray(doc.Attachments2_Lines)) {
@@ -164,14 +162,12 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       } else if (doc.Attachments && Array.isArray(doc.Attachments.Attachments2_Lines)) {
         rawAttachments = doc.Attachments.Attachments2_Lines;
       } else {
-        // 2. Scan all keys for anything related to "attachment"
         for (const key in doc) {
           const lowerKey = key.toLowerCase();
           if (lowerKey.includes("attachment") && Array.isArray(doc[key])) {
             rawAttachments = doc[key];
             break;
           } else if (lowerKey.includes("attachment") && typeof doc[key] === 'object' && doc[key] !== null) {
-            // Handle nested objects like doc.Attachments.Attachments2_Lines
             for (const subKey in doc[key]) {
               if (subKey.toLowerCase().includes("line") && Array.isArray(doc[key][subKey])) {
                 rawAttachments = doc[key][subKey];
@@ -187,7 +183,6 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         const fileName = att.FileName || "";
         const fileExt = att.FileExtension || "";
         let finalName = fileName;
-        // Only append extension if it's not already at the end of the filename
         if (fileExt && !fileName.toLowerCase().endsWith(`.${fileExt.toLowerCase()}`)) {
           finalName = `${fileName}.${fileExt}`;
         }
@@ -229,12 +224,13 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         return {
           ItemNo: line.ComponentCode || line.ItemCode,
           ItemName: line.ComponentName || line.ItemName || "",
-          BaseQuantity: lineQty, // Store original line quantity here
+          BaseQuantity: lineQty, 
           BaseRatio: baseRatio,
           BOMHeaderQty: parentQty, 
           PlannedQuantity: baseRatio * Number(plannedQty || 0),
           IssuedQuantity: 0,
           Warehouse: line.Warehouse || "",
+          UoMCode: line.UoMCode || line.UoM || line.InventoryUOM || "",
           ProductionOrderIssueType: line.IssueMethod === "im_Backflush" ? "im_Backflush" : "im_Manual",
           ItemType: line.ItemType || "pit_Item",
         };

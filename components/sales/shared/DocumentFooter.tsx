@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { useFormContext } from "react-hook-form";
-import { getClientSettings } from "@/lib/config/Client/clientSettings";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { DocumentType } from "@/types/master/DocumentType";
 
 export default function DocumentFooter() {
@@ -27,11 +27,13 @@ export default function DocumentFooter() {
     discSum = 0
   } = useSalesDocument();
 
-  const settings = getClientSettings();
+  const isFieldEnabled = (fieldName: string) => {
+    return getFieldSettings(config.type, "headerFieds", fieldName).enable !== false;
+  };
 
-  const disablePriceFields =
-    config.type === DocumentType.Delivery &&
-    settings?.disablePriceFields;
+  const isFieldVisible = (fieldName: string) => {
+    return getFieldSettings(config.type, "headerFieds", fieldName).visible !== false;
+  };
 
   const docStatus = watch("DocStatus");
   const docEntry = watch("DocEntry");
@@ -74,107 +76,123 @@ export default function DocumentFooter() {
         </div>
 
         <div className={`mt-2 space-y-3 bg-slate-100 p-4 rounded-lg text-sm -mt-12`}>
-          <div className="grid grid-cols-2 gap-2 items-center">
-            <AppLabel>Total Before Discount</AppLabel>
-            <div className="relative">
-               <Input
-                className="h-6 text-right bg-slate-200 pr-10"
-                value={formatCurrency(TotalBeforeDiscount).replace(/[^\d.-]/g, '')}
-                disabled={true}
-              />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 items-center">
-            <AppLabel>Discount</AppLabel>
-            <div className="flex gap-2 items-center">
-              <div className="relative flex-[1.5]">
-                <Input
-                  type="number"
-                  step="any"
-                  className="h-6 text-right pr-6"
-                  value={discountPercent}
-                  onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                  disabled={isFooterDisabled || disablePriceFields}
-                />
-                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">%</span>
-              </div>
-              <div className="relative flex-[2.5]">
-                <Input
-                  type="number"
-                  step="any"
-                  className="h-6 text-right pr-10"
-                  value={discSum.toFixed(2)}
-                  onChange={(e) => setDiscountSum(Number(e.target.value))}
-                  disabled={isFooterDisabled || disablePriceFields}
+          {isFieldVisible("TotalBeforeDiscount") && (
+            <div className="grid grid-cols-2 gap-2 items-center">
+              <AppLabel>Total Before Discount</AppLabel>
+              <div className="relative">
+                 <Input
+                  className="h-6 text-right bg-slate-200 pr-10"
+                  value={formatCurrency(TotalBeforeDiscount).replace(/[^\d.-]/g, '')}
+                  disabled={true}
+                  readOnly
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
               </div>
             </div>
-          </div>
+          )}
+
+          {isFieldVisible("DiscountPercent") && (
+            <div className="grid grid-cols-2 gap-2 items-center">
+              <AppLabel>Discount</AppLabel>
+              <div className="flex gap-2 items-center">
+                <div className="relative flex-[1.5]">
+                  <Input
+                    type="number"
+                    step="any"
+                    className="h-6 text-right pr-6"
+                    value={discountPercent}
+                    onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                    disabled={isFooterDisabled || !isFieldEnabled("DiscountPercent")}
+                  />
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">%</span>
+                </div>
+                <div className="relative flex-[2.5]">
+                  <Input
+                    type="number"
+                    step="any"
+                    className="h-6 text-right pr-10"
+                    value={discSum.toFixed(2)}
+                    onChange={(e) => setDiscountSum(Number(e.target.value))}
+                    disabled={isFooterDisabled || !isFieldEnabled("DiscountSum")}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 3. Freight */}
-          <div className="grid grid-cols-2 gap-2 items-center">
-            <div className="flex items-center gap-1">
-              <AppLabel>Freight</AppLabel>
+          {isFieldVisible("TotalFreight") && (
+            <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="flex items-center gap-1">
+                <AppLabel>Freight</AppLabel>
+              </div>
+              <div className="relative">
+                <Input
+                  className="h-6 text-right bg-slate-200 pr-10"
+                  value={TotalFreight.toFixed(2)}
+                  disabled={true}
+                  readOnly
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+              </div>
             </div>
-            <div className="relative">
-              <Input
-                className="h-6 text-right bg-slate-200 pr-10"
-                value={TotalFreight.toFixed(2)}
-                disabled={true}
-              />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
-            </div>
-          </div>
+          )}
 
           {/* 4. Rounding */}
-          <div className="grid grid-cols-2 gap-2 items-center">
-            <div className="flex items-center gap-2">
-              <input type="checkbox" className="h-3 w-3" disabled={isFooterDisabled || disablePriceFields} />
-              <AppLabel className="cursor-pointer">Rounding</AppLabel>
+          {isFieldVisible("Rounding") && (
+            <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="flex items-center gap-2">
+                <input type="checkbox" className="h-3 w-3" disabled={isFooterDisabled || !isFieldEnabled("Rounding")} />
+                <AppLabel className="cursor-pointer">Rounding</AppLabel>
+              </div>
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="any"
+                  className="h-6 text-right pr-10"
+                  value={rounding}
+                  onChange={(e) => setRounding(Number(e.target.value))}
+                  disabled={
+                    isFooterDisabled || !isFieldEnabled("RoundingValue")
+                  } 
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+              </div>
             </div>
-            <div className="relative">
-              <Input
-                type="number"
-                step="any"
-                className="h-6 text-right pr-10"
-                value={rounding}
-                onChange={(e) => setRounding(Number(e.target.value))}
-                disabled={
-                isFooterDisabled || disablePriceFields
-                } 
-              />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
-            </div>
-          </div>
+          )}
 
           {/* 5. Tax */}
-          <div className="grid grid-cols-2 gap-2 items-center">
-            <AppLabel>Tax</AppLabel>
-            <div className="relative">
-              <Input
-                className="h-6 text-right bg-slate-200 pr-10"
-                value={TaxTotal.toFixed(2)}
-                disabled={true}
-              />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+          {isFieldVisible("TaxTotal") && (
+            <div className="grid grid-cols-2 gap-2 items-center">
+              <AppLabel>Tax</AppLabel>
+              <div className="relative">
+                <Input
+                  className="h-6 text-right bg-slate-200 pr-10"
+                  value={TaxTotal.toFixed(2)}
+                  disabled={true}
+                  readOnly
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 6. Total */}
-          <div className="grid grid-cols-2 gap-2 items-center border-t border-gray-300 pt-2">
-            <AppLabel className="font-bold text-sm">Total</AppLabel>
-            <div className="relative">
-              <Input
-                className="h-7 text-right bg-white font-bold pr-10 border-slate-400"
-                value={DocTotal.toFixed(2)}
-                disabled={isFooterDisabled || disablePriceFields}
-              />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-900 font-black">{currency}</span>
+          {isFieldVisible("DocTotal") && (
+            <div className="grid grid-cols-2 gap-2 items-center border-t border-gray-300 pt-2">
+              <AppLabel className="font-bold text-sm">Total</AppLabel>
+              <div className="relative">
+                <Input
+                  className="h-7 text-right bg-white font-bold pr-10 border-slate-400"
+                  value={DocTotal.toFixed(2)}
+                  disabled={isFooterDisabled || !isFieldEnabled("DocTotal")}
+                  readOnly
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-900 font-black">{currency}</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>

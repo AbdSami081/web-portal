@@ -8,6 +8,7 @@ import { Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { toast } from "sonner";
 import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument } from "@/api+/sap/sales/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
@@ -235,31 +236,33 @@ export function DocumentHeader() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <AppLabel className="w-28 shrink-0">Customer</AppLabel>
-          <div className="flex items-center">
-            <Input
-              id="card-code-field"
-              type="text"
-              {...register("CardCode")}
-              className="h-8 w-48 pr-10"
-              placeholder="Card Code"
-              disabled
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="ml-2 h-8 w-8 cursor-pointer"
-              onClick={() => {
-                setModalOpen(true);
-              }}
-              disabled={isHeaderDisabled}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+        {getFieldSettings(config.type, "headerFieds", "CardCode").visible !== false && (
+          <div className="flex items-center gap-3">
+            <AppLabel className="w-28 shrink-0">Customer</AppLabel>
+            <div className="flex items-center">
+              <Input
+                id="card-code-field"
+                type="text"
+                {...register("CardCode")}
+                className="h-8 w-48 pr-10"
+                placeholder="Card Code"
+                disabled
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="ml-2 h-8 w-8 cursor-pointer"
+                onClick={() => {
+                  setModalOpen(true);
+                }}
+                disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "CardCode").enable}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex items-center gap-2">
           <Input
@@ -312,68 +315,78 @@ export function DocumentHeader() {
 
       <div className="flex flex-col lg:flex-row justify-between gap-4">
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
-          <div className="flex items-center w-full gap-3">
-            <AppLabel className="w-28 shrink-0">Name</AppLabel>
-            <Input
-              type="text"
-              {...register("CardName")}
-              className="h-8 w-48"
-              placeholder="Card Name"
-              disabled
-            />
-          </div>
+          {getFieldSettings(config.type, "headerFieds", "CardName").visible !== false && (
+            <div className="flex items-center w-full gap-3">
+              <AppLabel className="w-28 shrink-0">Name</AppLabel>
+              <Input
+                type="text"
+                {...register("CardName")}
+                className="h-8 w-48"
+                placeholder="Card Name"
+                disabled
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
-          <div className="flex justify-end items-center w-full gap-3">
-            <AppLabel className="w-28 shrink-0 text-right">Status</AppLabel>
-            <Select
-              value={watchedStatus}
-              onValueChange={(val) => setValue("DocStatus", val)}
-              disabled={true}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
+          {getFieldSettings(config.type, "headerFieds", "DocStatus").visible !== false && (
+            <div className="flex justify-end items-center w-full gap-3">
+              <AppLabel className="w-28 shrink-0 text-right">Status</AppLabel>
+              <Select
+                value={watchedStatus}
+                onValueChange={(val) => setValue("DocStatus", val)}
+                disabled={true || !getFieldSettings(config.type, "headerFieds", "DocStatus").enable}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
 
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Select Status</SelectLabel>
-                  {Object.entries(statusMap).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Select Status</SelectLabel>
+                    {Object.entries(statusMap).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          <div className="flex justify-end items-center w-full gap-3">
-            <AppLabel className="w-28 shrink-0 text-right">Posting Date</AppLabel>
-            <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
-              register("DocDate").onChange(e);
-              setDocDate(e.target.value);
-            }} />
-          </div>
+          {getFieldSettings(config.type, "headerFieds", "DocDate").visible !== false && (
+            <div className="flex justify-end items-center w-full gap-3">
+              <AppLabel className="w-28 shrink-0 text-right">Posting Date</AppLabel>
+              <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "DocDate").enable} onChange={(e) => {
+                register("DocDate").onChange(e);
+                setDocDate(e.target.value);
+              }} />
+            </div>
+          )}
 
-          <div className="flex justify-end items-center w-full gap-3">
-            <AppLabel className="w-28 shrink-0 text-right">
-              {getDateLabel(config.type)}
-            </AppLabel>
-            <Input type="date" {...register("DocDueDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
-              register("DocDueDate").onChange(e);
-              setDocDueDate(e.target.value);
-            }} />
-          </div>
+          {getFieldSettings(config.type, "headerFieds", "DocDueDate").visible !== false && (
+            <div className="flex justify-end items-center w-full gap-3">
+              <AppLabel className="w-28 shrink-0 text-right">
+                {getDateLabel(config.type)}
+              </AppLabel>
+              <Input type="date" {...register("DocDueDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "DocDueDate").enable} onChange={(e) => {
+                register("DocDueDate").onChange(e);
+                setDocDueDate(e.target.value);
+              }} />
+            </div>
+          )}
 
-          <div className="flex justify-end items-center w-full gap-3">
-            <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
-            <Input type="date" {...register("TaxDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
-              register("TaxDate").onChange(e);
-              setTaxDate(e.target.value);
-            }} />
-          </div>
+          {getFieldSettings(config.type, "headerFieds", "TaxDate").visible !== false && (
+            <div className="flex justify-end items-center w-full gap-3">
+              <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
+              <Input type="date" {...register("TaxDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "TaxDate").enable} onChange={(e) => {
+                register("TaxDate").onChange(e);
+                setTaxDate(e.target.value);
+              }} />
+            </div>
+          )}
         </div>
         <BusinessPartnerSelectorDialog
           open={modalOpen}

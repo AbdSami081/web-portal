@@ -62,6 +62,7 @@ export interface SalesDocumentLine {
   DiscountPercent?: number;
   WarehouseCode?: string;
   UoMCode?: string;
+  QtyInWhs?: any[];
   TaxCode?: string; // Added TaxCode
   TaxType?: string; // Added TaxType
   TaxRate?: number;

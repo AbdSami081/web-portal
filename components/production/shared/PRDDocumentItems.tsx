@@ -41,7 +41,7 @@ export function PRDDocumentItems() {
         BaseQuantity: 1,
         BaseRatio: 0,
         IssuedQuantity: 0,
-        UoMCode: isResource ? (item.UnitOfMeasure || "") : (item.UoMGroupEntry?.toString() || ""), 
+        UoMCode: isResource ? (item.UnitOfMeasure || "") : (item.UoM || item.InventoryUOM || item.SalesUnit || item.PurchaseUnit || ""),
         ProductionOrderIssueType: isResource ? issueType : "im_Manual"
       });
     });

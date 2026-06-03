@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,16 +9,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Warehouse } from "@/types/warehouse/warehouse";
-import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onSelect: (warehouse: Warehouse) => void;
+  itemCode?: string;
+  itemQtyInWhs?: Array<{ WarehouseCode: string; Qty: number; [key: string]: any }>;
 }
 
-export function WarehouseSelectorDialog({ open, onClose, onSelect }: Props) {
+export function WarehouseSelectorDialog({ open, onClose, onSelect, itemCode, itemQtyInWhs }: Props) {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,10 +52,12 @@ export function WarehouseSelectorDialog({ open, onClose, onSelect }: Props) {
     onClose();
   };
 
-  const filteredWarehouses = warehouses.filter((w) =>
-    w.WhsCode.toLowerCase().includes(search.toLowerCase()) ||
-    w.WhsName.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredWarehouses = useMemo(() => {
+    return warehouses.filter((w) =>
+      w.WhsCode.toLowerCase().includes(search.toLowerCase()) ||
+      w.WhsName.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [warehouses, search]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -80,28 +83,36 @@ export function WarehouseSelectorDialog({ open, onClose, onSelect }: Props) {
               <tr>
                 <th className="p-2 text-left">Code</th>
                 <th className="p-2 text-left">Name</th>
+                <th className="p-2 text-right">Qty In Whs</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {loading ? (
                 <tr>
-                  <td colSpan={2} className="p-4 text-center">Loading warehouses...</td>
+                  <td colSpan={3} className="p-4 text-center">Loading warehouses...</td>
                 </tr>
               ) : filteredWarehouses.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="p-4 text-center">No warehouses found.</td>
+                  <td colSpan={3} className="p-4 text-center">No warehouses found.</td>
                 </tr>
               ) : (
-                filteredWarehouses.map((w) => (
-                  <tr
-                    key={w.WhsCode}
-                    onClick={() => handleSelect(w)}
-                    className="hover:bg-gray-100 cursor-pointer"
-                  >
-                    <td className="p-2 font-medium">{w.WhsCode}</td>
-                    <td className="p-2 text-muted-foreground">{w.WhsName}</td>
-                  </tr>
-                ))
+                filteredWarehouses.map((w) => {
+                  const qtyRecord = itemQtyInWhs?.find(
+                    (q) => (q.WarehouseCode || q.warehouseCode) === w.WhsCode
+                  );
+                  const qty = qtyRecord ? (qtyRecord.Qty ?? qtyRecord.qty ?? 0) : 0;
+                  return (
+                    <tr
+                      key={w.WhsCode}
+                      onClick={() => handleSelect(w)}
+                      className="hover:bg-gray-100 cursor-pointer"
+                    >
+                      <td className="p-2 font-medium">{w.WhsCode}</td>
+                      <td className="p-2 text-muted-foreground">{w.WhsName}</td>
+                      <td className="p-2 text-center font-semibold text-black">{Number(qty)}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

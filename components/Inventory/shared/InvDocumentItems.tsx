@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
@@ -6,76 +6,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { InvDocumentLineRow } from "./InvDocumentItemRow";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-
-
 import { Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
 
 export function InvDocumentItems() {
   const { watch } = useFormContext();
-  const selectedCardCode = watch("CardCode");
-  const { lines, addLine, customer, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment } = useInventoryDocument();
+  const { lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment } = useInventoryDocument();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selected, setSelected] = useState<string>("Select Type");
   const [activeTab, setActiveTab] = useState("content");
 
-  const ITEM_SELECTOR_COLUMNS = [
-    { key: "ItemCode", header: "Item Code" },
-    { key: "Dscription", header: "Description" },
-  ];
-
-  const ITEM_SELECTOR_SEARCH_KEYS = ["ItemCode", "Dscription"];
-
-  const handleSelect = (value: string) => {
-    setSelected(value);
-    console.log("Selected:", value);
-  }
-
   const columns = [
-    {
-      key: "actions",
-      title: "Actions",
-      width: 80,
-    },
-    {
-      key: "ItemCode",
-      title: "Item",
-      width: 180,
-    },
-    {
-      key: "Dscription",
-      title: "Description",
-      width: 300,
-    },
-    {
-      key: "FromWhsCode",
-      title: "From Whs",
-      width: 180,
-    },
-    {
-      key: "WhsCode",
-      title: "To Whs",
-      width: 180,
-    },
-    {
-      key: "Quantity",
-      title: "Quantity",
-      width: 140,
-    },
-    {
-      key: "OnHand",
-      title: "Qty In Whs",
-      width: 120,
-    },
-    {
-      key: "UomCode",
-      title: "UoM",
-      width: 140,
-    },
+    { key: "actions",      title: "Actions",      width: 80  },
+    { key: "ItemCode",     title: "Item",         width: 180 },
+    { key: "Dscription",   title: "Description",  width: 300 },
+    { key: "FromWhsCode",  title: "From Whs",     width: 180 },
+    { key: "WhsCode",      title: "To Whs",       width: 180 },
+    { key: "Quantity",     title: "Quantity",     width: 140 },
+    { key: "OnHand",       title: "Qty In Whs",   width: 120 },
+    { key: "UomCode",      title: "UoM",          width: 140 },
   ];
 
   const handleOnSelectItems = (items: Item[]) => {
@@ -86,16 +36,24 @@ export function InvDocumentItems() {
       const defaultWhsLine = item.DefaultWhse || firstWhs;
       const quantity = 1;
 
+      // Resolve warehouse-specific OnHand from item's QtyInWhs array
+      const qtyInWhs: any[] = item.QtyInWhs || [];
+      const fromWhs = fromWarehouse || defaultWhsLine;
+      const whRecord = qtyInWhs.find(
+        (w: any) => (w.WarehouseCode || w.warehouseCode) === fromWhs
+      );
+      const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
+
       addLine({
         ItemCode: item.ItemCode,
         Dscription: item.ItemName || item.ItemDescription || "",
-        FromWhsCode: fromWarehouse || defaultWhsLine,
+        FromWhsCode: fromWhs,
         FromBinLoc: "",
         ToBinLoc: "",
         FisrtBin: "",
         WhsCode: toWarehouse || defaultWhsLine,
         Quantity: quantity,
-        OnHand: Number(item.OnHand || 0),
+        OnHand: initialOnHand,
         ItemCost: price,
         LineTotal: quantity * price,
         UomCode: item.UoM || item.UoMCode || item.InventoryUOM || item.SalesUnit || item.PurchaseUnit || "",
@@ -110,6 +68,7 @@ export function InvDocumentItems() {
         U_FBRQty: 0,
         U_SaleType: "Retail",
         U_FurtherTax: 0,
+        QtyInWhs: qtyInWhs,
       });
     });
   };
@@ -190,5 +149,3 @@ export function InvDocumentItems() {
     </div>
   );
 }
-
-

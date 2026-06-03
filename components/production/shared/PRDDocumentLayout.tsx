@@ -20,6 +20,7 @@ import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 
 import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
@@ -244,34 +245,40 @@ export function PRDDocumentLayout<T extends FieldValues>({
             {children}
           </div>
           <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
-            {docType === DocumentType.ProductionOrder  && (
-              <Select
-                value=""
-                onValueChange={handleCopyFrom}
-              >
-                <SelectTrigger
-                  className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0"
-                  disabled={isCopyingToInventory}
+            <div className="flex items-center gap-3">
+              {getFieldSettings(docType, "headerFieds", "CopyFrom").visible !== false && (
+                <Select
+                  value=""
+                  onValueChange={handleCopyFrom}
                 >
-                  <div className="flex items-center gap-2">
-                    {isCopyingToInventory && <Loader2 className="w-4 h-4 animate-spin text-white" />}
-                    <SelectValue placeholder="Copy To" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value={DocumentType.InvTransferReq.toString()}>
-                      Inventory Transfer Request
-                    </SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
-            {initialStatus !== "boposClosed" && (
-              <Button type="submit" disabled={isSubmitting || (docType === DocumentType.IssueForProduction && lines.length === 0)}>
-                {isSubmitting ? "Saving..." : ((watch("AbsoluteEntry" as any) || watch("DocEntry" as any)) ? "Update" : "Submit")}
-              </Button>
-            )}
+                  <SelectTrigger
+                    className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0"
+                    disabled={isCopyingToInventory || !getFieldSettings(docType, "headerFieds", "CopyFrom").enable || docType !== DocumentType.ProductionOrder}
+                  >
+                    <div className="flex items-center gap-2">
+                      {isCopyingToInventory && <Loader2 className="w-4 h-4 animate-spin text-white" />}
+                      <SelectValue placeholder="Copy To" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {docType === DocumentType.ProductionOrder && (
+                        <SelectItem value={DocumentType.InvTransferReq.toString()}>
+                          Inventory Transfer Request
+                        </SelectItem>
+                      )}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              )}
+
+
+              {initialStatus !== "boposClosed" && (
+                <Button type="submit" disabled={isSubmitting || (docType === DocumentType.IssueForProduction && lines.length === 0)}>
+                  {isSubmitting ? "Saving..." : ((watch("AbsoluteEntry" as any) || watch("DocEntry" as any)) ? "Update" : "Submit")}
+                </Button>
+              )}
+            </div>
           </div>
           <UDFLayout docType={docType} values={udfs} />
         </form>

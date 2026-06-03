@@ -25,6 +25,7 @@ import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 
 export function DocumentItems() {
   const { watch } = useFormContext();
@@ -123,24 +124,25 @@ export function DocumentItems() {
       const defaultWhsLine =
         item.DefaultWhse || firstWhs;
 
+      const qtyInWhs = item.QtyInWhs || [];
+      const whRecord = qtyInWhs.find(
+        (w: any) => (w.WarehouseCode || w.warehouseCode) === defaultWhsLine
+      );
+      const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
+
       addLine({
         ItemCode: item.ItemCode,
-        ItemName:
-          item.ItemName ||
-          item.ItemDescription ||
-          "",
+        ItemName: item.ItemName || item.ItemDescription || "",
         Quantity: 1,
-        OnHand: item.OnHand!,
+        OnHand: initialOnHand,
         Price: price,
         TaxCode: targetTaxCode,
         TaxRate: taxRate,
-        WarehouseCode:
-          defaultWhsLine,
+        WarehouseCode: defaultWhsLine,
         UoMCode: item.UoM || "",
-        ManSerNum:
-          item.ManSerNum,
-        ManBtchNum:
-          item.ManBtchNum,
+        ManSerNum: item.ManSerNum,
+        ManBtchNum: item.ManBtchNum,
+        QtyInWhs: qtyInWhs,
       });
     });
   };
@@ -295,7 +297,10 @@ export function DocumentItems() {
       title: "Freight 3 (LC)",
       width: 180,
     },
-  ];
+  ].filter(col => {
+    if (col.key === "actions") return true;
+    return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
+  });
 
   return (
     <div className="grid w-full relative pt-2 overflow-visible">

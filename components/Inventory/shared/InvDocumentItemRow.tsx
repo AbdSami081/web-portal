@@ -8,6 +8,7 @@ import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { Warehouse } from "@/types/warehouse/warehouse";
+import { getItemsList } from "@/api+/sap/master-data/items";
 
 interface Props {
   index: number;
@@ -20,6 +21,19 @@ export function InvDocumentLineRow({ index, line }: Props) {
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
+
+  // Fetch QtyInWhs from Item API if not present on the line (e.g. when loading existing documents)
+  useEffect(() => {
+    if (!line.QtyInWhs || line.QtyInWhs.length === 0) {
+      getItemsList(line.ItemCode, 0, 1).then((res) => {
+        const item = res.find(i => i.ItemCode === line.ItemCode);
+        if (item && item.QtyInWhs) {
+          updateLine(line.ItemCode, { QtyInWhs: item.QtyInWhs });
+        }
+      });
+    }
+  }, [line.ItemCode]);
+
   useEffect(() => {
     setDraftLine(line);
   }, [line, index]);
@@ -29,9 +43,15 @@ export function InvDocumentLineRow({ index, line }: Props) {
   };
 
   const handleWhsSelect = (wh: Warehouse) => {
-    let updated;
+    let updated: InventoryDocumentLine;
     if (whsMode === "from") {
-      updated = { ...draftLine, FromWhsCode: wh.WhsCode };
+      // Look up qty from item's QtyInWhs array for the selected warehouse
+      const qtyInWhs = line.QtyInWhs || [];
+      const whRecord = qtyInWhs.find(
+        (w: any) => (w.WarehouseCode || w.warehouseCode) === wh.WhsCode
+      );
+      const whOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
+      updated = { ...draftLine, FromWhsCode: wh.WhsCode, OnHand: whOnHand };
     } else {
       updated = { ...draftLine, WhsCode: wh.WhsCode };
     }
@@ -158,10 +178,13 @@ export function InvDocumentLineRow({ index, line }: Props) {
           readOnly
         />
       </td>
+
       <WarehouseSelectorDialog
         open={isWhsModalOpen}
         onClose={() => setIsWhsModalOpen(false)}
         onSelect={handleWhsSelect}
+        itemCode={line.ItemCode}
+        itemQtyInWhs={line.QtyInWhs}
       />
     </>
   );

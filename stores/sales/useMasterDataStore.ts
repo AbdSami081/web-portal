@@ -2,7 +2,7 @@ import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { Item } from "@/types/sales/Item.type";
 import { VatGroup } from "@/types/sales/VatGroups.type";
 import { UoM } from "@/types/sales/UoM.type";
-import axios from "axios";
+
 import { create } from "zustand";
 import { Warehouse } from "@/types/warehouse.type";
 import { getFreightTypes, fetchFreightWithCharges } from "@/api+/sap/master-data/freight";
@@ -60,7 +60,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   },
 
   async loadMasterData(cardType = "", freightCategory = "") {
-    if (get().masterDataLoaded) return;
+    if (get().masterDataLoaded && get().warehouses.length > 0) return;
     set({ itemLoading: true });
     try {
       const [items, customers, rawWarehouses] = await Promise.all([
@@ -69,10 +69,17 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
         getwarehouses()
       ]);
 
-      const warehouses = rawWarehouses.map((w: any) => ({
-        WarehouseCode: w.WhsCode || w.WarehouseCode,
-        WarehouseName: w.WhsName || w.WarehouseName
-      }));
+      const warehousesMap = new Map<string, any>();
+      for (const w of rawWarehouses) {
+        const code = w.WhsCode;
+        if (code && !warehousesMap.has(code)) {
+          warehousesMap.set(code, {
+            WarehouseCode: code,
+            WarehouseName: w.WhsName
+          });
+        }
+      }
+      const warehouses = Array.from(warehousesMap.values());
 
       await get().loadExternalMasterData(freightCategory);
 
@@ -89,19 +96,12 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
       set({ itemLoading: false });
     }
   },
-
   async loadItemPage(page) {
     set({ itemLoading: true });
     try {
       const { itemSearch } = get();
       const skip = (page - 1) * 50;
-      const res = await axios.get(
-        `/api/sap/master-data/items?top=50&skip=${skip}&search=${encodeURIComponent(
-          itemSearch
-        )}`
-      );
-      const data = res.data;
-      const pageItems = data.items || data.Items || [];
+      const pageItems = await getItemsList(itemSearch, skip, 50);
 
       set((state) => ({
         items: { ...state.items, [page]: pageItems },
