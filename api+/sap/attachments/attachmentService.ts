@@ -33,13 +33,40 @@ export const uploadAttachments = async (
   return response.data;
 };
 
-export const mapAttachmentForSap = (att: any) => ({
-  FileExtension: att.FileName?.split(".").pop(),
-  FileName: att.FileName?.split(".").slice(0, -1).join("."),
-  SourcePath: att.SourcePath,
-  FreeText: att.FreeText,
-  CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-});
+const splitPath = (path = "") => {
+  const BACKSLASH = String.fromCharCode(92);
+  const lastSep = Math.max(path.lastIndexOf("/"), path.lastIndexOf(BACKSLASH));
+
+  return {
+    folderPath: lastSep > -1 ? path.substring(0, lastSep) : path,
+    fileName: lastSep > -1 ? path.substring(lastSep + 1) : "",
+  };
+};
+
+const splitFileName = (fileName = "") => {
+  const lastDot = fileName.lastIndexOf(".");
+
+  return {
+    name: lastDot > -1 ? fileName.substring(0, lastDot) : fileName,
+    extension: lastDot > -1 ? fileName.substring(lastDot + 1) : "",
+  };
+};
+
+export const mapAttachmentForSap = (att: any) => {
+  const sourcePath = att.SourcePath || "";
+  const { folderPath, fileName: fileNameFromPath } = splitPath(sourcePath);
+  const sourcePathHasFile = fileNameFromPath.includes(".");
+  const fileWithExtension = sourcePathHasFile ? fileNameFromPath : (att.FileName || "");
+  const { name, extension } = splitFileName(fileWithExtension);
+
+  return {
+    FileName: name,
+    FileExtension: extension,
+    SourcePath: sourcePathHasFile ? folderPath : (sourcePath || process.env.NEXT_PUBLIC_ATTACHMENT_SOURCE_PATH || ""),
+    FreeText: att.FreeText || "",
+    CopyToTargetDoc: att.CopyToTarget ? "tYES" : "tNO",
+  };
+};
 
 export const uploadAndPatchAttachments = async (
   attachments: any[],
@@ -58,6 +85,7 @@ export const uploadAndPatchAttachments = async (
 
     uploadedAttachments = newAttachments.map((att, index) => ({
       ...att,
+      FileName: uploadResults[index].fileName || uploadResults[index].originalName || att.FileName,
       SourcePath: uploadResults[index].path,
     }));
   }
