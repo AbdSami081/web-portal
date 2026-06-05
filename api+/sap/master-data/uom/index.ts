@@ -1,13 +1,11 @@
-// import { json } from '@remix-run/node';
-// import type { LoaderFunctionArgs } from '@remix-run/node';
-// import { MasterDataService } from '~/lib/sap/service_layer/masterDataService';
+import { MasterDataService } from "@/lib/sap/service_layer/masterDataService";
 
-// export async function loader({ request }: LoaderFunctionArgs) {
-//   try {
-//     const uoms = await MasterDataService.getUOMs();
-//     return json({ uoms });
-//   } catch (error: any) {
-//     console.error('❌ Failed to fetch unit of measures:', error);
-//     return json({ error: 'Failed to fetch unit of measures' }, { status: 500 });
-//   }
-// }
+export async function getUOMs(): Promise<{ AbsEntry: number; Code: string; Name: string }[]> {
+  try {
+    const data = await MasterDataService.getUOMs();
+    return data || [];
+  } catch (error) {
+    console.error("Failed to fetch UoMs:", error);
+    return [];
+  }
+}

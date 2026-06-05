@@ -10,6 +10,7 @@ import { getVatGroups } from "@/api+/sap/master-data/tax-codes";
 import { getItemsList } from "@/api+/sap/master-data/items";
 import { getCustomers } from "@/api+/sap/master-data/business-partners";
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
+import { getUOMs } from "@/api+/sap/master-data/uom";
 
 interface MasterDataStore {
   items: Record<number, Item[]>;
@@ -63,10 +64,11 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
     if (get().masterDataLoaded && get().warehouses.length > 0) return;
     set({ itemLoading: true });
     try {
-      const [items, customers, rawWarehouses] = await Promise.all([
+      const [items, customers, rawWarehouses, uomData] = await Promise.all([
         getItemsList("", 0, 20),
         getCustomers("", 0, 20, cardType),
-        getwarehouses()
+        getwarehouses(),
+        getUOMs(),
       ]);
 
       const warehousesMap = new Map<string, any>();
@@ -87,6 +89,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
         items: { 1: items },
         customers,
         warehouses,
+        uoms: uomData,
         masterDataLoaded: true,
         currentItemPage: 1,
         itemLoading: false,

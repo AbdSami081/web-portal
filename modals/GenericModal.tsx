@@ -232,6 +232,7 @@ export function GenericModal<T>({
             {hasMore && (
               <div className="p-2 text-center border-t shrink-0">
                 <Button
+                  type="button"
                   variant="ghost"
                   className="w-full text-blue-600 h-8 text-xs"
                   onClick={onLoadMore}
@@ -247,8 +248,8 @@ export function GenericModal<T>({
 
 
         <DialogFooter className="mt-2 flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleChoose} disabled={multiple ? selectedItems.length === 0 : !selected}>
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="button" onClick={handleChoose} disabled={multiple ? selectedItems.length === 0 : !selected}>
             Choose
           </Button>
         </DialogFooter>

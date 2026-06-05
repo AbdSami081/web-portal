@@ -1,6 +1,66 @@
 "use client"
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { FieldValues, FormProvider, useForm, DefaultValues } from "react-hook-form";
+import { FieldValues, FormProvider, useForm, DefaultValues, SubmitErrorHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { DocumentConfig, getDocumentConfig } from "@/lib/config/inventory/documentConfig";
+import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { GenericModal } from "@/modals/GenericModal";
+import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/api+/sap/inventory/inventoryService";
+import { FilePlus2, Loader2, Keyboard } from "lucide-react";
+import { HeaderActionPortal } from "@/components/header-portal";
+import { HeaderModalAction } from "@/components/header-modal-action";
+import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DocumentType } from "@/types/master/DocumentType";
+import { useUDFStore } from "@/stores/useUDFStore";
+import { UDFLayout } from "@/components/shared/UDFSheet";
+
+const InvDocContext = createContext<DocumentConfig | null>(null);
+
+export const useInvDocConfig = () => {
+  const context = useContext(InvDocContext);
+  if (!context) throw new Error("useInvDocConfig must be used within InvDocumentLayout");
+  return context;
+};
+
+interface InvDocumentLayoutProps<T extends FieldValues> {
+  schema: z.ZodType<T>;
+  defaultValues: T;
+  onSubmit: (data: T) => Promise<void>;
+  children?: React.ReactNode;
+  actions?: React.ReactNode;
+  docType: DocumentType;
+}
+
+
+
+export function InvDocumentLayout<T extends FieldValues>({
+  schema,
+  defaultValues,
+  onSubmit,
+  children,
+  actions,
+  docType,
+}: InvDocumentLayoutProps<T>) {
+
+  const config = getDocumentConfig(docType);
+  const router = useRouter();
+  const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
+
+  useEffect(() => {
+    fetchUdfDefinitions(docType);
+  }, [docType, fetchUdfDefinitions]);
+
+  const methods = useForm<T>({
+    resolver: zodResolver(schema as any),
+    defaultValues: defaultValues as DefaultValues<T>,
+    mode: "onSubmit",
+  });
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -62,9 +122,10 @@ export function InvDocumentLayout<T extends FieldValues>({
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, setValue, formState: { isSubmitting }, watch } = methods;
+  const { handleSubmit, reset, setValue } = methods;
   const { reset: resetStore, DocEntry, loadFromDocument, setIsCopyingTo } = useInventoryDocument();
   const store = useInventoryDocument();
+  const [isSaving, setIsSaving] = useState(false);
 
   // Reset store and form when docType changes (e.g., navigating from Transfer to Transfer Request)
   useEffect(() => {
@@ -81,9 +142,8 @@ export function InvDocumentLayout<T extends FieldValues>({
 
   const isInitialMount = React.useRef(true);
 
-  // Handle store state on mount:
-  // - If we are copying, sync store to form and consume flag.
-  // - If normal entry, reset everything.
+  // On mount: if copying from another doc, sync data then clear the flag.
+  // On normal entry, reset form and store.
   useEffect(() => {
     if (!isInitialMount.current) return;
     isInitialMount.current = false;
@@ -91,7 +151,7 @@ export function InvDocumentLayout<T extends FieldValues>({
     const state = useInventoryDocument.getState();
 
     if (state.isCopyingTo) {
-      // Sync store to form
+      // Sync copied data into the form
       setValue("CardCode" as any, state.customer?.CardCode as any);
       setValue("CardName" as any, state.customer?.CardName as any);
       setValue("FromWarehouse" as any, state.fromWarehouse as any);
@@ -101,16 +161,18 @@ export function InvDocumentLayout<T extends FieldValues>({
       setValue("TaxDate" as any, state.docDate as any);
       setValue("DocumentLines" as any, state.lines as any);
 
-      // Flag will be consumed by store.reset() which is called in the other useEffect or manually
+      // Consume the flag so re-visiting the page starts fresh
+      setIsCopyingTo(false);
     } else {
-      // Normal entry, reset store (only if not viewing an existing document)
+      // Normal navigation — reset if no doc is open
       if (!DocEntry || DocEntry === 0) {
         resetStore();
+        reset(defaultValues as any);
       }
     }
-  }, [resetStore, setIsCopyingTo, setValue, DocEntry]);
+  }, [resetStore, setIsCopyingTo, setValue, DocEntry, reset, defaultValues]);
 
-  // Sync store to form for header fields (CardCode, Warehouses, etc.) when they change
+  // Continuously sync store header fields into react-hook-form
   useEffect(() => {
     if (store.customer) setValue("CardCode" as any, store.customer.CardCode as any);
     if (store.customer) setValue("CardName" as any, store.customer.CardName as any);
@@ -119,6 +181,7 @@ export function InvDocumentLayout<T extends FieldValues>({
     setValue("Comments" as any, store.comments as any);
     setValue("JournalMemo" as any, store.journalMemo as any);
     setValue("TaxDate" as any, store.docDate as any);
+    setValue("DocumentLines" as any, store.lines as any);
   }, [
     store.customer,
     store.fromWarehouse,
@@ -126,6 +189,7 @@ export function InvDocumentLayout<T extends FieldValues>({
     store.comments,
     store.journalMemo,
     store.docDate,
+    store.lines,
     setValue
   ]);
 
@@ -251,10 +315,39 @@ export function InvDocumentLayout<T extends FieldValues>({
   const canCopyTo = docType === DocumentType.InvTransferReq;
   const canCopyFrom = docType === DocumentType.InvTransfer;
 
+  const onSubmitValid = async (data: T) => {
+    setIsSaving(true);
+    try {
+      await onSubmit(data);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onSubmitInvalid: SubmitErrorHandler<T> = (errors) => {
+    console.error("Validation Errors:", errors);
+    const getFirstErrorMessage = (errs: any): string | null => {
+      if (!errs || typeof errs !== "object") return null;
+      if (typeof errs.message === "string" && errs.message) return errs.message;
+      for (const key in errs) {
+        const err = errs[key];
+        if (!err) continue;
+        if (typeof err.message === "string" && err.message) {
+          return `${key}: ${err.message}`;
+        }
+        const nestedMsg = getFirstErrorMessage(err);
+        if (nestedMsg) return nestedMsg;
+      }
+      return null;
+    };
+    const message = getFirstErrorMessage(errors) || "Please check the document fields.";
+    toast.error(message);
+  };
+
   return (
     <InvDocContext.Provider value={config}>
       <FormProvider {...methods}>
-        <form onSubmit={handleSubmit((data) => onSubmit(data as unknown as T))} className="flex flex-col min-h-screen bg-background overflow-x-hidden">
+        <form onSubmit={handleSubmit(onSubmitValid, onSubmitInvalid)} className="flex flex-col min-h-screen bg-background overflow-x-hidden">
 
           <HeaderActionPortal>
             <TooltipProvider>
@@ -354,8 +447,8 @@ export function InvDocumentLayout<T extends FieldValues>({
               </Select>
             )}
 
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : (DocEntry && DocEntry > 0 ? "Update" : "Submit")}
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : (DocEntry && DocEntry > 0 ? "Update" : "Submit")}
             </Button>
           </div>
 

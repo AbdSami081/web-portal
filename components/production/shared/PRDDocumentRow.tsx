@@ -56,25 +56,25 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
       {config.itemColumns.orderNumber && (
         <td className="py-2 px-4 text-center">
-          <span className="font-medium text-gray-700">{line.OrderNumber}</span>
+          <span className="block w-full truncate font-medium text-gray-700">{line.OrderNumber}</span>
         </td>
       )}
 
       {config.itemColumns.type && (
         <td className="py-2 px-4">
-          <span className="font-medium text-gray-700">{line.ItemType?.replace(/^[pd]it_/, "")}</span>
+          <span className="block w-full truncate font-medium text-gray-700">{line.ItemType?.replace(/^[pd]it_/, "")}</span>
         </td>
       )}
 
       {config.itemColumns.itemCode && (
         <td className="py-2 px-4">
-          <span className="font-medium text-gray-700">{line.ItemNo}</span>
+          <span className="block w-full truncate font-medium text-gray-700">{line.ItemNo}</span>
         </td>
       )}
 
       {config.itemColumns.itemDescription && (
-        <td className="py-2 px-4 max-w-[250px] truncate" title={line.ItemName}>
-          <span className="font-medium text-gray-700">{line.ItemName}</span>
+        <td className="py-2 px-4 min-w-0" title={line.ItemName}>
+          <span className="block w-full truncate font-medium text-gray-700">{line.ItemName}</span>
         </td>
       )}
 
@@ -82,14 +82,12 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         <td className="py-2 px-4 text-center">
           <Input
             type="number"
-            min={1}
+            min={0}
             name={`BaseQty-${index}`}
-            value={draftLine.BaseQuantity || 1}
+            value={draftLine.BaseQuantity ?? 0}
             onChange={(e) => {
               let numericVal = Number(e.target.value);
               if (isNaN(numericVal)) return;
-
-              if (numericVal < 1) numericVal = 1;
 
               const parentQty = (draftLine as any).BOMHeaderQty || 1;
               const newBaseRatio = numericVal / parentQty;
@@ -108,14 +106,14 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               saveRow();
             }}
             disabled={initialStatus === "boposClosed"}
-            className="font-medium text-gray-700 text-center"
+            className="h-7 w-full font-medium text-gray-700 text-center"
           />
         </td>
       )}
 
       {config.itemColumns.baseRatio && (
         <td className="py-2 px-4 text-center">
-          <span className="font-medium text-gray-700">{Number(draftLine.BaseRatio ?? 0).toLocaleString()}</span>
+          <span className="block w-full truncate font-medium text-gray-700">{Number(draftLine.BaseRatio ?? 0).toLocaleString()}</span>
         </td>
       )}
 
@@ -126,15 +124,13 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
           ) : (
             <Input
               type="number"
-              min={1}
+              min={0}
               name={`PlannedQty-${index}`}
-              className="h-7 w-24 mx-auto text-center border-zinc-300"
-              value={draftLine.PlannedQuantity || 1}
+              className="h-7 w-full text-center border-zinc-300"
+              value={draftLine.PlannedQuantity ?? 0}
               onChange={(e) => {
                 let numericVal = Number(e.target.value);
                 if (isNaN(numericVal)) return;
-
-                if (numericVal < 1) numericVal = 1;
 
                 const updated = { ...draftLine, PlannedQuantity: numericVal };
                 setDraftLine(updated);
@@ -151,7 +147,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
       {config.itemColumns.issued && (
         <td className="py-2 px-4 text-center text-gray-700">
-          <span>{line.IssuedQuantity || 0}</span>
+          <span className="block w-full truncate">{line.IssuedQuantity || 0}</span>
         </td>
       )}
 
@@ -159,15 +155,13 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         <td className="py-2 px-4 text-center">
           <Input
             type="number"
-            min={1}
+            min={0}
             name={`OpenQty-${index}`}
-            className="h-7 w-24 mx-auto text-center border-zinc-300"
-            value={draftLine.PlannedQuantity || 1}
+            className="h-7 w-full text-center border-zinc-300"
+            value={draftLine.PlannedQuantity ?? 0}
             onChange={(e) => {
               let numericVal = Number(e.target.value);
               if (isNaN(numericVal)) return;
-
-              if (numericVal < 1) numericVal = 1;
 
               const updated = { ...draftLine, PlannedQuantity: numericVal };
               setDraftLine(updated);
@@ -183,15 +177,15 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
       {config.itemColumns.uomCode && (
         <td className="py-2 px-4 text-center text-gray-700">
-          <span>{line.UoMCode}</span>
+          <span className="block w-full truncate">{line.UoMCode}</span>
         </td>
       )}
 
       {config.itemColumns.warehouse && (
         <td className="py-2 px-4 text-center text-gray-700">
-          <div className="flex items-center gap-1">
+          <div className="flex w-full items-center gap-1">
             <Input
-              className="h-7 w-28 text-xs bg-gray-100 text-gray-500 cursor-not-allowed"
+              className="h-7 min-w-0 flex-1 text-xs bg-gray-100 text-gray-500 cursor-not-allowed"
               value={draftLine.Warehouse || ""}
               disabled
               readOnly
@@ -221,7 +215,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
             }}
             disabled={initialStatus === "boposClosed"}
           >
-            <SelectTrigger className="h-7 w-32 text-xs">
+            <SelectTrigger className="h-7 w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

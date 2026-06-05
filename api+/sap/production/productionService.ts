@@ -77,9 +77,9 @@ const mapAttachment = (att: any) => {
 const mapProductionOrderLine = (line: any, data: any, includeLineNumber = false) => {
   const linePayload: any = {
     ItemNo: line.ItemNo,
-    BaseQuantity: line.BaseQuantity || 1,
-    PlannedQuantity: line.PlannedQuantity || 0,
-    IssuedQuantity: line.IssuedQuantity || 0,
+    BaseQuantity: line.BaseQuantity ?? 0,
+    PlannedQuantity: line.PlannedQuantity ?? 0,
+    IssuedQuantity: line.IssuedQuantity ?? 0,
     ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
     Warehouse: line.Warehouse || data.Warehouse,
     ItemType: line.ItemType,

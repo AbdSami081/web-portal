@@ -3,23 +3,48 @@
 import { toast } from "sonner";
 import { postInventoryTransfer, patchInventoryTransfer, InventoryTransferPayload } from "@/api+/sap/inventory/inventoryService";
 import { z } from "zod";
-import { quotationSchema } from "@/lib/schemas/quotationSchema";
 import { InvDocumentLayout } from "@/components/Inventory/shared/InvDocumentLayout";
 import { InvDocumentHeader } from "@/components/Inventory/shared/InvDocumentHeader";
 import { InvDocumentItems } from "@/components/Inventory/shared/InvDocumentItems";
 import InvDocumentFooter from "@/components/Inventory/shared/InvDocumentFooter";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-import { useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { DocumentType } from "@/types/master/DocumentType";
 
-const schema = quotationSchema.extend({
+const inventoryLineSchema = z.object({
+  ItemCode: z.string().optional(),
+  Dscription: z.string().optional(),
+  Quantity: z.number().optional(),
+  UoMCode: z.string().optional(),
+  unitMsr: z.string().optional(),
+  WhsCode: z.string().optional(),
+  FromWhsCode: z.string().optional(),
+  WarehouseCode: z.string().optional(),
+  FromWarehouseCode: z.string().optional(),
+  BaseType: z.number().nullable().optional(),
+  BaseEntry: z.number().nullable().optional(),
+  BaseLine: z.number().nullable().optional(),
+});
+
+const schema = z.object({
   CardCode: z.string().optional(),
   CardName: z.string().optional(),
+  DocDate: z.string().optional(),
+  DocDueDate: z.string().optional(),
+  TaxDate: z.string().optional(),
+  DocumentLines: z.array(inventoryLineSchema).optional(),
   JournalMemo: z.string().optional(),
+  Comments: z.string().optional(),
   FromWarehouse: z.string().optional(),
   ToWarehouse: z.string().optional(),
+  DiscountPercent: z.number().optional(),
+  Freight: z.number().optional(),
+  Rounding: z.number().optional(),
+  TotalBeforeDiscount: z.number().optional(),
+  TaxTotal: z.number().optional(),
+  DocTotal: z.number().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -82,8 +107,8 @@ export default function InvTransferPage() {
             ItemCode: line.ItemCode,
             Quantity: line.Quantity,
             UnitPrice: line.ItemCost || 0,
-            UoMCode: line.UomCode || line.unitMsr || "",
-            MeasureUnit: line.unitMsr || line.UomCode || "",
+            UoMCode: line.UoMCode || line.unitMsr || "",
+            MeasureUnit: line.unitMsr || line.UoMCode || "",
             WarehouseCode: line.WhsCode || toWarehouse || "",
             FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
           };

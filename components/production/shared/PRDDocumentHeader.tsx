@@ -29,7 +29,7 @@ const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className,
 
   useEffect(() => {
     if (document.activeElement !== document.getElementById(id)) {
-      setLocalValue(value ? Number(value).toLocaleString() : "");
+      setLocalValue(value !== undefined && value !== null ? Number(value).toLocaleString() : "");
     }
   }, [value, id]);
 
@@ -38,12 +38,11 @@ const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className,
       id={id}
       type="number"
       className={className}
-      value={value || ""}
+      value={value ?? ""}
       onChange={(e) => {
         const val = e.target.value;
         let numericVal = Number(val);
         if (!isNaN(numericVal)) {
-          if (numericVal < 1) numericVal = 1;
           onChange(numericVal);
         }
       }}
@@ -160,6 +159,22 @@ export function PRDDocumentHeader() {
     }
   };
 
+  const isSapBomRecord = (item: any) => {
+    return Boolean(item?.TreeCode || item?.ProductDescription || Array.isArray(item?.ProductTreeLines));
+  };
+
+  const isMultiBomRecord = (item: any) => {
+    return !isSapBomRecord(item) && Boolean(
+      item?.U_PCode ||
+      item?.U_Name ||
+      item?.U_BOMCode ||
+      item?.U_BOMName ||
+      item?.Code ||
+      item?.Name ||
+      Array.isArray(item?.lines)
+    );
+  };
+
   const fetchDocumentsList = async (isLoadMore = false) => {
     const resourceName = getResourceName(docType);
     if (!resourceName) return;
@@ -245,15 +260,10 @@ export function PRDDocumentHeader() {
           setValue("Comments", documentData.Remarks, { shouldDirty: true });
           setValue("PostingDate", documentData.PostingDate?.split("T")[0], { shouldDirty: true });
 
-          // Set all identifiers for stability
           setValue("DocNum", documentData.DocNum || documentData.DocumentNumber, { shouldDirty: true });
           setValue("DocEntry", documentData.DocEntry || documentData.AbsoluteEntry, { shouldDirty: true });
           setValue("AbsoluteEntry", documentData.AbsoluteEntry || documentData.DocEntry, { shouldDirty: true });
-
-          // Capture the loaded status locally so dropdown options stay stable regardless of selection
           setLoadedStatus(documentData.ProductionOrderStatus || "boposPlanned");
-
-          // Use setTimeout with a slight delay to ensure the Select options render before setting value
           setTimeout(() => {
             setValue("ProductionOrderStatus", documentData.ProductionOrderStatus, { shouldDirty: true });
           }, 100);
@@ -305,6 +315,8 @@ export function PRDDocumentHeader() {
     try {
       const currentSkip = isReset ? 0 : skip;
       let data = await getBOMList(isMultiBom, searchValue, currentSkip, 20);
+      const fetchedCount = data.length;
+      data = data.filter((item: any) => isMultiBom ? isMultiBomRecord(item) : isSapBomRecord(item));
 
       // Normalize Multi BOM structure: map 'lines' to 'ProductTreeLines' for the store
       if (isMultiBom && data.length > 0) {
@@ -321,7 +333,7 @@ export function PRDDocumentHeader() {
         setDataList((prev) => [...prev, ...data]);
         setSkip(currentSkip + 20);
       }
-      setHasMore(data.length === 20);
+      setHasMore(fetchedCount === 20);
       setModalType("bom");
       setBomModalOpen(true);
     } catch (error) {

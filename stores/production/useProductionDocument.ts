@@ -3,6 +3,8 @@ import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { BaseProductionDocument, PRDDocumentLine } from "@/types/production/PRDDoc.type";
 import { DocumentType } from "@/types/master/DocumentType";
+import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 
 interface IFPRDDocumentStore {
   docType: DocumentType;
@@ -104,6 +106,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     },
     loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
       const currentDocType = type || get().docType;
+      const uoms = useMasterDataStore.getState().uoms || [];
       
       let mappedLines = [];
       const isSourceProductionOrder = !!(doc.ProductionOrderLines || doc.AbsoluteEntry);
@@ -120,10 +123,10 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
           BaseRatio: 1,
           IssuedQuantity: 0,
           OnHand: 0,
-          UoMCode: doc.UoMCode || "",
+          UoMCode: resolveUoMFromCandidates(uoms, doc.UoMCode, doc.UoMGroupEntry),
           ProductionOrderIssueType: "im_Manual",
           OrderNumber: doc.AbsoluteEntry || doc.DocEntry,
-          LineNumber: -1, // Header reference
+          LineNumber: -1,
         }];
       } else {
         const linesData = doc.ProductionOrderLines || doc.DocumentLines || [];
@@ -143,7 +146,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
                 : 0),
             IssuedQuantity: line.IssuedQuantity,
             OnHand: line.OnHand,
-            UoMCode: line.UoMCode || line.UoM || "",
+            UoMCode: resolveUoMFromCandidates(uoms, line.UoMCode, line.UoMGroupEntry, line.UoM),
             ProductionOrderIssueType: line.ProductionOrderIssueType,
             OrderNumber: line.BaseEntry || (isSourceProductionOrder ? (doc.AbsoluteEntry || doc.DocEntry) : undefined),
             LineNumber: (currentDocType === type && !isCopy) ? line.LineNum : (line.BaseLine ?? line.LineNum),
@@ -217,6 +220,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     loadFromBOM: (bom: any, plannedQty: number = 0) => {
       set({ selectedBOM: bom }); 
       const parentQty = Number(bom.Quantity || 1); 
+      const uoms = useMasterDataStore.getState().uoms || [];
       const mappedLines = bom.ProductTreeLines?.map((line: any) => {
         const lineQty = Number(line.Quantity || 0);
         const baseRatio = lineQty / parentQty;
@@ -230,7 +234,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
           PlannedQuantity: baseRatio * Number(plannedQty || 0),
           IssuedQuantity: 0,
           Warehouse: line.Warehouse || "",
-          UoMCode: line.UoMCode || line.UoM || line.InventoryUOM || "",
+          UoMCode: resolveUoMFromCandidates(uoms, line.UoMCode, line.UoMGroupEntry, line.UoM, line.InventoryUOM),
           ProductionOrderIssueType: line.IssueMethod === "im_Backflush" ? "im_Backflush" : "im_Manual",
           ItemType: line.ItemType || "pit_Item",
         };

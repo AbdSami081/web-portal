@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { KeyboardEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Trash } from "lucide-react";
@@ -9,6 +9,7 @@ import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { getItemsList } from "@/api+/sap/master-data/items";
+import { normalizeInventoryUom } from "@/utils/inventoryUom";
 
 interface Props {
   index: number;
@@ -40,6 +41,13 @@ export function InvDocumentLineRow({ index, line }: Props) {
 
   const saveRow = (updatedLine = draftLine) => {
     updateLine(line.ItemCode, updatedLine);
+  };
+
+  const stopEnterSubmit = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveRow();
+    }
   };
 
   const handleWhsSelect = (wh: Warehouse) => {
@@ -75,7 +83,7 @@ export function InvDocumentLineRow({ index, line }: Props) {
 
       {/* Item Code */}
       <td className="py-2 px-4">
-        <span className="font-medium">{line.ItemCode}</span>
+        <span className="block w-full truncate font-medium">{line.ItemCode}</span>
       </td>
 
       {/* Description */}
@@ -84,6 +92,7 @@ export function InvDocumentLineRow({ index, line }: Props) {
           className="h-6 w-full"
           value={draftLine.Dscription || ""}
           onChange={(e) => setDraftLine({ ...draftLine, Dscription: e.target.value })}
+          onKeyDown={stopEnterSubmit}
           onBlur={() => saveRow()}
         />
       </td>
@@ -141,14 +150,15 @@ export function InvDocumentLineRow({ index, line }: Props) {
           className="h-6 w-full text-right"
           type="number"
           step="any"
-          min={1}
-          value={draftLine.Quantity || 1}
+          min={0}
+          value={draftLine.Quantity ?? 0}
+          onKeyDown={stopEnterSubmit}
           onChange={(e) => {
             let numericVal = Number(e.target.value);
             if (!isNaN(numericVal)) {
-              if (numericVal < 1) numericVal = 1;
-              setDraftLine({ ...draftLine, Quantity: numericVal });
-              updateLine(line.ItemCode, { ...draftLine, Quantity: numericVal });
+              const updatedLine = { ...draftLine, Quantity: numericVal };
+              setDraftLine(updatedLine);
+              updateLine(line.ItemCode, updatedLine);
             }
           }}
           onBlur={() => {
@@ -173,7 +183,7 @@ export function InvDocumentLineRow({ index, line }: Props) {
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full bg-slate-50 cursor-not-allowed"
-          value={draftLine.unitMsr || draftLine.UomCode || ""}
+          value={normalizeInventoryUom(draftLine.UoMCode, draftLine.unitMsr)}
           disabled
           readOnly
         />

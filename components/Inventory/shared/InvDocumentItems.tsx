@@ -10,10 +10,13 @@ import { Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
+import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 
 export function InvDocumentItems() {
   const { watch } = useFormContext();
   const { lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment } = useInventoryDocument();
+  const { uoms } = useMasterDataStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
 
@@ -25,7 +28,7 @@ export function InvDocumentItems() {
     { key: "WhsCode",      title: "To Whs",       width: 180 },
     { key: "Quantity",     title: "Quantity",     width: 140 },
     { key: "OnHand",       title: "Qty In Whs",   width: 120 },
-    { key: "UomCode",      title: "UoM",          width: 140 },
+    { key: "UoMCode",      title: "UoM",          width: 140 },
   ];
 
   const handleOnSelectItems = (items: Item[]) => {
@@ -35,6 +38,14 @@ export function InvDocumentItems() {
       const price = item.Prices?.[0]?.PriceAmount || 0.0;
       const defaultWhsLine = item.DefaultWhse || firstWhs;
       const quantity = 1;
+      const uomCode = resolveUoMFromCandidates(
+        uoms,
+        item.UoM,
+        item.InventoryUOM,
+        item.UoMCode,
+        item.UoMGroupEntry,
+        item.UnitsOfMeasurment
+      );
 
       // Resolve warehouse-specific OnHand from item's QtyInWhs array
       const qtyInWhs: any[] = item.QtyInWhs || [];
@@ -56,8 +67,8 @@ export function InvDocumentItems() {
         OnHand: initialOnHand,
         ItemCost: price,
         LineTotal: quantity * price,
-        UomCode: item.UoM || item.UoMCode || item.InventoryUOM || item.SalesUnit || item.PurchaseUnit || "",
-        unitMsr: item.UoM || item.UoMCode || item.InventoryUOM || item.SalesUnit || item.PurchaseUnit || "",
+        UoMCode: uomCode,
+        unitMsr: uomCode,
         PlPaWght: 0,
         U_LastPrice: price,
         OcrCode2: "",

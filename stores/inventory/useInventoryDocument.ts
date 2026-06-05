@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
+import { normalizeInventoryUom, resolveUoMFromCandidates } from "@/utils/inventoryUom";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 
 interface IOPRDDocumentStore {
   customer: BusinessPartner | null;
@@ -135,20 +137,39 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
 
     loadFromDocument: (doc, type, isCopy) => {
       const rawLines = doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [];
-      const lines: InventoryDocumentLine[] = rawLines.map((line: any, idx: number) => ({
-        ItemCode: line.ItemCode,
-        Dscription: line.ItemDescription || line.Dscription || line.ItemName || "",
-        FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || doc.FromWarehouse || "",
-        WhsCode: line.WarehouseCode || line.WhsCode || doc.ToWarehouse || "",
-        Quantity: Number(line.Quantity) || 0,
-        ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
-        UomCode: line.UoMCode || line.UomCode || "",
-        unitMsr: line.MeasureUnit || line.UnitMsr || line.unitMsr || line.UoMCode || line.UomCode || "",
-        LineNum: line.LineNum ?? idx,
-        BaseType: line.BaseType ?? (isCopy ? type : undefined),
-        BaseEntry: line.BaseEntry ?? (isCopy ? doc.DocEntry : undefined),
-        BaseLine: line.BaseLine ?? (line.LineNum ?? idx),
-      }));
+
+      // Get UoMs from master data store for resolution
+      const uoms = useMasterDataStore.getState().uoms || [];
+
+      const lines: InventoryDocumentLine[] = rawLines.map((line: any, idx: number) => {
+        const uomCode = resolveUoMFromCandidates(
+          uoms,
+          line.UoMCode,
+          line.UoMGroupEntry,
+          line.UnitsOfMeasurment
+        );
+
+        const unitMsr = resolveUoMFromCandidates(
+          uoms,
+          line.UnitsOfMeasurment,
+          uomCode
+        ) || uomCode;
+
+        return {
+          ItemCode: line.ItemCode,
+          Dscription: line.ItemDescription || line.Dscription || line.ItemName || "",
+          FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || doc.FromWarehouse || "",
+          WhsCode: line.WarehouseCode || line.WhsCode || doc.ToWarehouse || "",
+          Quantity: Number(line.Quantity) || 0,
+          ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
+          UoMCode: uomCode,
+          unitMsr,
+          LineNum: line.LineNum ?? idx,
+          BaseType: line.BaseType ?? (isCopy ? type : undefined),
+          BaseEntry: line.BaseEntry ?? (isCopy ? doc.DocEntry : undefined),
+          BaseLine: line.BaseLine ?? (line.LineNum ?? idx),
+        };
+      });
 
       const attachments = doc.Attachments_Lines?.Attachments2_Lines?.map((att: any) => ({
         LineNum: att.LineNum,
