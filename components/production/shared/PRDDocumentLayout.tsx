@@ -64,10 +64,11 @@ export function PRDDocumentLayout<T extends FieldValues>({
   });
 
   const { watch, reset, handleSubmit, formState: { isSubmitting, isDirty } } = methods;
-  const { lines, attachments, reset: lineReset, initialStatus, udfs, setDocType } = useIFPRDDocument();
+  const { lines, attachments, reset: lineReset, initialStatus, udfs, setDocType, sourceNavigation, setSourceNavigation } = useIFPRDDocument();
   const previousDocType = useRef<DocumentType | null>(null);
 
   // Reset store and form when docType changes (navigation between pages)
+  // But preserve state when coming FROM ProductionOrder to IssueForProduction
   useEffect(() => {
     const storeDocType =
       useIFPRDDocument.getState().docType;
@@ -78,14 +79,25 @@ export function PRDDocumentLayout<T extends FieldValues>({
       previousDocType.current !== docType;
 
     if (isDocTypeChange) {
-      lineReset(docType);
-      reset(defaultValues as any);
+      // Check if we're navigating FROM ProductionOrder TO IssueForProduction
+      const isProductionOrderToITR = 
+        sourceNavigation === DocumentType.ProductionOrder && 
+        docType === DocumentType.IssueForProduction;
+      
+      // Only reset if NOT navigating from ProductionOrder to ITR
+      if (!isProductionOrderToITR) {
+        lineReset(docType);
+        reset(defaultValues as any);
+      }
+      
+      // Clear the source navigation after handling
+      setSourceNavigation(null);
     } else {
       setDocType(docType);
     }
 
     previousDocType.current = docType;
-  }, [docType, setDocType, lineReset, reset, defaultValues]);
+  }, [docType, setDocType, lineReset, reset, defaultValues, sourceNavigation, setSourceNavigation]);
 
   useEffect(() => {
     const currentValues = methods.getValues();

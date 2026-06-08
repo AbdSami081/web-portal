@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { FieldValues, FormProvider, useForm, DefaultValues, SubmitErrorHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useRef } from "react"; // Added import for useRef
 import { Button } from "@/components/ui/button";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/inventory/documentConfig";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
@@ -37,57 +38,6 @@ interface InvDocumentLayoutProps<T extends FieldValues> {
   docType: DocumentType;
 }
 
-
-
-export function InvDocumentLayout<T extends FieldValues>({
-  schema,
-  defaultValues,
-  onSubmit,
-  children,
-  actions,
-  docType,
-}: InvDocumentLayoutProps<T>) {
-
-  const config = getDocumentConfig(docType);
-  const router = useRouter();
-  const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
-
-  useEffect(() => {
-    fetchUdfDefinitions(docType);
-  }, [docType, fetchUdfDefinitions]);
-
-  const methods = useForm<T>({
-    resolver: zodResolver(schema as any),
-    defaultValues: defaultValues as DefaultValues<T>,
-    mode: "onSubmit",
-  });
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { DocumentConfig, getDocumentConfig } from "@/lib/config/inventory/documentConfig";
-import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { GenericModal } from "@/modals/GenericModal";
-import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/api+/sap/inventory/inventoryService";
-import { FilePlus2, Loader2, Keyboard } from "lucide-react";
-import { HeaderActionPortal } from "@/components/header-portal";
-import { HeaderModalAction } from "@/components/header-modal-action";
-import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DocumentType } from "@/types/master/DocumentType";
-import { useUDFStore } from "@/stores/useUDFStore";
-import { UDFLayout } from "@/components/shared/UDFSheet";
-
-const InvDocContext = createContext<DocumentConfig | null>(null);
-
-export const useInvDocConfig = () => {
-  const context = useContext(InvDocContext);
-  if (!context) throw new Error("useInvDocConfig must be used within InvDocumentLayout");
-  return context;
-};
-
 interface InvDocumentLayoutProps<T extends FieldValues> {
   schema: z.ZodType<T>;
   defaultValues: T;
@@ -98,7 +48,6 @@ interface InvDocumentLayoutProps<T extends FieldValues> {
 }
 
 
-
 export function InvDocumentLayout<T extends FieldValues>({
   schema,
   defaultValues,
@@ -107,7 +56,6 @@ export function InvDocumentLayout<T extends FieldValues>({
   actions,
   docType,
 }: InvDocumentLayoutProps<T>) {
-
   const config = getDocumentConfig(docType);
   const router = useRouter();
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
@@ -125,25 +73,23 @@ export function InvDocumentLayout<T extends FieldValues>({
   const { handleSubmit, reset, setValue } = methods;
   const { reset: resetStore, DocEntry, loadFromDocument, setIsCopyingTo } = useInventoryDocument();
   const store = useInventoryDocument();
+  const isCopyingTo = useInventoryDocument(state => state.isCopyingTo);
+  const appliedCopyRef = useRef(false); // Added reference for applied copy
   const [isSaving, setIsSaving] = useState(false);
 
-  // Reset store and form when docType changes (e.g., navigating from Transfer to Transfer Request)
   useEffect(() => {
     const currentValues = methods.getValues();
     const isDocumentLoaded = (currentValues as any).DocEntry > 0 || (currentValues as any).DocNum > 0;
-    const state = useInventoryDocument.getState();
 
-    // Only reset if no document is loaded in the current form and we're not copying
-    if (!state.isCopyingTo && !isDocumentLoaded) {
+   
+    if (!isCopyingTo && !isDocumentLoaded) {
       resetStore();
       reset(defaultValues as any);
     }
-  }, [docType, resetStore, reset, defaultValues]); // Trigger on docType change
+  }, [docType, isCopyingTo, resetStore, reset, defaultValues]); // Trigger on docType or copying flag change
 
   const isInitialMount = React.useRef(true);
 
-  // On mount: if copying from another doc, sync data then clear the flag.
-  // On normal entry, reset form and store.
   useEffect(() => {
     if (!isInitialMount.current) return;
     isInitialMount.current = false;
@@ -162,10 +108,14 @@ export function InvDocumentLayout<T extends FieldValues>({
       setValue("DocumentLines" as any, state.lines as any);
 
       // Consume the flag so re-visiting the page starts fresh
+      // Mark that we've applied a copy so other effects won't immediately clear it
+      appliedCopyRef.current = true;
       setIsCopyingTo(false);
+      // Clear the transient marker on the next tick
+      setTimeout(() => { appliedCopyRef.current = false; }, 0);
     } else {
-      // Normal navigation — reset if no doc is open
-      if (!DocEntry || DocEntry === 0) {
+      // Normal navigation — reset if no doc is open and we're not copying
+      if (!state.isCopyingTo && (!DocEntry || DocEntry === 0)) {
         resetStore();
         reset(defaultValues as any);
       }
@@ -208,10 +158,9 @@ export function InvDocumentLayout<T extends FieldValues>({
       DocNum: 0,
       DocEntry: 0,
     } as any);
-    resetStore();
+    if (!isCopyingTo) resetStore();
   };
 
-  // Copy To: set store directly then navigate (no localStorage needed)
   const handleCopyTo = (selected: string) => {
     if (!DocEntry || DocEntry === 0) {
       toast.error("Please search or select a document first!");
@@ -247,7 +196,6 @@ export function InvDocumentLayout<T extends FieldValues>({
     }
   };
 
-  // Copy From: fetch ITR list and open modal
   const handleCopyFrom = async (type: string) => {
     if (parseInt(type) !== DocumentType.InvTransferReq) return;
     setIsLoadingCopyFrom(true);
@@ -396,7 +344,6 @@ export function InvDocumentLayout<T extends FieldValues>({
 
           <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
 
-            {/* Copy From — only on Inventory Transfer, only when no doc is loaded */}
             {canCopyFrom && (!DocEntry || DocEntry === 0) && (
               <Select
                 value={selectedCopyFrom}
@@ -424,7 +371,6 @@ export function InvDocumentLayout<T extends FieldValues>({
               </Select>
             )}
 
-            {/* Copy To — only on Inventory Transfer Request */}
             {canCopyTo && (
               <Select
                 value={selectedCopyTo}
