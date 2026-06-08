@@ -15,7 +15,6 @@ interface IFPRDDocumentStore {
   DocNum: number;
   ProductionOrderStatus: string;
   initialStatus: string;
-  sourceNavigation: DocumentType | null;
   attachments: {
     LineNum: number;
     SourcePath: string;
@@ -34,7 +33,6 @@ interface IFPRDDocumentStore {
 
   setCustomer: (customer: BusinessPartner) => void;
   setDocType: (docType: DocumentType) => void;
-  setSourceNavigation: (source: DocumentType | null) => void;
   addLine: (line: PRDDocumentLine) => void;
   removeLine: (index: number) => void;
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
@@ -54,7 +52,6 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     DocNum: 0,
     ProductionOrderStatus: "boposPlanned",
     initialStatus: "boposPlanned",
-    sourceNavigation: null,
     attachments: [],
     udfs: {},
 
@@ -62,7 +59,6 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     setCustomer: (customer) => set({ customer }),
 
     setDocType: (docType) => set({ docType }),
-    setSourceNavigation: (source) => set({ sourceNavigation: source }),
 
     addLine: (line) => {
       set((s) => ({ lines: [...s.lines, line] }), false, "addLine");
@@ -256,7 +252,6 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         DocNum: 0,
         ProductionOrderStatus: "boposPlanned",
         initialStatus: "boposPlanned",
-        sourceNavigation: null,
         attachments: [],
         udfs: {},
       })),

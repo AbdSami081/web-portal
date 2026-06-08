@@ -11,21 +11,15 @@ import { patchProductionOrder, saveProductionDocument } from "@/api+/sap/product
 import { toast } from "sonner";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { DocumentType } from "@/types/master/DocumentType";
-import { useRouter } from "next/navigation";
 
 export default function ProductionOrderPage() {
-    const { reset: resetStore, setSourceNavigation } = useIFPRDDocument();
-    const router = useRouter();
+    const { reset: resetStore } = useIFPRDDocument();
 
     useEffect(() => {
-        // Mark the source as ProductionOrder for navigation tracking
-        setSourceNavigation(DocumentType.ProductionOrder);
-        
         return () => {
-            // Only reset if we're not navigating to ITR/IssueForProduction
-            // This will be handled in PRDDocumentLayout based on destination
+            resetStore();
         };
-    }, [setSourceNavigation]);
+    }, [resetStore]);
 
     const defaultValues: ProductionOrderFormData = useMemo(() => ({
         ItemNo: "",
