@@ -193,11 +193,10 @@ export function DocumentLineRow({ index, line }: Props) {
             className="h-6 w-20 text-right"
             type="number"
             step="any"
-            min={1}
             value={draftLine.Quantity}
             onChange={(e) => {
               const val = Number(e.target.value);
-              setDraftLine({ ...draftLine, Quantity: val < 1 ? 1 : val });
+              setDraftLine({ ...draftLine, Quantity: val });
             }}
             disabled={!isFieldEnabled("Quantity")}
           />

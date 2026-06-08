@@ -83,7 +83,6 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         <td className="py-2 px-4 text-center">
           <Input
             type="number"
-            min={0}
             name={`BaseQty-${index}`}
             value={draftLine.BaseQuantity ?? 0}
             onChange={(e) => {
@@ -125,7 +124,6 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
           ) : (
             <Input
               type="number"
-              min={0}
               name={`PlannedQty-${index}`}
               className="h-7 w-full text-center border-zinc-300"
               value={draftLine.PlannedQuantity ?? 0}
