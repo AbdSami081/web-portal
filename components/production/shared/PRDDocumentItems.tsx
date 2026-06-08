@@ -105,7 +105,7 @@ export function PRDDocumentItems() {
     },
     config.itemColumns.uomCode && {
       key: "UoMCode",
-      title: "UoM Code",
+      title: "UoM Name",
       width: 130,
     },
     config.itemColumns.warehouse && {

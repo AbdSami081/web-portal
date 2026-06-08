@@ -5,6 +5,7 @@ import { Item } from "@/types/sales/Item.type";
 import { WarehouseList } from "@/types/warehouse.type";
 import { sapApi } from "./auth";
 import { fetchData } from "./fetchData";
+import apiClient from "@/lib/apiClient";
 
 export const buildODataQuery = ({
   top = 50,
@@ -113,7 +114,7 @@ export const MasterDataService = {
 
       const response = await sapApi.get(`${endpoint}?${params.toString()}`);
       const data = response?.data?.value || [];
-// const data=[];
+
       if(endpoint === "/Items"){
         
         console.log(logMessage);
@@ -122,7 +123,7 @@ export const MasterDataService = {
       return data;
     } catch (error: any) {
       console.error(
-        `❌ Error fetching data from ${endpoint}:`,
+        `Error fetching data from ${endpoint}:`,
         error?.response?.data || error.message
       );
       return [];
@@ -183,19 +184,14 @@ export const MasterDataService = {
   },
 
   async getUOMs() {
-    const params = buildODataQuery({
-      select: ["AbsEntry", "Code", "Name"],
-      //expand: "UoMGroupDefinitionCollection",
-    });
-    return await fetchData(
-      "/UnitOfMeasurementGroups",
-      params,
-      "UnitOfMeasurementGroups"
-    );
-    //console.log("UOMs", data);
-    //return data;
-    //return raw.flatMap((u) => u.UoMGroupDefinitionCollection ?? []);
-  },
+  try {
+    const res = await apiClient.get(`api/Master/GetUnitOfMeasurments`);
+    return res?.data || [];
+  } catch (error) {
+    console.error("Error fetching UOMs:", error);
+    return [];
+  }
+},
 
   async fetchMasterData() {
     const [items, customers, warehouses, priceLists, vatGroups, uoms] =
@@ -207,13 +203,6 @@ export const MasterDataService = {
         this.getVatGroups(),
         this.getUOMs(),
       ]);
-    //console.log("vatgroups", vatGroups);
-    // const uniqueItems = Object.values(
-    //   items.reduce((acc, item) => {
-    //     acc[item.ItemCode] = item;
-    //     return acc;
-    //   }, {} as Record<string, typeof items[number]>)
-    // );
 
     return {
       items: items,

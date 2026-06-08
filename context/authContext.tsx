@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { login as apiLogin, saveTokens, clearTokens, getAccessToken, LoginPayload } from "../api+/sap/auth/authService";
 import { getUserAccess } from "../api+/sap/authorization/authorizationService";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useUoMStore } from "@/stores/useUoMStore";
 
 interface User {
   empId: string;
@@ -57,15 +58,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const decoded = parseJwt(token);
       if (decoded) {
         const companyDB = decoded.CompanyDB || decoded.companyDB;
-        
+
         getUserAccess(decoded.sub || decoded.nameid, companyDB || "SBODemoAU")
           .then(access => {
             const allowedModulesClaim = decoded.AllowedModules || decoded.allowedModules || "";
             const tokenModules = allowedModulesClaim.split(',').map((id: string) => id.trim().toLowerCase()).filter((id: string) => id !== "");
-            
+
             const dbAllowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
             let uniqueAllowed = Array.from(new Set([...dbAllowed, ...tokenModules])).map(id => id.toLowerCase());
-            
+
             const role = decoded.role || decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
             const isAdmin = role?.toLowerCase() === "admin";
             const isSuperAdmin = decoded.isSuperAdmin === "True" || decoded.issuperadmin === "True" || decoded.isSuperAdmin === true;
@@ -78,6 +79,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               isSuperAdmin: isSuperAdmin,
               companyDB: companyDB || "SBODemoAU"
             });
+
+            // Load UoM data if not already loaded
+            if (!useUoMStore.getState().isLoaded) {
+              useUoMStore.getState().loadUoMs().catch(err => {
+                console.error("Failed to load UoMs:", err);
+              });
+            }
           })
           .catch(err => {
             console.error("Failed to load permissions from DB", err);
@@ -90,6 +98,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               isSuperAdmin: isSuperAdmin,
               companyDB: companyDB || "SBODemoAU"
             });
+
+            // Load UoM data if not already loaded
+            if (!useUoMStore.getState().isLoaded) {
+              useUoMStore.getState().loadUoMs().catch(err => {
+                console.error("Failed to load UoMs:", err);
+              });
+            }
           });
       }
 
@@ -120,10 +135,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const decoded = parseJwt(data.accessToken);
       const companyDB = decoded?.CompanyDB || decoded?.companyDB || (dbParams?.companyDB);
-      
+
       const allowedModulesClaim = decoded.AllowedModules || decoded.allowedModules || "";
       const tokenModules = allowedModulesClaim.split(',').map((id: string) => id.trim().toLowerCase()).filter((id: string) => id !== "");
-      
+
       const access = await getUserAccess(data.user.empId, companyDB || "SBODemoAU");
       const dbAllowed = access.flatMap(a => a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]);
       let uniqueAllowed = Array.from(new Set([...dbAllowed, ...tokenModules])).map(id => id.toLowerCase());
@@ -142,6 +157,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAccessToken(data.accessToken);
       useAuthStore.getState().startExpiryTimer(data.accessToken);
       saveTokens(data.accessToken, data.refreshToken);
+
+      // Load UoM data after successful login
+      useUoMStore.getState().loadUoMs().catch(err => {
+        console.error("Failed to load UoMs:", err);
+      });
+
       router.push("/dashboard");
     } catch (error: any) {
       if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {

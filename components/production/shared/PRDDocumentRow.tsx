@@ -11,6 +11,7 @@ import { Trash } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { PRDDocumentLine } from "@/types/production/PRDDoc.type";
+import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 
 interface Props {
   index: number;
@@ -177,7 +178,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
       {config.itemColumns.uomCode && (
         <td className="py-2 px-4 text-center text-gray-700">
-          <span className="block w-full truncate">{line.UoMCode}</span>
+          <span className="block w-full truncate">{getUoMName(line.UoMCode)}</span>
         </td>
       )}
 

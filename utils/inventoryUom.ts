@@ -4,16 +4,6 @@ export type UoMEntry = {
   Name: string;
 };
 
-/**
- * Resolves a UoM value against a list of UoM groups.
- *
- * Logic:
- * 1. If value is -1 or empty → skip
- * 2. If value is a number (AbsEntry) → look up in uoms and return Code
- * 3. If value is a string matching a Code → return it as-is
- * 4. If value is a string matching a Name → return Name
- * 5. If nothing matches → return value as-is (or "")
- */
 export const resolveUoMCode = (
   value: unknown,
   uoms: UoMEntry[] = []
@@ -25,12 +15,11 @@ export const resolveUoMCode = (
     return "";
   }
 
-  // Numeric: treat as AbsEntry — look up in UoM list
   const numeric = Number(raw);
   if (!isNaN(numeric) && uoms.length > 0) {
     const match = uoms.find((u) => u.AbsEntry === numeric);
     if (match) return match.Code || match.Name || "";
-    return ""; // numeric but not found → don't show raw number
+    return ""; 
   }
 
   // String: check exact Code match first
@@ -42,14 +31,8 @@ export const resolveUoMCode = (
     if (byName) return byName.Name;
   }
 
-  // Fallback: return raw string value
   return raw;
 };
-
-/**
- * Tries multiple candidate UoM values in order, returns the first resolved non-empty one.
- * Uses resolveUoMCode for each candidate.
- */
 export const normalizeInventoryUom = (...values: unknown[]): string => {
   for (const value of values) {
     if (value === undefined || value === null) continue;
@@ -62,10 +45,6 @@ export const normalizeInventoryUom = (...values: unknown[]): string => {
   return "";
 };
 
-/**
- * Resolves UoM from a list of candidate values using the UoM groups list.
- * First candidate that resolves to a non-empty value wins.
- */
 export const resolveUoMFromCandidates = (
   uoms: UoMEntry[],
   ...candidates: unknown[]

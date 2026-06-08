@@ -5,6 +5,7 @@ import { BaseProductionDocument, PRDDocumentLine } from "@/types/production/PRDD
 import { DocumentType } from "@/types/master/DocumentType";
 import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { getItemsList } from "@/api+/sap/master-data/items";
 
 interface IFPRDDocumentStore {
   docType: DocumentType;
@@ -217,28 +218,67 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         udfs: udfValues,
       });
     },
-    loadFromBOM: (bom: any, plannedQty: number = 0) => {
-      set({ selectedBOM: bom }); 
-      const parentQty = Number(bom.Quantity || 1); 
-      const uoms = useMasterDataStore.getState().uoms || [];
-      const mappedLines = bom.ProductTreeLines?.map((line: any) => {
-        const lineQty = Number(line.Quantity || 0);
-        const baseRatio = lineQty / parentQty;
+    loadFromBOM: async (bom: any, plannedQty: number = 0) => {
+      set({ selectedBOM: bom });
 
-        return {
-          ItemNo: line.ComponentCode || line.ItemCode,
-          ItemName: line.ComponentName || line.ItemName || "",
-          BaseQuantity: lineQty, 
-          BaseRatio: baseRatio,
-          BOMHeaderQty: parentQty, 
-          PlannedQuantity: baseRatio * Number(plannedQty || 0),
-          IssuedQuantity: 0,
-          Warehouse: line.Warehouse || "",
-          UoMCode: resolveUoMFromCandidates(uoms, line.UoMCode, line.UoMGroupEntry, line.UoM, line.InventoryUOM),
-          ProductionOrderIssueType: line.IssueMethod === "im_Backflush" ? "im_Backflush" : "im_Manual",
-          ItemType: line.ItemType || "pit_Item",
-        };
-      }) || [];
+      const parentQty = Number(bom.Quantity || 1);
+      const uoms = useMasterDataStore.getState().uoms || [];
+
+      const mappedLines = await Promise.all(
+        (bom.ProductTreeLines || []).map(async (line: any) => {
+          const lineQty = Number(line.Quantity || 0);
+          const baseRatio = lineQty / parentQty;
+
+          const itemCode = line.ComponentCode || line.ItemCode;
+
+          let itemUomCode = "";
+
+          try {
+            const items = await getItemsList(itemCode, 0, 1);
+
+            const matchedItem = items.find(
+              (x) => x.ItemCode === itemCode
+            );
+
+            itemUomCode = matchedItem?.UoM || "";
+          } catch (error) {
+            console.error(
+              `Failed to fetch UOM for item ${itemCode}`,
+              error
+            );
+          }
+
+          return {
+            ItemNo: itemCode,
+            ItemName:
+              line.ComponentName ||
+              line.ItemName ||
+              "",
+            BaseQuantity: lineQty,
+            BaseRatio: baseRatio,
+            BOMHeaderQty: parentQty,
+            PlannedQuantity:
+              baseRatio * Number(plannedQty || 0),
+            IssuedQuantity: 0,
+            Warehouse: line.Warehouse || "",
+            UoMCode:
+              itemUomCode ||
+              resolveUoMFromCandidates(
+                uoms,
+                line.UoMCode,
+                line.UoMGroupEntry,
+                line.UoM,
+                line.InventoryUOM
+              ),
+            ProductionOrderIssueType:
+              line.IssueMethod === "im_Backflush"
+                ? "im_Backflush"
+                : "im_Manual",
+            ItemType:
+              line.ItemType || "pit_Item",
+          };
+        })
+      );
 
       set({
         lines: mappedLines,

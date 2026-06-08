@@ -10,6 +10,7 @@ import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { getItemsList } from "@/api+/sap/master-data/items";
 import { normalizeInventoryUom } from "@/utils/inventoryUom";
+import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 
 interface Props {
   index: number;
@@ -183,7 +184,7 @@ export function InvDocumentLineRow({ index, line }: Props) {
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full bg-slate-50 cursor-not-allowed"
-          value={normalizeInventoryUom(draftLine.UoMCode, draftLine.unitMsr)}
+          value={getUoMName(draftLine.UoMCode || draftLine.unitMsr) || normalizeInventoryUom(draftLine.UoMCode, draftLine.unitMsr)}
           disabled
           readOnly
         />
