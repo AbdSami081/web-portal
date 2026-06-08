@@ -65,15 +65,24 @@ export function InvDocumentLayout<T extends FieldValues>({
   const store = useInventoryDocument();
   const [isSaving, setIsSaving] = useState(false);
 
+  const previousDocTypeRef = React.useRef<DocumentType | null>(null);
+
   useEffect(() => {
     const currentValues = methods.getValues();
     const isDocumentLoaded = (currentValues as any).DocEntry > 0 || (currentValues as any).DocNum > 0;
     const state = useInventoryDocument.getState();
+    const didDocTypeChange = previousDocTypeRef.current !== null && previousDocTypeRef.current !== docType;
 
-    if (!state.isCopyingTo && !isDocumentLoaded) {
+    // Only reset if:
+    // 1. Not copying from Production Order AND
+    // 2. No document is loaded AND
+    // 3. DocType actually changed (to avoid resetting on initial mount from Production Order copy)
+    if (!state.isCopyingTo && !isDocumentLoaded && didDocTypeChange) {
       resetStore();
       reset(defaultValues as any);
     }
+
+    previousDocTypeRef.current = docType;
   }, [docType, resetStore, reset, defaultValues]); 
 
   const isInitialMount = React.useRef(true);
