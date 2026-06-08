@@ -104,12 +104,11 @@ export function ResizableTable<T>({
   };
 
   return (
-    <div className="overflow-auto w-full max-w-full min-w-0">
+    <div className="resizable-table overflow-auto w-full max-w-full min-w-0">
       <Table
         className="table-fixed text-xs"
         style={{ minWidth: tableWidth }}
       >
-        {/* COLUMN WIDTH CONTROL */}
         <colgroup>
           {columns.map((col) => (
             <col
@@ -119,7 +118,6 @@ export function ResizableTable<T>({
           ))}
         </colgroup>
 
-        {/* HEADER */}
         <TableHeader className="sticky top-0 bg-neutral-900 z-10">
           <TableRow className="border-neutral-700">
             {columns.map((col) => (
@@ -131,7 +129,6 @@ export function ResizableTable<T>({
               >
                 <div className="pr-2">{col.title}</div>
 
-                {/* RESIZE HANDLE */}
                 <div
                   onMouseDown={(e) => startResize(e, col.key)}
                   className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-white/30"
@@ -141,7 +138,6 @@ export function ResizableTable<T>({
           </TableRow>
         </TableHeader>
 
-        {/* BODY */}
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
