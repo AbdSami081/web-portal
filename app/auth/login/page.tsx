@@ -26,7 +26,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Typing Effect Logic
   const words = useMemo(() => ["Innovation", "Efficiency", "Security", "Agility", "Growth"], []);
   const [index, setIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
