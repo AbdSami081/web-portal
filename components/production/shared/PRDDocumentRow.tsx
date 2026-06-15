@@ -154,7 +154,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         <td className="py-2 px-4 text-center">
           <Input
             type="number"
-            min={0}
+            step="any"
             name={`OpenQty-${index}`}
             className="h-7 w-full text-center border-zinc-300"
             value={draftLine.PlannedQuantity ?? 0}
