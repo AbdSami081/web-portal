@@ -191,6 +191,7 @@ export default function ReportsManagePage() {
           userName: currentUser?.userName || "",
           parameters: paramsArray,
           docType: cls.docType,
+          module: "",
           objectCode: cls.objectCode,
           isDefault: cls.isDefault ? "Y" : "N",
         });
