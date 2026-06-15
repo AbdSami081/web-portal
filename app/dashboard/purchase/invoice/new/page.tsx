@@ -31,7 +31,6 @@ export default function NewAPInvoicePage() {
   const handleSubmit = async (data: APInvoiceFormData) => {
     if (lines.length === 0) { toast.error("Please add at least one item."); return; }
     const payload = { ...data, DocTotal, DiscountPercent: discountPercent, Freight: freight, TaxTotal, DocumentLines: lines };
-    console.log("A/P Invoice Payload:", payload);
     toast.success("A/P Invoice payload ready — check console.");
   };
 

@@ -79,7 +79,7 @@ export default function NewQuotationPage() {
       DocumentLines: lines.map((line, index) => {
         const baseFields: any = {
           ItemCode: line.ItemCode,
-          Quantity: Number(line.Quantity) || 1,
+          Quantity: Number(line.Quantity) || 0,
           UnitPrice: Number(line.Price) || 0,
           DiscountPercent: Number(line.DiscountPercent) || 0,
           VatGroup: line.TaxCode || "",

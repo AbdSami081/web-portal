@@ -31,7 +31,6 @@ export default function NewGoodsReceiptPOPage() {
   const handleSubmit = async (data: GoodsReceiptPOFormData) => {
     if (lines.length === 0) { toast.error("Please add at least one item."); return; }
     const payload = { ...data, DocTotal, DiscountPercent: discountPercent, Freight: freight, TaxTotal, DocumentLines: lines };
-    console.log("Goods Receipt PO Payload:", payload);
     toast.success("Goods Receipt PO payload ready — check console.");
   };
 

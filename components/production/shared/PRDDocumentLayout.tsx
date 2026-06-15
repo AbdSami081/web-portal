@@ -21,6 +21,7 @@ import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
+import HeaderActions from "@/components/Custom/HeaderAction";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
@@ -161,11 +162,12 @@ export function PRDDocumentLayout<T extends FieldValues>({
         U_SaleType: "Retail",
         U_FurtherTax: 0,
         LineNum: index,
+        ItemType: line.ItemType || "",
       };
     });
 
     useInventoryDocument.setState({
-      lines: mappedLines,
+      lines: mappedLines.filter((line: any) => line.ItemType != 'pit_Resource'),
       fromWarehouse: mappedLines[0]?.FromWhsCode || headerWarehouse || "",
       toWarehouse: mappedLines[0]?.WhsCode || "",
       comments: `Copied from Production Order ${currentValues.DocNum || currentValues.AbsoluteEntry || currentValues.ItemNo || ""}`.trim(),
@@ -198,39 +200,13 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
 
           <HeaderActionPortal>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="inline-block">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={ResetForm}
-                      disabled={(!watch("AbsoluteEntry" as any) || watch("AbsoluteEntry" as any) === 0) && (!watch("DocEntry" as any) || watch("DocEntry" as any) === 0) && !watch("ItemNo" as any) && lines.length === 0}
-                      className="border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 w-8 disabled:opacity-50 transition-all active:scale-95"
-                    >
-                      <FilePlus2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="bottom"
-                  className="bg-blue-600 text-white border-blue-500 font-semibold shadow-[0_0_20px_rgba(37,99,235,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
-                >
-                  New Document
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <HeaderModalAction
-              triggerIcon={Keyboard}
-              triggerTooltip="Shortcut Keys"
-              modalTitle="Keyboard Shortcuts"
-              modalDescription="Quick reference for available keyboard shortcuts in the portal."
-            >
-              <KeyboardShortcutsContent />
-            </HeaderModalAction>
+            <HeaderActions
+              DocEntry={watch("DocEntry" as any) || 0}
+              objectCode={docType}
+              reset={reset}
+              defaultValues={defaultValues}
+              resetStore={ResetForm}
+            />
           </HeaderActionPortal>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+
 import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,17 +40,7 @@ export default function DocumentFooter() {
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isFooterDisabled = isLoadedDocument && docStatus === "bost_Close";
 
-  // Live calculation of discount amount whenever total or percent changes
-  useEffect(() => {
-    if (discountPercent > 0 && TotalBeforeDiscount > 0) {
-      const amount = (TotalBeforeDiscount * discountPercent) / 100;
-      if (Math.abs(amount - discSum) > 0.01) {
-        setDiscountSum(amount);
-      }
-    } else if (discountPercent === 0 && discSum !== 0) {
-      setDiscountSum(0);
-    }
-  }, [discountPercent, TotalBeforeDiscount, discSum, setDiscountSum]);
+
 
   const commentsField = register("Comments");
 

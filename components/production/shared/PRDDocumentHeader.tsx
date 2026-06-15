@@ -127,7 +127,6 @@ export function PRDDocumentHeader() {
   const docNum = watch("DocNum");
   const absEntry = watch("AbsoluteEntry");
 
-  // Reset loadedStatus when the form is cleared (new document)
   useEffect(() => {
     if (!absEntry || Number(absEntry) === 0) {
       setLoadedStatus("");
@@ -614,7 +613,6 @@ export function PRDDocumentHeader() {
                     <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* For new documents (no doc loaded): show all transitions from Planned */}
                     {!loadedStatus && (
                       <>
                         <SelectItem value="boposPlanned">Planned</SelectItem>

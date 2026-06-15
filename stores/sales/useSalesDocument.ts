@@ -228,7 +228,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     },
 
     calculateTotals: () => {
-      const { lines, freight, rounding, additionalExpenses, discSum } = get();
+      const { lines, freight, rounding, additionalExpenses, discountPercent } = get();
       const { freightsWithCharges } = useMasterDataStore.getState();
 
       let overallTotalBeforeDiscount = 0;
@@ -273,6 +273,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
 
       const totalTaxAmount = processedLines.reduce((sum, line) => sum + (line.TaxAmount || 0), 0);
       const totalFreightAmount = parseSafe(freight) + overallLineFreightAmount;
+      const calculatedDiscSum = (overallTotalBeforeDiscount * discountPercent) / 100;
 
      const finalDocTotal =
         overallTotalBeforeDiscount +
@@ -280,13 +281,14 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         totalFreightAmount +
         parseSafe(rounding) +
         totalAdditionalExpenses -
-        parseSafe(discSum);
+        calculatedDiscSum;
 
       set({
         lines: processedLines,
         TotalBeforeDiscount: parseSafe(overallTotalBeforeDiscount),
         TaxTotal: parseSafe(totalTaxAmount),
         TotalFreight: totalFreightAmount,
+        discSum: calculatedDiscSum,
         DocTotal: parseSafe(finalDocTotal),
       });
     },

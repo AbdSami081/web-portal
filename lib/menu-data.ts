@@ -6,11 +6,13 @@ export type MenuItem = {
     iconName?: string;
     isActive?: boolean;
     objectCode?: string | number;
+    isReporting?: boolean;
     items?: {
         id: string;
         title: string;
         url: string;
         objectCode?: string | number;
+        isReporting?: boolean;
     }[];
 };
 
@@ -49,24 +51,28 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "Sales Quotation",
                 url: "/dashboard/sales/quotation/new",
                 objectCode: 23,
+                isReporting: true,
             },
             {
                 id: "b683b385-cdab-4677-90c0-94cdd22970d4",
                 title: "Sales Order",
                 url: "/dashboard/sales/order",
                 objectCode: 17,
+                isReporting: true,
             },
             {
                 id: "267b80a3-f1d3-4cee-ba5a-fc58b341e018",
                 title: "Delivery",
                 url: "/dashboard/sales/delivery",
                 objectCode: 15,
+                isReporting: true,
             },
             {
                 id: "f46c594d-61ca-487d-8e20-1f9b0372931d",
                 title: "A/R Invoice",
                 url: "/dashboard/sales/invoice",
                 objectCode: 13,
+                isReporting: true,
             }
         ],
     },
@@ -82,24 +88,28 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "Purchase Quotation",
                 url: "/dashboard/purchase/quotation/new",
                 objectCode: 54,
+                isReporting: true,
             },
             {
                 id: "a234f19e-11e6-42b8-b982-76d987948bcd",
                 title: "Purchase Order",
                 url: "/dashboard/purchase/order/new",
                 objectCode: 22,
+                isReporting: true,
             },
             {
                 id: "2294ad1e-c1fd-44c0-ad1e-e1320ca7c0e7",
                 title: "Goods Receipt PO",
                 url: "/dashboard/purchase/grpo/new",
                 objectCode: 20,
+                isReporting: true,
             },
             {
                 id: "e9abfe0b-c738-4942-a643-3e3ca2db5016",
                 title: "A/P Invoice",
                 url: "/dashboard/purchase/invoice/new",
                 objectCode: 18,
+                isReporting: true,
             }
         ],
     },
@@ -115,12 +125,14 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "Inventory Transfer Request",
                 url: "/dashboard/inventory/transfer-request",
                 objectCode: 1250000001,
+                isReporting: true,
             },
             {
                 id: "0cfd14b5-f714-4f56-b552-bca3b2fec8e6",
                 title: "Inventory Transfer",
                 url: "/dashboard/inventory/transfer",
                 objectCode: 67,
+                isReporting: true,
             }
         ],
     },
@@ -136,18 +148,21 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "Production Order",
                 url: "/dashboard/production/production-order",
                 objectCode: 202,
+                isReporting: true,
             },
             {
                 id: "39dcf313-04a4-49df-943f-866483b30538",
                 title: "Issue For Production",
                 url: "/dashboard/production/issue-for-production",
                 objectCode: 60,
+                isReporting: true,
             },
             {
                 id: "aba68f41-0e50-4624-9ae5-f917299ea8c6",
                 title: "Receipt From Production",
                 url: "/dashboard/production/receipt-from-production",
                 objectCode: 59,
+                isReporting: true,
             }
         ],
     },

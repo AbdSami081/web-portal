@@ -20,6 +20,10 @@ export interface ReportData {
   U_ReportCode?: string;
   U_CanView?: string | boolean;
   U_CanPrint?: string | boolean;
+  U_DocType?: string;
+  U_Module?: string;
+  U_ObjectCode?: string;
+  U_IsDefault?: string;
   Parameters?: ReportParameter[];
 }
 
@@ -37,6 +41,10 @@ export interface ImportReportPayload {
   userCode: string;
   userName: string;
   parameters: any[];
+  docType: "Report" | "Layout";
+  module?: string;
+  objectCode: string;
+  isDefault: "Y" | "N";
 }
 
 export interface ReportAccessPayload {
@@ -91,9 +99,19 @@ export const uploadReport = async (formData: FormData) => {
 };
 
 export const getReports = async (employeeId: string): Promise<ReportData[]> => {
-  const url = `api/ReportingAPI/GetReports?employeeId=${employeeId}`
+  const url = `api/ReportingAPI/GetReports?employeeId=${employeeId}`;
   const response = await apiClient.get(url);
   return response.data || [];
+};
+
+export const getLayouts = async (objectCode: string | number): Promise<ReportData[]> => {
+  try {
+    const response = await apiClient.get(`api/ReportingAPI/GetLayouts/${objectCode}`);
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching layouts:", error);
+    return [];
+  }
 };
 
 export const downloadReport = async (payload: any) => {
