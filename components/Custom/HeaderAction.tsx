@@ -14,6 +14,7 @@ import {
 
 import { HeaderModalAction } from "../header-modal-action";
 import { KeyboardShortcutsContent } from "../keyboard-shortcuts-content";
+import { useAuth } from "@/context/authContext";
 import LayoutPreviewModal from "@/modals/LayoutPreviewModal";
 
 interface Props {
@@ -33,7 +34,10 @@ const HeaderActions: React.FC<Props> = ({
   defaultValues,
   resetStore,
 }) => {
+  const { user } = useAuth();
   const [layoutModalOpen, setLayoutModalOpen] = useState(false);
+
+  const activeSchema = schemaName || user?.companyDB || "";
 
   const handleNewDocument = () => {
     reset({
@@ -109,7 +113,7 @@ const HeaderActions: React.FC<Props> = ({
         onClose={() => setLayoutModalOpen(false)}
         objectCode={objectCode}
         docEntry={DocEntry}
-        schemaName={schemaName}
+        schemaName={activeSchema}
       />
     </>
   );
