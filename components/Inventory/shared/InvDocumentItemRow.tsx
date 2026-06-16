@@ -184,7 +184,7 @@ export function InvDocumentLineRow({ index, line }: Props) {
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full bg-slate-50 cursor-not-allowed"
-          value={getUoMName(draftLine.UoMCode || draftLine.unitMsr) || normalizeInventoryUom(draftLine.UoMCode, draftLine.unitMsr)}
+          value={getUoMName(draftLine.UoMCode) || normalizeInventoryUom(draftLine.UoMCode)}
           disabled
           readOnly
         />

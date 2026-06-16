@@ -14,6 +14,7 @@ import { distribtionLstOCRCO2, distribtionLstOCRCO3, distribtionLstOCRCO4 } from
 import { taxcCodeGrp, freightTypes, uomOptions, calculateFreightTax, calculateLineTax } from "@/utils/taxCalculations";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
+import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 
 
@@ -320,6 +321,17 @@ export function DocumentLineRow({ index, line }: Props) {
           <Input
             className="h-6 w-full text-center bg-neutral-100"
             value={draftLine.UoMCode || ""}
+            disabled
+            readOnly
+          />
+        </td>
+      )}
+
+      {isFieldVisible("UoMName") && (
+        <td className="py-2 px-2">
+          <Input
+            className="h-6 w-full text-center bg-neutral-100"
+            value={getUoMName(draftLine.UoMCode) || ""}
             disabled
             readOnly
           />

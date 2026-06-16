@@ -252,8 +252,14 @@ export function DocumentItems() {
 
     {
       key: "UoMCode",
-      title: "UoM",
+      title: "UoM Code",
       width: 120,
+    },
+
+    {
+      key: "UoMName",
+      title: "UoM Name",
+      width: 150,
     },
 
     {
