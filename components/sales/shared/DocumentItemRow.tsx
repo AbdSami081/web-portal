@@ -136,10 +136,10 @@ export function DocumentLineRow({ index, line }: Props) {
   };
 
   const renderCogsField = (field: "CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4", data: Record[]) => (
-    <td>
-      <div className="relative">
+    <td className="py-2 px-2">
+      <div className="relative w-full">
         <Input
-          className="h-6 w-28 pr-8"
+          className="h-6 w-full pr-8"
           value={draftLine[field]}
           onChange={(e) => setDraftLine({ ...draftLine, [field]: e.target.value })}
           onBlur={() => {
@@ -188,9 +188,9 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("Quantity") && (
-        <td>
+        <td className="py-2 px-2">
           <Input
-            className="h-6 w-20 text-right"
+            className="h-6 w-full text-right"
             type="number"
             step="any"
             value={draftLine.Quantity}
@@ -204,9 +204,9 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("OnHand") && (
-        <td>
+        <td className="py-2 px-2">
           <Input
-            className="h-6 w-25 text-right bg-neutral-100"
+            className="h-6 w-full text-right bg-neutral-100"
             type="number"
             step="any"
             value={draftLine.OnHand ?? 0}
@@ -217,9 +217,9 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("Price") && (
-        <td>
+        <td className="py-2 px-2">
           <Input
-            className="h-6 w-24 text-right"
+            className="h-6 w-full text-right"
             type="number"
             step="any"
             disabled={!isFieldEnabled("Price")}
@@ -234,9 +234,9 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("DiscountPercent") && (
-        <td>
+        <td className="py-2 px-2">
           <Input
-            className="h-6 w-16 text-right"
+            className="h-6 w-full text-right"
             type="number"
             step="any"
             min={0}
@@ -252,13 +252,13 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("TaxCode") && (
-        <td>
+        <td className="py-2 px-2">
           <Select
             value={draftLine.TaxCode || ""}
             disabled={!isFieldEnabled("TaxCode")}
             onValueChange={(val) => setDraftLine({ ...draftLine, TaxCode: val })}
           >
-            <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
+            <SelectTrigger className="h-6 w-full border rounded px-2 text-xs">
               <SelectValue placeholder="Select Tax" />
             </SelectTrigger>
             <SelectContent>
@@ -277,9 +277,9 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("TaxAmount") && (
-        <td>
+        <td className="py-2 px-2">
           <Input
-            className="h-6 w-24 text-right bg-neutral-100"
+            className="h-6 w-full text-right bg-neutral-100"
             value={calculateLineTax(
               Number(draftLine.Quantity) || 0,
               Number(draftLine.Price) || 0,
@@ -293,10 +293,10 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("WarehouseCode") && (
-        <td className="py-2 px-4">
+        <td className="py-2 px-2">
           <div className="flex items-center gap-1 w-full justify-center">
             <Input
-              className="h-6 w-16 bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
+              className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
               value={draftLine.WarehouseCode || ""}
               disabled
               readOnly
@@ -316,9 +316,9 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("UoMCode") && (
-        <td>
+        <td className="py-2 px-2">
           <Input
-            className="h-6 w-28 text-center bg-neutral-100"
+            className="h-6 w-full text-center bg-neutral-100"
             value={draftLine.UoMCode || ""}
             disabled
             readOnly
@@ -327,14 +327,14 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("LineTotal") && (
-        <td>
-          <Input className="h-6 w-24 text-right" value={draftLine.LineTotal || 0} disabled readOnly />
+        <td className="py-2 px-2">
+          <Input className="h-6 w-full text-right" value={draftLine.LineTotal || 0} disabled readOnly />
         </td>
       )}
 
       {/* Freight 1 */}
       {isFieldVisible("Freight1Type") && (
-        <td>
+        <td className="py-2 px-2">
           <Select
             value={draftLine.Freight1Type || ""}
             disabled={!isFieldEnabled("Freight1Type")}
@@ -346,7 +346,7 @@ export function DocumentLineRow({ index, line }: Props) {
               calculateAndUpdate(updated);
             }}
           >
-            <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
+            <SelectTrigger className="h-6 w-full border rounded px-2 text-xs">
               <SelectValue placeholder="Select Type" />
             </SelectTrigger>
             <SelectContent>
@@ -365,9 +365,9 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("Freight1LCAmount") && (
-        <td>
+        <td className="py-2 px-2">
           <Input
-            className="h-6 w-24 text-right"
+            className="h-6 w-full text-right"
             type="number"
             step="any"
             disabled={!isFieldEnabled("Freight1LCAmount")}
@@ -383,7 +383,7 @@ export function DocumentLineRow({ index, line }: Props) {
 
       {/* Freight 2 */}
       {isFieldVisible("Freight2Type") && (
-        <td>
+        <td className="py-2 px-2">
           <Select
             value={draftLine.Freight2Type || ""}
             disabled={!isFieldEnabled("Freight2Type")}
@@ -395,7 +395,7 @@ export function DocumentLineRow({ index, line }: Props) {
               calculateAndUpdate(updated);
             }}
           >
-            <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
+            <SelectTrigger className="h-6 w-full border rounded px-2 text-xs">
               <SelectValue placeholder="Select Type" />
             </SelectTrigger>
             <SelectContent>
@@ -414,9 +414,9 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("Freight2LCAmount") && (
-        <td>
+        <td className="py-2 px-2">
           <Input
-            className="h-6 w-24 text-right"
+            className="h-6 w-full text-right"
             type="number"
             step="any"
             disabled={!isFieldEnabled("Freight2LCAmount")}
@@ -432,7 +432,7 @@ export function DocumentLineRow({ index, line }: Props) {
 
       {/* Freight 3 */}
       {isFieldVisible("Freight3Type") && (
-        <td>
+        <td className="py-2 px-2">
           <Select
             value={draftLine.Freight3Type || ""}
             disabled={!isFieldEnabled("Freight3Type")}
@@ -444,7 +444,7 @@ export function DocumentLineRow({ index, line }: Props) {
               calculateAndUpdate(updated);
             }}
           >
-            <SelectTrigger className="h-6 w-28 border rounded px-2 text-xs">
+            <SelectTrigger className="h-6 w-full border rounded px-2 text-xs">
               <SelectValue placeholder="Select Type" />
             </SelectTrigger>
             <SelectContent>
@@ -463,9 +463,9 @@ export function DocumentLineRow({ index, line }: Props) {
       )}
 
       {isFieldVisible("Freight3LCAmount") && (
-        <td>
+        <td className="py-2 px-2">
           <Input
-            className="h-6 w-24 text-right"
+            className="h-6 w-full text-right"
             type="number"
             step="any"
             disabled={!isFieldEnabled("Freight3LCAmount")}
