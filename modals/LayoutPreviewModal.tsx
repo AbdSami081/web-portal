@@ -163,7 +163,6 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
     setViewerUrl(null);
   };
 
-  // Portal-based full-screen viewer — renders directly on body, avoids all Dialog transform conflicts
   const viewerPortal =
     mounted && viewerUrl
       ? createPortal(
@@ -193,7 +192,6 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
     <>
       {viewerPortal}
 
-      {/* Layout selector dialog — hidden while viewer is open */}
       <Dialog open={open && !viewerUrl} onOpenChange={(v) => !v && onClose()}>
         <DialogContent className="sm:max-w-[560px] max-h-[80vh] flex flex-col p-0 rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
           {/* Header */}
