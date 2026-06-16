@@ -69,16 +69,13 @@ export function InvDocumentLayout<T extends FieldValues>({
   const previousDocTypeRef = React.useRef<DocumentType | null>(null);
 
   useEffect(() => {
-    const currentValues = methods.getValues();
-    const isDocumentLoaded = (currentValues as any).DocEntry > 0 || (currentValues as any).DocNum > 0;
     const state = useInventoryDocument.getState();
     const didDocTypeChange = previousDocTypeRef.current !== null && previousDocTypeRef.current !== docType;
 
     // Only reset if:
     // 1. Not copying from Production Order AND
-    // 2. No document is loaded AND
-    // 3. DocType actually changed (to avoid resetting on initial mount from Production Order copy)
-    if (!state.isCopyingTo && !isDocumentLoaded && didDocTypeChange) {
+    // 2. DocType actually changed (to avoid resetting on initial mount from Production Order copy)
+    if (!state.isCopyingTo && didDocTypeChange) {
       resetStore();
       reset(defaultValues as any);
     }
@@ -107,22 +104,23 @@ export function InvDocumentLayout<T extends FieldValues>({
 
       setIsCopyingTo(false);
     } else {
-      if (!DocEntry || DocEntry === 0) {
-        resetStore();
-        reset(defaultValues as any);
-      }
+      resetStore();
+      reset(defaultValues as any);
     }
-  }, [resetStore, setIsCopyingTo, setValue, DocEntry, reset, defaultValues]);
+  }, [resetStore, setIsCopyingTo, setValue, reset, defaultValues]);
 
   useEffect(() => {
-    if (store.customer) setValue("CardCode" as any, store.customer.CardCode as any);
-    if (store.customer) setValue("CardName" as any, store.customer.CardName as any);
-    setValue("FromWarehouse" as any, store.fromWarehouse as any);
-    setValue("ToWarehouse" as any, store.toWarehouse as any);
-    setValue("Comments" as any, store.comments as any);
-    setValue("JournalMemo" as any, store.journalMemo as any);
-    setValue("TaxDate" as any, store.docDate as any);
-    setValue("DocumentLines" as any, store.lines as any);
+    setValue("CardCode" as any, store.customer?.CardCode || "");
+    setValue("CardName" as any, store.customer?.CardName || "");
+    setValue("FromWarehouse" as any, store.fromWarehouse || "");
+    setValue("ToWarehouse" as any, store.toWarehouse || "");
+    setValue("Comments" as any, store.comments || "");
+    setValue("JournalMemo" as any, store.journalMemo || "");
+    setValue("TaxDate" as any, store.docDate || "");
+    setValue("DocumentLines" as any, store.lines || []);
+    setValue("DocEntry" as any, store.DocEntry || 0);
+    setValue("DocNum" as any, store.DocNum || 0);
+    setValue("DocStatus" as any, store.docStatus || "");
   }, [
     store.customer,
     store.fromWarehouse,
@@ -131,6 +129,9 @@ export function InvDocumentLayout<T extends FieldValues>({
     store.journalMemo,
     store.docDate,
     store.lines,
+    store.DocEntry,
+    store.DocNum,
+    store.docStatus,
     setValue
   ]);
 
@@ -259,6 +260,8 @@ export function InvDocumentLayout<T extends FieldValues>({
     setIsSaving(true);
     try {
       await onSubmit(data);
+      reset(defaultValues as any);
+      resetStore();
     } finally {
       setIsSaving(false);
     }
