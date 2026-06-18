@@ -180,11 +180,21 @@ export function InvDocumentLineRow({ index, line }: Props) {
         />
       </td>
 
-      {/* UoM */}
+      {/* UoM Code*/}
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full bg-slate-50 cursor-not-allowed"
-          value={getUoMName(draftLine.UoMCode) || normalizeInventoryUom(draftLine.UoMCode)}
+          value={normalizeInventoryUom(draftLine.UoMCode)}
+          disabled
+          readOnly
+        />
+      </td>
+
+        {/* UoM Name*/}
+      <td className="py-2 px-4">
+        <Input
+          className="h-6 w-full bg-slate-50 cursor-not-allowed"
+          value={getUoMName(normalizeInventoryUom(draftLine.UoMCode)) || ""}
           disabled
           readOnly
         />

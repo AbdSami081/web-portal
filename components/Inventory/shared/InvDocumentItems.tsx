@@ -28,7 +28,8 @@ export function InvDocumentItems() {
     { key: "WhsCode",      title: "To Whs",       width: 180 },
     { key: "Quantity",     title: "Quantity",     width: 140 },
     { key: "OnHand",       title: "Qty In Whs",   width: 120 },
-    { key: "UoMCode",      title: "UoM",          width: 140 },
+    { key: "UoMCode",      title: "UoM Code",          width: 140 },
+    { key: "UoMName",      title: "UoM Name",          width: 140 },
   ];
 
   const handleOnSelectItems = (items: Item[]) => {

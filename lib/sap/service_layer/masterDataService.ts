@@ -6,6 +6,7 @@ import { WarehouseList } from "@/types/warehouse.type";
 import { sapApi } from "./auth";
 import { fetchData } from "./fetchData";
 import apiClient from "@/lib/apiClient";
+import { getUOMs } from "@/api+/sap/master-data/uom";
 
 export const buildODataQuery = ({
   top = 50,
@@ -184,14 +185,8 @@ export const MasterDataService = {
   },
 
   async getUOMs() {
-  try {
-    const res = await apiClient.get(`api/Master/GetUnitOfMeasurments`);
-    return res?.data || [];
-  } catch (error) {
-    console.error("Error fetching UOMs:", error);
-    return [];
-  }
-},
+    return await getUOMs();
+  },
 
   async fetchMasterData() {
     const [items, customers, warehouses, priceLists, vatGroups, uoms] =

@@ -34,7 +34,6 @@ export const useUoMStore = create<UoMStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await getUOMs();
-      console.log("[UoM] Successfully loaded", data.length, "UoM entries");
       set({ uoms: data, isLoaded: true, isLoading: false });
     } catch (error: any) {
       const errorMsg = error?.message || "Failed to load UoMs";
@@ -44,10 +43,11 @@ export const useUoMStore = create<UoMStore>((set, get) => ({
   },
 
   getUoMName: (code: string | number | null | undefined) => {
-    if (!code && code !== 0 && code !== -1) return "";
+    if (code === undefined || code === null) return "";
 
     const state = get();
     const codeStr = String(code);
+    if (!codeStr.trim() || codeStr === "-1") return "";
 
     const uom = state.uoms.find(u => {
       const absEntryStr = String(u.AbsEntry);
@@ -56,9 +56,10 @@ export const useUoMStore = create<UoMStore>((set, get) => ({
       return codeMatch || absEntryMatch;
     });
 
-    const result = uom?.Name || codeStr;
+    const result = uom?.Name?.trim() || "";
+    
     if (!uom && state.uoms.length > 0) {
-      console.warn(`[UoM] No match found for code: ${code}, falling back to: ${result}`);
+      console.warn(`[UoM] No match found for code: ${code}`);
     }
     return result;
   },

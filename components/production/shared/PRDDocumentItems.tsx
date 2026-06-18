@@ -105,6 +105,11 @@ export function PRDDocumentItems() {
     },
     config.itemColumns.uomCode && {
       key: "UoMCode",
+      title: "UoM Code",
+      width: 120,
+    },
+    config.itemColumns.uomName && {
+      key: "UoMName",
       title: "UoM Name",
       width: 130,
     },

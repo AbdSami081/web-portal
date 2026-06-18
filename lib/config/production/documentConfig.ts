@@ -30,6 +30,7 @@ export interface DocumentConfig {
     issued?: boolean;
     available?: boolean;
     uomCode?: boolean;
+    uomName?: boolean;
     warehouse?: boolean;
     issueMethod?: boolean;
     actions?: boolean;
@@ -58,6 +59,8 @@ export const IFPRDConfig: DocumentConfig = {
     plannedQty: true,
     issued: true,
     openQty: true,
+    uomCode: true,
+    uomName: true,
     warehouse: true,
     actions: true,
     orderNumber: true,
@@ -82,6 +85,8 @@ export const ReceiptFPRDConfig: DocumentConfig = {
     itemCode: true,
     itemDescription: true,
     plannedQty: true,
+    uomCode: true,
+    uomName: true,
     warehouse: true,
     actions: true,
     orderNumber: true,
@@ -117,6 +122,7 @@ export const PRDOrderConfig: DocumentConfig = {
     issued: true,
     available: false,
     uomCode: true,
+    uomName: true,
     warehouse: true,
     issueMethod: true,
     actions: true,

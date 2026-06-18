@@ -7,13 +7,7 @@ export type MenuItem = {
     isActive?: boolean;
     objectCode?: string | number;
     isReporting?: boolean;
-    items?: {
-        id: string;
-        title: string;
-        url: string;
-        objectCode?: string | number;
-        isReporting?: boolean;
-    }[];
+    items?: MenuItem[];
 };
 
 export const SERVER_MENUS: MenuItem[] = [
@@ -176,7 +170,19 @@ export const SERVER_MENUS: MenuItem[] = [
             {
                 id: "e250a09e-1ea0-4640-8561-ea3fa2526b40",
                 title: "Manage Reports",
-                url: "/dashboard/reports/upload",
+                url: "#",
+                items: [
+                    {
+                        id: "a67c4065-5bd6-426b-bb81-c339ddc4276b",
+                        title: "Import Report",
+                        url: "/dashboard/reports/upload",
+                    },
+                    {
+                        id: "3351796e-25ad-4bc1-8e47-28a47c19bceb",
+                        title: "Update Report",
+                        url: "/dashboard/reports/update",
+                    }
+                ]
             },
             {
                 id: "278db848-0aa3-4dff-a8d3-dad1206c5b84",
@@ -188,7 +194,6 @@ export const SERVER_MENUS: MenuItem[] = [
     {
         id: "debc3362-4bc4-4664-9726-a143aea26ec2",
         title: "Administration",
-
         url: "#",
         iconName: "Settings",
         isActive: true,

@@ -31,32 +31,35 @@ export async function getFilteredMenu(accessToken: string, allowedIds?: string[]
         allowed = allowedStr.split(',').map(m => m.trim().toLowerCase());
     }
 
-    // 1. If "all", show everything
     if (allowed.includes("all")) {
         return SERVER_MENUS;
     }
 
-    // 2. Filter recursively
-    const deepFiltered = SERVER_MENUS.map(item => {
-        // Clone item
-        const newItem = { ...item };
+    const alwaysShowBranches = new Set(["reporting", "manage reports"]);
 
-        if (newItem.items && newItem.items.length > 0) {
-            newItem.items = newItem.items.filter(child =>
-                child.id && allowed.includes(child.id.toLowerCase())
-            );
-        }
-        return newItem;
-    }).filter(item => {
-        // Keep if:
-        // 1. Explicitly Allowed (e.g. Dashboard)
-        if (allowed.includes(item.id.toLowerCase())) return true;
+    const filterRecursive = (items: MenuItem[]): MenuItem[] => {
+        return items
+            .map((item) => {
+                const cloned: MenuItem = { ...item };
 
-        // 2. OR Has allowed children (e.g. Sales with only Delivery allowed)
-        if (item.items && item.items.length > 0) return true;
+                if (item.title && alwaysShowBranches.has(item.title.toLowerCase())) {
+                    return cloned;
+                }
 
-        return false;
-    });
+                if (cloned.items?.length) {
+                    cloned.items = filterRecursive(cloned.items);
+                }
 
-    return deepFiltered;
+                return cloned;
+            })
+            .filter((item) => {
+                if (item.id && allowed.includes(item.id.toLowerCase())) {
+                    return true;
+                }
+
+                return !!item.items?.length;
+            });
+    };
+
+    return filterRecursive(SERVER_MENUS);
 }
