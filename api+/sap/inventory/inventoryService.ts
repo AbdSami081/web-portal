@@ -44,8 +44,16 @@ export const getInventoryTransfer = async (docNum: number) => {
     return response.data;
 };
 
-export const getInventoryTransferRequestList = async () => {
-    const response = await apiClient.get(`api/Inventory/InventoryTransferRequestList`);
+export const getInventoryTransferRequestList = async (
+    skip: number = 0,
+    top: number = 20,
+    search: string = ""
+) => {
+    const params = new URLSearchParams();
+    params.set("skip", String(skip));
+    params.set("top", String(top));
+    if (search) params.set("search", search);
+    const response = await apiClient.get(`api/Inventory/InventoryTransferRequestList?${params.toString()}`);
     const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
     return data.value || [];
 };

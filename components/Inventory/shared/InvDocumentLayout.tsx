@@ -138,6 +138,11 @@ export function InvDocumentLayout<T extends FieldValues>({
   const [itrData, setItrData] = useState<any[]>([]);
   const [isLoadingCopyFrom, setIsLoadingCopyFrom] = useState(false);
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
+  const PAGE_SIZE = 20;
+  const [itrSkip, setItrSkip] = useState(0);
+  const [itrHasMore, setItrHasMore] = useState(false);
+  const [itrSearch, setItrSearch] = useState("");
+  const itrSearchRef = React.useRef("");
 
 
 
@@ -189,12 +194,48 @@ export function InvDocumentLayout<T extends FieldValues>({
   const handleCopyFrom = async (type: string) => {
     if (parseInt(type) !== DocumentType.InvTransferReq) return;
     setIsLoadingCopyFrom(true);
+    setItrSkip(0);
+    itrSearchRef.current = "";
+    setItrSearch("");
     try {
-      const data = await getInventoryTransferRequestList();
+      const data = await getInventoryTransferRequestList(0, PAGE_SIZE, "");
       setItrData(data);
+      setItrHasMore(data.length === PAGE_SIZE);
       setCopyFromOpen(true);
     } catch (err: any) {
       toast.error(err.message || "Failed to fetch ITR list.");
+    } finally {
+      setIsLoadingCopyFrom(false);
+    }
+  };
+
+  const handleLoadMoreITR = async () => {
+    if (isLoadingCopyFrom) return;
+    const nextSkip = itrSkip + PAGE_SIZE;
+    setIsLoadingCopyFrom(true);
+    try {
+      const more = await getInventoryTransferRequestList(nextSkip, PAGE_SIZE, itrSearchRef.current);
+      setItrData(prev => [...prev, ...more]);
+      setItrSkip(nextSkip);
+      setItrHasMore(more.length === PAGE_SIZE);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load more.");
+    } finally {
+      setIsLoadingCopyFrom(false);
+    }
+  };
+
+  const handleItrSearch = async (value: string) => {
+    itrSearchRef.current = value;
+    setItrSearch(value);
+    setItrSkip(0);
+    setIsLoadingCopyFrom(true);
+    try {
+      const data = await getInventoryTransferRequestList(0, PAGE_SIZE, value);
+      setItrData(data);
+      setItrHasMore(data.length === PAGE_SIZE);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to search.");
     } finally {
       setIsLoadingCopyFrom(false);
     }
@@ -382,6 +423,10 @@ export function InvDocumentLayout<T extends FieldValues>({
             ]}
             getSelectValue={(item: any) => item.DocNum}
             isLoading={isLoadingCopyFrom}
+            hasMore={itrHasMore}
+            onLoadMore={handleLoadMoreITR}
+            onSearch={handleItrSearch}
+            searchValue={itrSearch}
           />
           <UDFLayout docType={docType} values={store.udfs} />
         </form>

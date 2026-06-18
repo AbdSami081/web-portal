@@ -31,6 +31,8 @@ interface GenericModalProps<T> {
   hasMore?: boolean;
   isLoading?: boolean;
   multiple?: boolean;
+  onSearch?: (value: string) => void;
+  searchValue?: string;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -46,9 +48,21 @@ export function GenericModal<T>({
   onLoadMore,
   hasMore,
   isLoading,
-  multiple = false
+  multiple = false,
+  onSearch,
+  searchValue,
 }: GenericModalProps<T>) {
-  const [search, setSearch] = useState("");
+  const [localSearch, setLocalSearch] = useState("");
+  // Use server-controlled search when onSearch prop is provided
+  const isServerSearch = typeof onSearch === "function";
+  const search = isServerSearch ? (searchValue ?? "") : localSearch;
+  const handleSearchChange = (value: string) => {
+    if (isServerSearch) {
+      onSearch!(value);
+    } else {
+      setLocalSearch(value);
+    }
+  };
   const [selected, setSelected] = useState<T | null>(null);
   const [selectedItems, setSelectedItems] = useState<T[]>([]);
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -105,7 +119,8 @@ export function GenericModal<T>({
         onSelect(values);
         onClose();
         setSelectedItems([]);
-        setSearch("");
+        setLocalSearch("");
+        if (isServerSearch) onSearch!("");
       }
     } else {
       if (selected) {
@@ -113,7 +128,8 @@ export function GenericModal<T>({
         onSelect(value);
         onClose();
         setSelected(null);
-        setSearch("");
+        setLocalSearch("");
+        if (isServerSearch) onSearch!("");
       }
     }
   };
@@ -130,7 +146,7 @@ export function GenericModal<T>({
           <Input
             placeholder="Search..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full"
           />
         </div>
