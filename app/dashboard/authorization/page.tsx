@@ -47,6 +47,33 @@ interface DatabaseConfig {
   CompanyDB: string;
 }
 
+type AuthMenuItem = MenuItem & {
+  icon?: any;
+};
+
+const getPermissionKey = (rootId: string, nodeId: string) =>
+  rootId === nodeId ? rootId : `${rootId}|${nodeId}`;
+
+const collectDescendantKeys = (rootId: string, node: AuthMenuItem): string[] => {
+  if (!node.items?.length) return [];
+
+  return node.items.flatMap((child) => {
+    const childKey = getPermissionKey(rootId, child.id);
+    return [childKey, ...collectDescendantKeys(rootId, child)];
+  });
+};
+
+const isNodeChecked = (
+  rootId: string,
+  node: AuthMenuItem,
+  permissions: Record<string, boolean>
+) => {
+  const nodeKey = getPermissionKey(rootId, node.id);
+  if (permissions[nodeKey]) return true;
+
+  return collectDescendantKeys(rootId, node).some((key) => permissions[key]);
+};
+
 export default function AuthorizationPage() {
   const { user } = useAuth();
   const [selectedCompany, setSelectedCompany] = useState<string>("");
@@ -81,17 +108,24 @@ export default function AuthorizationPage() {
   const filteredMenus = useMemo(() => {
     if (portalConfig.length === 0) return [];
 
-    return SERVER_MENUS.map(menu => {
-      const newMenu = { ...menu };
-      if (newMenu.items && newMenu.items.length > 0) {
-        newMenu.items = newMenu.items.filter(child => 
-          configuredModuleIds.has(child.id.toLowerCase())
-        );
-      }
-      return newMenu;
-    }).filter(menu => {
-      return configuredModuleIds.has(menu.id.toLowerCase()) || (menu.items && menu.items.length > 0);
-    });
+    const filterRecursive = (items: AuthMenuItem[]): AuthMenuItem[] => {
+      return items
+        .map((menu) => {
+          const cloned: AuthMenuItem = { ...menu };
+          if (cloned.items?.length) {
+            cloned.items = filterRecursive(cloned.items as AuthMenuItem[]);
+          }
+          return cloned;
+        })
+        .filter((menu) => {
+          return (
+            configuredModuleIds.has(menu.id.toLowerCase()) ||
+            Boolean(menu.items?.length)
+          );
+        });
+    };
+
+    return filterRecursive(SERVER_MENUS as AuthMenuItem[]);
   }, [configuredModuleIds, portalConfig]);
 
   useEffect(() => {
@@ -178,27 +212,25 @@ export default function AuthorizationPage() {
     );
   };
 
-  const handlePermissionToggle = (moduleId: string, componentId?: string) => {
-    const key = componentId ? `${moduleId}|${componentId}` : moduleId;
-    setSelectedPermissions(prev => {
-      const isChecking = !prev[key];
-      const newState = { ...prev, [key]: isChecking };
-      
-      if (!componentId) {
-        filteredMenus.forEach(menu => {
-          if (menu.id === moduleId && menu.items) {
-            menu.items.forEach(item => {
-              newState[`${moduleId}|${item.id}`] = isChecking;
-            });
-          }
-        });
-      }
-      
-      if (componentId && isChecking) {
-        newState[moduleId] = true;
-      }
-      
-      return newState;
+  const handlePermissionToggle = (
+    rootId: string,
+    node: AuthMenuItem,
+    ancestorKeys: string[] = []
+  ) => {
+    const nodeKey = getPermissionKey(rootId, node.id);
+    const nodeChecked = isNodeChecked(rootId, node, selectedPermissions);
+    const nextState = !nodeChecked;
+    const descendantKeys = collectDescendantKeys(rootId, node);
+
+    setSelectedPermissions((prev) => {
+      const updated = { ...prev };
+      [...ancestorKeys, nodeKey].forEach((key) => {
+        updated[key] = nextState;
+      });
+      descendantKeys.forEach((key) => {
+        updated[key] = nextState;
+      });
+      return updated;
     });
   };
 
@@ -257,6 +289,77 @@ export default function AuthorizationPage() {
     "FileText": FileText,
     "ShoppingCart": ShoppingCart,
     "Settings": Settings
+  };
+
+  const renderPermissionNode = (
+    rootMenu: AuthMenuItem,
+    node: AuthMenuItem,
+    depth = 0,
+    ancestorKeys: string[] = []
+  ) => {
+    const nodeKey = getPermissionKey(rootMenu.id, node.id);
+    const checked = isNodeChecked(rootMenu.id, node, selectedPermissions);
+    const hasChildren = !!node.items?.length;
+    const baseIndent = depth * 18;
+    const Icon = depth === 0
+      ? (ICON_MAP[rootMenu.iconName || ""] || LayoutDashboard)
+      : ChevronRight;
+
+    return (
+      <div key={nodeKey} className="space-y-1">
+        <div
+          className={cn(
+            "flex items-center justify-between p-2.5 px-3 rounded-lg group transition-colors cursor-pointer border border-transparent",
+            depth === 0
+              ? "border-slate-100 bg-white shadow-sm hover:bg-slate-50"
+              : checked
+                ? "bg-white border-slate-100 shadow-sm"
+                : "hover:bg-slate-50"
+          )}
+          style={{ marginLeft: depth > 0 ? baseIndent : 0 }}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
+              checked ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
+            )}>
+              <Icon className="w-4 h-4" />
+            </div>
+            <span className={cn(
+              "text-sm font-bold truncate",
+              checked ? "text-slate-900" : "text-slate-500"
+            )}>
+              {node.title}
+            </span>
+            {depth > 0 && hasChildren && (
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                Parent
+              </span>
+            )}
+          </div>
+
+          <Checkbox
+            className="h-4 w-4 border-slate-400 data-[state=checked]:bg-slate-900 border-2 rounded transition-colors"
+            checked={checked}
+            onCheckedChange={() =>
+              handlePermissionToggle(rootMenu.id, node, ancestorKeys)
+            }
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+
+        {hasChildren && (
+          <div className="grid grid-cols-1 gap-1.5">
+            {node.items!.map((child) =>
+              renderPermissionNode(rootMenu, child as AuthMenuItem, depth + 1, [
+                ...ancestorKeys,
+                nodeKey,
+              ])
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (user?.role?.toLowerCase() !== "admin" && !user?.isSuperAdmin) {
@@ -451,63 +554,44 @@ export default function AuthorizationPage() {
                 </div>
               ) : (
                 <div className="columns-1 md:columns-2 gap-12 space-y-10 opacity-100 transition-opacity duration-300">
-                    {filteredMenus.map((menu) => {
-                        const Icon = ICON_MAP[menu.iconName || ""] || LayoutDashboard;
-                        return (
-                          <div key={menu.id} className="break-inside-avoid space-y-4">
-                              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                  <div className="flex items-center gap-2.5">
-                                      <div className={cn(
-                                          "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
-                                          selectedPermissions[menu.id] ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
-                                      )}>
-                                          <Icon className="w-4 h-4" />
-                                      </div>
-                                      <span className={cn(
-                                          "text-sm font-bold",
-                                          selectedPermissions[menu.id] ? "text-slate-900" : "text-slate-500"
-                                      )}>{menu.title}</span>
-                                  </div>
-                                  <Checkbox 
-                                      className="h-5 w-5 border-slate-400 data-[state=checked]:bg-slate-900 border-2 rounded transition-colors"
-                                      checked={selectedPermissions[menu.id] || false}
-                                      onCheckedChange={() => handlePermissionToggle(menu.id)}
-                                  />
+                  {filteredMenus.map((menu) => (
+                    <div key={menu.id} className="break-inside-avoid space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2.5">
+                          {(() => {
+                            const MenuIcon = ICON_MAP[menu.iconName || ""] || LayoutDashboard;
+                            return (
+                              <div className={cn(
+                                "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+                                selectedPermissions[menu.id] ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
+                              )}>
+                                <MenuIcon className="w-4 h-4" />
                               </div>
+                            );
+                          })()}
+                          <span className={cn(
+                            "text-sm font-bold",
+                            isNodeChecked(menu.id, menu as AuthMenuItem, selectedPermissions) ? "text-slate-900" : "text-slate-500"
+                          )}>
+                            {menu.title}
+                          </span>
+                        </div>
+                        <Checkbox 
+                          className="h-5 w-5 border-slate-400 data-[state=checked]:bg-slate-900 border-2 rounded transition-colors"
+                          checked={isNodeChecked(menu.id, menu as AuthMenuItem, selectedPermissions)}
+                          onCheckedChange={() => handlePermissionToggle(menu.id, menu as AuthMenuItem)}
+                        />
+                      </div>
 
-                              {menu.items && menu.items.length > 0 && (
-                                  <div className="grid grid-cols-1 gap-1.5">
-                                      {menu.items.map((item) => (
-                                          <label 
-                                              key={item.id} 
-                                              className={cn(
-                                                  "flex items-center justify-between p-2.5 px-3 rounded-lg group transition-colors cursor-pointer border border-transparent",
-                                                  selectedPermissions[`${menu.id}|${item.id}`] ? "bg-white border-slate-100 shadow-sm" : "hover:bg-slate-50"
-                                              )}
-                                          >
-                                              <div className="flex items-center gap-2">
-                                                  <ChevronRight className={cn(
-                                                      "w-3.5 h-3.5 transition-colors",
-                                                      selectedPermissions[`${menu.id}|${item.id}`] ? "text-slate-900 font-bold" : "text-slate-300"
-                                                  )} />
-                                                  <span className={cn(
-                                                      "text-xs font-medium",
-                                                      selectedPermissions[`${menu.id}|${item.id}`] ? "text-slate-900 font-bold" : "text-slate-500"
-                                                  )}>{item.title}</span>
-                                              </div>
-                                              <Checkbox 
-                                                  className="h-4 w-4 border-slate-400 data-[state=checked]:bg-slate-900 border-2 rounded transition-colors"
-                                                  checked={selectedPermissions[`${menu.id}|${item.id}`] || false}
-                                                  onCheckedChange={() => handlePermissionToggle(menu.id, item.id)}
-                                                  onClick={(e) => e.stopPropagation()}
-                                              />
-                                          </label>
-                                      ))}
-                                  </div>
-                              )}
-                          </div>
-                      );
-                    })}
+                      {menu.items && menu.items.length > 0 && (
+                        <div className="grid grid-cols-1 gap-1.5">
+                          {menu.items.map((item) =>
+                            renderPermissionNode(menu as AuthMenuItem, item as AuthMenuItem, 1, [menu.id])
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -540,7 +624,7 @@ export default function AuthorizationPage() {
               Success!
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 font-medium pt-4 space-y-3 leading-relaxed">
-              <p>User permissions have been updated successfully in the system.</p>
+              <div>User permissions have been updated successfully in the system.</div>
               <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 text-amber-800 text-sm font-semibold flex items-start gap-2 shadow-sm">
                 <Info className="w-5 h-5 shrink-0" />
                 <span>IMPORTANT: The updated users must log out and sign back in to apply these changes to their session.</span>

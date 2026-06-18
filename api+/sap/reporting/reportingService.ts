@@ -126,3 +126,13 @@ export const downloadReport = async (payload: any) => {
 
   return url;
 };
+
+export const updateComponent = async (payload: any) => {
+  const response = await apiClient.post("api/ReportingAPI/UpdateReportLayout", payload);
+  return response.data;
+};
+
+export const deleteComponent = async (code: string, type: string) => {
+  const response = await apiClient.delete(`api/ReportingAPI/DeleteReportLayout?code=${encodeURIComponent(code)}&type=${encodeURIComponent(type)}`);
+  return response.data;
+};
