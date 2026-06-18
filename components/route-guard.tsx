@@ -33,14 +33,15 @@ export function RouteGuard({ children }: { children: ReactNode }) {
         }
 
         const flatMenus: { id: string, url: string }[] = [];
-        SERVER_MENUS.forEach(menu => {
-            if (menu.url !== "#") flatMenus.push({ id: menu.id, url: menu.url });
-            if (menu.items) {
-                menu.items.forEach(item => {
-                    if (item.url !== "#") flatMenus.push({ id: item.id, url: item.url });
-                });
-            }
-        });
+        const flattenMenus = (items: typeof SERVER_MENUS) => {
+            items.forEach(item => {
+                if (item.url !== "#") flatMenus.push({ id: item.id, url: item.url });
+                if (item.items && item.items.length > 0) {
+                    flattenMenus(item.items);
+                }
+            });
+        };
+        flattenMenus(SERVER_MENUS);
 
         const matches = flatMenus.filter(item => pathname.startsWith(item.url));
         const bestMatch = matches.sort((a, b) => b.url.length - a.url.length)[0];
