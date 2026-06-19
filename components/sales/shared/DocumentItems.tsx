@@ -26,6 +26,7 @@ import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialo
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
+import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 
 export function DocumentItems() {
   const { watch } = useFormContext();
@@ -61,6 +62,7 @@ export function DocumentItems() {
     freightsWithCharges,
     warehouses,
     loadMasterData,
+    uoms,
   } = useMasterDataStore();
 
   const firstWhs =
@@ -139,7 +141,7 @@ export function DocumentItems() {
         TaxCode: targetTaxCode,
         TaxRate: taxRate,
         WarehouseCode: defaultWhsLine,
-        UoMCode: item.UoM || "",
+        UoMCode: resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "",
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,

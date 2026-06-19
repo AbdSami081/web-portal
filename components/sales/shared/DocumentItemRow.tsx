@@ -54,7 +54,13 @@ export function DocumentLineRow({ index, line }: Props) {
       getItemsList(line.ItemCode, 0, 1).then((res) => {
         const item = res.find(i => i.ItemCode === line.ItemCode);
         if (item && item.QtyInWhs) {
-          updateLine(line.ItemCode, { QtyInWhs: item.QtyInWhs });
+          const qtyInWhs: any[] = item.QtyInWhs;
+          const whsCode = line.WarehouseCode || draftLine.WarehouseCode;
+          const whRecord = qtyInWhs.find(
+            (w: any) => (w.WarehouseCode || w.warehouseCode) === whsCode
+          );
+          const onHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
+          updateLine(line.ItemCode, { QtyInWhs: qtyInWhs, OnHand: onHand });
         }
       });
     }

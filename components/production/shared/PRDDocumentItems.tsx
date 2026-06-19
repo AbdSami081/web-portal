@@ -9,12 +9,11 @@ import { usePRDDocConfig } from "./PRDDocumentLayout";
 import { Plus } from "lucide-react";
 import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { DocumentType } from "@/types/master/DocumentType";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
-
+import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
+import { useUoMStore } from "@/stores/useUoMStore";
 
 export function PRDDocumentItems() {
   const { watch } = useFormContext();
@@ -23,6 +22,7 @@ export function PRDDocumentItems() {
   const itemNo = watch("ItemNo");
   const { lines, addLine, customer, warehouses, attachments, addAttachment, removeAttachment, updateAttachment, initialStatus } = useIFPRDDocument();
   const config = usePRDDocConfig();
+  const uoms = useUoMStore.getState().uoms;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
 
@@ -41,7 +41,9 @@ export function PRDDocumentItems() {
         BaseQuantity: 1,
         BaseRatio: 0,
         IssuedQuantity: 0,
-        UoMCode: isResource ? (item.UnitOfMeasure || "") : (item.UoM || item.InventoryUOM || item.SalesUnit || item.PurchaseUnit || ""),
+        UoMCode: isResource
+          ? resolveUoMFromCandidates(uoms, item.UnitOfMeasure, item.UoM) || item.UnitOfMeasure || ""
+          : resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "",
         ProductionOrderIssueType: isResource ? issueType : "im_Manual"
       });
     });

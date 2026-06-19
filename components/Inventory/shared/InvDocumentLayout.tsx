@@ -140,6 +140,7 @@ export function InvDocumentLayout<T extends FieldValues>({
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
   const PAGE_SIZE = 20;
   const [itrSkip, setItrSkip] = useState(0);
+  const itrSkipRef = React.useRef(0);  // ref to avoid stale closure in handleLoadMoreITR
   const [itrHasMore, setItrHasMore] = useState(false);
   const [itrSearch, setItrSearch] = useState("");
   const itrSearchRef = React.useRef("");
@@ -155,7 +156,6 @@ export function InvDocumentLayout<T extends FieldValues>({
     resetStore();
   };
 
-  // Copy To: set store directly then navigate (no localStorage needed)
   const handleCopyTo = (selected: string) => {
     if (!DocEntry || DocEntry === 0) {
       toast.error("Please search or select a document first!");
@@ -195,12 +195,13 @@ export function InvDocumentLayout<T extends FieldValues>({
     if (parseInt(type) !== DocumentType.InvTransferReq) return;
     setIsLoadingCopyFrom(true);
     setItrSkip(0);
+    itrSkipRef.current = 0;
     itrSearchRef.current = "";
     setItrSearch("");
     try {
-      const data = await getInventoryTransferRequestList(0, PAGE_SIZE, "");
-      setItrData(data);
-      setItrHasMore(data.length === PAGE_SIZE);
+      const data = await getInventoryTransferRequestList(0, PAGE_SIZE + 1, "");
+      setItrData(data.slice(0, PAGE_SIZE));
+      setItrHasMore(data.length > PAGE_SIZE);
       setCopyFromOpen(true);
     } catch (err: any) {
       toast.error(err.message || "Failed to fetch ITR list.");
@@ -211,15 +212,21 @@ export function InvDocumentLayout<T extends FieldValues>({
 
   const handleLoadMoreITR = async () => {
     if (isLoadingCopyFrom) return;
-    const nextSkip = itrSkip + PAGE_SIZE;
+    const nextSkip = itrSkipRef.current + PAGE_SIZE;
     setIsLoadingCopyFrom(true);
     try {
-      const more = await getInventoryTransferRequestList(nextSkip, PAGE_SIZE, itrSearchRef.current);
-      setItrData(prev => [...prev, ...more]);
+      const more = await getInventoryTransferRequestList(nextSkip, PAGE_SIZE + 1, itrSearchRef.current);
+      const pageData = more.slice(0, PAGE_SIZE);
+      setItrData(prev => {
+        const existingDocNums = new Set(prev.map((d: any) => d.DocNum));
+        const unique = pageData.filter((d: any) => !existingDocNums.has(d.DocNum));
+        return [...prev, ...unique];
+      });
+      itrSkipRef.current = nextSkip;
       setItrSkip(nextSkip);
-      setItrHasMore(more.length === PAGE_SIZE);
+      setItrHasMore(more.length > PAGE_SIZE);
     } catch (err: any) {
-      toast.error(err.message || "Failed to load more ITRs.");
+      toast.error(err.message || "Failed to load more.");
     } finally {
       setIsLoadingCopyFrom(false);
     }
@@ -228,12 +235,13 @@ export function InvDocumentLayout<T extends FieldValues>({
   const handleItrSearch = async (value: string) => {
     itrSearchRef.current = value;
     setItrSearch(value);
+    itrSkipRef.current = 0;
     setItrSkip(0);
     setIsLoadingCopyFrom(true);
     try {
-      const data = await getInventoryTransferRequestList(0, PAGE_SIZE, value);
-      setItrData(data);
-      setItrHasMore(data.length === PAGE_SIZE);
+      const data = await getInventoryTransferRequestList(0, PAGE_SIZE + 1, value);
+      setItrData(data.slice(0, PAGE_SIZE));
+      setItrHasMore(data.length > PAGE_SIZE);
     } catch (err: any) {
       toast.error(err.message || "Failed to search.");
     } finally {
@@ -241,8 +249,7 @@ export function InvDocumentLayout<T extends FieldValues>({
     }
   };
 
-  // Copy From: user selected ITR(s) from modal
-  const handleSelectITR = async (docNums: any) => {
+    const handleSelectITR = async (docNums: any) => {
     const nums = Array.isArray(docNums) ? docNums : [docNums];
     if (nums.length === 0) return;
 
@@ -272,8 +279,7 @@ export function InvDocumentLayout<T extends FieldValues>({
       }
 
       if (mergedDoc) {
-        // ... baaki ka logic same rahega ...
-        const fromWhs = mergedDoc.FromWarehouse || allLines[0]?.FromWhsCode || "";
+              const fromWhs = mergedDoc.FromWarehouse || allLines[0]?.FromWhsCode || "";
         const toWhs = mergedDoc.ToWarehouse || allLines[0]?.WhsCode || "";
 
         setValue("DocEntry" as any, 0 as any);

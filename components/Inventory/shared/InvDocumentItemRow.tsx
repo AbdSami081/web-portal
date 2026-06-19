@@ -30,7 +30,13 @@ export function InvDocumentLineRow({ index, line }: Props) {
       getItemsList(line.ItemCode, 0, 1).then((res) => {
         const item = res.find(i => i.ItemCode === line.ItemCode);
         if (item && item.QtyInWhs) {
-          updateLine(line.ItemCode, { QtyInWhs: item.QtyInWhs });
+          const qtyInWhs: any[] = item.QtyInWhs;
+          const fromWhs = line.FromWhsCode;
+          const whRecord = qtyInWhs.find(
+            (w: any) => (w.WarehouseCode || w.warehouseCode) === fromWhs
+          );
+          const onHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
+          updateLine(line.ItemCode, { QtyInWhs: qtyInWhs, OnHand: onHand });
         }
       });
     }
@@ -54,7 +60,6 @@ export function InvDocumentLineRow({ index, line }: Props) {
   const handleWhsSelect = (wh: Warehouse) => {
     let updated: InventoryDocumentLine;
     if (whsMode === "from") {
-      // Look up qty from item's QtyInWhs array for the selected warehouse
       const qtyInWhs = line.QtyInWhs || [];
       const whRecord = qtyInWhs.find(
         (w: any) => (w.WarehouseCode || w.warehouseCode) === wh.WhsCode

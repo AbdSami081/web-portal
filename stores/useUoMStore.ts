@@ -53,7 +53,8 @@ export const useUoMStore = create<UoMStore>((set, get) => ({
       const absEntryStr = String(u.AbsEntry);
       const codeMatch = u.Code === codeStr || u.Code === code;
       const absEntryMatch = absEntryStr === codeStr || u.AbsEntry === code;
-      return codeMatch || absEntryMatch;
+      const nameMatch = u.Name === codeStr;
+      return codeMatch || absEntryMatch || nameMatch;
     });
 
     const result = uom?.Name?.trim() || "";

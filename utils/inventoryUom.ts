@@ -28,7 +28,7 @@ export const resolveUoMCode = (
     if (byCode) return byCode.Code;
 
     const byName = uoms.find((u) => u.Name === raw);
-    if (byName) return byName.Name;
+    if (byName) return byName.Code;  // Always return Code, not Name
   }
 
   return raw;

@@ -5,7 +5,8 @@ import { BaseSalesDocument, DocCurrency, SalesDocumentLine } from "@/types/sales
 import { calculateFreightTax } from "@/utils/taxCalculations";
 import { useMasterDataStore } from "./useMasterDataStore";
 import { DocumentType } from "@/types/master/DocumentType";
-
+import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
+import { useUoMStore } from "@/stores/useUoMStore";
 
 interface SalesDocumentStore {
   docType: DocumentType;
@@ -335,6 +336,8 @@ export const useSalesDocument = create<SalesDocumentStore>()(
 
     loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
       const rawLines = doc.DocumentLines || doc.lines || [];
+      // Resolve UoM master data for proper Code resolution
+      const uoms = useUoMStore.getState().uoms || [];
 
       const mappedLines = rawLines.map((line: any, index: number) => {
         const qty = parseSafe(line.Quantity);
@@ -360,7 +363,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           ManBtchNum: line.ManBtchNum || "",
           WarehouseCode: line.WarehouseCode || "",
           TaxAmount: parseSafe(line.TaxTotal || line.TaxSum) || calculatedTax,
-          UoMCode: line.UoMCode,
+          UoMCode: resolveUoMFromCandidates(uoms, line.UoMCode, line.UoMGroupEntry, line.UnitsOfMeasurment) || line.UoMCode || "",
           TaxCode: line.VatGroup || line.TaxCode,
           BaseType: line.BaseType,
           BaseEntry: line.BaseEntry,
