@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ReportParameterModal from "@/modals/ReportParameterModal";
 import ReportViewer from "@/components/reporting/ReportViewer";
+import { useAuth } from "@/context/authContext";
 
 interface LayoutPreviewModalProps {
   open: boolean;
@@ -33,6 +34,10 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
   docEntry,
   schemaName,
 }) => {
+  const { user } = useAuth();
+  // Schema@ always resolves from: prop → user.companyDB → empty string
+  const resolvedSchema = schemaName || user?.companyDB || "";
+
   const [layouts, setLayouts] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedLayout, setSelectedLayout] = useState<ReportData | null>(null);
@@ -74,6 +79,15 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
     }
   };
 
+  const SYSTEM_PARAM_NAMES = new Set([
+    "schema@", "schema",
+    "dockey@", "dockey",
+    "objectid@", "objectid",
+  ]);
+
+  const isSystemParam = (name: string) =>
+    SYSTEM_PARAM_NAMES.has(name.toLowerCase());
+
   const printLayoutDirect = async (
     layout: ReportData,
     customParamValues: Record<string, any>
@@ -81,21 +95,26 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
     try {
       setPrinting(true);
 
-      const parameters: Record<string, any> = { "DocKey@": docEntry };
-      if (schemaName) parameters["Schema@"] = schemaName;
+      const parameters: Record<string, any> = {};
 
       (layout.Parameters || []).forEach((p) => {
-        const paramNameLower = p.U_ParamName.toLowerCase();
-        if (paramNameLower === "dockey@") {
+        const lower = p.U_ParamName.toLowerCase();
+        if (lower === "dockey@" || lower === "dockey") {
           parameters[p.U_ParamName] = docEntry;
-        } else if (paramNameLower === "schema@") {
-          parameters[p.U_ParamName] = schemaName || "";
+        } else if (lower === "schema@" || lower === "schema") {
+          parameters[p.U_ParamName] = resolvedSchema || "";
+        } else if (lower === "objectid@" || lower === "objectid") {
+          parameters[p.U_ParamName] = objectCode;
         } else {
-          parameters[p.U_ParamName] = customParamValues[p.U_ParamName] !== undefined
-            ? customParamValues[p.U_ParamName]
-            : "";
+          parameters[p.U_ParamName] =
+            customParamValues[p.U_ParamName] !== undefined
+              ? customParamValues[p.U_ParamName]
+              : "";
         }
       });
+
+     if (!("DocKey@" in parameters)) parameters["DocKey@"] = docEntry;
+      if (!("Schema@" in parameters) && resolvedSchema) parameters["Schema@"] = resolvedSchema;
 
       const pdfUrl = await downloadReport({
         FilePath: layout.U_FilePath + "\\" + layout.U_ActualFileName,
@@ -119,9 +138,8 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
       return;
     }
 
-    const systemParams = ["dockey@", "objectid@", "schema@"];
     const customParams = (selectedLayout.Parameters || []).filter(
-      (p) => !systemParams.includes(p.U_ParamName.toLowerCase())
+      (p) => !isSystemParam(p.U_ParamName)
     );
 
     if (customParams.length > 0) {
@@ -140,9 +158,8 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
   const handleParamSubmit = async () => {
     if (!selectedLayout) return;
 
-    const systemParams = ["dockey@", "objectid@", "schema@"];
     const customParams = (selectedLayout.Parameters || []).filter(
-      (p) => !systemParams.includes(p.U_ParamName.toLowerCase())
+      (p) => !isSystemParam(p.U_ParamName)
     );
 
     const hasEmpty = customParams.some(
@@ -330,11 +347,8 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
             onClose={() => setShowParamModal(false)}
             selectedReport={{
               ...selectedLayout,
-              Parameters: (selectedLayout.Parameters || []).filter(
-                (p) =>
-                  !["dockey@", "objectid@", "schema@"].includes(
-                    p.U_ParamName.toLowerCase()
-                  )
+                Parameters: (selectedLayout.Parameters || []).filter(
+                (p) => !isSystemParam(p.U_ParamName)
               ),
             }}
             paramValues={paramValues}
