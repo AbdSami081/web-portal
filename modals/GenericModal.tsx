@@ -151,22 +151,11 @@ export function GenericModal<T>({
           />
         </div>
 
-        {/* Main responsive structural box */}
         <div className="flex-1 min-h-0 border rounded-md mt-3 relative flex flex-col bg-white overflow-hidden">
-          {isLoading && (
-            <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-[100] flex items-center justify-center transition-all duration-300">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-12 w-12 animate-spin text-zinc-900 stroke-[1.5]" />
-                <span className="text-xs font-semibold tracking-wider text-zinc-700 uppercase">Loading data...</span>
-              </div>
-            </div>
-          )}
-
-          {/* Table Container handles BOTH vertical and horizontal scroll */}
-          <div className="flex-1 overflow-auto max-h-full">
-            <div className="inline-block min-w-full align-middle">
-              <Table className="relative min-w-full border-collapse">
-                <TableHeader className="bg-zinc-50 sticky top-0 z-10 shadow-[0_1px_0_0_rgba(228,228,231,1)]">
+  
+          <div className="flex-1 overflow-y-auto">
+            <Table className="min-w-full border-collapse">
+              <TableHeader className="bg-zinc-50 sticky top-0 z-10">
                   <TableRow>
                     {multiple && (
                       <TableHead className="w-[50px] bg-zinc-50">
@@ -203,7 +192,6 @@ export function GenericModal<T>({
                     ))}
                   </TableRow>
                 </TableHeader>
-
                 <TableBody>
                   {filteredData.length === 0 && !isLoading ? (
                     <TableRow>
@@ -257,21 +245,19 @@ export function GenericModal<T>({
                     ))
                   )}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           </div>
 
-          {/* Load More section fixed at the bottom inside the frame */}
           {hasMore && (
-            <div className="p-2 text-center border-t bg-zinc-50 shrink-0 sticky bottom-0 z-20">
+            <div className="p-2 border-t bg-zinc-50 shrink-0">
               <Button
-                type="button"
-                variant="ghost"
-                className="w-full text-zinc-900 hover:bg-zinc-200 h-8 text-xs font-medium"
+                type="button" 
+                variant="ghost" 
+                className="w-full text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 h-8 text-xs"
                 onClick={onLoadMore}
                 disabled={isLoading}
               >
-                {isLoading ? "Loading dynamic data..." : "Load More"}
+                {isLoading ? "Loading..." : "Load More"}
               </Button>
             </div>
           )}
