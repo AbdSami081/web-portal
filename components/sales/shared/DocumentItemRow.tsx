@@ -331,7 +331,11 @@ export function DocumentLineRow({ index, line }: Props) {
         <td className="py-2 px-2">
           <Input
             className="h-6 w-full text-center bg-neutral-100"
-            value={getUoMName(draftLine.UoMCode) || ""}
+            value={
+              !draftLine.UoMCode || draftLine.UoMCode === "-1" || getUoMName(draftLine.UoMCode) === "Manual"
+                ? ""
+                : getUoMName(draftLine.UoMCode) || ""
+            }
             disabled
             readOnly
           />

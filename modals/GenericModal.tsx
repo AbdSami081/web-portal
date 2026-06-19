@@ -53,7 +53,6 @@ export function GenericModal<T>({
   searchValue,
 }: GenericModalProps<T>) {
   const [localSearch, setLocalSearch] = useState("");
-  // Use server-controlled search when onSearch prop is provided
   const isServerSearch = typeof onSearch === "function";
   const search = isServerSearch ? (searchValue ?? "") : localSearch;
   const handleSearchChange = (value: string) => {
@@ -248,7 +247,7 @@ export function GenericModal<T>({
             </Table>
           </div>
 
-          {hasMore && (
+          {hasMore && data.length >= 20 && (
             <div className="p-2 border-t bg-zinc-50 shrink-0">
               <Button
                 type="button" 

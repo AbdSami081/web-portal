@@ -219,7 +219,7 @@ export function InvDocumentLayout<T extends FieldValues>({
       setItrSkip(nextSkip);
       setItrHasMore(more.length === PAGE_SIZE);
     } catch (err: any) {
-      toast.error(err.message || "Failed to load more.");
+      toast.error(err.message || "Failed to load more ITRs.");
     } finally {
       setIsLoadingCopyFrom(false);
     }
@@ -414,6 +414,7 @@ export function InvDocumentLayout<T extends FieldValues>({
             onSelect={handleSelectITR}
             data={itrData}
             columns={[
+              { key: "index", label: "#" },
               { key: "DocNum", label: "Doc Num" },
               { key: "DocDate", label: "Doc Date" },
               { key: "FromWarehouse", label: "From Whse" },
