@@ -14,6 +14,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
 import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useUoMStore } from "@/stores/useUoMStore";
+import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 
 export function PRDDocumentItems() {
   const { watch } = useFormContext();
@@ -22,7 +23,7 @@ export function PRDDocumentItems() {
   const itemNo = watch("ItemNo");
   const { lines, addLine, customer, warehouses, attachments, addAttachment, removeAttachment, updateAttachment, initialStatus } = useIFPRDDocument();
   const config = usePRDDocConfig();
-  const uoms = useUoMStore.getState().uoms;
+  const uoms = useUoMStore((state) => state.uoms);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
 
@@ -44,6 +45,9 @@ export function PRDDocumentItems() {
         UoMCode: isResource
           ? resolveUoMFromCandidates(uoms, item.UnitOfMeasure, item.UoM) || item.UnitOfMeasure || ""
           : resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "",
+        MeasureUnit: isResource
+          ? getUoMName(resolveUoMFromCandidates(uoms, item.UnitOfMeasure, item.UoM) || item.UnitOfMeasure || "")
+          : getUoMName(resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || ""),
         ProductionOrderIssueType: isResource ? issueType : "im_Manual"
       });
     });

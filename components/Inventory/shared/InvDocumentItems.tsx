@@ -12,11 +12,13 @@ import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
 import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { useUoMStore } from "@/stores/useUoMStore";
+import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 
 export function InvDocumentItems() {
   const { watch } = useFormContext();
   const { lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment } = useInventoryDocument();
-  const { uoms } = useMasterDataStore();
+  const uoms = useUoMStore((state) => state.uoms);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
 
@@ -70,6 +72,7 @@ export function InvDocumentItems() {
         LineTotal: quantity * price,
         UoMCode: uomCode,
         unitMsr: uomCode,
+        MeasureUnit: getUoMName(uomCode) || "",
         PlPaWght: 0,
         U_LastPrice: price,
         OcrCode2: "",

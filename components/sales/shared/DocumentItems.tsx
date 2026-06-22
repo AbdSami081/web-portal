@@ -22,6 +22,8 @@ import {
 import { toast } from "sonner";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { useUoMStore } from "@/stores/useUoMStore";
+import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
@@ -62,8 +64,9 @@ export function DocumentItems() {
     freightsWithCharges,
     warehouses,
     loadMasterData,
-    uoms,
   } = useMasterDataStore();
+
+  const uoms = useUoMStore((state) => state.uoms);
 
   const firstWhs =
     warehouses.length > 0
@@ -132,6 +135,7 @@ export function DocumentItems() {
       );
       const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
 
+      const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
       addLine({
         ItemCode: item.ItemCode,
         ItemName: item.ItemName || item.ItemDescription || "",
@@ -141,7 +145,8 @@ export function DocumentItems() {
         TaxCode: targetTaxCode,
         TaxRate: taxRate,
         WarehouseCode: defaultWhsLine,
-        UoMCode: resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "",
+        UoMCode: uomVal,
+        MeasureUnit: getUoMName(uomVal) || "",
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,

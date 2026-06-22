@@ -23,6 +23,7 @@ export interface InventoryDocumentLine {
     ItemCost?: number;
     UoMCode?: string;
     unitMsr?: string;
+    MeasureUnit?: string;
     QtyInWhs?: any[];
     OcrCode2?: string;
     OcrCode3?: string;

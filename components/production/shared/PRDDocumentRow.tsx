@@ -183,7 +183,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
       {config.itemColumns.uomName && (
         <td className="py-2 px-4 text-center text-gray-700">
-          <span className="block w-full truncate">{getUoMName(normalizeInventoryUom(line.UoMCode))}</span>
+          <span className="block w-full truncate">{line.MeasureUnit || getUoMName(normalizeInventoryUom(line.UoMCode)) || ""}</span>
         </td>
       )}
 

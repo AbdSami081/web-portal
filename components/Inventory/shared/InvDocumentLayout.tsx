@@ -199,9 +199,9 @@ export function InvDocumentLayout<T extends FieldValues>({
     itrSearchRef.current = "";
     setItrSearch("");
     try {
-      const data = await getInventoryTransferRequestList(0, PAGE_SIZE + 1, "");
-      setItrData(data.slice(0, PAGE_SIZE));
-      setItrHasMore(data.length > PAGE_SIZE);
+      const result = await getInventoryTransferRequestList(0, PAGE_SIZE, "");
+      setItrData(result.value);
+      setItrHasMore(result.hasMore);
       setCopyFromOpen(true);
     } catch (err: any) {
       toast.error(err.message || "Failed to fetch ITR list.");
@@ -215,16 +215,15 @@ export function InvDocumentLayout<T extends FieldValues>({
     const nextSkip = itrSkipRef.current + PAGE_SIZE;
     setIsLoadingCopyFrom(true);
     try {
-      const more = await getInventoryTransferRequestList(nextSkip, PAGE_SIZE + 1, itrSearchRef.current);
-      const pageData = more.slice(0, PAGE_SIZE);
+      const result = await getInventoryTransferRequestList(nextSkip, PAGE_SIZE, itrSearchRef.current);
       setItrData(prev => {
         const existingDocNums = new Set(prev.map((d: any) => d.DocNum));
-        const unique = pageData.filter((d: any) => !existingDocNums.has(d.DocNum));
+        const unique = result.value.filter((d: any) => !existingDocNums.has(d.DocNum));
         return [...prev, ...unique];
       });
       itrSkipRef.current = nextSkip;
       setItrSkip(nextSkip);
-      setItrHasMore(more.length > PAGE_SIZE);
+      setItrHasMore(result.hasMore);
     } catch (err: any) {
       toast.error(err.message || "Failed to load more.");
     } finally {
@@ -239,9 +238,9 @@ export function InvDocumentLayout<T extends FieldValues>({
     setItrSkip(0);
     setIsLoadingCopyFrom(true);
     try {
-      const data = await getInventoryTransferRequestList(0, PAGE_SIZE + 1, value);
-      setItrData(data.slice(0, PAGE_SIZE));
-      setItrHasMore(data.length > PAGE_SIZE);
+      const result = await getInventoryTransferRequestList(0, PAGE_SIZE, value);
+      setItrData(result.value);
+      setItrHasMore(result.hasMore);
     } catch (err: any) {
       toast.error(err.message || "Failed to search.");
     } finally {

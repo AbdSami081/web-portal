@@ -338,9 +338,9 @@ export function DocumentLineRow({ index, line }: Props) {
           <Input
             className="h-6 w-full text-center bg-neutral-100"
             value={
-              !draftLine.UoMCode || draftLine.UoMCode === "-1" || getUoMName(draftLine.UoMCode) === "Manual"
+              !draftLine.UoMCode || draftLine.UoMCode === "-1"
                 ? ""
-                : getUoMName(draftLine.UoMCode) || ""
+                : draftLine.MeasureUnit || getUoMName(draftLine.UoMCode) || ""
             }
             disabled
             readOnly

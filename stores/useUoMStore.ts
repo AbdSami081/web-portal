@@ -46,18 +46,17 @@ export const useUoMStore = create<UoMStore>((set, get) => ({
     if (code === undefined || code === null) return "";
 
     const state = get();
-    const codeStr = String(code);
-    if (!codeStr.trim() || codeStr === "-1") return "";
+    const codeStr = String(code).trim();
+    if (!codeStr || codeStr === "-1" || codeStr.toLowerCase() === "manual") return "";
 
-    const uom = state.uoms.find(u => {
-      const absEntryStr = String(u.AbsEntry);
-      const codeMatch = u.Code === codeStr || u.Code === code;
-      const absEntryMatch = absEntryStr === codeStr || u.AbsEntry === code;
-      const nameMatch = u.Name === codeStr;
-      return codeMatch || absEntryMatch || nameMatch;
-    });
+    let uom = state.uoms.find(u => u.Code === codeStr || (u.Code && String(u.Code).trim() === codeStr));
+
+    if (!uom) {
+      uom = state.uoms.find(u => String(u.AbsEntry) === codeStr || u.AbsEntry === code);
+    }
 
     const result = uom?.Name?.trim() || "";
+    if (result.toLowerCase() === "manual") return "";
     
     if (!uom && state.uoms.length > 0) {
       console.warn(`[UoM] No match found for code: ${code}`);

@@ -55,7 +55,12 @@ export const getInventoryTransferRequestList = async (
     if (search) params.set("search", search);
     const response = await apiClient.get(`api/Inventory/InventoryTransferRequestList?${params.toString()}`);
     const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-    return data.value || [];
+    const list = data.value || [];
+    const hasMore = !!data["@odata.nextLink"] || list.length >= top;
+    return {
+        value: list,
+        hasMore: hasMore
+    };
 };
 
 export const patchInventoryTransferRequest = async (docEntry: number, payload: any) => {

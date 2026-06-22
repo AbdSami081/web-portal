@@ -164,6 +164,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
           UoMCode: uomCode,
           unitMsr,
+          MeasureUnit: line.MeasureUnit || "",
           LineNum: line.LineNum ?? idx,
           BaseType: line.BaseType ?? (isCopy ? type : undefined),
           BaseEntry: line.BaseEntry ?? (isCopy ? doc.DocEntry : undefined),
