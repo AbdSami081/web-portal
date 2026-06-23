@@ -200,7 +200,8 @@ export function InvDocumentLayout<T extends FieldValues>({
     setItrSearch("");
     try {
       const result = await getInventoryTransferRequestList(0, PAGE_SIZE, "");
-      setItrData(result.value);
+      const filterdData = result.value.filter((d: any) => d.FromWarehouse == store.fromWarehouse);
+      setItrData(filterdData);
       setItrHasMore(result.hasMore);
       setCopyFromOpen(true);
     } catch (err: any) {
