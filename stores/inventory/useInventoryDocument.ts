@@ -160,7 +160,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           Dscription: line.ItemDescription || line.Dscription || line.ItemName || "",
           FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || doc.FromWarehouse || "",
           WhsCode: line.WarehouseCode || line.WhsCode || doc.ToWarehouse || "",
-          Quantity: Number(line.Quantity) || 0,
+          Quantity: isCopy ? Number(line.RemainingOpenQuantity) : Number(line.Quantity) || 0,
           ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
           UoMCode: uomCode,
           unitMsr,

@@ -24,6 +24,7 @@ export interface InventoryDocumentLine {
     UoMCode?: string;
     unitMsr?: string;
     MeasureUnit?: string;
+    RemainingOpenQuantity?: number;
     QtyInWhs?: any[];
     OcrCode2?: string;
     OcrCode3?: string;
