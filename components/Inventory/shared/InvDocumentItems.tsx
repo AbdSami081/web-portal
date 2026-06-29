@@ -72,7 +72,7 @@ export function InvDocumentItems() {
         LineTotal: quantity * price,
         UoMCode: uomCode,
         unitMsr: uomCode,
-        MeasureUnit: getUoMName(uomCode) || "",
+        MeasureUnit: item.MeasureUnit || getUoMName(uomCode) || "",
         PlPaWght: 0,
         U_LastPrice: price,
         OcrCode2: "",
