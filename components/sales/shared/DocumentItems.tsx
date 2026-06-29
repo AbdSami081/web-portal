@@ -146,7 +146,7 @@ export function DocumentItems() {
         TaxRate: taxRate,
         WarehouseCode: defaultWhsLine,
         UoMCode: uomVal,
-        MeasureUnit: getUoMName(uomVal) || "",
+        MeasureUnit: item.MeasureUnit || getUoMName(uomVal) || "",
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,

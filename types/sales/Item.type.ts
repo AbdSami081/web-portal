@@ -19,6 +19,7 @@ export type Item = {
   VatGourpSa?: string;
   VatGourpPu?: string; 
   Category?: string; 
+  MeasureUnit?: string;
   Prices?: {
     PriceList: number;
     PriceAmount: number; 
@@ -32,6 +33,7 @@ export type ItemGroup = {
   ItmsGrpCod: number;
   ItmsGrpNam: string;
 };
+
 export type UserDefinedField = {
   Name: string;
   Type: string;
