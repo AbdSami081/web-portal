@@ -23,6 +23,10 @@ import {
 import { getModules } from "@/api+/sap/authorization/authorizationService";
 import { SERVER_MENUS } from "@/lib/menu-data";
 import { toast } from "sonner";
+import { ConfirmationModal } from "@/modals/ConfirmationModal";
+
+const toDocType = (value?: string): "Layout" | "Report" =>
+  String(value ?? "").trim().toLowerCase() === "layout" ? "Layout" : "Report";
 
 export default function ReportManagementPage() {
   const { user } = useAuth(); 
@@ -40,6 +44,7 @@ export default function ReportManagementPage() {
     id: string; 
     title: string;
     type: "Layout" | "Report";
+    docType: "Layout" | "Report";
     isDefault?: boolean;
     objectCode?: string;
   } | null>(null);
@@ -47,6 +52,8 @@ export default function ReportManagementPage() {
   const [modalObjectCode, setModalObjectCode] = useState<string>("");
   const [modalDocType, setModalDocType] = useState<"Layout" | "Report">("Layout");
   const [modalIsDefault, setModalIsDefault] = useState<boolean>(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
+  const [deleting, setDeleting] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchModules() {
@@ -96,7 +103,9 @@ export default function ReportManagementPage() {
         const data = await getReports(user.empId);
         
         if (Array.isArray(data)) {
-          const filteredReports = data.filter(item => item.U_DocType === "Report");
+          const filteredReports = data.filter(
+            item => String(item.U_DocType ?? "").toLowerCase() === "report"
+          );
           setReports(filteredReports);
         } else {
           setReports([]);
@@ -132,6 +141,20 @@ export default function ReportManagementPage() {
 
     fetchImportedLayouts();
   }, [selectedObjectCode, activeTab]);
+
+  const refreshCurrentList = async () => {
+    if (activeTab === "layout" && selectedObjectCode) {
+      const data = await getLayouts(selectedObjectCode);
+      setLayouts(Array.isArray(data) ? data : []);
+    } else if (activeTab === "report" && user?.empId) {
+      const data = await getReports(user.empId);
+      if (Array.isArray(data)) {
+        setReports(data.filter(item => String(item.U_DocType ?? "").toLowerCase() === "report"));
+      } else {
+        setReports([]);
+      }
+    }
+  };
 
   const handleUpdateComponent = async () => {
     if (!editingItem) return;
@@ -179,17 +202,7 @@ export default function ReportManagementPage() {
       toast.success("Configuration Updated");
       setIsModalOpen(false);
 
-      if (activeTab === "layout" && selectedObjectCode) {
-        const data = await getLayouts(selectedObjectCode);
-        setLayouts(Array.isArray(data) ? data : []);
-      } else if (activeTab === "report" && user?.empId) {
-        const data = await getReports(user.empId);
-        if (Array.isArray(data)) {
-          setReports(data.filter(item => item.U_DocType === "Report"));
-        } else {
-          setReports([]);
-        }
-      }
+      await refreshCurrentList();
 
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update component settings.");
@@ -198,21 +211,26 @@ export default function ReportManagementPage() {
     }
   };
 
-  const handleDelete = async (itemCode: string, type: "Layout" | "Report") => {
-    if (!itemCode) return;
-    if (!confirm(`Are you sure you want to permanently delete this ${type}?`)) return;
-    
-    try {
-      await deleteComponent(itemCode, type);
+  const handleDelete = async () => {
+    if (!editingItem) return;
 
-      if (type === "Layout") {
-        setLayouts(prev => prev.filter(l => l.Code !== itemCode && l.U_ReportCode !== itemCode));
-      } else {
-        setReports(prev => prev.filter(r => r.Code !== itemCode && r.U_ReportCode !== itemCode));
-      }
+    const itemCode = editingItem.id;
+    const deleteType = editingItem.docType;
+    if (!itemCode) return;
+
+    try {
+      setDeleting(true);
+      await deleteComponent(itemCode, deleteType, user?.companyDB || "");
+      setDeleteConfirmOpen(false);
       setIsModalOpen(false);
+      setEditingItem(null);
+      toast.success(`${deleteType} deleted successfully`);
+      await refreshCurrentList();
     } catch (error) {
       console.error("Failed to delete item:", error);
+      toast.error(error instanceof Error ? error.message : `Failed to delete ${deleteType}.`);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -284,7 +302,7 @@ export default function ReportManagementPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {layouts.map((layout, index) => {
-                  const itemUniqueId = layout.Code || layout.U_ReportCode || `layout-${index}`;
+                  const itemUniqueId = String(layout.Code ?? layout.U_ReportCode ?? `layout-${index}`);
                   const isItemDefault = layout.U_IsDefault === "Y";
 
                   return (
@@ -305,9 +323,10 @@ export default function ReportManagementPage() {
                       <button
                         onClick={() => {
                           setEditingItem({ 
-                            id: String(itemUniqueId), 
+                            id: itemUniqueId, 
                             title: layout.U_FileName || layout.Name || "Untitled Layout", 
-                            type: "Layout", 
+                            type: "Layout",
+                            docType: "Layout",
                             isDefault: isItemDefault,
                             objectCode: selectedObjectCode
                           });
@@ -337,7 +356,7 @@ export default function ReportManagementPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {reports.map((report, index) => {
-                  const reportUniqueId = report.Code || report.U_ReportCode || `report-${index}`;
+                  const reportUniqueId = String(report.Code ?? report.U_ReportCode ?? `report-${index}`);
 
                   return (
                     <div key={reportUniqueId} className="bg-white border border-zinc-200 rounded-lg p-4 flex items-center justify-between hover:border-zinc-300 shadow-sm transition-all">
@@ -351,9 +370,10 @@ export default function ReportManagementPage() {
                         onClick={() => {
                           const currentObjCode = (report as any).U_ObjectCode || "";
                           setEditingItem({ 
-                            id: String(reportUniqueId), 
+                            id: reportUniqueId, 
                             title: report.U_FileName || report.Name || "Untitled Report", 
                             type: "Report",
+                            docType: toDocType(report.U_DocType as string),
                             isDefault: false,
                             objectCode: currentObjCode
                           });
@@ -450,10 +470,11 @@ export default function ReportManagementPage() {
 
                 <div className="border-t border-zinc-100 pt-3">
                   <button
-                    onClick={() => handleDelete(editingItem.id, editingItem.type)}
-                    className="w-full flex items-center justify-center gap-2 text-xs font-medium h-9 px-4 rounded-md bg-white text-red-600 hover:bg-red-50 border border-red-200 transition-all"
+                    onClick={() => setDeleteConfirmOpen(true)}
+                    disabled={deleting}
+                    className="w-full flex items-center justify-center gap-2 text-xs font-medium h-9 px-4 rounded-md bg-white text-red-600 hover:bg-red-50 border border-red-200 transition-all disabled:opacity-50"
                   >
-                    <Trash2 size={14} /> Delete {editingItem.type}
+                    <Trash2 size={14} /> Delete {editingItem.docType}
                   </button>
                 </div>
               </div>
@@ -478,6 +499,19 @@ export default function ReportManagementPage() {
 
             </div>
           </div>
+        )}
+
+        {editingItem && (
+          <ConfirmationModal
+            open={deleteConfirmOpen}
+            onOpenChange={setDeleteConfirmOpen}
+            title={`Delete ${editingItem.docType}?`}
+            description={`Are you sure you want to permanently delete "${editingItem.title}"? This action cannot be undone.`}
+            cancelText="Cancel"
+            confirmText={deleting ? "Deleting..." : "Delete"}
+            onConfirm={handleDelete}
+            onCancel={() => setDeleteConfirmOpen(false)}
+          />
         )}
 
       </div>

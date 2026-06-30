@@ -132,7 +132,14 @@ export const updateComponent = async (payload: any) => {
   return response.data;
 };
 
-export const deleteComponent = async (code: string, type: string) => {
-  const response = await apiClient.delete(`api/ReportingAPI/DeleteReportLayout?code=${encodeURIComponent(code)}&type=${encodeURIComponent(type)}`);
+export const deleteComponent = async (code: string, type: string, companyDB?: string) => {
+  const params = new URLSearchParams({
+    code,
+    type,
+  });
+  if (companyDB) {
+    params.append("companyDB", companyDB);
+  }
+  const response = await apiClient.delete(`api/ReportingAPI/DeleteReportLayout?${params.toString()}`);
   return response.data;
 };

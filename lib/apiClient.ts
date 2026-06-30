@@ -3,12 +3,25 @@ import { getAccessToken } from "@/api+/sap/auth/authService";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 
+const resolveApiBaseUrl = () => {
+    if (typeof window !== "undefined") {
+        return "/";
+    }
+    const url = process.env.NEXT_PUBLIC_API_URL ?? "";
+    return url.endsWith("/") ? url : `${url}/`;
+};
+
+const resolveReportingApiBaseUrl = () => {
+    const url = process.env.NEXT_PUBLIC_ReportingApi_URL ?? "";
+    return url.endsWith("/") ? url : `${url}/`;
+};
+
 const apiClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    baseURL: resolveApiBaseUrl(),
 });
 
 const reportingApiClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_ReportingApi_URL,
+    baseURL: resolveReportingApiBaseUrl(),
 });
 
 const requestInterceptor = (config: any) => {
@@ -48,7 +61,6 @@ const errorInterceptor = (error: any) => {
             console.error('API Setup Error:', error.message);
         }
 
-        // Transform message for the UI
         error.message = getSapErrorMessage(error);
     } else {
         console.error('Non-Axios Error:', error);
@@ -56,10 +68,10 @@ const errorInterceptor = (error: any) => {
     return Promise.reject(error);
 };
 
-// Apply interceptors to both clients
 apiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
 apiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
 
+reportingApiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
 reportingApiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
 
 export default apiClient;
