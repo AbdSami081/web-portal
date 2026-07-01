@@ -12,6 +12,10 @@ const resolveApiBaseUrl = () => {
 };
 
 const resolveReportingApiBaseUrl = () => {
+    // Browser: same-origin proxy via next.config rewrites (/reporting/* -> reporting server)
+    if (typeof window !== "undefined") {
+        return "/reporting/";
+    }
     const url = process.env.NEXT_PUBLIC_ReportingApi_URL ?? "";
     return url.endsWith("/") ? url : `${url}/`;
 };

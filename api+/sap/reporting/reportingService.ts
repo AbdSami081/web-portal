@@ -53,7 +53,9 @@ export interface ReportAccessPayload {
 }
 
 export const getReportParameters = async (filePath: string) => {
-  const response = await reportingApiClient.get(`/api/reports/GetReportParameters?filePath=${encodeURIComponent(filePath)}`);
+  const response = await reportingApiClient.get(
+    `api/reports/GetReportParameters?filePath=${encodeURIComponent(filePath)}`
+  );
   return response.data;
 };
 
@@ -116,7 +118,7 @@ export const getLayouts = async (objectCode: string | number): Promise<ReportDat
 
 export const downloadReport = async (payload: any) => {
   const response = await reportingApiClient.post(
-    "/api/reports/render",
+    "api/reports/render",
     payload,
     { responseType: "blob" }
   );
