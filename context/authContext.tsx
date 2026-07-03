@@ -90,11 +90,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .catch(err => {
             console.error("Failed to load permissions from DB", err);
             const isSuperAdmin = decoded.isSuperAdmin === "True" || decoded.issuperadmin === "True" || decoded.isSuperAdmin === true;
+           const fallbackClaim = decoded.AllowedModules || decoded.allowedModules || "";
+            const fallbackModules = fallbackClaim
+              ? fallbackClaim.split(',').map((id: string) => id.trim().toLowerCase()).filter((id: string) => id !== "")
+              : [];
             setUser({
               empId: decoded.sub || decoded.nameid,
               userName: decoded.unique_name || decoded.name,
               role: decoded.role,
-              allowedModules: [],
+              allowedModules: fallbackModules,
               isSuperAdmin: isSuperAdmin,
               companyDB: companyDB || "SBODemoAU"
             });

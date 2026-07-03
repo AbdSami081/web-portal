@@ -362,7 +362,36 @@ export default function AuthorizationPage() {
     );
   };
 
-  if (user?.role?.toLowerCase() !== "admin" && !user?.isSuperAdmin) {
+  const hasAdminAccess = useMemo(() => {
+    if (!user) return false;
+    if (user.isSuperAdmin === true || user.role?.toLowerCase() === "admin") return true;
+
+    const userAllowedLower = (user.allowedModules || []).map((m: string) => m.toLowerCase());
+    if (userAllowedLower.includes("all")) return true;
+
+    let moduleAccessItem: MenuItem | undefined;
+    let parentItem: MenuItem | undefined;
+
+    for (const parent of SERVER_MENUS) {
+      const foundChild = parent.items?.find(child => child.url === "/dashboard/authorization");
+      if (foundChild) {
+        moduleAccessItem = foundChild;
+        parentItem = parent;
+        break;
+      }
+    }
+
+    if (moduleAccessItem && moduleAccessItem.id && userAllowedLower.includes(moduleAccessItem.id.toLowerCase())) {
+      return true;
+    }
+    if (parentItem && parentItem.id && userAllowedLower.includes(parentItem.id.toLowerCase())) {
+      return true;
+    }
+
+    return false;
+  }, [user]);
+
+  if (!hasAdminAccess) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <div className="p-4 bg-orange-50 border border-orange-100 rounded-full text-orange-600">

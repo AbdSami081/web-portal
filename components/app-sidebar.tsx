@@ -32,11 +32,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       if (accessToken && user) {
         try {
           const filtered = await getFilteredMenu(accessToken, user.allowedModules);
-          
+
+          const userAllowedLower = (user.allowedModules || []).map((m: string) => m.toLowerCase());
+
           const mapped = filtered
             .filter(item => {
               if (item.url === "#" && item.title === "Administration") {
-                return user.isSuperAdmin;
+                if (user.isSuperAdmin) return true;
+                if (userAllowedLower.includes("all")) return true;
+                if (item.id && userAllowedLower.includes(item.id.toLowerCase())) return true;
+                return item.items?.some(
+                  (child: any) => child.id && userAllowedLower.includes(child.id.toLowerCase())
+                ) ?? false;
               }
               return true;
             })

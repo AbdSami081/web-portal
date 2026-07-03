@@ -46,16 +46,24 @@ export function RouteGuard({ children }: { children: ReactNode }) {
         const matches = flatMenus.filter(item => pathname.startsWith(item.url));
         const bestMatch = matches.sort((a, b) => b.url.length - a.url.length)[0];
 
-        if (pathname.includes("/dashboard/authorization")) {
-            setIsAuthorized(user.isSuperAdmin === true);
+        if (user.isSuperAdmin === true || isAllAllowed) {
+            setIsAuthorized(true);
             return;
         }
-
 
         if (!bestMatch) {
             setIsAuthorized(true);
         } else {
-            setIsAuthorized(allowed.includes(bestMatch.id.toLowerCase()));
+            let isAllowed = allowed.includes(bestMatch.id.toLowerCase());
+            if (!isAllowed) {
+                const parent = SERVER_MENUS.find(parentItem => 
+                    parentItem.items?.some(child => child.id === bestMatch.id)
+                );
+                if (parent && parent.id) {
+                    isAllowed = allowed.includes(parent.id.toLowerCase());
+                }
+            }
+            setIsAuthorized(isAllowed);
         }
     }, [pathname, user]);
 

@@ -35,7 +35,7 @@ export async function getFilteredMenu(accessToken: string, allowedIds?: string[]
         return SERVER_MENUS;
     }
 
-    const alwaysShowBranches = new Set(["reporting", "manage reports"]);
+    const alwaysShowBranches = new Set(["reporting", "manage reports", "administration"]);
 
     const filterRecursive = (items: MenuItem[]): MenuItem[] => {
         return items
