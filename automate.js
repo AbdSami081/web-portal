@@ -77,6 +77,13 @@ async function automate() {
         } else {
             console.warn('⚠️  Warning: web.config was not found in the root directory!');
         }
+
+        // --- CREATE LOGS FOLDER (required by web.config stdoutLogFile) ---
+        // IIS HttpPlatformHandler will fail to start if this folder does not exist
+        const logsDir = path.join(TEMP_DIR, 'logs');
+        fs.ensureDirSync(logsDir);
+        fs.writeFileSync(path.join(logsDir, '.gitkeep'), ''); // keep folder in zip
+        console.log('📁 Created logs/ folder for IIS stdout logging.');
         
 
         // 5. Create ZIP
@@ -106,7 +113,8 @@ function obfuscateDirectory(dir) {
         const filePath = path.join(dir, file);
         if (fs.statSync(filePath).isDirectory()) {
             if (file !== 'node_modules') obfuscateDirectory(filePath);
-        } else if (file.endsWith('.js')) {
+        } else if (file.endsWith('.js') && file !== 'server.js') {
+            // ⚠️ server.js is excluded: obfuscating it breaks Next.js standalone startup on IIS
             const originalCode = fs.readFileSync(filePath, 'utf8');
             const result = JavaScriptObfuscator.obfuscate(originalCode, {
                 compact: true,
