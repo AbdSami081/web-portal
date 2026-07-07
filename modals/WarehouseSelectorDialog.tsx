@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Warehouse } from "@/types/warehouse/warehouse";
-import { getwarehouses } from "@/api+/sap/master-data/warehouses";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 
 interface Props {
   open: boolean;
@@ -20,15 +20,14 @@ interface Props {
 }
 
 export function WarehouseSelectorDialog({ open, onClose, onSelect, itemCode, itemQtyInWhs }: Props) {
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const { loadWarehouses, rawWarehouses } = useMasterDataStore();
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
 
   const fetchWarehousesData = async () => {
     setLoading(true);
     try {
-      const res = await getwarehouses();
-      setWarehouses(res);
+      await loadWarehouses();
     } catch (error) {
       console.error("Failed to fetch warehouses", error);
     } finally {
@@ -53,11 +52,11 @@ export function WarehouseSelectorDialog({ open, onClose, onSelect, itemCode, ite
   };
 
   const filteredWarehouses = useMemo(() => {
-    return warehouses.filter((w) =>
+    return rawWarehouses.filter((w) =>
       w.WhsCode.toLowerCase().includes(search.toLowerCase()) ||
       w.WhsName.toLowerCase().includes(search.toLowerCase())
     );
-  }, [warehouses, search]);
+  }, [rawWarehouses, search]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

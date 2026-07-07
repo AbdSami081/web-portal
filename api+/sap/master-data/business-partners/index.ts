@@ -24,18 +24,14 @@
 //     return json({ businessPartners: [] }); // Return an empty array on error
 //   }
 // }
-import apiClient from "@/lib/apiClient";
+import { cachedGet } from "@/lib/apiClient";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 
 export const getCustomers = async (search = "", skip = 0, top = 20, cardType = ""): Promise<BusinessPartner[]> => {
-  const res = await apiClient.get(`api/Master/GetCustomers`, {
-    params: {
-      search: search,
-      skip: skip,
-      top: top,
-      cardType: cardType
-    },
+  const data = await cachedGet<BusinessPartner[]>(`api/Master/GetCustomers`, {
+    params: { search, skip, top, cardType },
+    timeout: 12000,
   });
 
-  return Array.isArray(res.data) ? res.data : [];
+  return Array.isArray(data) ? data : [];
 };

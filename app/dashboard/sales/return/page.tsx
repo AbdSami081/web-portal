@@ -13,6 +13,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { postSalesReturn, patchSalesReturn } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
+import { buildSalesDocumentPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 
@@ -36,7 +37,7 @@ export default function ReturnPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.SalesReturn) {
       const patchPayload = {
@@ -66,23 +67,16 @@ export default function ReturnPage() {
       return;
     }
 
-    const payload = {
-      ...data,
-      DocumentLines: lines.map((line) => {
-        const lineData: any = { ...line };
-
-        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.SalesReturn) {
-          lineData.BaseType = lastLoadedDocType;
-          lineData.BaseEntry = DocEntry;
-          lineData.BaseLine = line.LineNum;
-        } else {
-          lineData.BaseType = -1;
-          lineData.BaseEntry = null;
-          lineData.BaseLine = null;
-        }
-        return lineData;
-      }),
-    };
+    const payload = buildSalesDocumentPayload({
+      data,
+      lines,
+      docEntry: DocEntry,
+      lastLoadedDocType,
+      targetDocType: DocumentType.SalesReturn,
+      discountPercent,
+      freight,
+      additionalExpenses,
+    });
 
     try {
       const response = await postSalesReturn(payload);

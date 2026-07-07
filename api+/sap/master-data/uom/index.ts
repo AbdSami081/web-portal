@@ -1,10 +1,8 @@
-import apiClient from "@/lib/apiClient";
+import { cachedGet } from "@/lib/apiClient";
 
 export async function getUOMs(): Promise<{ AbsEntry: number; Code: string; Name: string }[]> {
   try {
-    const res = await apiClient.get(`api/Master/GetUnitOfMeasurments`);
-
-    const data = res?.data;
+    const data = await cachedGet<any>(`api/Master/GetUnitOfMeasurments`, { timeout: 10000 });
 
     if (Array.isArray(data)) return data;
     if (Array.isArray(data?.value)) return data.value;

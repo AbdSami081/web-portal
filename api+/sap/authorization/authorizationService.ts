@@ -1,4 +1,6 @@
-import apiClient from "@/lib/apiClient";
+import apiClient, { cachedGet } from "@/lib/apiClient";
+import { dedupeRequest } from "@/lib/api/requestDedupe";
+import { getCachedPermissions, setCachedPermissions } from "@/lib/api/permissionsCache";
 
 export interface OhemUser {
   empId: string;
@@ -20,11 +22,11 @@ export interface UserAccessSavePayload {
 
 export const getUsers = async (companyDB: string): Promise<OhemUser[]> => {
   try {
-    const response = await apiClient.get<{ success: boolean; data: OhemUser[] }>(
+    const response = await cachedGet<{ success: boolean; data: OhemUser[] }>(
       `api/Authorization/users`,
-      { params: { companyDB } }
+      { params: { companyDB }, timeout: 10000 }
     );
-    return response.data.data ?? [];
+    return response.data ?? [];
   } catch (error) {
     console.error("Failed to fetch users from SAP API:", error);
     return [
@@ -38,11 +40,20 @@ export const getUserAccess = async (
   empId: string,
   companyDB: string
 ): Promise<UserAccessEntry[]> => {
-  const response = await apiClient.get<{ success: boolean; data: UserAccessEntry[] }>(
-    `api/Authorization/user-access/${empId}`,
-    { params: { companyDB } }
-  );
-  return response.data.data ?? [];
+  const cached = getCachedPermissions(empId, companyDB);
+  if (cached) return cached;
+
+  const cacheKey = `user-access:${empId}:${companyDB}`;
+
+  return dedupeRequest(cacheKey, async () => {
+    const response = await apiClient.get<{ success: boolean; data: UserAccessEntry[] }>(
+      `api/Authorization/user-access/${empId}`,
+      { params: { companyDB }, timeout: 10000 }
+    );
+    const data = response.data.data ?? [];
+    setCachedPermissions(empId, companyDB, data);
+    return data;
+  });
 };
 
 export const saveUserAccess = async (payload: UserAccessSavePayload): Promise<void> => {
@@ -62,9 +73,9 @@ export interface WebPortalConfigEntry {
 }
 
 export const getModules = async (companyDB: string): Promise<WebPortalConfigEntry[]> => {
-  const response = await apiClient.get<{ success: boolean; data: WebPortalConfigEntry[] }>(
+  const response = await cachedGet<{ success: boolean; data: WebPortalConfigEntry[] }>(
     `api/Authorization/GetModules`,
-    { params: { companyDB } }
+    { params: { companyDB }, timeout: 10000 }
   );
-  return response.data.data ?? [];
+  return response.data ?? [];
 };

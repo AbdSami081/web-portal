@@ -71,11 +71,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const dbParams = {
-        companyDB: selectedDb,
-      };
-
-      await login(username, password, dbParams);
+      await login(username, password, { companyDB: selectedDb });
       toast.success("Logged in successfully!");
     } catch (err: any) {
       toast.error(err.message || "Login failed");

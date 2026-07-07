@@ -38,17 +38,14 @@
 //   return json({ items });
 // }
 
-import apiClient from "@/lib/apiClient";
+import apiClient, { cachedGet } from "@/lib/apiClient";
 import { Item } from "@/types/sales/Item.type";
 
 export const getItemsList = async (search = "", skip = 0, top = 10): Promise<Item[]> => {
-  const res = await apiClient.get(`api/Master/GetItems`, {
-    params: {
-      search: search,
-      skip: skip,
-      top: top
-    },
+  const data = await cachedGet<Item[]>(`api/Master/GetItems`, {
+    params: { search, skip, top },
+    timeout: 12000,
   });
 
-  return Array.isArray(res.data) ? res.data : [];
+  return Array.isArray(data) ? data : [];
 };

@@ -4,14 +4,14 @@ import { useAuth } from "@/context/authContext";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import { SERVER_MENUS } from "@/lib/menu-data";
-import { ShieldAlert, ArrowLeft, Home } from "lucide-react";
+import { ShieldAlert, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import logoImage from "@/public/assets/logo.png";
 import Image from "next/image";
 
 export function RouteGuard({ children }: { children: ReactNode }) {
-    const { user } = useAuth();
+    const { user, isPermissionsLoading } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
@@ -19,12 +19,12 @@ export function RouteGuard({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!user) return;
 
-        if (!user.allowedModules) {
-            setIsAuthorized(false);
+        if (isPermissionsLoading && (!user.allowedModules || user.allowedModules.length === 0)) {
+            setIsAuthorized(null);
             return;
         }
 
-        const allowed = user.allowedModules.map(m => m.toLowerCase());
+        const allowed = (user.allowedModules || []).map(m => m.toLowerCase());
         const isAllAllowed = allowed.includes("all");
 
         if (isAllAllowed) {
@@ -65,9 +65,17 @@ export function RouteGuard({ children }: { children: ReactNode }) {
             }
             setIsAuthorized(isAllowed);
         }
-    }, [pathname, user]);
+    }, [pathname, user, isPermissionsLoading]);
 
-    if (isAuthorized === null) return null;
+    if (!user) return null;
+
+    if (isAuthorized === null) {
+        return (
+            <div className="flex min-h-[40vh] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     if (!isAuthorized) {
         if (pathname === "/dashboard") {

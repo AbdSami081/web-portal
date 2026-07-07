@@ -1,21 +1,19 @@
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { Item } from "@/types/sales/Item.type";
-import { VatGroup } from "@/types/sales/VatGroups.type";
 import { UoM } from "@/types/sales/UoM.type";
 
 import { create } from "zustand";
 import { Warehouse } from "@/types/warehouse.type";
+import { Warehouse as RawWarehouse } from "@/types/warehouse/warehouse";
 import { getFreightTypes, fetchFreightWithCharges } from "@/api+/sap/master-data/freight";
-import { getVatGroups } from "@/api+/sap/master-data/tax-codes";
 import { getItemsList } from "@/api+/sap/master-data/items";
-import { getCustomers } from "@/api+/sap/master-data/business-partners";
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
-import { getUOMs } from "@/api+/sap/master-data/uom";
 
 interface MasterDataStore {
   items: Record<number, Item[]>;
   customers: BusinessPartner[];
   warehouses: Warehouse[];
+  rawWarehouses: RawWarehouse[];
   priceLists: [];
   uoms: UoM[];
   freightTypes: any[];
@@ -23,10 +21,13 @@ interface MasterDataStore {
   itemSearch: string;
   itemLoading: boolean;
   masterDataLoaded: boolean;
+  warehousesLoaded: boolean;
   currentItemPage: number;
 
+  loadDocumentEssentials: (freightCategory?: string) => Promise<void>;
   loadMasterData: (cardType?: string, freightCategory?: string) => Promise<void>;
   loadExternalMasterData: (category?: string) => Promise<void>;
+  loadWarehouses: () => Promise<RawWarehouse[]>;
   loadItemPage: (page: number) => Promise<void>;
   loadMoreItemPages: () => Promise<void>;
   setItemSearch: (value: string) => void;
@@ -38,6 +39,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   items: {},
   customers: [],
   warehouses: [],
+  rawWarehouses: [],
   priceLists: [],
   uoms: [],
   freightTypes: [],
@@ -45,6 +47,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   itemSearch: "",
   itemLoading: false,
   masterDataLoaded: false,
+  warehousesLoaded: false,
   currentItemPage: 1,
 
   async loadExternalMasterData(category = "") {
@@ -60,45 +63,57 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
     set(updates);
   },
 
-  async loadMasterData(cardType = "", freightCategory = "") {
-    if (get().masterDataLoaded && get().warehouses.length > 0) return;
+  async loadWarehouses() {
+    if (get().warehousesLoaded && get().rawWarehouses.length > 0) {
+      return get().rawWarehouses;
+    }
+
+    const rawWarehouses = await getwarehouses();
+    const warehousesMap = new Map<string, Warehouse>();
+
+    for (const w of rawWarehouses) {
+      const code = w.WhsCode;
+      if (code && !warehousesMap.has(code)) {
+        warehousesMap.set(code, {
+          WarehouseCode: code,
+          WarehouseName: w.WhsName,
+        });
+      }
+    }
+
+    set({
+      rawWarehouses,
+      warehouses: Array.from(warehousesMap.values()),
+      warehousesLoaded: true,
+    });
+
+    return rawWarehouses;
+  },
+
+  async loadDocumentEssentials(freightCategory = "O") {
+    if (get().masterDataLoaded) return;
+
     set({ itemLoading: true });
     try {
-      const [items, customers, rawWarehouses, uomData] = await Promise.all([
-        getItemsList("", 0, 20),
-        getCustomers("", 0, 20, cardType),
-        getwarehouses(),
-        getUOMs(),
+      await Promise.all([
+        get().loadWarehouses(),
+        get().loadExternalMasterData(freightCategory),
       ]);
 
-      const warehousesMap = new Map<string, any>();
-      for (const w of rawWarehouses) {
-        const code = w.WhsCode;
-        if (code && !warehousesMap.has(code)) {
-          warehousesMap.set(code, {
-            WarehouseCode: code,
-            WarehouseName: w.WhsName
-          });
-        }
-      }
-      const warehouses = Array.from(warehousesMap.values());
-
-      await get().loadExternalMasterData(freightCategory);
-
       set({
-        items: { 1: items },
-        customers,
-        warehouses,
-        uoms: uomData,
         masterDataLoaded: true,
-        currentItemPage: 1,
         itemLoading: false,
       });
     } catch (error) {
-      console.error("Failed to load master data", error);
+      console.error("Failed to load document essentials", error);
       set({ itemLoading: false });
     }
   },
+
+  async loadMasterData(_cardType = "", freightCategory = "") {
+    await get().loadDocumentEssentials(freightCategory || "O");
+  },
+
   async loadItemPage(page) {
     set({ itemLoading: true });
     try {
@@ -135,12 +150,15 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
       items: {},
       customers: [],
       warehouses: [],
+      rawWarehouses: [],
       priceLists: [],
       uoms: [],
       freightTypes: [],
       freightsWithCharges: [],
       itemSearch: "",
       itemLoading: false,
+      masterDataLoaded: false,
+      warehousesLoaded: false,
       currentItemPage: 1,
     });
   },

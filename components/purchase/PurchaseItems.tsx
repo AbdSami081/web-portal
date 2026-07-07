@@ -17,12 +17,12 @@ import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 
 export function PurchaseItems() {
   const { lines, addLine } = usePurchaseDocument();
-  const { loadMasterData } = useMasterDataStore();
+  const { loadDocumentEssentials } = useMasterDataStore();
   const [activeTab, setActiveTab] = useState("content");
 
   useEffect(() => {
-    loadMasterData("S", "P");
-  }, [loadMasterData]);
+    loadDocumentEssentials("P");
+  }, [loadDocumentEssentials]);
 
   const handleAddLine = () => {
     addLine({

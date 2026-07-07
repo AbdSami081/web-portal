@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
+import { buildSalesDocumentPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 
 export default function InvoicePage() {
@@ -36,7 +37,7 @@ export default function InvoicePage() {
     DocumentLines: [],
   };
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.ARInvoice) {
       const payload = {
@@ -65,23 +66,16 @@ export default function InvoicePage() {
       return;
     }
 
-    const payload = {
-      ...data,
-      DocumentLines: lines.map((line) => {
-        const lineData: any = { ...line };
-
-        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.ARInvoice) {
-          lineData.BaseType = lastLoadedDocType;
-          lineData.BaseEntry = DocEntry;
-          lineData.BaseLine = line.LineNum;
-        } else {
-          lineData.BaseType = -1;
-          lineData.BaseEntry = null;
-          lineData.BaseLine = null;
-        }
-        return lineData;
-      }),
-    };
+    const payload = buildSalesDocumentPayload({
+      data,
+      lines,
+      docEntry: DocEntry,
+      lastLoadedDocType,
+      targetDocType: DocumentType.ARInvoice,
+      discountPercent,
+      freight,
+      additionalExpenses,
+    });
 
     try {
       const response = await postARInvoice(payload);

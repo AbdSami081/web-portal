@@ -8,7 +8,7 @@ import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { Warehouse } from "@/types/warehouse/warehouse";
-import { getItemsList } from "@/api+/sap/master-data/items";
+import { fetchItemByCode } from "@/lib/sap/helpers/itemCacheHelper";
 import { normalizeInventoryUom } from "@/utils/inventoryUom";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 
@@ -27,9 +27,8 @@ export function InvDocumentLineRow({ index, line }: Props) {
   // Fetch QtyInWhs from Item API if not present on the line (e.g. when loading existing documents)
   useEffect(() => {
     if (!line.QtyInWhs || line.QtyInWhs.length === 0) {
-      getItemsList(line.ItemCode, 0, 1).then((res) => {
-        const item = res.find(i => i.ItemCode === line.ItemCode);
-        if (item && item.QtyInWhs) {
+      fetchItemByCode(line.ItemCode).then((item) => {
+        if (item?.QtyInWhs) {
           const qtyInWhs: any[] = item.QtyInWhs;
           const fromWhs = line.FromWhsCode;
           const whRecord = qtyInWhs.find(

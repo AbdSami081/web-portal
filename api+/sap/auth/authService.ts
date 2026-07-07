@@ -16,24 +16,58 @@ export interface LoginResponse {
   };
 }
 
-export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
-  const AUTH_URL = typeof window !== "undefined"
-    ? "/api/Auth/login"
-    : `${process.env.NEXT_PUBLIC_API_URL}api/Auth/login`;
-  const response = await axios.post<any>(AUTH_URL, payload);
+const resolveAuthUrl = () => {
+  const useProxy = process.env.NEXT_PUBLIC_USE_API_PROXY === "true";
+  if (typeof window !== "undefined") {
+    if (!useProxy && process.env.NEXT_PUBLIC_API_URL) {
+      const base = process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
+      return `${base}/api/Auth/login`;
+    }
+    return "/api/Auth/login";
+  }
+  return `${process.env.NEXT_PUBLIC_API_URL}api/Auth/login`;
+};
 
-  const rawData = response.data;
-  
-  // Safely map values whether the backend returns PascalCase or camelCase
-  return {
-    accessToken: rawData.AccessToken || rawData.accessToken,
-    refreshToken: rawData.RefreshToken || rawData.refreshToken,
-    user: rawData.User || rawData.user
-  };
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetryableLoginError = (error: unknown) => {
+  if (!axios.isAxiosError(error)) return false;
+  if (!error.response) return true;
+  return [502, 503, 504].includes(error.response.status);
+};
+
+export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
+  const AUTH_URL = resolveAuthUrl();
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const response = await axios.post<any>(AUTH_URL, payload, { timeout: 20000 });
+      const rawData = response.data;
+      const rawUser = rawData.User || rawData.user || {};
+
+      return {
+        accessToken: rawData.AccessToken || rawData.accessToken,
+        refreshToken: rawData.RefreshToken || rawData.refreshToken,
+        user: {
+          empId: String(rawUser.empId || rawUser.EmpId || rawUser.EmpID || ""),
+          userName: rawUser.userName || rawUser.UserName || "",
+          role: rawUser.role || rawUser.Role || "",
+        },
+      };
+    } catch (error) {
+      lastError = error;
+      if (attempt === 2 || !isRetryableLoginError(error)) {
+        throw error;
+      }
+      await sleep(600);
+    }
+  }
+
+  throw lastError;
 };
 
 export const saveTokens = (accessToken: string, refreshToken: string) => {
-  // Store in cookies with basic security attributes
   document.cookie = `accessToken=${accessToken}; path=/; samesite=lax`;
   document.cookie = `refreshToken=${refreshToken}; path=/; samesite=lax`;
 };
@@ -41,7 +75,7 @@ export const saveTokens = (accessToken: string, refreshToken: string) => {
 export const clearTokens = () => {
   document.cookie = "accessToken=; path=/; samesite=lax; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
   document.cookie = "refreshToken=; path=/; samesite=lax; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-  localStorage.clear(); // Removing everything from LocalStorage as requested
+  localStorage.clear();
 };
 
 export const getAccessToken = () => {

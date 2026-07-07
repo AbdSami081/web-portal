@@ -15,6 +15,7 @@ import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentServ
 import { postSalesOrder, patchSalesOrder } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { UDFLayout } from "@/components/shared/UDFSheet";
+import { buildSalesDocumentPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 
 export default function OrderPage() {
@@ -37,7 +38,7 @@ export default function OrderPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Order) {
       const payload = {
@@ -66,23 +67,16 @@ export default function OrderPage() {
       return;
     }
 
-    const payload = {
-      ...data,
-      DocumentLines: lines.map((line) => {
-        const lineData: any = { ...line };
-
-        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Order) {
-          lineData.BaseType = lastLoadedDocType;
-          lineData.BaseEntry = DocEntry;
-          lineData.BaseLine = line.LineNum;
-        } else {
-          lineData.BaseType = -1;
-          lineData.BaseEntry = null;
-          lineData.BaseLine = null;
-        }
-        return lineData;
-      }),
-    };
+    const payload = buildSalesDocumentPayload({
+      data,
+      lines,
+      docEntry: DocEntry,
+      lastLoadedDocType,
+      targetDocType: DocumentType.Order,
+      discountPercent,
+      freight,
+      additionalExpenses,
+    });
 
     try {
       const response = await postSalesOrder(payload);

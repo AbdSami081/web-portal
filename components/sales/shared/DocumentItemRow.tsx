@@ -9,7 +9,7 @@ import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
-import { getItemsList } from "@/api+/sap/master-data/items";
+import { fetchItemByCode } from "@/lib/sap/helpers/itemCacheHelper";
 import { distribtionLstOCRCO2, distribtionLstOCRCO3, distribtionLstOCRCO4 } from "@/app/data/cogsData";
 import { taxcCodeGrp, freightTypes, uomOptions, calculateFreightTax, calculateLineTax } from "@/utils/taxCalculations";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
@@ -51,9 +51,8 @@ export function DocumentLineRow({ index, line }: Props) {
   // Fetch QtyInWhs from Item API if not present on the line (e.g. when loading existing documents)
   useEffect(() => {
     if (!line.QtyInWhs || line.QtyInWhs.length === 0) {
-      getItemsList(line.ItemCode, 0, 1).then((res) => {
-        const item = res.find(i => i.ItemCode === line.ItemCode);
-        if (item && item.QtyInWhs) {
+      fetchItemByCode(line.ItemCode).then((item) => {
+        if (item?.QtyInWhs) {
           const qtyInWhs: any[] = item.QtyInWhs;
           const whsCode = line.WarehouseCode || draftLine.WarehouseCode;
           const whRecord = qtyInWhs.find(

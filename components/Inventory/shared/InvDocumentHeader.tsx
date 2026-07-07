@@ -13,7 +13,7 @@ import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { useInvDocConfig } from "./InvDocumentLayout";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { Warehouse } from "@/types/warehouse/warehouse";
-import { getwarehouses } from "@/api+/sap/master-data/warehouses";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
 import { GenericModal } from "@/modals/GenericModal";
@@ -59,6 +59,7 @@ export function InvDocumentHeader() {
     journalMemo,
     setJournalMemo,
   } = useInventoryDocument();
+  const { loadWarehouses } = useMasterDataStore();
   const [warehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
 
   const docNum = watch("DocNum");
@@ -83,7 +84,7 @@ export function InvDocumentHeader() {
   useEffect(() => {
     const fetchWarehouses = async () => {
       try {
-        const res = await getwarehouses();
+        const res = await loadWarehouses();
         setLocalWarehouses(res);
         setWarehouses(res);
       } catch (error) {
@@ -91,7 +92,7 @@ export function InvDocumentHeader() {
       }
     };
     fetchWarehouses();
-  }, [setWarehouses]);
+  }, [loadWarehouses, setWarehouses]);
 
   const fromWhs = watch("FromWarehouse");
   const toWhs = watch("ToWarehouse");

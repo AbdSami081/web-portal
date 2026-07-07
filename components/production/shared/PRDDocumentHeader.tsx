@@ -9,7 +9,7 @@ import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getwarehouses } from "@/api+/sap/master-data/warehouses";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { GenericModal } from "@/modals/GenericModal";
 import { getBOMList, getDisassembleProductionOrders, getIssueForProduction, getProductionOrder, getReceiptFromProduction, getReleasedProductionOrders } from "@/api+/sap/production/productionService";
@@ -88,6 +88,7 @@ export function PRDDocumentHeader() {
   const LIST_PAGE_SIZE = 20;
 
   const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus } = useIFPRDDocument();
+  const { loadWarehouses } = useMasterDataStore();
   const { allowMultiBom: allowMultiBomConfig } = useAuthStore();
   const config = usePRDDocConfig();
   const docType = config.type;
@@ -97,7 +98,7 @@ export function PRDDocumentHeader() {
   useEffect(() => {
     const fetchWarehouses = async () => {
       try {
-        const res = await getwarehouses();
+        const res = await loadWarehouses();
         setWarehouses(res);
       } catch (error) {
         console.error("Failed to fetch warehouses", error);
@@ -106,7 +107,7 @@ export function PRDDocumentHeader() {
     if (warehouses.length === 0) {
       fetchWarehouses();
     }
-  }, [setWarehouses, warehouses.length]);
+  }, [setWarehouses, warehouses.length, loadWarehouses]);
 
   const watchedWhs = watch("Warehouse");
 

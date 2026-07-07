@@ -63,7 +63,7 @@ export function DocumentItems() {
   const {
     freightsWithCharges,
     warehouses,
-    loadMasterData,
+    loadDocumentEssentials,
   } = useMasterDataStore();
 
   const uoms = useUoMStore((state) => state.uoms);
@@ -96,8 +96,8 @@ export function DocumentItems() {
   ] = useState(false);
 
   useEffect(() => {
-    loadMasterData("C", "O");
-  }, [loadMasterData]);
+    loadDocumentEssentials("O");
+  }, [loadDocumentEssentials]);
 
   const handleOnSelectItems = (
     items: Item[]
