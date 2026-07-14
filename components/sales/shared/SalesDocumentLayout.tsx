@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/sales/documentConfig";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotationDocument, getSalesOrderDocument, getSalesDeliveryDocument } from "@/api+/sap/sales/salesService";
@@ -52,6 +52,10 @@ export function SalesDocumentLayout<T extends FieldValues>({
 }: SalesDocumentLayoutProps<T>) {
 
   const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
+  const searchParams = useSearchParams();
+
+  const isDraftFromUrl = Boolean(searchParams.get("docEntry")) && searchParams.get("draft") === "1";
+
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
   React.useEffect(() => {
@@ -295,7 +299,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted shrink-0">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold">{config.title}</h1>
+              <h1 className="text-xl font-semibold flex items-center gap-2">
+                {config.title}
+                {isDraftFromUrl && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200/60 rounded px-1.5 py-0.5">
+                    Draft
+                  </span>
+                )}
+              </h1>
             </div>
             {actions && <div>{actions}</div>}
           </div>

@@ -121,7 +121,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setUnreadCount((c) => c + 1);
 
       toast.info(`New SAP Alert: ${msg.Subject}`, {
-        description: msg.Text,
+        description: msg.Text || "",
         duration: 8000,
         action: {
           label: "View Inbox",

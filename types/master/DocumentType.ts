@@ -11,3 +11,5 @@ export enum DocumentType {
   ProductionOrder = 202,
   SalesReturn = 16
 }
+
+export const DRAFT_OBJECT_TYPES = ["112", "122"];

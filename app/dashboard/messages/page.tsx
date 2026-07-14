@@ -10,13 +10,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Mail, MailOpen, AlertCircle, AlertOctagon, Info, Paperclip, 
-  Trash2, CornerUpRight, Reply, LogOut, CheckCircle, RefreshCw,
-  FolderOpen, ArrowRight, ArrowUpRight
+import {
+  Mail, MailOpen, AlertOctagon, Info, Paperclip,
+  Trash2, CornerUpRight, Reply, CheckCircle, RefreshCw,
+  FolderOpen, ArrowRight, ArrowUpRight, XCircle, Clock
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
+import { DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
+import { buildDocumentUrl, getMenuInfoByObjectCode } from "@/lib/menu-lookup";
 
 export default function MessagesOverviewPage() {
   const { messages: contextMessages, isLoading, refreshNotifications, clearUnread } = useNotifications();
@@ -28,7 +30,6 @@ export default function MessagesOverviewPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const router = useRouter();
 
-  // Sync from context (first page)
   useEffect(() => {
     setMessages(contextMessages);
     setHasMore(contextMessages.length === PAGE_SIZE);
@@ -100,81 +101,98 @@ export default function MessagesOverviewPage() {
     }
   };
 
-  // Parsing message links/documents for display
-  const parsedLinks = useMemo(() => {
-    if (!selectedMessage || !selectedMessage.MessageDataColumns) return [];
-    
-    const links: Array<{
-      index: number;
-      columnName: string;
-      value: string;
-      objectType: string;
-      objectKey: string;
-    }> = [];
+  const getApprovalStatusBadge = (status: string) => {
+    switch (status) {
+      case "arsApproved":
+        return (
+          <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border border-emerald-200/50 flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5">
+            <CheckCircle className="h-3 w-3" /> Approved
+          </Badge>
+        );
+      case "arsRejected":
+        return (
+          <Badge variant="destructive" className="flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5">
+            <XCircle className="h-3 w-3" /> Rejected
+          </Badge>
+        );
+      case "arsPending":
+        return (
+          <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200/50 flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5">
+            <Clock className="h-3 w-3" /> Pending
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
 
-    let idx = 1;
-    selectedMessage.MessageDataColumns.forEach(col => {
-      if (col.MessageDataLines) {
-        col.MessageDataLines.forEach(line => {
-          links.push({
-            index: idx++,
-            columnName: col.ColumnName,
-            value: line.Value,
-            objectType: line.Object,
-            objectKey: line.ObjectKey
-          });
-        });
-      }
-    });
+  const getObjectName = (type: string) => {
+      const menuInfo = getMenuInfoByObjectCode(type);
+      return menuInfo?.title || `SAP Object (${type})`;
+    };
 
-    return links;
+  const documentLink = useMemo(() => {
+    if (!selectedMessage) return null;
+
+    const objectEntry = selectedMessage.ObjectEntry?.toString().trim();
+    const draftEntry = selectedMessage.DraftEntry?.toString().trim();
+    const objectType = selectedMessage.ObjectType;
+    const sourceDraftNumber = selectedMessage.SourceDraftNumber;
+
+    if (objectEntry) {
+      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber };
+    }
+    if (draftEntry) {
+      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber };
+    }
+    return null;
   }, [selectedMessage]);
 
-  const handleDocumentLinkClick = (link: any) => {
-    // Determine the route if it's a draft or sales document
-    // Object "122" is Drafts, Value often says e.g. "Sales Quotation based on draft no. 788"
-    const isQuotation = link.value.toLowerCase().includes("quotation");
-    const isOrder = link.value.toLowerCase().includes("order");
-    const isDelivery = link.value.toLowerCase().includes("delivery");
-    const isInvoice = link.value.toLowerCase().includes("invoice");
+  const handleDocumentLinkClick = (link: {
+    objectType: string;
+    objectEntry?: string;
+    draftEntry?: string;
+    isDraft: boolean;
+    sourceDraftNumber?: number | null;
+  }) => {
+    const key = (link.isDraft ? link.draftEntry : link.objectEntry)?.toString().trim().split(/\s+/)[0];
 
-    const cleanKey = link.objectKey.trim().split(/\s+/)[0]; // Extract first key segment (DocEntry)
-
-    if (link.objectType === "122") {
-      // Drafts
-      toast.info(`Opening Draft #${cleanKey} (Type: ${link.value})`, {
-        description: "Draft view detail loading..."
-      });
-      // Route placeholders
-      if (isQuotation) {
-        // Quotation draft
-        router.push(`/dashboard/sales/quotation?draft=${cleanKey}`);
-      } else if (isOrder) {
-        router.push(`/dashboard/sales/order?draft=${cleanKey}`);
-      } else {
-        toast.warning("Routing for this draft type is under construction.");
-      }
-    } else {
-      // Direct SAP object
-      if (isQuotation) {
-        router.push(`/dashboard/sales/quotation/${cleanKey}`);
-      } else if (isOrder) {
-        router.push(`/dashboard/sales/order/${cleanKey}`);
-      } else if (isDelivery) {
-        router.push(`/dashboard/sales/delivery/${cleanKey}`);
-      } else if (isInvoice) {
-        router.push(`/dashboard/sales/invoice/${cleanKey}`);
-      } else {
-        toast.warning(`Routing for SAP Object ${link.objectType} is not implemented.`);
-      }
+    if (!key) {
+      toast.error("Invalid SAP document key");
+      return;
     }
+
+    const menuInfo = getMenuInfoByObjectCode(link.objectType);
+    if (!menuInfo) {
+      toast.warning(`${getObjectName(link.objectType)} route not configured`);
+      return;
+    }
+
+    toast.info(`Opening ${getObjectName(link.objectType)} #${link.sourceDraftNumber}`);
+    router.push(
+      buildDocumentUrl(menuInfo.url, {
+        objectType: link.objectType,
+        objectEntry: link.isDraft
+          ? undefined
+          : (link.sourceDraftNumber ? String(link.sourceDraftNumber) : link.objectEntry),
+        draftEntry: link.draftEntry,
+        isDraft: link.isDraft,
+      })
+    );
   };
 
   const handleDeleteMessage = (code: number) => {
     toast.success(`Message #${code} deleted locally`);
-    // Local simulation of deleting a message
-    if (selectedMessage?.Code === code) {
+    if (selectedMessage?.MessageCode === code) {
       setSelectedMessage(null);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return format(parseISO(dateStr), "dd.MM.yyyy");
+    } catch {
+      return dateStr;
     }
   };
 
@@ -187,10 +205,10 @@ export default function MessagesOverviewPage() {
             Real-time messages and notifications from SAP Business One Workflow & Approvals.
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleRefresh} 
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
           disabled={isLoading}
           className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 h-9 rounded-lg"
         >
@@ -236,71 +254,73 @@ export default function MessagesOverviewPage() {
               ) : (
                 <>
                   <ScrollArea className="flex-1">
-                  <Table>
-                    <TableHeader className="bg-slate-50/70 border-b border-slate-100">
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[45px] text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">!</TableHead>
-                        <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Subject</TableHead>
-                        <TableHead className="w-[100px] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">From</TableHead>
-                        {/* <TableHead className="w-[140px] text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Date/Time</TableHead> */}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {messages.map((msg) => {
-                        const isSelected = selectedMessage?.Code === msg.Code;
-                        return (
-                          <TableRow 
-                            key={msg.Code}
-                            onClick={() => setSelectedMessage(msg)}
-                            className={`cursor-pointer transition-colors border-b border-slate-100 hover:bg-slate-50/50 ${isSelected ? "bg-slate-50 font-medium" : ""}`}
-                          >
-                            <TableCell className="text-center py-3.5">
-                              <div className="flex justify-center">
-                                {getPriorityIcon(msg.Priority)}
-                              </div>
-                            </TableCell>
-                            <TableCell className="py-3.5">
-                              <div className="flex flex-col gap-1 pr-4">
-                                <span className={`text-sm text-slate-900 leading-snug truncate max-w-sm ${isSelected ? "font-semibold" : "font-normal"}`}>
-                                  {msg.Subject}
-                                </span>
-                                {msg.MessageDataColumns?.length > 0 && (
-                                  <span className="text-[10px] font-bold text-orange-600 flex items-center gap-1">
-                                    <Paperclip className="h-3 w-3 shrink-0" /> Linked Document
+                    <Table>
+                      <TableHeader className="bg-slate-50/70 border-b border-slate-100">
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-[45px] text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">!</TableHead>
+                          <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Subject</TableHead>
+                          <TableHead className="w-[110px] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Status</TableHead>
+                          <TableHead className="w-[110px] text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {messages.map((msg) => {
+                          const isSelected = selectedMessage?.MessageCode === msg.MessageCode;
+                          const hasLinkedDoc = !!(msg.ObjectEntry?.toString().trim() || msg.DraftEntry?.toString().trim());
+                          return (
+                            <TableRow
+                              key={msg.MessageCode}
+                              onClick={() => setSelectedMessage(msg)}
+                              className={`cursor-pointer transition-colors border-b border-slate-100 hover:bg-slate-50/50 ${isSelected ? "bg-slate-50 font-medium" : ""}`}
+                            >
+                              <TableCell className="text-center py-3.5">
+                                <div className="flex justify-center">
+                                  {getPriorityIcon(msg.Priority)}
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-3.5">
+                                <div className="flex flex-col gap-1 pr-4">
+                                  <span className={`text-sm text-slate-900 leading-snug truncate max-w-sm ${isSelected ? "font-semibold" : "font-normal"}`}>
+                                    {msg.Subject}
                                   </span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="py-3.5 text-slate-600 text-xs font-semibold">
-                              {msg.RecipientCollection?.[0]?.NameTo || "SAP System"}
-                            </TableCell>
-                            {/* <TableCell className="py-3.5 text-right text-[11px] text-slate-400 font-bold whitespace-nowrap">
-                              09.07.26 11:39
-                            </TableCell> */}
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-                {hasMore && (
-                  <div className="flex justify-center py-3 border-t border-slate-100">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleLoadMore}
-                      disabled={loadingMore}
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-2 text-xs font-medium"
-                    >
-                      {loadingMore ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      )}
-                      {loadingMore ? "Loading..." : "Load More"}
-                    </Button>
-                  </div>
-                )}
+                                  {hasLinkedDoc && (
+                                    <span className="text-[10px] font-bold text-orange-600 flex items-center gap-1">
+                                      <Paperclip className="h-3 w-3 shrink-0" />
+                                      {getObjectName(msg.ObjectEntry?.toString().trim() ? msg.ObjectType : msg.DraftType)}
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-3.5">
+                                {getApprovalStatusBadge(msg.ApprovalStatus)}
+                              </TableCell>
+                              <TableCell className="py-3.5 text-right text-[11px] text-slate-400 font-bold whitespace-nowrap">
+                                {formatDate(msg.ApprovalCreationDate)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                  {hasMore && (
+                    <div className="flex justify-center py-3 border-t border-slate-100">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-2 text-xs font-medium"
+                      >
+                        {loadingMore ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        )}
+                        {loadingMore ? "Loading..." : "Load More"}
+                      </Button>
+                    </div>
+                  )}
                 </>
               )}
             </TabsContent>
@@ -335,35 +355,45 @@ export default function MessagesOverviewPage() {
           </Tabs>
         </Card>
 
-        {/* Right Side: Message Detail Panel */}
         <Card className="lg:col-span-5 flex flex-col min-h-0 bg-white border-slate-200 shadow-sm rounded-xl overflow-hidden">
           {selectedMessage ? (
             <div className="flex-1 flex flex-col min-h-0">
-              {/* Detail Header */}
+
               <div className="p-5 border-b border-slate-100 bg-slate-50/30 space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <h2 className="text-lg font-bold text-slate-900 leading-tight">
                     {selectedMessage.Subject}
                   </h2>
-                  <div className="shrink-0">
+                  <div className="shrink-0 flex flex-col items-end gap-1.5">
                     {getPriorityBadge(selectedMessage.Priority)}
+                    {getApprovalStatusBadge(selectedMessage.ApprovalStatus)}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-y-2 text-xs font-medium text-slate-500">
                   <div>
-                    <span className="text-slate-400">From:</span>{" "}
+                    <span className="text-slate-400">Raised By:</span>{" "}
+                    <span className="text-slate-900 font-bold">User #{selectedMessage.User}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-400">Date:</span>{" "}
                     <span className="text-slate-900 font-bold">
-                      {selectedMessage.RecipientCollection?.[0]?.NameTo || "SAP System"}
+                      {formatDate(selectedMessage.ApprovalCreationDate)}
                     </span>
                   </div>
-                  {/* <div className="text-right">
-                    <span className="text-slate-400">Date:</span>{" "}
-                    <span className="text-slate-900 font-bold">09.07.2026 11:39</span>
-                  </div> */}
                   <div>
                     <span className="text-slate-400">Code:</span>{" "}
-                    <span className="text-slate-800 font-mono">#{selectedMessage.Code}</span>
+                    <span className="text-slate-800 font-mono">#{selectedMessage.MessageCode}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-400">Request:</span>{" "}
+                    <span className="text-slate-800 font-mono">#{selectedMessage.ApprovalRequestCode}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Source Document #:</span>{" "}
+                    <span className="text-slate-900 font-bold">
+                      {selectedMessage.SourceDraftNumber ? `#${selectedMessage.SourceDraftNumber}` : "—"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -372,53 +402,46 @@ export default function MessagesOverviewPage() {
               <ScrollArea className="flex-1 p-5">
                 <div className="space-y-6">
                   <div className="text-sm leading-relaxed text-slate-700 font-medium whitespace-pre-wrap">
-                    {selectedMessage.Text}
+                    {selectedMessage.Text || selectedMessage.ApprovalRemarks}
                   </div>
 
-                  {/* Documents Link Grid */}
-                  {parsedLinks.length > 0 && (
+                  {/* Linked Document */}
+                  {documentLink && (
                     <div className="space-y-3 pt-4 border-t border-slate-100">
                       <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <Paperclip className="h-3.5 w-3.5 text-slate-400" /> Attached Documents
+                        <Paperclip className="h-3.5 w-3.5 text-slate-400" /> Linked Document
                       </h4>
                       <div className="border border-slate-200/80 rounded-xl overflow-hidden shadow-sm">
                         <Table>
-                          <TableHeader className="bg-slate-50">
-                            <TableRow className="hover:bg-transparent">
-                              <TableHead className="w-[45px] font-bold text-slate-500 uppercase text-[9px] tracking-wider py-2">#</TableHead>
-                              <TableHead className="font-bold text-slate-500 uppercase text-[9px] tracking-wider py-2">Document Details</TableHead>
-                              <TableHead className="w-[80px] text-center font-bold text-slate-500 uppercase text-[9px] tracking-wider py-2">Link</TableHead>
-                            </TableRow>
-                          </TableHeader>
                           <TableBody>
-                            {parsedLinks.map((link) => (
-                              <TableRow key={link.index} className="hover:bg-slate-50/50">
-                                <TableCell className="text-slate-500 text-xs font-semibold py-2.5">
-                                  {link.index}
-                                </TableCell>
-                                <TableCell className="py-2.5">
-                                  <div className="flex flex-col">
-                                    <span className="text-xs font-bold text-slate-800">
-                                      {link.value}
-                                    </span>
-                                    <span className="text-[10px] text-slate-400 font-semibold font-mono mt-0.5">
-                                      Obj: {link.objectType} | Key: {link.objectKey.trim()}
-                                    </span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-center py-2.5">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    onClick={() => handleDocumentLinkClick(link)}
-                                    className="h-7 w-7 text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
-                                    title="Open Document in SAP"
-                                  >
-                                    <ArrowUpRight className="h-4 w-4 stroke-[2.5]" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                            <TableRow className="hover:bg-slate-50/50">
+                              <TableCell className="py-3">
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold text-slate-800">
+                                    {getObjectName(documentLink.objectType)}
+                                    {documentLink.isDraft && (
+                                      <span className="ml-1.5 text-[9px] font-semibold text-amber-600 uppercase tracking-wide">
+                                        (Draft)
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-semibold font-mono mt-0.5">
+                                    Key: {documentLink.isDraft ? documentLink.draftEntry : documentLink.objectEntry}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center py-3 w-[80px]">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDocumentLinkClick(documentLink)}
+                                  className="h-7 w-7 text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                                  title="Open Document in SAP"
+                                >
+                                  <ArrowUpRight className="h-4 w-4 stroke-[2.5]" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
                           </TableBody>
                         </Table>
                       </div>
@@ -437,10 +460,10 @@ export default function MessagesOverviewPage() {
                     <CornerUpRight className="h-4 w-4" /> Forward
                   </Button>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => handleDeleteMessage(selectedMessage.Code)}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteMessage(selectedMessage.MessageCode)}
                   className="h-9 px-3 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   <Trash2 className="h-4 w-4" /> Delete

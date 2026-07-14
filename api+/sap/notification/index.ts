@@ -1,39 +1,21 @@
 import apiClient from "@/lib/apiClient";
 
-export interface MessageDataLine {
-  Value: string;
-  Object: string;
-  ObjectKey: string;
-}
-
-export interface MessageDataColumn {
-  ColumnName: string;
-  Link: string;
-  MessageDataLines: MessageDataLine[];
-}
-
-export interface RecipientInfo {
-  UserCode: string;
-  UserType: string;
-  NameTo: string;
-  SendEmail: string;
-  EmailAddress: string;
-  SendSMS: string;
-  CellularNumber: string;
-  SendFax: string;
-  FaxNumber: string;
-  SendInternal: string;
-}
-
 export interface SAPMessage {
-  Code: number;
+  MessageCode: number;
   User: number;
-  Priority: string;
+  Priority: string;            
   Subject: string;
   Text: string;
-  Attachment: any;
-  MessageDataColumns: MessageDataColumn[];
-  RecipientCollection: RecipientInfo[];
+  ApprovalRequestCode: number;
+  ApprovalStatus: string;       
+  ApprovalRemarks: string;
+  ApprovalCreationDate: string;  
+  DraftEntry: string;
+  DraftType: string;             
+  ObjectType: string;            
+  ObjectEntry: string;
+  Document?: string;   
+  SourceDraftNumber?: number | null;          
 }
 
 export const PAGE_SIZE = 20;
@@ -59,7 +41,6 @@ export const getMyAlerts = async (skip = 0, top = PAGE_SIZE): Promise<AlertsPage
 
   let messages: SAPMessage[] = [];
 
-  // SAP B1 OData returns { value: [...], "@odata.nextLink": "..." }
   if (data && Array.isArray(data.value)) {
     messages = data.value;
   } else if (Array.isArray(data)) {

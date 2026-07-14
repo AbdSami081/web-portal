@@ -16,6 +16,7 @@ import { GenericModal } from "@/modals/GenericModal";
 import { List } from "lucide-react";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
+import { useSearchParams } from "next/navigation";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -49,6 +50,30 @@ export function DocumentHeader() {
 
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
+  const searchParams = useSearchParams();
+  const [isDraftMode, setIsDraftMode] = useState(false);
+
+  useEffect(() => {
+    const draftParam = searchParams.get("draft") === "1";
+
+    if (draftParam) {
+      toast.info("Opening drafts isn't supported yet. Coming soon.");
+      return;
+    }
+
+    const docEntryParam = searchParams.get("docEntry");
+    const documentCodeParam = searchParams.get("documentCode");
+
+    if (!docEntryParam || !documentCodeParam) return;
+
+    if (Number(documentCodeParam) !== Number(config.type)) {
+      return;
+    }
+
+    setIsDraftMode(false);
+    setSearchValue(docEntryParam);
+    fetchDocument(docEntryParam, { isDraft: false });
+  }, []);
 
   useEffect(() => {
     if (!watchedStatus && !isLoadedDocument) {
@@ -151,7 +176,7 @@ export function DocumentHeader() {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
-  const fetchDocument = async (docNum: string) => {
+  const fetchDocument = async (docNum: string, opts?: { isDraft?: boolean }) => {
     var documentData;
     clearLines();
     const docNumInt = parseInt(docNum);
