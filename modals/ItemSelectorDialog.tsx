@@ -159,6 +159,9 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
     setSelectedCodes(newSelectedCodes);
   };
 
+  const showSkeleton = loading && items.length === 0;
+  const skeletonRowCount = 8;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
@@ -200,44 +203,63 @@ export function ItemSelectorDialog({ open, onClose, onSelectItems, multiple = tr
               </tr>
             </thead>
             <tbody>
-              {items.map((item, idx) => (
-                <tr
-                  key={idx}
-                  className={`hover:bg-gray-50 cursor-pointer ${selectedCodes.includes(item.ItemCode) ? "bg-blue-100" : ""
-                    }`}
-                  onClick={(e) => handleRowClick(idx, item.ItemCode, e)}
-                  onDoubleClick={() => !multiple && handleConfirm()}
-                >
-                  {multiple && (
+              {showSkeleton
+                ? Array.from({ length: skeletonRowCount }).map((_, idx) => (
+                  <tr key={`skeleton-${idx}`} className="animate-pulse">
+                    {multiple && (
+                      <td className="p-2">
+                        <div className="h-4 w-4 rounded bg-gray-200" />
+                      </td>
+                    )}
                     <td className="p-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedCodes.includes(item.ItemCode)}
-                        readOnly
-                      />
+                      <div className="h-4 w-20 rounded bg-gray-200" />
                     </td>
-                  )}
-                  <td className="p-2">{item.ItemCode}</td>
-                  <td className="p-2">{item.ItemName}</td>
-                  <td className="p-2">
-                    {
-                    selectorType === "resource"
-                      ? item.Type === "rtLabor"
-                        ? "Labour"
-                        : item.Type === "rtMachine"
-                        ? "Machine"
-                        : item.Type === "rtOther"
-                        ? "Other"
-                        : item.Type
-                      : item.OnHand
-                    }
-                  </td>
-                </tr>
-              ))}
+                    <td className="p-2">
+                      <div className="h-4 w-48 rounded bg-gray-200" />
+                    </td>
+                    <td className="p-2">
+                      <div className="h-4 w-14 rounded bg-gray-200" />
+                    </td>
+                  </tr>
+                ))
+                : items.map((item, idx) => (
+                  <tr
+                    key={idx}
+                    className={`hover:bg-gray-50 cursor-pointer ${selectedCodes.includes(item.ItemCode) ? "bg-blue-100" : ""
+                      }`}
+                    onClick={(e) => handleRowClick(idx, item.ItemCode, e)}
+                    onDoubleClick={() => !multiple && handleConfirm()}
+                  >
+                    {multiple && (
+                      <td className="p-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedCodes.includes(item.ItemCode)}
+                          readOnly
+                        />
+                      </td>
+                    )}
+                    <td className="p-2">{item.ItemCode}</td>
+                    <td className="p-2">{item.ItemName}</td>
+                    <td className="p-2">
+                      {
+                      selectorType === "resource"
+                        ? item.Type === "rtLabor"
+                          ? "Labour"
+                          : item.Type === "rtMachine"
+                          ? "Machine"
+                          : item.Type === "rtOther"
+                          ? "Other"
+                          : item.Type
+                        : item.OnHand
+                      }
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
 
-          {hasMore && (
+          {!showSkeleton && hasMore && (
             <div className="text-center py-4">
               <Button
                 type="button"

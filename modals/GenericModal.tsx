@@ -133,6 +133,10 @@ export function GenericModal<T>({
     }
   };
 
+  const showSkeleton = Boolean(isLoading) && filteredData.length === 0;
+  const skeletonColSpan = columns.length + (multiple ? 2 : 1);
+  const skeletonRowCount = 10;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl w-full h-[85vh] flex flex-col p-6 overflow-hidden">
@@ -140,7 +144,6 @@ export function GenericModal<T>({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        {/* Input area fixed top */}
         <div className="shrink-0 mt-2">
           <Input
             placeholder="Search..."
@@ -192,9 +195,27 @@ export function GenericModal<T>({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredData.length === 0 && !isLoading ? (
+                  {showSkeleton ? (
+                    Array.from({ length: skeletonRowCount }).map((_, rowIdx) => (
+                      <TableRow key={`skeleton-${rowIdx}`} className="animate-pulse">
+                        {multiple && (
+                          <TableCell>
+                            <div className="h-4 w-4 rounded bg-zinc-200" />
+                          </TableCell>
+                        )}
+                        <TableCell>
+                          <div className="h-3 w-4 rounded bg-zinc-200" />
+                        </TableCell>
+                        {columns.map((col) => (
+                          <TableCell key={col.key} className="px-4 py-2.5">
+                            <div className="h-3 w-full max-w-[120px] rounded bg-zinc-200" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : filteredData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={columns.length + (multiple ? 2 : 1)} className="h-40 text-center text-sm text-zinc-400">
+                      <TableCell colSpan={skeletonColSpan} className="h-40 text-center text-sm text-zinc-400">
                         No records found.
                       </TableCell>
                     </TableRow>
@@ -247,7 +268,7 @@ export function GenericModal<T>({
             </Table>
           </div>
 
-          {hasMore && data.length >= 20 && (
+          {!showSkeleton && hasMore && data.length >= 20 && (
             <div className="p-2 border-t bg-zinc-50 shrink-0">
               <Button
                 type="button" 
