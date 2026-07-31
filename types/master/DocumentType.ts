@@ -15,6 +15,7 @@ export enum DocumentType {
   PurchaseOrder = 22,
   GoodsReceiptPO = 20,
   APInvoice = 18,
+  BusinessPartner = 2,
 }
 
 export const DRAFT_OBJECT_TYPES = ["112", "122"];

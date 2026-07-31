@@ -34,6 +34,22 @@ export const SERVER_MENUS: MenuItem[] = [
         ],
     },
     {
+        id: "d4b1e0ee-2db9-4915-9007-834d173a3da6",
+        title: "Business Partner",
+        url: "#",
+        isMain: true,
+        iconName: "ShieldCheck",
+        items: [
+            {
+                id: "f34ea5e6-41a9-438f-93ec-ef1faeab13b8",
+                title: "BP Master Data",
+                url: "/dashboard/BusinessPartner",
+                objectCode: 2,
+                isReporting: true,
+            },
+        ],
+    },
+    {
         id: "135e11d0-4f7a-4290-840c-102486b4bd78",
         title: "Sales",
         url: "/dashboard/sales",
