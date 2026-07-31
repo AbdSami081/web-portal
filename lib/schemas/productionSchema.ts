@@ -14,9 +14,9 @@ export const productionLineSchema = z.object({
     ProductionOrderIssueType: z.enum(["im_Manual", "im_Backflush"]).optional(),
     OrderNumber: z.number().optional(),
     LineNumber: z.number().optional(),
-    BaseType: z.number().optional(),
-    BaseEntry: z.number().optional(),
-    BaseLine: z.number().optional(),
+    BaseType: z.coerce.number().nullable().optional(),
+    BaseEntry: z.coerce.number().nullable().optional(),
+    BaseLine: z.coerce.number().nullable().optional(),
 });
 
 export const productionSchema = z.object({

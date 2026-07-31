@@ -115,6 +115,24 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
+    connection.onreconnecting((error) => {
+      console.warn("[SignalR] Connection lost, reconnecting...", error?.message);
+    });
+
+    connection.onreconnected(async (connectionId) => {
+      console.log("[SignalR] Connection re-established. Connection ID:", connectionId);
+      await refreshNotifications();
+    });
+
+    connection.onclose((error) => {
+      console.warn("[SignalR] Connection closed:", error?.message);
+      setTimeout(() => {
+        if (accessToken && connectionRef.current?.state === HubConnectionState.Disconnected) {
+          void startHubConnection();
+        }
+      }, 5000);
+    });
+
     connection.on("ReceiveNotification", (msg: SAPMessage) => {
       console.log("Real-time notification received: ", msg);
       setMessages((prev) => [msg, ...prev]);

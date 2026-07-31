@@ -40,6 +40,7 @@ interface SalesDocumentLayoutProps<T extends FieldValues> {
   children?: React.ReactNode;
   actions?: React.ReactNode;
   docType: DocumentType;
+  skipAutoReset?: boolean; 
 }
 
 export function SalesDocumentLayout<T extends FieldValues>({
@@ -49,12 +50,21 @@ export function SalesDocumentLayout<T extends FieldValues>({
   children,
   actions,
   docType,
+  skipAutoReset = false,
 }: SalesDocumentLayoutProps<T>) {
 
   const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
   const searchParams = useSearchParams();
 
-  const isDraftFromUrl = Boolean(searchParams.get("docEntry")) && searchParams.get("draft") === "1";
+
+  const [badgeState, setBadgeState] = useState<"draft" | "approved" | null>(() => {
+    const draftEntryParam = searchParams.get("draftEntry");
+    const docEntryParam = searchParams.get("docEntry");
+
+    if (draftEntryParam) return "draft";       
+    if (docEntryParam) return "approved";
+    return null;
+  });
 
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
@@ -68,15 +78,23 @@ export function SalesDocumentLayout<T extends FieldValues>({
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty, errors } } = methods;
-  const { reset: lineReset, customer, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs } = useSalesDocument();
+  const { handleSubmit, reset, watch, setValue, formState: { isSubmitting, isDirty, errors } } = methods;
+  const { reset: lineReset, customer, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, lines } = useSalesDocument();
 
+  
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
       const errorFields = Object.keys(errors).join(", ");
       toast.error(`Please fix validation errors in: ${errorFields}`);
     }
   }, [errors]);
+
+  useEffect(() => {
+    setValue("DocumentLines" as any, (lines || []) as any, {
+      shouldValidate: false,
+      shouldDirty: false,
+    });
+  }, [lines, setValue]);
 
   const docStatus = watch("DocStatus" as any);
   const docEntry = watch("DocEntry" as any);
@@ -168,7 +186,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
       } as unknown as DefaultValues<T>);
 
       setIsCopying(false);
-    } else if (!isDirty) {
+    } else if (!isDirty && !skipAutoReset) {
       ResetForm();
     }
   }, [defaultValues]);
@@ -189,18 +207,23 @@ export function SalesDocumentLayout<T extends FieldValues>({
     lineReset();
   };
 
+  const handleNewDocumentClick = () => {
+    ResetForm();
+    setBadgeState(null);
+  };
+
   const getSubmitButtonText = () => {
     if (isSubmitting) return "Saving...";
     if (isLoadingDocument) return "Loading...";
     
     const normalizedStatus = docStatus?.toString().replace("bost_", "");
     
-    if (!isEditMode || docEntry === "0") return "Submit";
-    if (normalizedStatus === "Open") return "Update";
+    if (isEditMode && normalizedStatus === "Open") return "Update";
+    if (isEditMode) return "Update";
     
-    return "Submit"; // Fallback
+    return "Submit";
   };
-
+0
   const copyToOptions = (() => {
     if (docType === DocumentType.Quotation)
       return [DocumentType.Order, DocumentType.Delivery, DocumentType.ARInvoice];
@@ -222,6 +245,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
       toast.error("Please save or select a document first!");
       return;
     }
+    
     setIsLoadingCopyTo(true);
 
     if (copyType === DocumentType.Order.toString()) {
@@ -243,47 +267,49 @@ export function SalesDocumentLayout<T extends FieldValues>({
       <FormProvider {...methods}>
         <form
           onSubmit={handleSubmit(async (data) => {
-            const state = useSalesDocument.getState();
-            const needsSerialManagement = (docType === DocumentType.Delivery || docType === DocumentType.ARInvoice) && 
-                                state.lines.some(l => {
-                                  const isSerial = l.ManSerNum === 'Y' || l.ManSerNum === 'tYES';
-                                  if (isSerial) {
-                                    return !l.SerialNumbers || l.SerialNumbers.length < l.Quantity;
-                                  }
-                                  return false;
-                                });
 
-            const needsBatchManagement = (docType === DocumentType.Delivery || docType === DocumentType.ARInvoice) && 
-                                state.lines.some(l => {
-                                  const isBatch = String(l.ManBtchNum).toLowerCase() === 'y' || String(l.ManBtchNum).toLowerCase() === 'tyes';
-                                  if (isBatch) {
-                                    const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
-                                    return totalBatch < l.Quantity;
-                                  }
-                                  return false;
-                                });
-            if (needsSerialManagement) {
-              setPendingData(data as unknown as T);
-              setSerialModalOpen(true);
-              return;
-            }
+          const state = useSalesDocument.getState();
+          const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
 
-            if (needsBatchManagement) {
-              setPendingData(data as unknown as T);
-              setBatchModalOpen(true);
-              return;
-            }
+          const needsSerialManagement = (docType === DocumentType.Delivery || docType === DocumentType.ARInvoice) && 
+                              state.lines.some(l => {
+                                const isSerial = l.ManSerNum === 'Y' || l.ManSerNum === 'tYES';
+                                if (isSerial) {
+                                  return !l.SerialNumbers || l.SerialNumbers.length < l.Quantity;
+                                }
+                                return false;
+                              });
 
-            try {
-              console.log("Proceeding with onSubmit...");
-              await onSubmit(data as unknown as T);
-              console.log("onSubmit finished. Resetting form...");
-              ResetForm();
-            } catch (error) {
-              console.error("Submit Error:", error);
-              // Error handled in onSubmit
-            }
-          })}
+          const needsBatchManagement = (docType === DocumentType.Delivery || docType === DocumentType.ARInvoice) && 
+                              state.lines.some(l => {
+                                const isBatch = String(l.ManBtchNum).toLowerCase() === 'y' || String(l.ManBtchNum).toLowerCase() === 'tyes';
+                                if (isBatch) {
+                                  const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
+                                  return totalBatch < l.Quantity;
+                                }
+                                return false;
+                              });
+          if (needsSerialManagement) {
+            setPendingData(finalData);   // 👈 data ki jagah finalData
+            setSerialModalOpen(true);
+            return;
+          }
+
+          if (needsBatchManagement) {
+            setPendingData(finalData);   // 👈 data ki jagah finalData
+            setBatchModalOpen(true);
+            return;
+          }
+
+          try {
+            console.log("Proceeding with onSubmit...");
+            await onSubmit(finalData);   // 👈 data ki jagah finalData
+            console.log("onSubmit finished. Resetting form...");
+            ResetForm();
+          } catch (error) {
+            console.error("Submit Error:", error);
+          }
+        })}
           className="flex flex-col min-h-screen bg-background"
         >
 
@@ -293,7 +319,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
               objectCode={docType}
               reset={reset}
               defaultValues={defaultValues}
-              resetStore={ResetForm}
+              resetStore={handleNewDocumentClick}
             />
           </HeaderActionPortal>
 
@@ -301,9 +327,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold flex items-center gap-2">
                 {config.title}
-                {isDraftFromUrl && (
+                {badgeState === "draft" && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200/60 rounded px-1.5 py-0.5">
                     Draft
+                  </span>
+                )}
+                {badgeState === "approved" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 border border-emerald-200/60 rounded px-1.5 py-0.5">
+                    Approved
                   </span>
                 )}
               </h1>

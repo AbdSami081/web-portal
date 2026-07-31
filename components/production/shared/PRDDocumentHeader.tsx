@@ -20,7 +20,9 @@ import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { Item } from "@/types/sales/Item.type";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useSearchParams } from "next/navigation";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
+import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { List } from "lucide-react";
 import { useUDFStore } from "@/stores/useUDFStore";
 
@@ -94,6 +96,43 @@ export function PRDDocumentHeader() {
   const docType = config.type;
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
   const watchedPlannedQty = watch("PlannedQuantity");
+
+  const searchParams = useSearchParams();
+  const autoCreatedRef = useState(() => ({ current: false }))[0];
+
+  useEffect(() => {
+    const isDraft = searchParams.get("draft") === "1";
+    const draftEntryParam = searchParams.get("draftEntry") || "";
+    const docEntryParam = searchParams.get("docEntry") || "";
+
+    if (isDraft && draftEntryParam) {
+      const draftId = parseInt(draftEntryParam);
+      if (!isNaN(draftId)) {
+        loadDraftDoc(draftId);
+      }
+    }
+  }, []);
+
+  const loadDraftDoc = async (draftId: number) => {
+    setIsLoading(true);
+    try {
+      const documentData = await getDraftDocument(draftId);
+      if (documentData) {
+        fetchUdfDefinitions(docType, true);
+        loadFromDocument(documentData, docType);
+        setValue("DocEntry", documentData.DocEntry || 0);
+        setValue("DocNum", documentData.DocNum || 0);
+        setValue("Comments", documentData.Comments || "");
+        useIFPRDDocument.getState().setLoadedDraftData(documentData);
+      } else {
+        toast.error(`Draft document ${draftId} not found.`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load draft document.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchWarehouses = async () => {

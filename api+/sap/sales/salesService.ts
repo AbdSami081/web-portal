@@ -198,4 +198,20 @@ export const getAttachment = async (filePath: string) => {
   return res.data;
 };
 
+export const getDraftDocument = async (draftID: number): Promise<BaseSalesDocument | null> => {
+  const res = await apiClient.get(`api/Draft/Drafts/${draftID}`);
+  if (!res.data) return null;
+
+  const doc: BaseSalesDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+
 export { getDocumentsList } from "@/api+/sap/common/documentService";

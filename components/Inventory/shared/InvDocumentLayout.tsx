@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/inventory/documentConfig";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/api+/sap/inventory/inventoryService";
@@ -36,6 +36,7 @@ interface InvDocumentLayoutProps<T extends FieldValues> {
   children?: React.ReactNode;
   actions?: React.ReactNode;
   docType: DocumentType;
+  skipAutoReset?: boolean; 
 }
 
 export function InvDocumentLayout<T extends FieldValues>({
@@ -45,10 +46,23 @@ export function InvDocumentLayout<T extends FieldValues>({
   children,
   actions,
   docType,
+  skipAutoReset = false,
 }: InvDocumentLayoutProps<T>) {
 
   const config = getDocumentConfig(docType);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+
+  const [badgeState, setBadgeState] = useState<"draft" | "approved" | null>(() => {
+    const draftEntryParam = searchParams.get("draftEntry");
+    const docEntryParam = searchParams.get("docEntry");
+    const isDraft = Boolean(draftEntryParam) && searchParams.get("draft") === "1";
+
+    if (isDraft) return "draft";
+    if (docEntryParam) return "approved";
+    return null;
+  });
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
   useEffect(() => {
@@ -72,7 +86,7 @@ export function InvDocumentLayout<T extends FieldValues>({
     const state = useInventoryDocument.getState();
     const didDocTypeChange = previousDocTypeRef.current !== null && previousDocTypeRef.current !== docType;
 
-    if (!state.isCopyingTo && didDocTypeChange) {
+    if (!state.isCopyingTo && didDocTypeChange && !skipAutoReset) {
       resetStore();
       reset(defaultValues as any);
     }
@@ -100,11 +114,11 @@ export function InvDocumentLayout<T extends FieldValues>({
       setValue("DocumentLines" as any, state.lines as any);
 
       setIsCopyingTo(false);
-    } else {
+    } else if (!skipAutoReset) {        
       resetStore();
       reset(defaultValues as any);
     }
-  }, [resetStore, setIsCopyingTo, setValue, reset, defaultValues]);
+  }, [resetStore, setIsCopyingTo, setValue, reset, defaultValues, skipAutoReset]);
 
   useEffect(() => {
    setValue("CardCode" as any, (store.customer?.CardCode || "") as any);
@@ -285,8 +299,6 @@ export function InvDocumentLayout<T extends FieldValues>({
         setValue("DocEntry" as any, 0 as any);
         setValue("DocNum" as any, 0 as any);
         
-        // ... (rest of your state setting logic)
-        
         loadFromDocument({ ...mergedDoc, DocumentLines: allLines }, DocumentType.InvTransferReq, true);
         toast.success(`Copied from ${nums.length} ITR(s)`);
       }
@@ -306,6 +318,8 @@ export function InvDocumentLayout<T extends FieldValues>({
       await onSubmit(data);
       reset(defaultValues as any);
       resetStore();
+    } catch (err: any) {
+      toast.error(err?.message || "Error submitting document");
     } finally {
       setIsSaving(false);
     }
@@ -347,7 +361,21 @@ export function InvDocumentLayout<T extends FieldValues>({
           </HeaderActionPortal>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
-            <h1 className="text-xl font-semibold">{config.title}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold flex items-center gap-2">
+                {config.title}
+                {badgeState === "draft" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200/60 rounded px-1.5 py-0.5">
+                    Draft
+                  </span>
+                )}
+                {badgeState === "approved" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 border border-emerald-200/60 rounded px-1.5 py-0.5">
+                    Approved
+                  </span>
+                )}
+              </h1>
+            </div>
             {actions && <div>{actions}</div>}
           </div>
 

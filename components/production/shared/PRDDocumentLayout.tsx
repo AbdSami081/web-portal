@@ -15,8 +15,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { DocumentType } from "@/types/master/DocumentType";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
+
 
 import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
@@ -38,6 +39,7 @@ interface PRDDocumentLayoutProps<T extends FieldValues> {
   children?: React.ReactNode;
   actions?: React.ReactNode;
   docType: DocumentType;
+  skipAutoReset?: boolean;
 }
 
 export function PRDDocumentLayout<T extends FieldValues>({
@@ -47,10 +49,23 @@ export function PRDDocumentLayout<T extends FieldValues>({
   children,
   actions,
   docType,
+  skipAutoReset = false,
 }: PRDDocumentLayoutProps<T>) {
 
   const config = getDocumentConfig(docType);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+
+  const [badgeState, setBadgeState] = React.useState<"draft" | "approved" | null>(() => {
+    const draftEntryParam = searchParams.get("draftEntry");
+    const docEntryParam = searchParams.get("docEntry");
+    const isDraft = Boolean(draftEntryParam) && searchParams.get("draft") === "1";
+
+    if (isDraft) return "draft";
+    if (docEntryParam) return "approved";
+    return null;
+  });
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
   const [isCopyingToInventory, setIsCopyingToInventory] = React.useState(false);
 
@@ -68,7 +83,6 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const { lines, attachments, reset: lineReset, initialStatus, udfs, setDocType } = useIFPRDDocument();
   const previousDocType = useRef<DocumentType | null>(null);
 
-  // Reset store and form when docType changes (navigation between pages)
   useEffect(() => {
     const storeDocType =
       useIFPRDDocument.getState().docType;
@@ -78,7 +92,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
       previousDocType.current !== null &&
       previousDocType.current !== docType;
 
-    if (isDocTypeChange) {
+    if (isDocTypeChange && !skipAutoReset) {
       lineReset(docType);
       reset(defaultValues as any);
     } else {
@@ -86,7 +100,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
     }
 
     previousDocType.current = docType;
-  }, [docType, setDocType, lineReset, reset, defaultValues]);
+  }, [docType, setDocType, lineReset, reset, defaultValues, skipAutoReset]);
 
   useEffect(() => {
     const currentValues = methods.getValues();
@@ -96,10 +110,10 @@ export function PRDDocumentLayout<T extends FieldValues>({
     const { lines: storeLines, attachments: storeAttachments } = useIFPRDDocument.getState();
     const hasStoreContent = storeLines.length > 0 || storeAttachments.length > 0;
 
-    if (!isDirty && !isDocumentLoaded && !hasStoreContent) {
+    if (!isDirty && !isDocumentLoaded && !hasStoreContent && !skipAutoReset) {
       ResetForm(); 
     }
-  }, [defaultValues, isDirty]);
+  }, [defaultValues, isDirty, skipAutoReset]);
 
   const ResetForm = () => {
     const today = new Date().toISOString().split("T")[0];
@@ -196,7 +210,13 @@ export function PRDDocumentLayout<T extends FieldValues>({
     <PRDDocContext.Provider value={config}>
       <FormProvider {...methods}>
 
-        <form onSubmit={handleSubmit((data) => onSubmit(data as any), onSubmitError)} className="flex flex-col min-h-screen bg-background">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            handleSubmit((data) => onSubmit(data as any), onSubmitError)(e);
+          }}
+          className="flex flex-col min-h-screen bg-background"
+        >
 
 
           <HeaderActionPortal>
@@ -211,7 +231,19 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold">{config.title}</h1>
+              <h1 className="text-xl font-semibold flex items-center gap-2">
+                {config.title}
+                {badgeState === "draft" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200/60 rounded px-1.5 py-0.5">
+                    Draft
+                  </span>
+                )}
+                {badgeState === "approved" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 border border-emerald-200/60 rounded px-1.5 py-0.5">
+                    Approved
+                  </span>
+                )}
+              </h1>
             </div>
 
             {actions && <div>{actions}</div>}

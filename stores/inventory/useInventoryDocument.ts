@@ -20,6 +20,8 @@ interface IOPRDDocumentStore {
   docStatus: string;
   isCopyingTo: boolean;
   udfs: Record<string, any>;
+  loadedDraftData: any | null;
+  setLoadedDraftData: (data: any) => void;
 
   setCustomer: (customer: BusinessPartner | null) => void;
   setWarehouses: (warehouses: any[]) => void;
@@ -71,7 +73,9 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     isCopyingTo: false,
     attachments: [],
     udfs: {},
+    loadedDraftData: null,
 
+    setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setCustomer: (customer) => set({ customer }),
     setWarehouses: (warehouses) => set({ warehouses }),
     setDocEntry: (DocEntry) => set({ DocEntry }),

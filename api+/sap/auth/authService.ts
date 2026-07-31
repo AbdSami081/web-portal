@@ -42,7 +42,7 @@ export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const response = await axios.post<any>(AUTH_URL, payload, { timeout: 20000 });
+      const response = await axios.post<any>(AUTH_URL, payload, { timeout: 60000 });
       const rawData = response.data;
       const rawUser = rawData.User || rawData.user || {};
 

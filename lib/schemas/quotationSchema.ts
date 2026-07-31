@@ -10,14 +10,14 @@ export const quotationSchema = z.object({
   DocumentLines: z.array(
     z.object({
       ItemCode: z.string(),
-      Quantity: z.number(),
-      Price: z.number(),
+      Quantity: z.coerce.number(),   
+      Price: z.coerce.number(), 
       WarehouseCode: z.string().optional(),
       TaxCode: z.string().optional(),
-      LineTotal: z.number().optional(),
-      BaseType: z.number().optional(),
-      BaseEntry: z.number().optional(),
-      BaseLine: z.number().optional(),
+      LineTotal: z.coerce.number().optional(),
+      BaseType: z.coerce.number().nullable().optional(),
+      BaseEntry: z.coerce.number().nullable().optional(),
+      BaseLine: z.coerce.number().nullable().optional(),
     })
   ),
   Freight: z.number().optional(),

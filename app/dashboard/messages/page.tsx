@@ -128,7 +128,7 @@ export default function MessagesOverviewPage() {
 
   const getObjectName = (type: string) => {
       const menuInfo = getMenuInfoByObjectCode(type);
-      return menuInfo?.title || `SAP Object (${type})`;
+      return menuInfo?.title || `Draft (${type})`;
     };
 
   const documentLink = useMemo(() => {
@@ -138,14 +138,17 @@ export default function MessagesOverviewPage() {
     const draftEntry = selectedMessage.DraftEntry?.toString().trim();
     const objectType = selectedMessage.ObjectType;
     const sourceDraftNumber = selectedMessage.SourceDraftNumber;
+    const approvalRequestCode = selectedMessage.ApprovalRequestCode;
 
     if (objectEntry) {
-      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber };
+      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber, approvalRequestCode };
     }
     if (draftEntry) {
-      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber };
+      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber, approvalRequestCode };
     }
+
     return null;
+
   }, [selectedMessage]);
 
   const handleDocumentLinkClick = (link: {
@@ -154,6 +157,7 @@ export default function MessagesOverviewPage() {
     draftEntry?: string;
     isDraft: boolean;
     sourceDraftNumber?: number | null;
+    approvalRequestCode?: number ; 
   }) => {
     const key = (link.isDraft ? link.draftEntry : link.objectEntry)?.toString().trim().split(/\s+/)[0];
 
@@ -168,7 +172,6 @@ export default function MessagesOverviewPage() {
       return;
     }
 
-    toast.info(`Opening ${getObjectName(link.objectType)} #${link.sourceDraftNumber}`);
     router.push(
       buildDocumentUrl(menuInfo.url, {
         objectType: link.objectType,
@@ -177,17 +180,12 @@ export default function MessagesOverviewPage() {
           : (link.sourceDraftNumber ? String(link.sourceDraftNumber) : link.objectEntry),
         draftEntry: link.draftEntry,
         isDraft: link.isDraft,
+        approvalRequestCode: link.approvalRequestCode,
+        approvalStatus: selectedMessage?.ApprovalStatus
       })
     );
   };
-
-  const handleDeleteMessage = (code: number) => {
-    toast.success(`Message #${code} deleted locally`);
-    if (selectedMessage?.MessageCode === code) {
-      setSelectedMessage(null);
-    }
-  };
-
+  
   const formatDate = (dateStr: string) => {
     try {
       return format(parseISO(dateStr), "dd.MM.yyyy");
@@ -222,7 +220,7 @@ export default function MessagesOverviewPage() {
         <Card className="lg:col-span-7 flex flex-col min-h-0 bg-white border-slate-200 shadow-sm rounded-xl overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <div className="px-4 pt-4 border-b border-slate-100 flex items-center justify-between">
-              <TabsList className="bg-slate-100/80 p-0.5 gap-1 rounded-lg h-9">
+              {/* <TabsList className="bg-slate-100/80 p-0.5 gap-1 rounded-lg h-9">
                 <TabsTrigger value="inbox" className="text-xs font-semibold rounded-md h-8 px-4 data-[state=active]:bg-white data-[state=active]:text-slate-950">
                   Inbox
                 </TabsTrigger>
@@ -232,7 +230,7 @@ export default function MessagesOverviewPage() {
                 <TabsTrigger value="sent" className="text-xs font-semibold rounded-md h-8 px-4 data-[state=active]:bg-white data-[state=active]:text-slate-950">
                   Sent
                 </TabsTrigger>
-              </TabsList>
+              </TabsList> */}
               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                 Total: {messages.length} alerts
               </div>
@@ -451,7 +449,7 @@ export default function MessagesOverviewPage() {
               </ScrollArea>
 
               {/* Action Buttons Footer */}
-              <div className="p-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between gap-3">
+              {/* <div className="p-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" className="h-9 px-3 gap-1.5 rounded-lg border-slate-200 text-slate-700 bg-white">
                     <Reply className="h-4 w-4" /> Reply
@@ -468,7 +466,7 @@ export default function MessagesOverviewPage() {
                 >
                   <Trash2 className="h-4 w-4" /> Delete
                 </Button>
-              </div>
+              </div> */}
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-4">

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { List } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { useInvDocConfig } from "./InvDocumentLayout";
@@ -16,6 +17,7 @@ import { Warehouse } from "@/types/warehouse/warehouse";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
+import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { GenericModal } from "@/modals/GenericModal";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { DocumentType } from "@/types/master/DocumentType";
@@ -81,6 +83,9 @@ export function InvDocumentHeader() {
     value: string;
   }>({ open: false, type: null, value: "" });
 
+  const searchParams = useSearchParams();
+  const autoCreatedRef = useRef(false);
+
   useEffect(() => {
     const fetchWarehouses = async () => {
       try {
@@ -93,6 +98,41 @@ export function InvDocumentHeader() {
     };
     fetchWarehouses();
   }, [loadWarehouses, setWarehouses]);
+
+  useEffect(() => {
+    const isDraft = searchParams.get("draft") === "1";
+    const draftEntryParam = searchParams.get("draftEntry") || "";
+    const docEntryParam = searchParams.get("docEntry") || "";
+
+    if (isDraft && draftEntryParam) {
+      const draftId = parseInt(draftEntryParam);
+      if (!isNaN(draftId)) {
+        loadDraftDoc(draftId);
+      }
+    } else if (docEntryParam) {
+      setDocNumSearch(docEntryParam);
+      fetchDocument(docEntryParam);
+    }
+  }, []);
+
+  const loadDraftDoc = async (draftId: number) => {
+    setIsLoading(true);
+    try {
+      const documentData = await getDraftDocument(draftId);
+      if (documentData) {
+        fetchUdfDefinitions(config.type, true);
+        applyDocumentData(documentData, config.type);
+
+        useInventoryDocument.getState().setLoadedDraftData(documentData);
+      } else {
+        toast.error(`Draft document ${draftId} not found.`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load draft document.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fromWhs = watch("FromWarehouse");
   const toWhs = watch("ToWarehouse");

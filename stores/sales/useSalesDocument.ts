@@ -47,6 +47,8 @@ interface SalesDocumentStore {
   udfs: Record<string, any>;
   isCopying: boolean;
   lastLoadedDocType: number | null; // Track original doc type
+  loadedDraftData: any | null;
+  setLoadedDraftData: (data: any) => void;
   setIsCopying: (val: boolean) => void;
 
   setCustomer: (c: BusinessPartner) => void;
@@ -123,7 +125,9 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     attachments: [],
     udfs: {},
     isCopying: false,
+    loadedDraftData: null,
 
+    setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setIsCopying: (val) => set({ isCopying: val }),
     setCustomer: (c) => set({ customer: c }),
     setDocDate: (d) => set({ docDate: d }),

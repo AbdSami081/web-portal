@@ -26,6 +26,8 @@ interface IFPRDDocumentStore {
     File?: File;
   }[];
   udfs: Record<string, any>;
+  loadedDraftData: any | null;
+  setLoadedDraftData: (data: any) => void;
   addAttachment: (file: File) => void;
   removeAttachment: (lineNum: number) => void;
   updateAttachment: (lineNum: number, updated: Partial<IFPRDDocumentStore["attachments"][0]>) => void;
@@ -55,7 +57,9 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     initialStatus: "boposPlanned",
     attachments: [],
     udfs: {},
+    loadedDraftData: null,
 
+    setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setWarehouses: (warehouses) => set({ warehouses }),
     setCustomer: (customer) => set({ customer }),
 

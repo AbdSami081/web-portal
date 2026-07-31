@@ -10,7 +10,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { toast } from "sonner";
-import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument } from "@/api+/sap/sales/salesService";
+import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument, getDraftDocument } from "@/api+/sap/sales/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
 import { List } from "lucide-react";
@@ -46,33 +46,23 @@ export function DocumentHeader() {
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const PAGE_SIZE = 20;
-  const currentDate = new Date().toISOString().split('T')[0];
 
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
   const searchParams = useSearchParams();
-  const [isDraftMode, setIsDraftMode] = useState(false);
+  const autoCreatedRef = React.useRef(false);
 
   useEffect(() => {
     const draftParam = searchParams.get("draft") === "1";
 
-    if (draftParam) {
-      toast.info("Opening drafts isn't supported yet. Coming soon.");
-      return;
-    }
+    const docEntryParam = searchParams.get("docEntry") || "";
+    const draftEntryParam = searchParams.get("draftEntry") || "";
 
-    const docEntryParam = searchParams.get("docEntry");
-    const documentCodeParam = searchParams.get("documentCode");
+    // Only auto-fetch if we have a regular docEntry, or a proper draftEntry with draft=1 flag
+    if (!docEntryParam && !(draftParam && draftEntryParam)) return;
 
-    if (!docEntryParam || !documentCodeParam) return;
-
-    if (Number(documentCodeParam) !== Number(config.type)) {
-      return;
-    }
-
-    setIsDraftMode(false);
     setSearchValue(docEntryParam);
-    fetchDocument(docEntryParam, { isDraft: false });
+    fetchDocument(docEntryParam, { isDraft: draftParam }, Number(draftEntryParam));
   }, []);
 
   useEffect(() => {
@@ -165,7 +155,6 @@ export function DocumentHeader() {
     setCustomer(bp);
     setValue("listNum", bp.PriceListNum);
     
-    // Set currency from selected customer
     if (bp.Currency) {
       setCurrency(bp.Currency as any);
     }
@@ -176,40 +165,47 @@ export function DocumentHeader() {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
-  const fetchDocument = async (docNum: string, opts?: { isDraft?: boolean }) => {
+  const fetchDocument = async (docNum: string, opts?: { isDraft?: boolean }, draftEntry?: number) => {
     var documentData;
     clearLines();
-    const docNumInt = parseInt(docNum);
-
-    if (isNaN(docNumInt)) {
-      toast.error("Invalid Document Number entered.");
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      if (config.type === DocumentType.Quotation) {
-        documentData = await getQuotationDocument(docNumInt);
-      }
-      else if (config.type === DocumentType.Order) {
-        documentData = await getSalesOrderDocument(docNumInt);
-      }
-      else if (config.type === DocumentType.Delivery) {
-        documentData = await getSalesDeliveryDocument(docNumInt);
-      }
-      else if (config.type === DocumentType.ARInvoice) {
-        documentData = await getARInvoiceDocument(docNumInt);
-      }
-      else if (config.type === DocumentType.SalesReturn) {
-        documentData = await getSalesReturnDocument(docNumInt);
+      if (opts?.isDraft && draftEntry) {
+        documentData = await getDraftDocument(draftEntry);
+      } else {
+        const docNumInt = parseInt(docNum);
+
+        if (isNaN(docNumInt)) {
+          toast.error("Invalid Document Number entered.");
+          return; 
+        }
+
+        if (config.type === DocumentType.Quotation) {
+          documentData = await getQuotationDocument(docNumInt);
+        }
+        else if (config.type === DocumentType.Order) {
+          documentData = await getSalesOrderDocument(docNumInt);
+        }
+        else if (config.type === DocumentType.Delivery) {
+          documentData = await getSalesDeliveryDocument(docNumInt);
+        }
+        else if (config.type === DocumentType.ARInvoice) {
+          documentData = await getARInvoiceDocument(docNumInt);
+        }
+        else if (config.type === DocumentType.SalesReturn) {
+          documentData = await getSalesReturnDocument(docNumInt);
+        }
       }
 
       if (!documentData?.DocEntry) {
-        toast.info(`Document number ${docNumInt} not found.`);
+        toast.info(
+          opts?.isDraft
+            ? `Draft document ${draftEntry} not found.`
+            : `Document number ${docNum} not found.`
+        );
       } else {
         fetchUdfDefinitions(config.type, true);
-
         loadFromDocument(documentData, config.type);
         setValue("DocDate", documentData.DocDate?.split("T")[0]);
         setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
@@ -221,7 +217,9 @@ export function DocumentHeader() {
         setValue("DocEntry", documentData.DocEntry);
         setValue("DocNum", documentData.DocNum);
         setValue("Comments", documentData.Comments);
-        toast.success(`Document ${documentData.DocNum} loaded successfully.`);
+        if (opts?.isDraft) {
+          useSalesDocument.getState().setLoadedDraftData(documentData);
+        }
       }
     } catch (error: any) {
       if (error.response?.status === 404) {

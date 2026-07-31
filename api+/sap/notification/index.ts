@@ -35,7 +35,7 @@ interface ODataResponse {
 export const getMyAlerts = async (skip = 0, top = PAGE_SIZE): Promise<AlertsPage> => {
   const response = await apiClient.get<ODataResponse | SAPMessage[]>(
     `api/Notifications/GetMyAlerts`,
-    { params: { skip, top } }
+    { params: { skip, top }, timeout: 60000 }
   );
   const data = response.data as any;
 
