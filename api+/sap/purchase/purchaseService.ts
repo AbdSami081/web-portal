@@ -1,12 +1,197 @@
 import apiClient from "@/lib/apiClient";
+import { BasePurchaseDocument } from "@/types/purchase/purchaseDocuments.type";
 
-export const postPurchaseOrder = async (data: any): Promise<any> => {
-    const res = await apiClient.post(`api/PurchaseOrder`, data);
-    return res.data;
+export const getPurchaseQuotationDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseQuotation?docNum=${docNum}`);
+  if (!res.data) return null;
+
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
 };
 
-export const postPurchaseRequest = async (data: any): Promise<any> => {
-    // Assuming backend endpoint is /api/PurchaseRequest
-    const res = await apiClient.post(`api/PurchaseRequest`, data);
-    return res.data;
+export const getPurchaseRequestDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseRequests?docNum=${docNum}`);
+  if (!res.data) return null;
+
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const getPurchaseOrderDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseOrders?docNum=${docNum}`);
+  if (!res.data) return null;
+
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const getPurchaseDeliveryDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseDeliveryNotes?docNum=${docNum}`);
+  if (!res.data) return null;
+
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const getAPInvoiceDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseInvoices?docNum=${docNum}`);
+  if (!res.data) return null;
+
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const getPurchaseReturnDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/Returns?docNum=${docNum}`);
+  if (!res.data) return null;
+
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const postPurchaseOrder = async (payload: any): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseOrders`, payload, {
+    headers: {
+      Prefer: "return-no-content",
+    },
+  });
+
+  if (res.status === 204) {
+    return {
+      isDraft: true,
+    };
+  }
+  if (!res.data) return null;
+
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const patchPurchaseOrder = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseOrders/${docEntry}`, payload);
+  return res.data;
+};
+
+export const postPurchaseRequest = async (payload: any): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseRequests`, payload);
+  if (!res.data) return null;
+
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const patchPurchaseRequest = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseRequests/${docEntry}`, payload);
+  return res.data;
+};
+
+export const postPurchaseQuotation = async (data: any): Promise<any> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseQuotations`, data);
+  return res.data;
+};
+
+export const patchPurchaseQuotation = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseQuotations/${docEntry}`, payload);
+  return res.data;
+};
+
+export const postPurchaseGRPO = async (data: any): Promise<any> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseDeliveryNotes`, data);
+  return res.data;
+};
+
+export const patchGRPO = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseDeliveryNotes/${docEntry}`, payload);
+  return res.data;
+};
+
+export const postPurchaseInvoice = async (data: any): Promise<any> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseInvoices`, data);
+  return res.data;
+};
+
+export const patchPurchaseInvoice = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseInvoices/${docEntry}`, payload);
+  return res.data;
+};
+
+export const getPurchaseQuotation = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseInvoices/${docEntry}`, payload);
+  return res.data || [];
+};
+
+export const getPurchaseQuotationByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
+  const res = await apiClient.get(`api/Purchase/GetPurchaseQuotationsByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
+  return res.data || [];
+};
+
+export const getPurchaseOrderByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
+  const res = await apiClient.get(`api/Purchase/GetPurchaseOrderByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
+  return res.data || [];
+};
+
+export const getPurchaseDeliveryByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
+  const res = await apiClient.get(`api/Purchase/GetGRPOByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
+  return res.data || [];
+};
+
+export const getPurchaseRequestsByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
+  const res = await apiClient.get(`api/Purchase/GetPurchaseRequestsByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
+  return res.data || [];
 };

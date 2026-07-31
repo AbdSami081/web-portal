@@ -6,6 +6,7 @@ const vendorDocBase = z.object({
   CardCode: z.string().optional(),
   CardName: z.string().optional(),
   ContactPersonCode: z.string().optional(),
+  discountPercent: z.coerce.number().optional(),
   NumAtCard: z.string().optional(),
   DocDate: z.string().default(today),
   DocDueDate: z.string().default(today),
@@ -18,6 +19,9 @@ const vendorDocBase = z.object({
 
 export const purchaseQuotationSchema = vendorDocBase;
 export type PurchaseQuotationFormData = z.infer<typeof purchaseQuotationSchema>;
+
+export const purchaseRequestSchema = vendorDocBase;
+export type PurchaseRequestFormData = z.infer<typeof purchaseRequestSchema>;
 
 export const purchaseOrderSchema = vendorDocBase;
 export type PurchaseOrderFormData = z.infer<typeof purchaseOrderSchema>;

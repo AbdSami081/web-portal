@@ -12,8 +12,8 @@ const statusMap: Record<string, string> = {
 };
 
 export function PurchaseHeader() {
-  const { register, watch } = useFormContext();
-  const { setDocDate, setDocDueDate, setTaxDate, setRequiredDate, setRequester, setRequesterName, setBranch, setDepartment } = usePurchaseDocument();
+  const { register, watch, setValue } = useFormContext();
+  const { setDocDate, requester, setDocDueDate, setTaxDate, setRequiredDate, setRequester, setRequesterName, setBranch, setDepartment } = usePurchaseDocument();
 
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const docNum = watch("DocNum");
@@ -35,9 +35,15 @@ export function PurchaseHeader() {
     }
   };
 
+  useEffect(() => {
+    if (requester) {
+      setValue("CardCode", requester.CardCode);
+      setValue("CardName", requester.CardName);
+    }
+  }, [requester, setValue]);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-      {/* Left Column */}
       <div className="space-y-4">
         <div className="grid grid-cols-3 items-center gap-4">
           <AppLabel>Requester</AppLabel>
@@ -45,7 +51,7 @@ export function PurchaseHeader() {
             <Input
               {...register("Requester")}
               className="bg-yellow-50"
-              onChange={(e) => setRequester(e.target.value)}
+              onChange={(e) => setRequester(e.target.value as any)}
               placeholder="e.g. USER"
             />
           </div>
@@ -84,9 +90,7 @@ export function PurchaseHeader() {
         </div>
       </div>
 
-      {/* Right Column */}
       <div className="space-y-4">
-        {/* Search — top-right, same level as Requester */}
         <div className="flex items-center justify-end gap-2">
           <Input
             type="text"

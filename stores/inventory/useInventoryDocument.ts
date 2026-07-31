@@ -14,6 +14,9 @@ interface IOPRDDocumentStore {
   lastLoadedDocType: number | null;
   fromWarehouse: string;
   toWarehouse: string;
+  priceList: string;
+  series: string;
+  postingDate: string;
   comments: string;
   journalMemo: string;
   docDate: string;
@@ -21,8 +24,8 @@ interface IOPRDDocumentStore {
   isCopyingTo: boolean;
   udfs: Record<string, any>;
   loadedDraftData: any | null;
-  setLoadedDraftData: (data: any) => void;
 
+  setLoadedDraftData: (data: any) => void;
   setCustomer: (customer: BusinessPartner | null) => void;
   setWarehouses: (warehouses: any[]) => void;
   setDocEntry: (DocEntry: number) => void;
@@ -32,6 +35,9 @@ interface IOPRDDocumentStore {
   setJournalMemo: (v: string) => void;
   setDocDate: (v: string) => void;
   setIsCopyingTo: (v: boolean) => void;
+  setPriceList: (priceList: string) => void;
+  setSeries: (series: string) => void;
+  setPostingDate: (postingDate: string) => void;
   addLine: (line: InventoryDocumentLine) => void;
   removeLine: (index: number) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
@@ -69,6 +75,9 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     comments: "",
     journalMemo: "",
     docDate: today(),
+    priceList: "",
+    series: "",
+    postingDate: today(),
     docStatus: "",
     isCopyingTo: false,
     attachments: [],
@@ -85,6 +94,9 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     setJournalMemo: (journalMemo) => set({ journalMemo }),
     setDocDate: (docDate) => set({ docDate }),
     setIsCopyingTo: (isCopyingTo) => set({ isCopyingTo }),
+    setPriceList: (priceList: string) => set({ priceList }),
+    setSeries: (series: string) => set({ series }),
+    setPostingDate: (postingDate: string) => set({ postingDate }),
 
     addLine: (line) => {
       const existing = get().lines.find((l) => l.ItemCode === line.ItemCode);
@@ -164,11 +176,10 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           Dscription: line.ItemDescription || line.Dscription || line.ItemName || "",
           FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || doc.FromWarehouse || "",
           WhsCode: line.WarehouseCode || line.WhsCode || doc.ToWarehouse || "",
-          Quantity: isCopy ? Number(line.RemainingOpenQuantity) : Number(line.Quantity) || 0,
+          Quantity: Number(line.Quantity) || 0,
           ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
           UoMCode: uomCode,
           unitMsr,
-          MeasureUnit: line.MeasureUnit || "",
           LineNum: line.LineNum ?? idx,
           BaseType: line.BaseType ?? (isCopy ? type : undefined),
           BaseEntry: line.BaseEntry ?? (isCopy ? doc.DocEntry : undefined),
@@ -197,6 +208,13 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         DocEntry: isCopy ? 0 : (doc.DocEntry || 0),
         DocNum: isCopy ? 0 : (doc.DocNum || 0),
         lastLoadedDocType: type ?? null,
+        priceList: doc.PriceList ? String(doc.PriceList) : "",
+        series: doc.Series ? String(doc.Series) : "",
+        postingDate: isCopy
+          ? today()
+          : (doc.PostingDate
+              ? doc.PostingDate.split("T")[0]
+              : (doc.TaxDate ? doc.TaxDate.split("T")[0] : today())),
         fromWarehouse: doc.FromWarehouse || "",
         toWarehouse: doc.ToWarehouse || "",
         comments: isCopy ? "" : (doc.Comments || ""),
@@ -225,6 +243,9 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         lastLoadedDocType: null,
         fromWarehouse: "",
         toWarehouse: "",
+        priceList: "",
+        series: "",
+        postingDate: today(),
         comments: "",
         journalMemo: "",
         docDate: today(),
@@ -232,6 +253,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         isCopyingTo: false,
         attachments: [],
         udfs: {},
+        loadedDraftData: null,
       });
     },
   }))

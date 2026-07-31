@@ -24,6 +24,13 @@ export interface InventoryTransferPayload {
     Attachments2_Lines?: any[];
 }
 
+export interface GoodIssuePayload {
+    Comments?: string;
+    JournalMemo?: string;
+    DocumentLines: InventoryTransferLine[];
+    Attachments2_Lines?: any[];
+}
+
 export const postInventoryTransferRequest = async (payload: InventoryTransferPayload) => {
     const response = await apiClient.post("api/Inventory/InventoryTransferRequest", payload);
     return response.data;
@@ -34,6 +41,23 @@ export const postInventoryTransfer = async (payload: InventoryTransferPayload) =
     return response.data;
 };
 
+export const postGoodIssue = async (payload: GoodIssuePayload) => {
+    const response = await apiClient.post("api/Inventory/GoodIssue", payload, {
+        headers: {
+            Prefer: "return-no-content",
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (response.status === 204) {
+        return {
+            isDraft: true,
+        };
+    }
+
+    return response.data;
+};
+
 export const getInventoryTransferRequest = async (docNum: number) => {
     const response = await apiClient.get(`api/Inventory/InventoryTransferRequest?docNum=${docNum}`);
     return response.data;
@@ -41,6 +65,11 @@ export const getInventoryTransferRequest = async (docNum: number) => {
 
 export const getInventoryTransfer = async (docNum: number) => {
     const response = await apiClient.get(`api/Inventory/InventoryTransfer?docNum=${docNum}`);
+    return response.data;
+};
+
+export const getGoodIssue = async (docNum: number) => {
+    const response = await apiClient.get(`api/Inventory/GoodIssue?docNum=${docNum}`);
     return response.data;
 };
 
@@ -63,6 +92,12 @@ export const getInventoryTransferRequestList = async (
     };
 };
 
+export const getGoodIssueList = async () => {
+    const response = await apiClient.get(`api/Inventory/GoodIssueList`);
+    const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    return data.value || [];
+};
+
 export const patchInventoryTransferRequest = async (docEntry: number, payload: any) => {
     const response = await apiClient.patch(`api/Inventory/InventoryTransferRequest/${docEntry}`, payload);
     return response.data;
@@ -70,6 +105,11 @@ export const patchInventoryTransferRequest = async (docEntry: number, payload: a
 
 export const patchInventoryTransfer = async (docEntry: number, payload: any) => {
     const response = await apiClient.patch(`api/Inventory/InventoryTransfer/${docEntry}`, payload);
+    return response.data;
+};
+
+export const patchGoodIssue = async (docEntry: number, payload: any) => {
+    const response = await apiClient.patch(`api/Inventory/GoodIssue/${docEntry}`, payload);
     return response.data;
 };
 

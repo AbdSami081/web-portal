@@ -1,40 +1,151 @@
 import { useEffect, useState } from "react";
-import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { PurchaseItemRow } from "./PurchaseItemRow";
+import { useFormContext } from "react-hook-form";
+import { Item } from "@/types/sales/Item.type";
+import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
+import { Trash2, Plus, FileText } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
+import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
+import { PurchaseItemRow } from "./PurchaseItemRow";
+import { DocumentType } from "@/types/master/DocumentType";
+import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
+import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
+import { ResizableTable } from "../Custom/ResizableTable";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 
 export function PurchaseItems() {
-  const { lines, addLine } = usePurchaseDocument();
-  const { loadDocumentEssentials } = useMasterDataStore();
+  const { watch } = useFormContext();
+  const selectedCardCode = watch("CardCode");
+  const {
+    lines,
+    addLine,
+    requester,
+    attachments,
+    addAttachment,
+    removeAttachment,
+    updateAttachment,
+  } = usePurchaseDocument();
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
+  const config = usePurchaseDocConfig();
+  const isTableDisabled = config.isDisabledTable(requester?.DocumentStatus!);
+
+  const { freightsWithCharges, warehouses, loadMasterData } = useMasterDataStore();
+  const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    line?: any;
+  } | null>(null);
+
+  const [selectedLineForModal, setSelectedLineForModal] = useState<any | null>(null);
+  const [serialModalOpen, setSerialModalOpen] = useState(false);
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
 
   useEffect(() => {
-    loadDocumentEssentials("P");
-  }, [loadDocumentEssentials]);
+    loadMasterData("S", "I");
+  }, [loadMasterData]);
 
-  const handleAddLine = () => {
-    addLine({
-      Quantity: 1,
-      Price: 0,
-      DiscountPercent: 0,
+  const handleOnSelectItems = (items: Item[]) => {
+    items.forEach((item) => {
+      const price = getCustomerPrice(item.Prices || []);
+
+      const isItem = item.Category === "I" || item.ItemType === "itItems";
+      const targetTaxCode = isItem ? item.VatGourpPu : item.VatGourpSa;
+      const selectedTax = freightsWithCharges.find(
+        (t) => t.Code === targetTaxCode,
+      );
+      const taxRate = Number(selectedTax?.Rate || 0);
+      const defaultWhsLine = item.DefaultWhse || firstWhs;
+      const qtyInWhs = item.QtyInWhs || [];
+
+      const whRecord = qtyInWhs.find(
+        (w: any) =>
+          (w.WarehouseCode || w.warehouseCode) === defaultWhsLine
+      );
+
+      const initialOnHand = whRecord
+        ? (whRecord.Qty ?? whRecord.qty ?? 0)
+        : 0;
+
+      addLine({
+        ItemCode: item.ItemCode,
+        ItemName: item.ItemName || item.ItemDescription || "",
+        Quantity: 1,
+        OnHand: initialOnHand,
+        Price: price,
+        TaxCode: targetTaxCode,
+        TaxRate: taxRate,
+        WarehouseCode: defaultWhsLine,
+        UoMCode: item.UoM || "",
+        ManSerNum: item.ManSerNum,
+        ManBtchNum: item.ManBtchNum,
+        QtyInWhs: qtyInWhs,
+      });
     });
   };
 
+  const handleRowContextMenu = (
+    e: React.MouseEvent,
+    line: any
+  ) => {
+    e.preventDefault();      
+
+    const isDeliveryOrInvoice = config.type === DocumentType.GoodsReceiptPO || config.type === DocumentType.APInvoice;
+    if (!isDeliveryOrInvoice) return;
+
+    const isSerial = String(line.ManSerNum).toLowerCase() === 'y' || String(line.ManSerNum).toLowerCase() === 'tyes';
+    const isBatch = String(line.ManBtchNum).toLowerCase() === 'y' || String(line.ManBtchNum).toLowerCase() === 'tyes';
+    const isSerialBatchItem = isSerial || isBatch;
+
+    if (!isSerialBatchItem) return;
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      line,
+    });
+  };
+
+  const columns = [
+    { key: "actions", title: "Actions", width: 80 },
+    { key: "ItemCode", title: "Item Code", width: 180 },
+    { key: "ItemName", title: "Item Description", width: 300 },
+    { key: "Quantity", title: "Qty", width: 100 },
+    { key: "OnHand", title: "Qty In Whs", width: 100 },
+    { key: "Price", title: "Price", width: 120 },
+    { key: "DiscountPercent", title: "Disc %", width: 120 },
+    { key: "TaxCode", title: "Tax Code", width: 140 },
+    { key: "TaxAmount", title: "Tax Amount (LC)", width: 180 },
+    { key: "WarehouseCode", title: "Whs", width: 120 },
+    { key: "UoMCode", title: "UoM", width: 120 },
+    { key: "LineTotal", title: "Line Total", width: 180 },
+    { key: "Freight1Type", title: "Freight 1 Type", width: 180 },
+    { key: "Freight1LCAmount", title: "Freight 1 (LC)", width: 180 },
+    { key: "Freight2Type", title: "Freight 2 Type", width: 180 },
+    { key: "Freight2LCAmount", title: "Freight 2 (LC)", width: 180 },
+    { key: "Freight3Type", title: "Freight 3 Type", width: 180 },
+    { key: "Freight3LCAmount", title: "Freight 3 (LC)", width: 180 },
+    { key: "Vendor", title: "Vendor", width: 150 },
+    { key: "RequiredDate", title: "Required Date", width: 150 },
+  ].filter(col => {
+    if (col.key === "actions") return true;
+    return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
+  });
+
   return (
     <div className="grid w-full relative pt-2 overflow-visible">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-1 overflow-x-auto">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full pt-1 overflow-x-auto"
+      >
         <TabsList className="grid w-[240px] grid-cols-2 mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800">
           <TabsTrigger
             value="content"
@@ -50,7 +161,10 @@ export function PurchaseItems() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="content" className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto">
+        <TabsContent
+          value="content"
+          className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto"
+        >
           <div className="relative overflow-visible">
             <div className="absolute -top-6 left-2 z-50">
               <TooltipProvider>
@@ -59,7 +173,19 @@ export function PurchaseItems() {
                     <Button
                       type="button"
                       size="icon"
-                      onClick={handleAddLine}
+                      onClick={() => {
+                        if (!selectedCardCode) {
+                          const field = document.getElementById("card-code-field");
+                          if (field) {
+                            field.classList.add("animate-glow-red-blink");
+                            setTimeout(() => {
+                              field.classList.remove("animate-glow-red-blink");
+                            }, 3000);
+                          }
+                          return;
+                        }
+                        setDialogOpen(true);
+                      }}
                       className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
                     >
                       <Plus className="h-5 w-5 stroke-[2.5px]" />
@@ -74,57 +200,119 @@ export function PurchaseItems() {
                 </Tooltip>
               </TooltipProvider>
             </div>
-
             <div className="relative border rounded overflow-x-auto">
-              <div className="w-full overflow-x-auto pb-2">
-                <Table className="text-xs min-w-[1600px]">
-                  <TableHeader className="sticky top-0 bg-neutral-900 z-10">
-                    <TableRow className="border-neutral-600">
-                      <TableHead className="text-gray-300 px-4 py-2 border-r border-neutral-700 w-[60px] text-center">Actions</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Item Code</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Vendor</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Required Date</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">Required Qty.</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">Info Price</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">Discount %</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Tax Code</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">Total (LC)</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">UoM Code</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">Country Org</TableHead>
-                      
-                      {/* Custom FBR Fields */}
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap">FBR UoM</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">FBR Qty</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">FBR Rate</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">FBR LineTotal</TableHead>
-                      <TableHead className="text-gray-300 px-4 py-2 whitespace-nowrap text-right">FBR SalesTax</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lines.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={16} className="h-32 text-center text-slate-500">
-                          No items added yet. Click &quot;Add Item&quot; to begin.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      lines.map((_, index) => (
-                        <PurchaseItemRow key={index} index={index} />
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+              <div
+                className={`w-full overflow-x-auto pb-2 ${isTableDisabled ? "opacity-80 pointer-events-none" : ""}`}
+              >
+                <ResizableTable
+                  columns={columns}
+                  data={lines}
+                  emptyMessage="No items added yet."
+                  onRowContextMenu={handleRowContextMenu}
+                  renderRow={(line, idx) => (
+                    <PurchaseItemRow index={idx} line={line} />
+                  )}
+                />
+                {contextMenu && (
+                  <div
+                    className="fixed z-50 bg-white border border-neutral-200/80 shadow-lg rounded-lg w-72 p-1 select-none animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-150 ease-out"
+                    style={{
+                      top: contextMenu.y,
+                      left: contextMenu.x,
+                    }}
+                    onMouseLeave={() => setContextMenu(null)}
+                  >
+                    <button
+                      className="cursor-pointer w-full text-left px-3 py-2 hover:bg-neutral-100 active:bg-neutral-200 rounded text-sm font-semibold flex items-center gap-2 text-neutral-800 transition-colors"
+                      onClick={() => {
+                        const isBatch = String(contextMenu.line.ManBtchNum).toLowerCase() === 'y' || String(contextMenu.line.ManBtchNum).toLowerCase() === 'tyes';
+                        setSelectedLineForModal(contextMenu.line);
+                        if (isBatch) {
+                          setBatchModalOpen(true);
+                        } else {
+                          setSerialModalOpen(true);
+                        }
+                        setContextMenu(null);
+                      }}
+                    >
+                      {(() => {
+                        const isBatch = String(contextMenu.line.ManBtchNum).toLowerCase() === 'y' || String(contextMenu.line.ManBtchNum).toLowerCase() === 'tyes';
+                        return isBatch ? (
+                          <>
+                            <FileText className="h-4 w-4 text-blue-500 stroke-[2]" />
+                            <span>Batch Number Transactions Report</span>
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 text-emerald-500 stroke-[2]" />
+                            <span>Serial Number Transactions Report</span>
+                          </>
+                        );
+                      })()}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="attachments" className="mt-0">
-           <div className="p-8 text-center text-slate-500 bg-white border rounded-lg">
-              Attachments functionality coming soon.
-           </div>
+        <TabsContent value="attachments" className="overflow-hidden mt-0">
+          <AttachmentsTab
+            attachments={attachments}
+            addAttachment={addAttachment}
+            removeAttachment={removeAttachment}
+            updateAttachment={updateAttachment}
+            isTableDisabled={isTableDisabled}
+          />
         </TabsContent>
       </Tabs>
+      <ItemSelectorDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSelectItems={handleOnSelectItems}
+      />
+      {selectedLineForModal && (
+        <SerialNumberSelectionDialog
+          open={serialModalOpen}
+          onClose={() => {
+            setSerialModalOpen(false);
+            setSelectedLineForModal(null);
+          }}
+          onConfirm={(selections) => {
+            const state = usePurchaseDocument.getState();
+            if (selections.serials) {
+              Object.entries(selections.serials).forEach(([itemCode, serials]) => {
+                state.setLineSerials(itemCode, serials);
+              });
+              toast.success("Serial numbers allocated successfully");
+            }
+          }}
+          lines={lines}
+          initialItemCode={selectedLineForModal.ItemCode}
+        />
+      )}
+
+      {selectedLineForModal && (
+        <BatchNumberSelectionDialog
+          open={batchModalOpen}
+          onClose={() => {
+            setBatchModalOpen(false);
+            setSelectedLineForModal(null);
+          }}
+          onConfirm={(selections) => {
+            const state = usePurchaseDocument.getState();
+            if (selections.batches) {
+              Object.entries(selections.batches).forEach(([itemCode, batches]) => {
+                state.setLineBatches(itemCode, batches);
+              });
+              toast.success("Batch numbers allocated successfully");
+            }
+          }}
+          lines={lines}
+          initialItemCode={selectedLineForModal.ItemCode}
+        />
+      )}
     </div>
   );
 }

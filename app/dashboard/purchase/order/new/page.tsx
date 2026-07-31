@@ -7,14 +7,17 @@ import { PurchaseDocumentLayout } from "@/components/purchase/PurchaseDocumentLa
 import { PurchaseVendorHeader } from "@/components/purchase/PurchaseVendorHeader";
 import { PurchaseItems } from "@/components/purchase/PurchaseItems";
 import { PurchaseFooter } from "@/components/purchase/PurchaseFooter";
-import { purchaseOrderSchema, PurchaseOrderFormData } from "@/lib/schemas/purchaseVendorSchemas";
+import { purchaseOrderSchema, PurchaseOrderFormData, PurchaseQuotationFormData } from "@/lib/schemas/purchaseVendorSchemas";
+import { DocumentType } from "@/types/master/DocumentType";
+import { getSapErrorMessage } from "@/lib/errorHelper";
+import { patchPurchaseOrder, postPurchaseOrder } from "@/api+/sap/purchase/purchaseService";
+import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { UDFLayout } from "@/components/shared/UDFSheet";
 
 const today = new Date().toISOString().split("T")[0];
 
 export default function NewPurchaseOrderPage() {
-  const { lines, DocTotal, TaxTotal, freight, discountPercent } = usePurchaseDocument();
-
-  const [defaultValues] = useState<PurchaseOrderFormData>({
+  const [defaultValues] = useState<PurchaseQuotationFormData>({
     CardCode: "",
     CardName: "",
     ContactPersonCode: "",
@@ -29,10 +32,92 @@ export default function NewPurchaseOrderPage() {
   });
 
   const handleSubmit = async (data: PurchaseOrderFormData) => {
-    if (lines.length === 0) { toast.error("Please add at least one item."); return; }
-    const payload = { ...data, DocTotal, DiscountPercent: discountPercent, Freight: freight, TaxTotal, DocumentLines: lines };
-    console.log("Purchase Order Payload:", payload);
-    toast.success("Purchase Order payload ready — check console.");
+    const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = usePurchaseDocument.getState();
+
+    const newAttachments = attachments.filter(att => att.File);
+    const existingAttachments = attachments.filter(att => !att.File);
+
+    let uploadedAttachments: any[] = [];
+    if (newAttachments.length > 0) {
+      try {
+        const filesToUpload = newAttachments.map(att => att.File as File);
+        const uploadResults = await uploadAttachments(filesToUpload, "PurchaseOrder");
+        
+        toast.success(`${uploadResults.length} attachments uploaded successfully`);
+
+        uploadedAttachments = newAttachments.map((att, index) => ({
+          ...att,
+          SourcePath: uploadResults[index].path,
+        }));
+      } catch (error) {
+        console.error("Failed to upload attachments", error);
+        toast.error("Failed to upload attachments");
+        return;
+      }
+    }
+
+    const processedAttachments = [...existingAttachments, ...uploadedAttachments];
+
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Order) {
+      const payload = {
+        Comments: data.Comments,
+        Attachments2_Lines: processedAttachments.map((att) => ({
+          FileExtension: att.FileName.split('.').pop(),
+          FileName: att.FileName.split('.').slice(0, -1).join('.'),
+          SourcePath: att.SourcePath,
+          FreeText: att.FreeText,
+          CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
+        }))
+      };
+
+      try {
+        await patchPurchaseOrder(Number(DocEntry), payload);
+        const docNum = usePurchaseDocument.getState().DocNum;
+        toast.success(`Purchase Order #${docNum || DocEntry} updated successfully`);
+      } catch (error) {
+        toast.error("Failed to update Purchase Order");
+      }
+      return;
+    }
+
+    const payload = {
+      ...data,
+      DocumentLines: lines.map((line) => {
+        const lineData: any = { ...line };
+
+        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Order) {
+          lineData.BaseType = lastLoadedDocType;
+          lineData.BaseEntry = DocEntry;
+          lineData.BaseLine = line.LineNum;
+        } else {
+          lineData.BaseType = -1;
+          lineData.BaseEntry = null;
+          lineData.BaseLine = null;
+        }
+        return lineData;
+      }),
+      Attachments2_Lines: processedAttachments.map((att) => ({
+        FileExtension: att.FileName.split('.').pop(),
+        FileName: att.FileName.split('.').slice(0, -1).join('.'),
+        SourcePath: att.SourcePath,
+        UserID: "1",
+        FreeText: att.FreeText
+      }))
+    };
+
+    try {
+      const response = await postPurchaseOrder(payload);
+
+      if (response?.DocEntry) {
+        toast.success(`Purchase Order #${response.DocNum} created successfully!`);
+      } else {
+        throw new Error("Failed to create Purchase Order");
+      }
+    } catch (error: any) {
+      const message = getSapErrorMessage(error);
+      toast.error(message || "Failed to create Purchase Order. Please try again.");
+      throw error;
+    }
   };
 
   return (
@@ -40,11 +125,12 @@ export default function NewPurchaseOrderPage() {
       schema={purchaseOrderSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={PurchaseDocumentType.PurchaseOrder}
+      docType={DocumentType.PurchaseOrder}
     >
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={PurchaseDocumentType.PurchaseOrder} />
         <PurchaseItems />
+        <UDFLayout docType={DocumentType.PurchaseOrder} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

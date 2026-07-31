@@ -4,19 +4,27 @@ import { AppLabel } from "@/components/Custom/AppLabel";
 import { Textarea } from "@/components/ui/textarea";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { useFormContext } from "react-hook-form";
+import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 
 export function PurchaseFooter() {
   const { watch } = useFormContext();
   const {
     DocTotal,
     TaxTotal,
+    lines,
     TotalBeforeDiscount,
     freight = 0,
+    rounding = 0,
     discountPercent = 0,
+    currency,
     setFreight,
+    setRounding,
     setDiscountPercent,
+    setDiscountSum,
+    setTaxTotal,
     setComments,
     TotalFreight = 0,
+    discSum = 0
   } = usePurchaseDocument();
 
   const docStatus = watch("DocStatus");
@@ -24,7 +32,16 @@ export function PurchaseFooter() {
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isFooterDisabled = isLoadedDocument && docStatus === "bost_Close";
 
-  const currency = "PKR";
+  useEffect(() => {
+    if (discountPercent > 0 && TotalBeforeDiscount > 0) {
+      const amount = (TotalBeforeDiscount * discountPercent) / 100;
+      if (Math.abs(amount - discSum) > 0.01) {
+        setDiscountSum(amount);
+      }
+    } else if (discountPercent === 0 && discSum !== 0) {
+      setDiscountSum(0);
+    }
+  }, [discountPercent, TotalBeforeDiscount]);
 
   return (
     <>
@@ -47,13 +64,13 @@ export function PurchaseFooter() {
           />
         </div>
 
-        <div className={`space-y-3 bg-slate-100 p-4 rounded-lg text-sm -mt-12`}>
+        <div className={`mt-2 space-y-3 bg-slate-100 p-4 rounded-lg text-sm -mt-12`}>
           <div className="grid grid-cols-2 gap-2 items-center">
             <AppLabel>Total Before Discount</AppLabel>
             <div className="relative">
               <Input
                 className="h-6 text-right bg-slate-200 pr-10"
-                value={TotalBeforeDiscount.toFixed(2)}
+                value={formatCurrency(TotalBeforeDiscount).replace(/[^\d.-]/g, '')}
                 disabled={true}
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
@@ -61,33 +78,65 @@ export function PurchaseFooter() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 items-center">
-            <AppLabel>Discount %</AppLabel>
-            <div className="relative">
-              <Input
-                type="number"
-                className="h-6 text-right pr-6"
-                value={discountPercent}
-                onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                disabled={isFooterDisabled}
-              />
-              <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">%</span>
+            <AppLabel>Discount</AppLabel>
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-[1.5]">
+                <Input
+                  type="number"
+                  step="any"
+                  className="h-6 text-right pr-6"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                  disabled={isFooterDisabled}
+                />
+                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">%</span>
+              </div>
+              <div className="relative flex-[2.5]">
+                <Input
+                  type="number"
+                  step="any"
+                  className="h-6 text-right pr-10"
+                  value={discSum.toFixed(2)}
+                  onChange={(e) => setDiscountSum(Number(e.target.value))}
+                  disabled={isFooterDisabled}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+              </div>
             </div>
           </div>
 
-          {/* Freight */}
           <div className="grid grid-cols-2 gap-2 items-center">
-            <AppLabel>Freight</AppLabel>
+            <div className="flex items-center gap-1">
+              <AppLabel>Freight</AppLabel>
+            </div>
             <div className="relative">
               <Input
                 className="h-6 text-right bg-slate-200 pr-10"
-                value={TotalFreight.toFixed(2)}
+                value={formatCurrency(TotalFreight)}
                 disabled={true}
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
           </div>
 
-          {/* Tax */}
+          <div className="grid grid-cols-2 gap-2 items-center">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" className="h-3 w-3" disabled={isFooterDisabled} />
+              <AppLabel className="cursor-pointer">Rounding</AppLabel>
+            </div>
+            <div className="relative">
+              <Input
+                type="number"
+                step="any"
+                className="h-6 text-right pr-10"
+                value={rounding}
+                onChange={(e) => setRounding(Number(e.target.value))}
+                disabled={isFooterDisabled}
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-2 items-center">
             <AppLabel>Tax</AppLabel>
             <div className="relative">
@@ -100,7 +149,6 @@ export function PurchaseFooter() {
             </div>
           </div>
 
-          {/* Total */}
           <div className="grid grid-cols-2 gap-2 items-center border-t border-gray-300 pt-2">
             <AppLabel className="font-bold text-sm">Total</AppLabel>
             <div className="relative">

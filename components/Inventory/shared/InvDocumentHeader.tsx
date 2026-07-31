@@ -16,7 +16,7 @@ import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorD
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-import { getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
+import { getGoodIssue, getGoodIssueList, getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
 import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { GenericModal } from "@/modals/GenericModal";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
@@ -158,6 +158,7 @@ export function InvDocumentHeader() {
     switch (type) {
       case DocumentType.InvTransfer: return "StockTransfers";
       case DocumentType.InvTransferReq: return "InventoryTransferRequests";
+      case DocumentType.GoodIssue: return "GoodIssues";
       default: return "";
     }
   };
@@ -166,26 +167,35 @@ export function InvDocumentHeader() {
     const resourceName = getResourceName(config.type);
     if (!resourceName) return;
 
-    const currentSkip = isLoadMore ? listSkip + LIST_PAGE_SIZE : 0;
-
     setIsLoadingList(true);
     try {
-      const data = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE);
-      const newDocs = (data || []).map((d: any) => ({
+      let rawList: any[] = [];
+
+      if (config.type === DocumentType.GoodIssue) {
+        rawList = await getGoodIssueList();
+      } else {
+        const currentSkip = isLoadMore ? listSkip + LIST_PAGE_SIZE : 0;
+        rawList = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE);
+        if (isLoadMore) {
+          setListSkip(currentSkip);
+        } else {
+          setListSkip(0);
+        }
+      }
+
+      const newDocs = (rawList || []).map((d: any) => ({
         ...d,
         DocumentStatus: d.DocumentStatus?.replace("bost_", "") || d.DocumentStatus,
       }));
 
-      if (isLoadMore) {
+      if (isLoadMore && config.type !== DocumentType.GoodIssue) {
         setDocumentsList(prev => [...prev, ...newDocs]);
-        setListSkip(currentSkip);
       } else {
         setDocumentsList(newDocs);
-        setListSkip(0);
         setDocListModalOpen(true);
       }
 
-      setListHasMore(newDocs.length === LIST_PAGE_SIZE);
+      setListHasMore(config.type !== DocumentType.GoodIssue && newDocs.length === LIST_PAGE_SIZE);
     } catch (error) {
       toast.error("Failed to fetch documents list.");
     } finally {
@@ -204,19 +214,6 @@ export function InvDocumentHeader() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [config.type, listSkip, listHasMore]);
-
-
-
-  const fetchBusinessPartners = () => {
-    // const data: BusinessPartner[] = [
-    //   { CardCode: "C0001", CardName: "Alpha Traders" },
-    //   { CardCode: "C0002", CardName: "Beta Industries" },
-    //   { CardCode: "C0003", CardName: "Gamma Distributors" },
-    //   { CardCode: "C0004", CardName: "Delta Co." },
-    //   { CardCode: "C0005", CardName: "Zeta Solutions" },
-    // ];
-    // setBusinessPartners(data);
-  };
 
   const handleSelectBP = (bp: BusinessPartner) => {
     setCustomer(bp);
@@ -247,6 +244,9 @@ export function InvDocumentHeader() {
       } else if (config.type === DocumentType.InvTransfer) {
         documentData = await getInventoryTransfer(docNumInt);
       }
+      else if (config.type === DocumentType.GoodIssue) {
+        documentData = await getGoodIssue(docNumInt);
+      } 
 
       if (abortController.signal.aborted) return;
 

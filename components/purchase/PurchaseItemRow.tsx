@@ -1,172 +1,409 @@
-import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
-import { TableRow, TableCell } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
-import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Settings, Trash, Search } from "lucide-react";
+import { useFormContext } from "react-hook-form";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
+import { GenericModal } from "@/modals/GenericModal";
+import { distribtionLstOCRCO2, distribtionLstOCRCO3, distribtionLstOCRCO4 } from "@/app/data/cogsData";
+import { calculateFreightTax, calculateLineTax } from "@/utils/taxCalculations";
+import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
+import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
+import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 
-export function PurchaseItemRow({ index }: { index: number }) {
-  const { lines, updateLine, removeLine } = usePurchaseDocument();
-  const { freightsWithCharges } = useMasterDataStore();
-  const line = lines[index];
+interface Props {
+  index: number;
+  line: PurchaseDocumentLine;
+}
 
-  if (!line) return null;
+interface Record {
+  Code: string;
+  Name: string;
+}
+
+export function PurchaseItemRow({ index, line }: Props) {
+  const { watch } = useFormContext();
+  const { updateLine, removeLine } = usePurchaseDocument();
+  const { freightsWithCharges, freightTypes } = useMasterDataStore();
+
+  const config = usePurchaseDocConfig();
+
+  const isFieldEnabled = (fieldName: string) => {
+    return getFieldSettings(config.type, "linesFieds", fieldName).enable !== false;
+  };
+
+  const isFieldVisible = (fieldName: string) => {
+    return getFieldSettings(config.type, "linesFieds", fieldName).visible !== false;
+  };
+
+  const [draftLine, setDraftLine] = useState(line);
+  const [whDialogOpen, setWhDialogOpen] = useState(false);
+  const [cogsModalOpen, setCogsModalOpen] = useState(false);
+  const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
+  const [cogsData, setCogsData] = useState<Record[]>([]);
+
+  useEffect(() => {
+    setDraftLine(line);
+  }, [line, index]);
+
+  useEffect(() => {
+    calculateAndUpdate(draftLine);
+  }, [
+    draftLine.Quantity,
+    draftLine.Price,
+    draftLine.DiscountPercent,
+    draftLine.TaxCode,
+    draftLine.ItemCode,
+    draftLine.Freight1LCAmount,
+    draftLine.Freight1TaxGroup,
+    draftLine.Freight2LCAmount,
+    draftLine.Freight2TaxGroup,
+    draftLine.Freight3LCAmount,
+    draftLine.Freight3TaxGroup,
+    freightsWithCharges,
+  ]);
+
+  const calculateAndUpdate = (lineData: PurchaseDocumentLine) => {
+    const quantity = Number(lineData.Quantity) || 0;
+    const price = Number(lineData.Price) || 0;
+    const discount = Number(lineData.DiscountPercent) || 0;
+
+    const selectedTax = freightsWithCharges.find(t => (t.Code || (t as any).code) === lineData.TaxCode);
+    let itemTaxRate = Number(selectedTax?.Rate || 0);
+
+    const subtotal = quantity * price;
+    const discounted = subtotal * (1 - discount / 100);
+    const itemTax = (discounted * itemTaxRate) / 100;
+
+    const f1 = calculateFreightTax(Number(lineData.Freight1LCAmount || 0), lineData.Freight1TaxGroup || "", freightsWithCharges);
+    const f2 = calculateFreightTax(Number(lineData.Freight2LCAmount || 0), lineData.Freight2TaxGroup || "", freightsWithCharges);
+    const f3 = calculateFreightTax(Number(lineData.Freight3LCAmount || 0), lineData.Freight3TaxGroup || "", freightsWithCharges);
+
+    const totalTax = itemTax + f1.taxAmount + f2.taxAmount + f3.taxAmount;
+
+    const updatedLine = {
+      ...lineData,
+      TaxRate: itemTaxRate,
+      Freight1TaxRate: f1.rate,
+      Freight1TaxLCAmount: f1.taxAmount,
+      Freight2TaxRate: f2.rate,
+      Freight2TaxLCAmount: f2.taxAmount,
+      Freight3TaxRate: f3.rate,
+      Freight3TaxLCAmount: f3.taxAmount,
+      TaxAmount: Number(totalTax.toFixed(2)),
+      LineTotal: Number((discounted + totalTax).toFixed(2)),
+    };
+
+    updateLine(line.ItemCode, updatedLine);
+  };
+
+  const openCogsModal = (field: "CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4") => {
+    setActiveField(field);
+    setCogsData(
+      field === "CogsOcrCo2"
+        ? distribtionLstOCRCO2
+        : field === "CogsOcrCo3"
+          ? distribtionLstOCRCO3
+          : distribtionLstOCRCO4
+    );
+    setCogsModalOpen(true);
+  };
 
   return (
-    <TableRow className="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-      <TableCell className="w-[40px] text-center font-medium text-slate-500">
-        {index + 1}
-      </TableCell>
-      
-      <TableCell className="min-w-[150px]">
-        <Input
-          value={line.ItemCode || ""}
-          onChange={(e) => updateLine(index, { ItemCode: e.target.value })}
-          placeholder="Item Code"
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-      
-      <TableCell className="min-w-[150px]">
-        <Input
-          value={line.LineVendor || ""}
-          onChange={(e) => updateLine(index, { LineVendor: e.target.value })}
-          placeholder="Vendor"
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-      
-      <TableCell className="min-w-[130px]">
-        <Input
-          type="date"
-          value={line.RequiredDate || ""}
-          onChange={(e) => updateLine(index, { RequiredDate: e.target.value })}
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-      
-      <TableCell className="w-[100px]">
-        <Input
-          type="number"
-          value={line.Quantity || ""}
-          onChange={(e) => updateLine(index, { Quantity: Number(e.target.value) })}
-          className="h-6 text-[10px] text-right"
-        />
-      </TableCell>
-      
-      <TableCell className="w-[120px]">
-        <Input
-          type="number"
-          value={line.Price || ""}
-          onChange={(e) => updateLine(index, { Price: Number(e.target.value) })}
-          className="h-6 text-[10px] text-right"
-        />
-      </TableCell>
-
-      <TableCell className="w-[100px]">
-        <Input
-          type="number"
-          value={line.DiscountPercent || ""}
-          onChange={(e) => updateLine(index, { DiscountPercent: Number(e.target.value) })}
-          className="h-6 text-[10px] text-right"
-        />
-      </TableCell>
-
-      <TableCell className="w-[100px]">
-        <Select
-          value={line.TaxCode || ""}
-          onValueChange={(val) => updateLine(index, { TaxCode: val })}
-        >
-          <SelectTrigger className="h-6 text-[10px] border rounded px-1">
-            <SelectValue placeholder="Tax Code" />
-          </SelectTrigger>
-          <SelectContent>
-            {freightsWithCharges?.map((grp: any) => {
-              const code = grp.Code || grp.code;
-              const name = grp.Name || grp.name;
-              return (
-                <SelectItem key={code} value={code} className="text-[10px]">
-                  {code} - {name || code}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      
-      <TableCell className="w-[120px] text-right font-medium text-slate-700 text-[10px]">
-        {((line.Quantity || 0) * (line.Price || 0) * (1 - (line.DiscountPercent || 0) / 100)).toFixed(2)}
-      </TableCell>
-      
-      <TableCell className="w-[100px]">
-        <Input
-          value={line.UoMCode || ""}
-          onChange={(e) => updateLine(index, { UoMCode: e.target.value })}
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-      
-      <TableCell className="w-[150px]">
-        <Input
-          value={line.CountryOrg || ""}
-          onChange={(e) => updateLine(index, { CountryOrg: e.target.value })}
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-
-      {/* Custom FBR Fields */}
-      <TableCell className="w-[100px]">
-        <Input
-          value={line.U_FBRUom || ""}
-          onChange={(e) => updateLine(index, { U_FBRUom: e.target.value })}
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-      <TableCell className="w-[100px]">
-        <Input
-          type="number"
-          value={line.U_FBRQty || ""}
-          onChange={(e) => updateLine(index, { U_FBRQty: Number(e.target.value) })}
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-      <TableCell className="w-[100px]">
-        <Input
-          type="number"
-          value={line.U_FBRRate || ""}
-          onChange={(e) => updateLine(index, { U_FBRRate: Number(e.target.value) })}
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-      <TableCell className="w-[120px]">
-        <Input
-          type="number"
-          value={line.U_FBRLneTotal || ""}
-          onChange={(e) => updateLine(index, { U_FBRLneTotal: Number(e.target.value) })}
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-      <TableCell className="w-[120px]">
-        <Input
-          type="number"
-          value={line.U_FBRSalesTax || ""}
-          onChange={(e) => updateLine(index, { U_FBRSalesTax: Number(e.target.value) })}
-          className="h-6 text-[10px]"
-        />
-      </TableCell>
-      
-      <TableCell className="w-[60px] text-center">
+    <>
+      <td className="py-1 px-2 border-r border-neutral-200 text-center w-[40px]">
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          onClick={() => removeLine(index)}
-          className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+          className="h-6 w-6 p-0 hover:bg-red-100/10"
+          onClick={() => removeLine(line.ItemCode)}
+          disabled={Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash
+            className={`h-4 w-4 ${
+              watch("DocEntry") && Number(watch("DocEntry")) > 0
+                ? "text-gray-500"
+                : "text-red-500"
+            }`}
+          />
         </Button>
-      </TableCell>
-    </TableRow>
+      </td>
+
+      {isFieldVisible("ItemCode") && (
+        <td className="px-2 py-1 w-[120px] truncate">
+          <span className="font-medium">{line.ItemCode}</span>
+        </td>
+      )}
+
+      {isFieldVisible("ItemName") && (
+        <td className="px-2 py-1 w-[220px]">
+          <span className="block text-left truncate">{draftLine.ItemName}</span>
+        </td>
+      )}
+
+      {isFieldVisible("Quantity") && (
+        <td className="w-[90px]">
+          <Input
+            className="h-6 w-full text-right"
+            type="number"
+            step="any"
+            value={draftLine.Quantity}
+            onChange={(e) =>
+              setDraftLine({ ...draftLine, Quantity: Number(e.target.value) })
+            }
+            disabled={!isFieldEnabled("Quantity")}
+          />
+        </td>
+      )}
+
+      {isFieldVisible("OnHand") && (
+        <td className="w-[90px]">
+          <Input
+            className="h-6 w-full text-right bg-neutral-100"
+            type="number"
+            value={draftLine.OnHand ?? 0}
+            disabled
+            readOnly
+          />
+        </td>
+      )}
+
+      {isFieldVisible("Price") && (
+        <td className="w-[110px]">
+          <Input
+            className="h-6 w-full text-right"
+            type="number"
+            value={draftLine.Price}
+            onChange={(e) =>
+              setDraftLine({ ...draftLine, Price: Number(e.target.value) })
+            }
+            disabled={!isFieldEnabled("Price")}
+          />
+        </td>
+      )}
+
+      {isFieldVisible("DiscountPercent") && (
+        <td className="w-[90px]">
+          <Input
+            className="h-6 w-full text-right"
+            type="number"
+            min={0}
+            max={100}
+            value={draftLine.DiscountPercent || 0}
+            onChange={(e) =>
+              setDraftLine({
+                ...draftLine,
+                DiscountPercent: Math.min(100, Number(e.target.value)),
+              })
+            }
+            disabled={!isFieldEnabled("DiscountPercent")}
+          />
+        </td>
+      )}
+
+      {isFieldVisible("TaxCode") && (
+        <td className="w-[140px]">
+          <Select
+            value={draftLine.TaxCode || ""}
+            disabled={!isFieldEnabled("TaxCode")}
+            onValueChange={(val) =>
+              setDraftLine({ ...draftLine, TaxCode: val })
+            }
+          >
+            <SelectTrigger className="h-6 w-full text-xs">
+              <SelectValue placeholder="Tax" />
+            </SelectTrigger>
+            <SelectContent>
+              {freightsWithCharges?.map((grp: any) => {
+                const code = grp.Code || grp.code;
+                const name = grp.Name || grp.name;
+                return (
+                  <SelectItem key={code} value={code} className="text-xs">
+                    {code} - {name}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </td>
+      )}
+
+      {isFieldVisible("TaxAmount") && (
+        <td className="w-[100px]">
+          <Input
+            className="h-6 w-full text-right bg-neutral-100"
+            value={calculateLineTax(
+              Number(draftLine.Quantity) || 0,
+              Number(draftLine.Price) || 0,
+              Number(draftLine.DiscountPercent) || 0,
+              Number(draftLine.TaxRate) || 0
+            )}
+            disabled
+            readOnly
+          />
+        </td>
+      )}
+
+      {isFieldVisible("WarehouseCode") && (
+        <td className="w-[120px]">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full bg-gray-100 text-center text-xs"
+              value={draftLine.WarehouseCode || ""}
+              disabled
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setWhDialogOpen(true)}
+              disabled={!isFieldEnabled("WarehouseCode")}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </td>
+      )}
+
+      {isFieldVisible("UoMCode") && (
+        <td className="w-[100px]">
+          <Input
+            className="h-6 w-full text-center bg-neutral-100"
+            value={draftLine.UoMCode || ""}
+            disabled
+            readOnly
+          />
+        </td>
+      )}
+
+      {isFieldVisible("LineTotal") && (
+        <td className="w-[120px]">
+          <Input
+            className="h-6 w-full text-right"
+            value={draftLine.LineTotal || 0}
+            disabled
+            readOnly
+          />
+        </td>
+      )}
+
+      {isFieldVisible("Freight1Type") && (
+        <td className="w-[140px]">
+          <Select
+            value={draftLine.Freight1Type || ""}
+            onValueChange={(val) => {
+              const selectedType = freightTypes?.find(
+                (t: any) => t.ExpnsCode?.toString() === val
+              );
+              const updated = {
+                ...draftLine,
+                Freight1Type: val,
+                Freight1TaxGroup: selectedType?.VatGroupO || "",
+              };
+              setDraftLine(updated);
+              calculateAndUpdate(updated);
+            }}
+          >
+            <SelectTrigger className="h-6 w-full text-xs">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              {freightTypes?.map((type: any) => (
+                <SelectItem
+                  key={type.ExpnsCode}
+                  value={type.ExpnsCode?.toString()}
+                  className="text-xs"
+                >
+                  {type.ExpnsName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </td>
+      )}
+
+      {isFieldVisible("Freight1LCAmount") && (
+        <td className="w-[110px]">
+          <Input
+            className="h-6 w-full text-right"
+            type="number"
+            value={draftLine.Freight1LCAmount || 0}
+            onChange={(e) =>
+              setDraftLine({
+                ...draftLine,
+                Freight1LCAmount: Number(e.target.value),
+              })
+            }
+            onBlur={() => calculateAndUpdate(draftLine)}
+          />
+        </td>
+      )}
+
+      {isFieldVisible("Vendor") && (
+        <td className="w-[150px]">
+          <Input
+            value={draftLine.Requester || ""}
+            onChange={(e) =>
+              setDraftLine({ ...draftLine, Requester: e.target.value })
+            }
+          />
+        </td>
+      )}
+
+      {isFieldVisible("RequiredDate") && (
+        <td className="w-[150px]">
+          <Input
+            type="date"
+            value={draftLine.RequiredDate || ""}
+            onChange={(e) =>
+              setDraftLine({ ...draftLine, RequiredDate: e.target.value })
+            }
+          />
+        </td>
+      )}
+
+      <WarehouseSelectorDialog
+        open={whDialogOpen}
+        onClose={() => setWhDialogOpen(false)}
+        onSelect={(wh: any) => {
+          const qtyInWhs = line.QtyInWhs || [];
+          const whRecord = qtyInWhs.find(
+            (w: any) => (w.WarehouseCode || w.warehouseCode) === wh.WhsCode
+          );
+
+          const updated = {
+            ...draftLine,
+            WarehouseCode: wh.WhsCode,
+            OnHand: whRecord ? whRecord.Qty ?? 0 : 0,
+          };
+
+          setDraftLine(updated);
+          updateLine(line.ItemCode, updated);
+        }}
+        itemCode={line.ItemCode}
+        itemQtyInWhs={line.QtyInWhs}
+      />
+
+      <GenericModal
+        open={cogsModalOpen}
+        onClose={() => setCogsModalOpen(false)}
+        onSelect={(val) => {
+          setDraftLine({ ...draftLine, [activeField]: val });
+          setCogsModalOpen(false);
+        }}
+        data={cogsData}
+        columns={[
+          { key: "Code", label: "Code" },
+          { key: "Name", label: "Name" },
+        ]}
+        title="Select Distribution Rule"
+        getSelectValue={(item) => item.Code}
+      />
+    </>
   );
 }

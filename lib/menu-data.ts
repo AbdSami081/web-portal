@@ -78,6 +78,13 @@ export const SERVER_MENUS: MenuItem[] = [
         isActive: true,
         items: [
             {
+                id: "52195e8a-52f7-4186-b17d-74d2dcd5c4b4",
+                title: "Purchase Request",
+                url: "/dashboard/purchase/request/new",
+                objectCode: 1470000113,
+                isReporting: true,
+            },
+            {
                 id: "8a4b1eed-bb98-4ce2-ade2-63cf9f77ec37",
                 title: "Purchase Quotation",
                 url: "/dashboard/purchase/quotation/new",
@@ -126,6 +133,13 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "Inventory Transfer",
                 url: "/dashboard/inventory/transfer",
                 objectCode: 67,
+                isReporting: true,
+            },
+            {
+                id: "396e0217-175b-44d6-af6b-d735559f886e",
+                title: "Good Issue",
+                url: "/dashboard/inventory/Good_Issue",
+                objectCode: 60,
                 isReporting: true,
             }
         ],

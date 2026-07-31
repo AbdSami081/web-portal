@@ -159,17 +159,6 @@ export function InvDocumentLayout<T extends FieldValues>({
   const [itrSearch, setItrSearch] = useState("");
   const itrSearchRef = React.useRef("");
 
-
-
-  const handleNewDocument = () => {
-    reset({
-      ...defaultValues,
-      DocNum: 0,
-      DocEntry: 0,
-    } as any);
-    resetStore();
-  };
-
   const handleCopyTo = (selected: string) => {
     if (!DocEntry || DocEntry === 0) {
       toast.error("Please search or select a document first!");

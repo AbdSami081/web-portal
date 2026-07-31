@@ -5,21 +5,21 @@ import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { PurchaseDocumentType } from "@/types/purchase/purchaseDocuments.type";
 import { PurchaseDocumentLayout } from "@/components/purchase/PurchaseDocumentLayout";
 import { PurchaseVendorHeader } from "@/components/purchase/PurchaseVendorHeader";
-import { purchaseQuotationSchema, PurchaseQuotationFormData } from "@/lib/schemas/purchaseVendorSchemas";
-import { PurchaseFooter } from "@/components/purchase/PurchaseFooter";
 import { PurchaseItems } from "@/components/purchase/PurchaseItems";
+import { PurchaseFooter } from "@/components/purchase/PurchaseFooter";
+import { PurchaseRequestFormData, purchaseRequestSchema } from "@/lib/schemas/purchaseVendorSchemas";
 import { DocumentType } from "@/types/master/DocumentType";
 import { getSapErrorMessage } from "@/lib/errorHelper";
-import { patchPurchaseQuotation, postPurchaseQuotation } from "@/api+/sap/purchase/purchaseService";
+import { patchPurchaseRequest, postPurchaseRequest } from "@/api+/sap/purchase/purchaseService";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 
 const today = new Date().toISOString().split("T")[0];
 
-export default function NewPurchaseQuotationPage() {
+export default function PurchaseRequestPage() {
   const loadFromDocument = usePurchaseDocument((state) => state.loadFromDocument);
 
-  const [defaultValues] = useState<PurchaseQuotationFormData>({
+  const [defaultValues] = useState<PurchaseRequestFormData>({
     CardCode: "",
     CardName: "",
     ContactPersonCode: "",
@@ -33,7 +33,7 @@ export default function NewPurchaseQuotationPage() {
     DocEntry: 0,
   });
 
-  const handleSubmit = async (data: PurchaseQuotationFormData) => {
+  const handleSubmit = async (data: PurchaseRequestFormData) => {
     const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses } = usePurchaseDocument.getState();
 
     if (lines.length === 0) {
@@ -74,7 +74,7 @@ export default function NewPurchaseQuotationPage() {
         }))
       };
       try {
-        await patchPurchaseQuotation(Number(DocEntry), patchPayload);
+        await patchPurchaseRequest(Number(DocEntry), patchPayload);
         const docNum = usePurchaseDocument.getState().DocNum;
         toast.success(`Quotation #${docNum || DocEntry} updated successfully`);
       } catch (error) {
@@ -140,11 +140,11 @@ export default function NewPurchaseQuotationPage() {
     };
 
     try {
-      console.log("Submitting Purchase Quotation with payload:", payload);
-      const documentData = await postPurchaseQuotation(payload);
-      if (!documentData?.DocEntry) throw new Error("Failed to create quotation");
-      loadFromDocument(documentData, DocumentType.Quotation);
-      toast.success(`Quotation #${documentData.DocNum} created successfully`);
+      console.log("Submitting Purchase Request with payload:", payload);
+      const documentData = await postPurchaseRequest(payload);
+      if (!documentData?.DocEntry) throw new Error("Failed to create request");
+      loadFromDocument(documentData, DocumentType.PurchaseRequests);
+      toast.success(`Request #${documentData.DocNum} created successfully`);
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create quotation. Please try again.");
@@ -154,15 +154,15 @@ export default function NewPurchaseQuotationPage() {
 
   return (
     <PurchaseDocumentLayout
-      schema={purchaseQuotationSchema}
+      schema={purchaseRequestSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={DocumentType.PurchaseQuotation}
+      docType={DocumentType.PurchaseRequests}
     >
       <div className="flex flex-col gap-6">
-        <PurchaseVendorHeader docType={PurchaseDocumentType.PurchaseQuotation} />
+        <PurchaseVendorHeader docType={PurchaseDocumentType.PurchaseRequests} />
         <PurchaseItems />
-        <UDFLayout docType={DocumentType.PurchaseQuotation} />
+        <UDFLayout docType={DocumentType.PurchaseRequests} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

@@ -1,5 +1,5 @@
 export enum PurchaseDocumentType {
-  PurchaseRequest = 1470000113,
+  PurchaseRequests = 1470000113,
   PurchaseQuotation = 54,
   PurchaseOrder = 22,
   GoodsReceiptPO = 20,
@@ -10,18 +10,22 @@ export interface BasePurchaseDocument {
   DocEntry?: number;
   DocNum?: number;
   DocType?: string; 
-  DocumentStatus?: "bost_Open" | "bost_Close" | "bost_Cancel";
+  DocumentStatus: "bost_Open" | "bost_Close" | "bost_Cancel";
   DocObjectCode?: string;
   DocDate: string; 
   DocDueDate: string; 
   TaxDate?: string | null; 
   RequriedDate?: string | null; 
-
+  CardCode?: string;
+  CardName?: string;
+  ContactPersonCode?: string;
+  Address2?: string;
+  Address?: string;
   Requester?: string;
   RequesterName?: string;
   Branch?: string;
   Department?: string;
-  
+  RequiredDate?: string;
   Comments?: string;
   DiscSum?: number;
   DiscountPercent?: number;
@@ -41,29 +45,78 @@ export interface BasePurchaseDocument {
 
 export interface PurchaseDocumentLine {
   LineNum?: number;
-  ItemCode?: string;
+  ItemCode: string;
+  ItemName?: string;
   ItemDescription?: string;
-  LineVendor?: string;
-  RequiredDate?: string;
+  ManSerNum?: string;
+  ManBtchNum?: string;
+  SerialNumbers?: { InternalSerialNumber: string }[];
+  BatchNumbers?: { BatchNumber: string; Quantity: number }[];
   Quantity: number;
   Price: number;
+  OnHand: number;
+  QtyInWhs?: any[];
   DiscountPercent?: number;
-  TaxCode?: string;
-  LineTotal?: number;
+  WarehouseCode?: string;
+  RequiredDate?: string;
   UoMCode?: string;
+  TaxCode?: string;
+  TaxType?: string;
+  TaxRate?: number;
+  LineTotal?: number;
+  TaxAmount?: number;
+  InStockQty?: number;
+  Requester?: string;
+  CommittedQty?: number;
+  OrderedQty?: number;
+  IsClosed?: string;
+
+  InvQty?: number;
+  TotalDoc?: number;
+  PackageQuantity?: number;
   CountryOrg?: string;
+  CogsOcrCo2?: string;
+  CogsOcrCo3?: string;
+  CogsOcrCo4?: string;
+  BlanketAgreementNo?: string;
+  LinePoPrss?: boolean;
+  U_LastPrice?: number;
+  U_OQCR?: string;
+  U_OQDC?: number;
+  U_LPP2?: number;
+  U_ExtraTax?: number;
+  U_FurtherTax?: number;
+  U_FixedRetailPrice?: number;
+  U_SaleType?: number;
+  U_SroScheduleNo?: string;
+  U_SroSerialItem?: string;
 
-  U_FBRUom?: string;
-  U_FBRQty?: number;
-  U_FBRRate?: number;
-  U_FBRLneTotal?: number;
-  U_FBRSalesTax?: number;
+  Freight1Type?: string;
+  Freight1Amount?: number;
+  Freight1LCAmount?: number;
+  Freight1TaxGroup?: string;
+  Freight1TaxRate?: number;
+  Freight1TaxAmount?: number;
+  Freight1TaxLCAmount?: number;
 
+  Freight2Type?: string;
+  Freight2Amount?: number;
+  Freight2LCAmount?: number;
+  Freight2TaxGroup?: string;
+  Freight2TaxRate?: number;
+  Freight2TaxAmount?: number;
+  Freight2TaxLCAmount?: number;
+
+  Freight3Type?: string;
+  Freight3Amount?: number;
+  Freight3LCAmount?: number;
+  Freight3TaxGroup?: string;
+  Freight3TaxRate?: number;
+  Freight3TaxAmount?: number;
+  Freight3TaxLCAmount?: number;
   BaseType?: number;
   BaseEntry?: number;
   BaseLine?: number;
 }
 
-export interface PurchaseRequest extends BasePurchaseDocument {
-
-}
+export interface PurchaseRequest extends BasePurchaseDocument {}
