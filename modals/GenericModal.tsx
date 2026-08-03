@@ -133,7 +133,7 @@ export function GenericModal<T>({
     }
   };
 
-  const showSkeleton = Boolean(isLoading) && filteredData.length === 0;
+  const showSkeleton = Boolean(isLoading) && (filteredData.length === 0 || isServerSearch);
   const skeletonColSpan = columns.length + (multiple ? 2 : 1);
   const skeletonRowCount = 10;
 

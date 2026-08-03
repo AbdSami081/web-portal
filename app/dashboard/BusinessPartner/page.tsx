@@ -19,7 +19,8 @@ import {
   saveBusinessPartner,
 } from "@/api+/sap/BusinessPartner/BPService";
 import { Search, List, ChevronDown, Loader2 } from "lucide-react";
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -55,6 +56,7 @@ export default function BPMasterDataPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [listSearch, setListSearch] = useState("");
   const [openShipping, setOpenShipping] = useState(false);
   const [openIndicator, setOpenIndicator] = useState(false);
   const [openProject, setOpenProject] = useState(false);
@@ -102,12 +104,15 @@ export default function BPMasterDataPage() {
     }
   };
 
+  const searchRequestIdRef = useRef(0);
+
   const fetchDocumentsList = useCallback(
-    async (isLoadMore = false) => {
+    async (isLoadMore = false, searchText?: string) => {
       const resourceName = getResourceName(DocumentType.BusinessPartner);
 
       if (!resourceName) return;
 
+      const requestId = ++searchRequestIdRef.current;
       const currentSkip = isLoadMore ? skip + PAGE_SIZE : 0;
 
       setIsLoadingList(true);
@@ -115,8 +120,11 @@ export default function BPMasterDataPage() {
         const data = await getDocumentsList(
           resourceName,
           currentSkip,
-          PAGE_SIZE
+          PAGE_SIZE,
+          searchText
         );
+
+        if (requestId !== searchRequestIdRef.current) return;
 
         if (isLoadMore) {
           setDocumentsList((prev) => [...prev, ...data]);
@@ -128,13 +136,39 @@ export default function BPMasterDataPage() {
 
         setHasMore(data.length === PAGE_SIZE); 
       } catch {
-        toast.error("Failed to fetch documents list.");
+        if (requestId === searchRequestIdRef.current) {
+          toast.error("Failed to fetch documents list.");
+        }
       } finally {
-        setIsLoadingList(false);
+        if (requestId === searchRequestIdRef.current) {
+          setIsLoadingList(false);
+        }
       }
     },
     [skip]
   );
+
+  const debouncedFetchDocumentsList = useDebouncedCallback((val: string) => {
+    fetchDocumentsList(false, val);
+  }, 400);
+
+  // Server-side search: opens modal and fetches filtered results from backend
+  const handleSearch = () => {
+    const val = searchValue.trim();
+    if (!val) {
+      setDocumentsList([]);
+      setSkip(0);
+      setListSearch("");
+      setOpen(true);
+      fetchDocumentsList(false);
+      return;
+    }
+    setListSearch(val);
+    setDocumentsList([]);
+    setSkip(0);
+    setOpen(true);
+    fetchDocumentsList(false, val);
+  };
 
   const openBPModal = useCallback(() => {
     setOpen(true);
@@ -348,21 +382,6 @@ export default function BPMasterDataPage() {
     setOpen(false);
   };
 
-  const handleSearch = () => {
-    if (!searchValue.trim()) return;
-    const found = documentsList.find(
-      (item) =>
-        item.CardCode.toLowerCase() === searchValue.trim().toLowerCase() ||
-        item.CardName.toLowerCase().includes(searchValue.trim().toLowerCase())
-    );
-    if (found) {
-      handleRowDoubleClick(found);
-      toast.success(`Business Partner ${found.CardCode} loaded successfully.`);
-    } else {
-      toast.error(`Business Partner "${searchValue}" not found.`);
-    }
-  };
-
   const isFormValid =
     formData.CardCode.trim() !== "" &&
     formData.CardType.trim() !== "";
@@ -378,7 +397,10 @@ export default function BPMasterDataPage() {
       <GenericModal
         title="Select Business Partner"
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setListSearch("");
+        }}
         data={documentsList}
         isLoading={isLoadingList}
         getSelectValue={(item) => item.CardCode}
@@ -394,8 +416,16 @@ export default function BPMasterDataPage() {
           { key: "CardName", label: "Card Name" },
           { key: "CardType", label: "Card Type" },
         ]}
-        onLoadMore={() => fetchDocumentsList(true)}
+        onLoadMore={() => fetchDocumentsList(true, listSearch)}
         hasMore={hasMore}
+        onSearch={(value) => {
+          setListSearch(value);
+          setDocumentsList([]);
+          setSkip(0);
+          setIsLoadingList(true);
+          debouncedFetchDocumentsList(value);
+        }}
+        searchValue={listSearch}
     />
 
         <GenericModal
@@ -516,223 +546,210 @@ export default function BPMasterDataPage() {
        { key: "Name", label: "Name" },
        ]}
      />
-        <div className="bg-white px-6 py-6">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-0">
-                <label className="w-20 shrink-0 text-sm">Code</label>
-                <div className="flex items-center">
-                  <Input
-                    value={formData.CardCode}
-                    onChange={(e) => handleChange("CardCode", e.target.value)}
-                    placeholder="Enter Code"
-                    className="h-7 w-45"
-                    
-                  />
-                </div>
-              </div>
+        <div className="bg-white px-6 py-4 border-b">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+            <h2 className="text-sm font-semibold text-zinc-800">Header Information</h2>
+            
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                placeholder="Search document..."
+                className="h-8 w-48 text-xs"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSearch();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer shrink-0"
+                onClick={handleSearch}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer shrink-0"
+                onClick={openBPModal}
+                title="List Business Partners"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-              <div className="flex items-center gap-2">
-                <Input
-                  type="text"
-                  placeholder="Search document..."
-                  className="h-8 w-38"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSearch();
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 cursor-pointer"
-                  onClick={handleSearch}
-                >
-                  <Search className="h-5 w-5" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 cursor-pointer"
-                  onClick={openBPModal}
-                  title="List Business Partners"
-                >
-                  <List className="h-5 w-5" />
-                </Button>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+            <div className="flex items-center gap-2">
+              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Code</label>
+              <Input
+                value={formData.CardCode}
+                onChange={(e) => handleChange("CardCode", e.target.value)}
+                placeholder="Enter Code"
+                className="h-8 w-full text-xs"
+              />
             </div>
 
-            <div className="flex flex-col gap-1 w-full lg:w-1/2">
-              <div className="flex items-center gap-0">
-                <label className="w-20 shrink-0 text-sm">Group</label>
-                <Select value={formData.Group} onValueChange={(value) => handleChange("Group", value)}>
-                  <SelectTrigger className="w-40 h-7">
-                    <SelectValue placeholder="Select Group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((item) => (
-                    <SelectItem
-                    key={item.Code}
-                    value={item.Code.toString()}
-                    >
-                    {item.Name}
-                   </SelectItem>
-                    ))}
-                 </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-0">
-                <label className="w-20 shrink-0 text-sm">Name</label>
-                <Input
-                  value={formData.CardName}
-                  onChange={(e) => handleChange("CardName", e.target.value)}
-                  placeholder="Enter Name"
-                  className="h-8 w-45"
-                />
-              </div>
-
-              <div className="flex items-center gap-0">
-                <label className="w-20 shrink-0 text-sm">Card Type</label>
-                <Select value={formData.CardType} onValueChange={(value) => handleChange("CardType", value)}>
-                  <SelectTrigger className="h-7 w-45">
-                    <SelectValue placeholder="Select Card Type" />
-                  </SelectTrigger>
-                 <SelectContent>
-                   {cardTypes.map((item) => (
-                  <SelectItem key={item.Code} value={item.Code}>
-                  {item.Name}
-                  </SelectItem>
+            <div className="flex items-center gap-2">
+              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Group</label>
+              <Select value={formData.Group} onValueChange={(value) => handleChange("Group", value)}>
+                <SelectTrigger className="h-8 w-full text-xs">
+                  <SelectValue placeholder="Select Group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {groups.map((item) => (
+                    <SelectItem key={item.Code} value={item.Code.toString()} className="text-xs">
+                      {item.Name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
-                </Select>
-              </div>
+              </Select>
+            </div>
 
-              <div className="flex items-center gap-0">
-                <label className="w-20 text-sm font-medium text-gray-700">Currency</label>
-               <Select
-                 value={formData.Currency}
-                 onValueChange={(value) => handleChange("Currency", value)}
-                >
-                  <SelectTrigger className="w-45">
-                  <SelectValue placeholder="Select Currency" />
-                  </SelectTrigger>
+            <div className="flex items-center gap-2">
+              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Name</label>
+              <Input
+                value={formData.CardName}
+                onChange={(e) => handleChange("CardName", e.target.value)}
+                placeholder="Enter Name"
+                className="h-8 w-full text-xs"
+              />
+            </div>
 
-                 <SelectContent>
-                    {currencies.map((currency) => (
-                    <SelectItem
-                    key={currency.Code}
-                    value={currency.Code}
-                    >
-                   {currency.Code} - {currency.Name}
-                   </SelectItem>
-                    ))}
+            <div className="flex items-center gap-2">
+              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Card Type</label>
+              <Select value={formData.CardType} onValueChange={(value) => handleChange("CardType", value)}>
+                <SelectTrigger className="h-8 w-full text-xs">
+                  <SelectValue placeholder="Select Card Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cardTypes.map((item) => (
+                    <SelectItem key={item.Code} value={item.Code} className="text-xs">
+                      {item.Name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
-               </Select>
-              </div>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Currency</label>
+              <Select value={formData.Currency} onValueChange={(value) => handleChange("Currency", value)}>
+                <SelectTrigger className="h-8 w-full text-xs">
+                  <SelectValue placeholder="Select Currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currencies.map((currency) => (
+                    <SelectItem key={currency.Code} value={currency.Code} className="text-xs">
+                      {currency.Code} - {currency.Name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
 
-        <Tabs defaultValue="general" className="mt-6 bg-white px-6 pb-6">
-          <TabsList className="h-11 w-[300px] rounded-xl bg-[#1f1f1f] p-1">
+        <Tabs defaultValue="general" className="mt-4 bg-white px-6 pb-6">
+          <TabsList className="h-9 w-[260px] bg-[#1f1f1f] p-1 rounded-lg inline-flex mb-3">
             <TabsTrigger
               value="general"
-              className="flex-1 rounded-lg font-semibold camelCase text-gray-300 data-[state=active]:bg-[#2d2d2d] data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="flex-1 px-4 py-1 text-xs font-medium rounded-md text-gray-300 data-[state=active]:bg-[#2d2d2d] data-[state=active]:text-white data-[state=active]:shadow-none"
             >
               General
             </TabsTrigger>
             <TabsTrigger
               value="remarks"
-              className="flex-1 rounded-lg font-semibold camelCase text-gray-300 data-[state=active]:bg-[#2d2d2d] data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="flex-1 px-4 py-1 text-xs font-medium rounded-md text-gray-300 data-[state=active]:bg-[#2d2d2d] data-[state=active]:text-white data-[state=active]:shadow-none"
             >
               Remarks
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general">
-            <div className="rounded-md border bg-white p-6">
-              <div className="flex flex-col gap-1">
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Tel 1</label>
+          <TabsContent value="general" className="mt-0">
+            <div className="rounded-md border bg-white p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Tel 1</label>
                   <Input
                     value={formData.Phone1}
                     onChange={(e) => handleChange("Phone1", e.target.value)}
                     placeholder="Tel 1"
-                    className="h-7 w-45"
+                    className="h-8 w-full text-xs"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Tel 2</label>
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Tel 2</label>
                   <Input
                     value={formData.Phone2}
                     onChange={(e) => handleChange("Phone2", e.target.value)}
                     placeholder="Tel 2"
-                    className="h-7 w-45"
+                    className="h-8 w-full text-xs"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Mobile Phone</label>
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Mobile Phone</label>
                   <Input
                     value={formData.Cellular}
                     onChange={(e) => handleChange("Cellular", e.target.value)}
                     placeholder="Mobile Phone"
-                    className="h-7 w-45"
+                    className="h-8 w-full text-xs"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Fax</label>
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Fax</label>
                   <Input
                     value={formData.Fax}
                     onChange={(e) => handleChange("Fax", e.target.value)}
                     placeholder="Fax"
-                    className="h-7 w-45"
+                    className="h-8 w-full text-xs"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">E-Mail</label>
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">E-Mail</label>
                   <Input
                     value={formData.EmailAddress}
                     onChange={(e) => handleChange("EmailAddress", e.target.value)}
-                    className="h-7 w-45"
+                    placeholder="E-Mail"
+                    className="h-8 w-full text-xs"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Web Site</label>
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Web Site</label>
                   <Input
                     value={formData.Website}
                     onChange={(e) => handleChange("Website", e.target.value)}
-                    className="h-7 w-45"
+                    placeholder="Web Site"
+                    className="h-8 w-full text-xs"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Shipping Type</label>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Shipping Type</label>
+                  <div className="flex items-center gap-1.5 w-full">
                     <Input
                       value={formData.ShippingType}
                       readOnly
                       placeholder="Select Shipping Type"
-                      className="h-7 w-45"
+                      className="h-8 w-full text-xs"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-8 w-8 shrink-0 cursor-pointer"
                       onClick={() => setOpenShipping(true)}
                     >
                       <Search className="h-4 w-4" />
@@ -740,25 +757,25 @@ export default function BPMasterDataPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Password</label>
-                  <Input type="password" placeholder="Password" className="h-7 w-45" />
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Password</label>
+                  <Input type="password" placeholder="Password" className="h-8 w-full text-xs" />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Factoring Indicator</label>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Factoring Indicator</label>
+                  <div className="flex items-center gap-1.5 w-full">
                     <Input
                       value={formData.Indicator}
                       readOnly
                       placeholder="Select Indicator"
-                      className="h-7 w-45"
+                      className="h-8 w-full text-xs"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-8 w-8 shrink-0 cursor-pointer"
                       onClick={() => setOpenIndicator(true)}
                     >
                       <Search className="h-4 w-4" />
@@ -766,20 +783,20 @@ export default function BPMasterDataPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Business Partner Project</label>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">BP Project</label>
+                  <div className="flex items-center gap-1.5 w-full">
                     <Input
                       value={formData.Project}
                       readOnly
                       placeholder="Select Project"
-                      className="h-7 w-100"
+                      className="h-8 w-full text-xs"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-8 w-8 shrink-0 cursor-pointer"
                       onClick={() => setOpenProject(true)}
                     >
                       <Search className="h-4 w-4" />
@@ -787,20 +804,20 @@ export default function BPMasterDataPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Industry</label>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Industry</label>
+                  <div className="flex items-center gap-1.5 w-full">
                     <Input
                       value={formData.Industry}
                       readOnly
                       placeholder="Select Industry"
-                      className="h-7 w-45"
+                      className="h-8 w-full text-xs"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-8 w-8 shrink-0 cursor-pointer"
                       onClick={() => setOpenIndustry(true)}
                     >
                       <Search className="h-4 w-4" />
@@ -808,71 +825,72 @@ export default function BPMasterDataPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Type of Business</label>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Type of Business</label>
+                  <div className="flex items-center gap-1.5 w-full">
                     <Input
                       value={formData.Company}
                       readOnly
                       placeholder="Select Company"
-                      className="h-7 w-45"
+                      className="h-8 w-full text-xs"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-8 w-8 shrink-0 cursor-pointer"
                       onClick={() => setOpenCompany(true)}
                     >
                       <Search className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
+              </div>
 
-                <div className="col-span-3 mt-4">
-                  <label className="mb-2 block text-sm font-medium">Remarks</label>
-                  <Textarea
-                    value={formData.Remarks}
-                    onChange={(e) => handleChange("Remarks", e.target.value)}
-                    placeholder="Enter Remarks..."
-                    className="h-24 max-w-96 resize-none"
-                  />
-                </div>
+              <div className="mt-5 pt-4 border-t flex items-center gap-6">
+                <span className="text-xs font-medium text-zinc-700 w-32 shrink-0">Status</span>
+                <RadioGroup defaultValue="active" className="flex gap-6">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="active" id="active" />
+                    <label htmlFor="active" className="text-xs cursor-pointer">
+                      Active
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="inactive" id="inactive" />
+                    <label htmlFor="inactive" className="text-xs cursor-pointer">
+                      Inactive
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="advanced" id="advanced" />
+                    <label htmlFor="advanced" className="text-xs cursor-pointer">
+                      Advanced
+                    </label>
+                  </div>
+                </RadioGroup>
+              </div>
 
-                <div className="col-span-3 mt-6 flex items-center">
-                  <RadioGroup defaultValue="active" className="flex gap-6">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="active" id="active" />
-                      <label htmlFor="active" className="text-sm">
-                        Active
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="inactive" id="inactive" />
-                      <label htmlFor="inactive" className="text-sm">
-                        Inactive
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="advanced" id="advanced" />
-                      <label htmlFor="advanced" className="text-sm">
-                        Advanced
-                      </label>
-                    </div>
-                  </RadioGroup>
-                </div>
+              <div className="mt-4 pt-4 border-t">
+                <label className="mb-1.5 block text-xs font-medium text-zinc-700">Remarks</label>
+                <Textarea
+                  value={formData.Remarks}
+                  onChange={(e) => handleChange("Remarks", e.target.value)}
+                  placeholder="Enter Remarks..."
+                  className="h-20 w-full text-xs resize-none"
+                />
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="remarks">
-            <div className="mt-6 rounded-md border p-5">
-              <label className="mb-2 block text-sm font-medium">Remarks</label>
+          <TabsContent value="remarks" className="mt-0">
+            <div className="rounded-md border bg-white p-5">
+              <label className="mb-1.5 block text-xs font-medium text-zinc-700">Remarks</label>
               <Textarea
                 value={formData.FreeText}
                 onChange={(e) => handleChange("FreeText", e.target.value)}
                 placeholder="Enter Remarks..."
-                rows={6}
+                className="h-32 w-full text-xs"
               />
             </div>
           </TabsContent>

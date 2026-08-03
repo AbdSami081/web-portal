@@ -22,6 +22,7 @@ import { GenericModal } from "@/modals/GenericModal";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -71,6 +72,7 @@ export function InvDocumentHeader() {
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [listSkip, setListSkip] = useState(0);
   const [listHasMore, setListHasMore] = useState(true);
+  const [listSearch, setListSearch] = useState("");
   const LIST_PAGE_SIZE = 20;
   const abortControllerRef = useRef<AbortController | null>(null);
   const isFetchingRef = useRef(false);
@@ -163,9 +165,13 @@ export function InvDocumentHeader() {
     }
   };
 
-  const fetchDocumentsList = async (isLoadMore = false) => {
+  const searchRequestIdRef = useRef(0);
+
+  const fetchDocumentsList = async (isLoadMore = false, searchText?: string) => {
     const resourceName = getResourceName(config.type);
     if (!resourceName) return;
+
+    const requestId = ++searchRequestIdRef.current;
 
     setIsLoadingList(true);
     try {
@@ -175,13 +181,16 @@ export function InvDocumentHeader() {
         rawList = await getGoodIssueList();
       } else {
         const currentSkip = isLoadMore ? listSkip + LIST_PAGE_SIZE : 0;
-        rawList = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE);
+        rawList = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE, searchText);
+        if (requestId !== searchRequestIdRef.current) return;
         if (isLoadMore) {
           setListSkip(currentSkip);
         } else {
           setListSkip(0);
         }
       }
+
+      if (requestId !== searchRequestIdRef.current) return;
 
       const newDocs = (rawList || []).map((d: any) => ({
         ...d,
@@ -197,11 +206,19 @@ export function InvDocumentHeader() {
 
       setListHasMore(config.type !== DocumentType.GoodIssue && newDocs.length === LIST_PAGE_SIZE);
     } catch (error) {
-      toast.error("Failed to fetch documents list.");
+      if (requestId === searchRequestIdRef.current) {
+        toast.error("Failed to fetch documents list.");
+      }
     } finally {
-      setIsLoadingList(false);
+      if (requestId === searchRequestIdRef.current) {
+        setIsLoadingList(false);
+      }
     }
   };
+
+  const debouncedFetchDocumentsList = useDebouncedCallback((val: string) => {
+    fetchDocumentsList(false, val);
+  }, 400);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -461,8 +478,16 @@ export function InvDocumentHeader() {
           { key: "DocumentStatus", label: "Status" },
         ]}
         isLoading={isLoadingList}
-        onLoadMore={() => fetchDocumentsList(true)}
+        onLoadMore={() => fetchDocumentsList(true, listSearch)}
         hasMore={listHasMore}
+        onSearch={(value) => {
+          setListSearch(value);
+          setDocumentsList([]);
+          setListSkip(0);
+          setIsLoadingList(true);
+          debouncedFetchDocumentsList(value);
+        }}
+        searchValue={listSearch}
       />
 
       <GenericModal

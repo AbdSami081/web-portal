@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { List } from "lucide-react";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { useSearchParams } from "next/navigation";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -45,6 +46,7 @@ export function DocumentHeader() {
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [listSearch, setListSearch] = useState("");
   const PAGE_SIZE = 20;
 
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
@@ -96,18 +98,24 @@ export function DocumentHeader() {
     }
   };
 
-  const fetchDocumentsList = useCallback(async (isLoadMore = false) => {
+  const searchRequestIdRef = useRef(0);
+
+  const fetchDocumentsList = useCallback(async (isLoadMore = false, searchText?: string) => {
     const resourceName = getResourceName(config.type);
     if (!resourceName) {
       console.error("Resource name not found for docType:", config.type);
       return;
     }
 
+    const requestId = ++searchRequestIdRef.current;
     const currentSkip = isLoadMore ? skip + PAGE_SIZE : 0;
 
     setIsLoadingList(true);
     try {
-      const data = await getDocumentsList(resourceName, currentSkip, PAGE_SIZE);
+      const data = await getDocumentsList(resourceName, currentSkip, PAGE_SIZE, searchText);
+
+      if (requestId !== searchRequestIdRef.current) return;
+
       const newDocs = (data || []).map((d: any) => ({
         ...d,
         DocumentStatus: d.DocumentStatus?.replace("bost_", "") || d.DocumentStatus,
@@ -123,11 +131,19 @@ export function DocumentHeader() {
       setHasMore(newDocs.length === PAGE_SIZE);
 
     } catch (error) {
-      toast.error("Failed to fetch documents list.");
+      if (requestId === searchRequestIdRef.current) {
+        toast.error("Failed to fetch documents list.");
+      }
     } finally {
-      setIsLoadingList(false);
+      if (requestId === searchRequestIdRef.current) {
+        setIsLoadingList(false);
+      }
     }
   }, [config.type, skip, PAGE_SIZE]);
+
+  const debouncedFetchDocumentsList = useDebouncedCallback((val: string) => {
+    fetchDocumentsList(false, val);
+  }, 400);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -439,8 +455,16 @@ export function DocumentHeader() {
             { key: "DocumentStatus", label: "Status" },
           ]}
           isLoading={isLoadingList}
-          onLoadMore={() => fetchDocumentsList(true)}
+          onLoadMore={() => fetchDocumentsList(true, listSearch)}
           hasMore={hasMore}
+          onSearch={(value) => {
+            setListSearch(value);
+            setDocumentsList([]);
+            setSkip(0);
+            setIsLoadingList(true);
+            debouncedFetchDocumentsList(value);
+          }}
+          searchValue={listSearch}
         />
       </div>
     </div>

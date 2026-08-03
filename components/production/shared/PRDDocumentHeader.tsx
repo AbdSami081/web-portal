@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { List } from "lucide-react";
 import { useUDFStore } from "@/stores/useUDFStore";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className, id }: any) => {
   const [localValue, setLocalValue] = useState(value ? value.toString() : "");
@@ -84,6 +85,7 @@ export function PRDDocumentHeader() {
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [listSkip, setListSkip] = useState(0);
   const [listHasMore, setListHasMore] = useState(true);
+  const [listSearch, setListSearch] = useState("");
   const [selectedMultiBomHeader, setSelectedMultiBomHeader] = useState<any | null>(null);
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [loadedStatus, setLoadedStatus] = useState<string>("");
@@ -214,15 +216,21 @@ export function PRDDocumentHeader() {
     );
   };
 
-  const fetchDocumentsList = async (isLoadMore = false) => {
+  const searchRequestIdRef = useRef(0);
+
+  const fetchDocumentsList = async (isLoadMore = false, searchText?: string) => {
     const resourceName = getResourceName(docType);
     if (!resourceName) return;
 
+    const requestId = ++searchRequestIdRef.current;
     const currentSkip = isLoadMore ? listSkip + LIST_PAGE_SIZE : 0;
 
     setIsLoadingList(true);
     try {
-      const data = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE);
+      const data = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE, searchText);
+      
+      if (requestId !== searchRequestIdRef.current) return;
+
       const newDocs = (data || []).map((d: any) => ({
         ...d,
         // Fallbacks for Issue and Receipt to resolve empty Item columns
@@ -244,11 +252,19 @@ export function PRDDocumentHeader() {
 
       setListHasMore(newDocs.length === LIST_PAGE_SIZE);
     } catch (error) {
-      toast.error("Failed to fetch documents list.");
+      if (requestId === searchRequestIdRef.current) {
+        toast.error("Failed to fetch documents list.");
+      }
     } finally {
-      setIsLoadingList(false);
+      if (requestId === searchRequestIdRef.current) {
+        setIsLoadingList(false);
+      }
     }
   };
+
+  const debouncedFetchDocumentsList = useDebouncedCallback((val: string) => {
+    fetchDocumentsList(false, val);
+  }, 400);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -862,8 +878,16 @@ export function PRDDocumentHeader() {
             ]
         }
         isLoading={isLoadingList}
-        onLoadMore={() => fetchDocumentsList(true)}
+        onLoadMore={() => fetchDocumentsList(true, listSearch)}
         hasMore={listHasMore}
+        onSearch={(value) => {
+          setListSearch(value);
+          setDocumentsList([]);
+          setListSkip(0);
+          setIsLoadingList(true);
+          debouncedFetchDocumentsList(value);
+        }}
+        searchValue={listSearch}
       />
 
       <ItemSelectorDialog

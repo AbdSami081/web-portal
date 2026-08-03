@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import { usePurchaseDocConfig } from "../purchase/PurchaseDocumentLayout";
 import { toast } from "sonner";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -86,18 +87,22 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const [documentsList, setDocumentsList] = useState<any[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [skip, setSkip] = useState(0);
+  const [listSearch, setListSearch] = useState("");
   const PAGE_SIZE = 20;
 
   const config = usePurchaseDocConfig();
 
+  const searchRequestIdRef = useRef(0);
+
   const fetchDocumentsList = useCallback(
-    async (isLoadMore = false) => {
+    async (isLoadMore = false, searchText?: string) => {
       const resourceName = getResourceName(config.type);
       if (!resourceName) {
         console.error("Resource name not found for docType:", config.type);
         return;
       }
 
+      const requestId = ++searchRequestIdRef.current;
       const currentSkip = isLoadMore ? skip + PAGE_SIZE : 0;
 
       setIsLoadingList(true);
@@ -106,7 +111,11 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
           resourceName,
           currentSkip,
           PAGE_SIZE,
+          searchText,
         );
+
+        if (requestId !== searchRequestIdRef.current) return;
+
         const newDocs = (data || []).map((d: any) => ({
           ...d,
           DocumentStatus:
@@ -122,13 +131,21 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         }
         setHasMore(newDocs.length === PAGE_SIZE);
       } catch (error) {
-        toast.error("Failed to fetch documents list.");
+        if (requestId === searchRequestIdRef.current) {
+          toast.error("Failed to fetch documents list.");
+        }
       } finally {
-        setIsLoadingList(false);
+        if (requestId === searchRequestIdRef.current) {
+          setIsLoadingList(false);
+        }
       }
     },
     [config.type, skip, PAGE_SIZE],
   );
+
+  const debouncedFetchDocumentsList = useDebouncedCallback((val: string) => {
+    fetchDocumentsList(false, val);
+  }, 400);
 
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -410,8 +427,16 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
             { key: "DocumentStatus", label: "Status" },
           ]}
           isLoading={isLoadingList}
-          onLoadMore={() => fetchDocumentsList(true)}
+          onLoadMore={() => fetchDocumentsList(true, listSearch)}
           hasMore={hasMore}
+          onSearch={(value) => {
+            setListSearch(value);
+            setDocumentsList([]);
+            setSkip(0);
+            setIsLoadingList(true);
+            debouncedFetchDocumentsList(value);
+          }}
+          searchValue={listSearch}
         />
       </div>
     </div>
