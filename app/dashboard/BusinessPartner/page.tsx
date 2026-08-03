@@ -547,9 +547,17 @@ export default function BPMasterDataPage() {
        ]}
      />
         <div className="bg-white px-6 py-4 border-b">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-            <h2 className="text-sm font-semibold text-zinc-800">Header Information</h2>
-            
+          <div className="flex justify-between items-center gap-4 mb-3">
+            <div className="flex items-center gap-2">
+              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Code</label>
+              <Input
+                value={formData.CardCode}
+                onChange={(e) => handleChange("CardCode", e.target.value)}
+                placeholder="Enter Code"
+                className="h-8 w-48 text-xs"
+              />
+            </div>
+
             <div className="flex items-center gap-2">
               <Input
                 type="text"
@@ -586,21 +594,11 @@ export default function BPMasterDataPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-            <div className="flex items-center gap-2">
-              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Code</label>
-              <Input
-                value={formData.CardCode}
-                onChange={(e) => handleChange("CardCode", e.target.value)}
-                placeholder="Enter Code"
-                className="h-8 w-full text-xs"
-              />
-            </div>
-
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Group</label>
               <Select value={formData.Group} onValueChange={(value) => handleChange("Group", value)}>
-                <SelectTrigger className="h-8 w-full text-xs">
+                <SelectTrigger className="h-8 w-48 text-xs">
                   <SelectValue placeholder="Select Group" />
                 </SelectTrigger>
                 <SelectContent>
@@ -619,14 +617,14 @@ export default function BPMasterDataPage() {
                 value={formData.CardName}
                 onChange={(e) => handleChange("CardName", e.target.value)}
                 placeholder="Enter Name"
-                className="h-8 w-full text-xs"
+                className="h-8 w-48 text-xs"
               />
             </div>
 
             <div className="flex items-center gap-2">
               <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Card Type</label>
               <Select value={formData.CardType} onValueChange={(value) => handleChange("CardType", value)}>
-                <SelectTrigger className="h-8 w-full text-xs">
+                <SelectTrigger className="h-8 w-48 text-xs">
                   <SelectValue placeholder="Select Card Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -642,7 +640,7 @@ export default function BPMasterDataPage() {
             <div className="flex items-center gap-2">
               <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Currency</label>
               <Select value={formData.Currency} onValueChange={(value) => handleChange("Currency", value)}>
-                <SelectTrigger className="h-8 w-full text-xs">
+                <SelectTrigger className="h-8 w-48 text-xs">
                   <SelectValue placeholder="Select Currency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -675,14 +673,14 @@ export default function BPMasterDataPage() {
 
           <TabsContent value="general" className="mt-0">
             <div className="rounded-md border bg-white p-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+              <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Tel 1</label>
                   <Input
                     value={formData.Phone1}
                     onChange={(e) => handleChange("Phone1", e.target.value)}
                     placeholder="Tel 1"
-                    className="h-8 w-full text-xs"
+                    className="h-8 w-48 text-xs"
                   />
                 </div>
 
@@ -692,7 +690,7 @@ export default function BPMasterDataPage() {
                     value={formData.Phone2}
                     onChange={(e) => handleChange("Phone2", e.target.value)}
                     placeholder="Tel 2"
-                    className="h-8 w-full text-xs"
+                    className="h-8 w-48 text-xs"
                   />
                 </div>
 
@@ -702,7 +700,7 @@ export default function BPMasterDataPage() {
                     value={formData.Cellular}
                     onChange={(e) => handleChange("Cellular", e.target.value)}
                     placeholder="Mobile Phone"
-                    className="h-8 w-full text-xs"
+                    className="h-8 w-48 text-xs"
                   />
                 </div>
 
@@ -712,7 +710,7 @@ export default function BPMasterDataPage() {
                     value={formData.Fax}
                     onChange={(e) => handleChange("Fax", e.target.value)}
                     placeholder="Fax"
-                    className="h-8 w-full text-xs"
+                    className="h-8 w-48 text-xs"
                   />
                 </div>
 
@@ -722,7 +720,7 @@ export default function BPMasterDataPage() {
                     value={formData.EmailAddress}
                     onChange={(e) => handleChange("EmailAddress", e.target.value)}
                     placeholder="E-Mail"
-                    className="h-8 w-full text-xs"
+                    className="h-8 w-48 text-xs"
                   />
                 </div>
 
@@ -732,18 +730,18 @@ export default function BPMasterDataPage() {
                     value={formData.Website}
                     onChange={(e) => handleChange("Website", e.target.value)}
                     placeholder="Web Site"
-                    className="h-8 w-full text-xs"
+                    className="h-8 w-48 text-xs"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
                   <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Shipping Type</label>
-                  <div className="flex items-center gap-1.5 w-full">
+                  <div className="flex items-center gap-1.5 w-48">
                     <Input
                       value={formData.ShippingType}
                       readOnly
                       placeholder="Select Shipping Type"
-                      className="h-8 w-full text-xs"
+                      className="h-8 w-48 text-xs"
                     />
                     <Button
                       type="button"
@@ -759,17 +757,17 @@ export default function BPMasterDataPage() {
 
                 <div className="flex items-center gap-2">
                   <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Password</label>
-                  <Input type="password" placeholder="Password" className="h-8 w-full text-xs" />
+                  <Input type="password" placeholder="Password" className="h-8 w-48 text-xs" />
                 </div>
 
                 <div className="flex items-center gap-2">
                   <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Factoring Indicator</label>
-                  <div className="flex items-center gap-1.5 w-full">
+                  <div className="flex items-center gap-1.5 w-48">
                     <Input
                       value={formData.Indicator}
                       readOnly
                       placeholder="Select Indicator"
-                      className="h-8 w-full text-xs"
+                      className="h-8 w-48 text-xs"
                     />
                     <Button
                       type="button"
@@ -785,12 +783,12 @@ export default function BPMasterDataPage() {
 
                 <div className="flex items-center gap-2">
                   <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">BP Project</label>
-                  <div className="flex items-center gap-1.5 w-full">
+                  <div className="flex items-center gap-1.5 w-48">
                     <Input
                       value={formData.Project}
                       readOnly
                       placeholder="Select Project"
-                      className="h-8 w-full text-xs"
+                      className="h-8 w-48 text-xs"
                     />
                     <Button
                       type="button"
@@ -806,12 +804,12 @@ export default function BPMasterDataPage() {
 
                 <div className="flex items-center gap-2">
                   <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Industry</label>
-                  <div className="flex items-center gap-1.5 w-full">
+                  <div className="flex items-center gap-1.5 w-48">
                     <Input
                       value={formData.Industry}
                       readOnly
                       placeholder="Select Industry"
-                      className="h-8 w-full text-xs"
+                      className="h-8 w-48 text-xs"
                     />
                     <Button
                       type="button"
@@ -827,12 +825,12 @@ export default function BPMasterDataPage() {
 
                 <div className="flex items-center gap-2">
                   <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Type of Business</label>
-                  <div className="flex items-center gap-1.5 w-full">
+                  <div className="flex items-center gap-1.5 w-48">
                     <Input
                       value={formData.Company}
                       readOnly
                       placeholder="Select Company"
-                      className="h-8 w-full text-xs"
+                      className="h-8 w-48 text-xs"
                     />
                     <Button
                       type="button"
@@ -847,7 +845,7 @@ export default function BPMasterDataPage() {
                 </div>
               </div>
 
-              <div className="mt-5 pt-4 border-t flex items-center gap-6">
+              {/* <div className="mt-5 pt-4 border-t flex items-center gap-6">
                 <span className="text-xs font-medium text-zinc-700 w-32 shrink-0">Status</span>
                 <RadioGroup defaultValue="active" className="flex gap-6">
                   <div className="flex items-center space-x-2">
@@ -869,7 +867,7 @@ export default function BPMasterDataPage() {
                     </label>
                   </div>
                 </RadioGroup>
-              </div>
+              </div> */}
 
               <div className="mt-4 pt-4 border-t">
                 <label className="mb-1.5 block text-xs font-medium text-zinc-700">Remarks</label>
@@ -877,7 +875,7 @@ export default function BPMasterDataPage() {
                   value={formData.Remarks}
                   onChange={(e) => handleChange("Remarks", e.target.value)}
                   placeholder="Enter Remarks..."
-                  className="h-20 w-full text-xs resize-none"
+                  className="h-20 w-48 text-xs resize-none"
                 />
               </div>
             </div>
@@ -890,7 +888,7 @@ export default function BPMasterDataPage() {
                 value={formData.FreeText}
                 onChange={(e) => handleChange("FreeText", e.target.value)}
                 placeholder="Enter Remarks..."
-                className="h-32 w-full text-xs"
+                className="h-32 w-48 text-xs"
               />
             </div>
           </TabsContent>
