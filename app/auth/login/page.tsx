@@ -156,7 +156,7 @@ export default function LoginPage() {
             <FieldGroup className="space-y-3">
               <Field className="space-y-3">
                 <FieldLabel htmlFor="database" className="text-slate-800 font-bold text-[10px] tracking-widest uppercase opacity-70">
-                  Data Environment
+                  Database
                 </FieldLabel>
                 <Select value={selectedDb} onValueChange={setSelectedDb}>
                   <SelectTrigger
@@ -187,7 +187,7 @@ export default function LoginPage() {
 
               <Field className="space-y-3">
                 <FieldLabel htmlFor="username" className="text-slate-800 font-bold text-[10px] tracking-widest uppercase opacity-70">
-                  Employee Identity
+                  User Id
                 </FieldLabel>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors">
@@ -196,7 +196,7 @@ export default function LoginPage() {
                   <Input
                     id="username"
                     type="text"
-                    placeholder="EMP001"
+                    placeholder="User Id"
                     required
                     value={username}
                     onChange={(e) => setUserName(e.target.value)}
@@ -207,7 +207,7 @@ export default function LoginPage() {
 
               <Field className="space-y-3">
                 <FieldLabel htmlFor="password" title="Password" className="text-slate-800 font-bold text-[10px] tracking-widest uppercase opacity-70">
-                  Security Key
+                  Password
                 </FieldLabel>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors">

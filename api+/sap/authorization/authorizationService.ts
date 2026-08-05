@@ -2,12 +2,14 @@ import apiClient, { cachedGet } from "@/lib/apiClient";
 import { dedupeRequest } from "@/lib/api/requestDedupe";
 import { getCachedPermissions, setCachedPermissions } from "@/lib/api/permissionsCache";
 
-export interface OhemUser {
+export interface PortalUser {
   empId: string;
   firstName: string;
   lastName: string;
   fullName: string;
 }
+
+export type OhemUser = PortalUser;
 
 export interface UserAccessEntry {
   moduleId: string;
@@ -20,19 +22,16 @@ export interface UserAccessSavePayload {
   permissions: { moduleID: string; componentID: string }[];
 }
 
-export const getUsers = async (companyDB: string): Promise<OhemUser[]> => {
+export const getUsers = async (companyDB: string): Promise<PortalUser[]> => {
   try {
-    const response = await cachedGet<{ success: boolean; data: OhemUser[] }>(
+    const response = await cachedGet<{ success: boolean; data: PortalUser[] }>(
       `api/Authorization/users`,
       { params: { companyDB }, timeout: 10000 }
     );
     return response.data ?? [];
   } catch (error) {
     console.error("Failed to fetch users from SAP API:", error);
-    return [
-      { empId: "1", firstName: "Mock", lastName: "Admin", fullName: "Mock Admin" },
-      { empId: "2", firstName: "Test", lastName: "User", fullName: "Test User" }
-    ];
+    return [];
   }
 };
 
