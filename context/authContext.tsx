@@ -201,11 +201,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error.code === 'ECONNABORTED') {
         throw new Error("Login request timed out. Please try again.");
       }
+
+      const responseData = error?.response?.data;
+      const serverMessage =
+        typeof responseData === "string" && responseData.trim()
+          ? responseData
+          : responseData?.detail || responseData?.message || responseData?.error;
+
       throw new Error(
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
-        error?.message ||
-        "Login failed due to an unknown error."
+        serverMessage || error?.message || "Login failed due to an unknown error."
       );
     } finally {
       loginInProgressRef.current = false;
