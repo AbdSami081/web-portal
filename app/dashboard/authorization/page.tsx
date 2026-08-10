@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { 
   Loader2, Save, Users, Shield, Database, 
   Search, ShieldCheck, ChevronRight, CheckCircle2,
-  Settings, Info, Filter, X,
+  Settings, Info, Filter, X, Copy,
   LayoutDashboard,
   Package,
   Factory,
@@ -41,6 +41,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface DatabaseConfig {
   CompanyName: string;
@@ -79,7 +87,7 @@ export default function AuthorizationPage() {
   const [selectedCompany, setSelectedCompany] = useState<string>("");
   const [users, setUsers] = useState<OhemUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   
   const [loadingAccess, setLoadingAccess] = useState(false);
@@ -88,8 +96,26 @@ export default function AuthorizationPage() {
   const [saving, setSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // Copy Authorization Modal state
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [copySearchQuery, setCopySearchQuery] = useState("");
+  const [selectedCopyUsers, setSelectedCopyUsers] = useState<string[]>([]);
+  const [savingCopy, setSavingCopy] = useState(false);
+
   const [portalConfig, setPortalConfig] = useState<WebPortalConfigEntry[]>([]);
   const [loadingConfig, setLoadingConfig] = useState(false);
+
+  const sourceUser = useMemo(() => {
+    return users.find(u => u.empId === selectedUser);
+  }, [users, selectedUser]);
+
+  const copyFilteredUsers = useMemo(() => {
+    return users.filter(u => 
+      u.empId !== selectedUser && 
+      (u.fullName.toLowerCase().includes(copySearchQuery.toLowerCase()) || 
+       u.empId.toString().includes(copySearchQuery))
+    );
+  }, [users, copySearchQuery, selectedUser]);
 
   const configuredModuleIds = useMemo(() => {
     const ids = new Set<string>();
@@ -160,19 +186,19 @@ export default function AuthorizationPage() {
       loadPortalConfig();
     } else {
       setUsers([]);
-      setSelectedUsers([]);
+      setSelectedUser("");
       setPortalConfig([]);
     }
   }, [selectedCompany]);
 
   // Fetch access when a user is selected
   useEffect(() => {
-    if (selectedUsers.length === 1 && selectedCompany) {
-      loadUserAccess(selectedUsers[0]);
-    } else if (selectedUsers.length === 0) {
+    if (selectedUser && selectedCompany) {
+      loadUserAccess(selectedUser);
+    } else {
       setSelectedPermissions({});
     }
-  }, [selectedUsers, selectedCompany]);
+  }, [selectedUser, selectedCompany]);
 
   const loadUsers = async () => {
     setLoadingUsers(true);
@@ -206,10 +232,22 @@ export default function AuthorizationPage() {
     }
   };
 
-  const handleUserToggle = (userId: string) => {
-    setSelectedUsers(prev => 
+  const handleUserSelect = (userId: string) => {
+    setSelectedUser(prev => (prev === userId ? "" : userId));
+  };
+
+  const handleCopyUserToggle = (userId: string) => {
+    setSelectedCopyUsers(prev => 
       prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
     );
+  };
+
+  const handleSelectAllCopyUsers = (checked: boolean) => {
+    if (checked) {
+      setSelectedCopyUsers(copyFilteredUsers.map(u => u.empId));
+    } else {
+      setSelectedCopyUsers([]);
+    }
   };
 
   const handlePermissionToggle = (
@@ -235,8 +273,8 @@ export default function AuthorizationPage() {
   };
 
   const handleSave = async () => {
-    if (selectedUsers.length === 0 || !selectedCompany) {
-      toast.error("Please select at least one user and an environment");
+    if (!selectedUser || !selectedCompany) {
+      toast.error("Please select a user and an environment");
       return;
     }
 
@@ -254,21 +292,19 @@ export default function AuthorizationPage() {
         }
       });
 
-      for (const userId of selectedUsers) {
-        const payload = {
-          userID: userId,
-          companyDB: selectedCompany,
-          permissions
-        };
-        
-        console.log(`Sending payload for user ${userId}:`, payload);
-        
-        try {
-          await saveUserAccess(payload);
-        } catch (apiError: any) {
-          console.error(`API Error for user ${userId}:`, apiError.response?.data || apiError.message);
-          throw apiError; 
-        }
+      const payload = {
+        userID: selectedUser,
+        companyDB: selectedCompany,
+        permissions
+      };
+      
+      console.log(`Sending payload for user ${selectedUser}:`, payload);
+      
+      try {
+        await saveUserAccess(payload);
+      } catch (apiError: any) {
+        console.error(`API Error for user ${selectedUser}:`, apiError.response?.data || apiError.message);
+        throw apiError; 
       }
 
       setShowSuccessModal(true);
@@ -278,6 +314,49 @@ export default function AuthorizationPage() {
       toast.error("Update failed: " + serverMessage);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveCopyAuthorization = async () => {
+    if (selectedCopyUsers.length === 0 || !selectedCompany) {
+      toast.error("Please select at least one target user");
+      return;
+    }
+
+    setSavingCopy(true);
+    try {
+      const permissions: { moduleID: string; componentID: string }[] = [];
+      Object.entries(selectedPermissions).forEach(([key, enabled]) => {
+        if (enabled) {
+          if (key.includes("|")) {
+            const [m, c] = key.split("|");
+            permissions.push({ moduleID: m, componentID: c });
+          } else {
+            permissions.push({ moduleID: key, componentID: "" });
+          }
+        }
+      });
+
+      for (const targetUserId of selectedCopyUsers) {
+        const payload = {
+          userID: targetUserId,
+          companyDB: selectedCompany,
+          permissions
+        };
+        await saveUserAccess(payload);
+      }
+
+      setShowCopyModal(false);
+      const count = selectedCopyUsers.length;
+      setSelectedCopyUsers([]);
+      setShowSuccessModal(true);
+      toast.success(`Authorizations copied to ${count} user(s) successfully.`);
+    } catch (error: any) {
+      console.error("Copy Save Error:", error);
+      const serverMessage = error.response?.data?.message || error.message;
+      toast.error("Copy failed: " + serverMessage);
+    } finally {
+      setSavingCopy(false);
     }
   };
 
@@ -418,41 +497,50 @@ export default function AuthorizationPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {selectedUsers.length > 0 && (
-                <div className="hidden md:flex items-center border-l border-slate-200 pl-4 h-8 mr-2 px-4">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mr-3">Selected</span>
-                    <div className="flex -space-x-2">
-                        {selectedUsers.slice(0, 3).map(id => (
-                            <div key={id} className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600">
-                                {users.find(u => u.empId === id)?.fullName.charAt(0) || id}
-                            </div>
-                        ))}
-                        {selectedUsers.length > 3 && (
-                            <div className="w-7 h-7 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">
-                                +{selectedUsers.length - 3}
-                            </div>
-                        )}
-                    </div>
+            {selectedUser && (
+              <div className="hidden md:flex items-center border-l border-slate-200 pl-4 h-8 mr-2 px-4">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mr-3">Source User</span>
+                <div className="flex items-center gap-2 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                  <div className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">
+                    {sourceUser?.fullName?.charAt(0).toUpperCase() || "U"}
+                  </div>
+                  <span className="text-xs font-bold text-slate-700">{sourceUser?.fullName}</span>
                 </div>
+              </div>
             )}
             
             <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setSelectedUsers([])}
-                disabled={selectedUsers.length === 0}
-                className="h-9 px-4 text-xs font-bold border-slate-200 hover:bg-slate-50 text-slate-600"
+              variant="outline" 
+              size="sm"
+              onClick={() => setSelectedUser("")}
+              disabled={!selectedUser}
+              className="h-9 px-4 text-xs font-bold border-slate-200 hover:bg-slate-50 text-slate-600"
             >
-                Clear
+              Clear
+            </Button>
+
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                setSelectedCopyUsers([]);
+                setCopySearchQuery("");
+                setShowCopyModal(true);
+              }}
+              disabled={!selectedUser || loadingAccess}
+              className="h-9 px-4 text-xs font-bold border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-blue-700 shadow-sm disabled:opacity-50"
+            >
+              <Copy className="mr-2 h-4 w-4 text-blue-600" />
+              Copy Authorization
             </Button>
             
             <Button 
-                onClick={handleSave} 
-                disabled={saving || selectedUsers.length === 0 || !selectedCompany}
-                className="h-9 px-6 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm disabled:opacity-50"
+              onClick={handleSave} 
+              disabled={saving || !selectedUser || !selectedCompany}
+              className="h-9 px-6 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm disabled:opacity-50"
             >
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Save Changes
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save Changes
             </Button>
           </div>
         </div>
@@ -498,37 +586,40 @@ export default function AuthorizationPage() {
                 ) : users.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-10">
                         <Users className="w-8 h-8 mb-2" />
-                        <p className="text-xs font-bold">No users selected.</p>
+                        <p className="text-xs font-bold">No users available.</p>
                     </div>
                 ) : (
                   <div className="space-y-1">
-                    {filteredUsers.map((u) => (
-                      <button 
-                        key={u.empId} 
-                        onClick={() => handleUserToggle(u.empId)}
-                        className={cn(
-                          "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3 group px-4",
-                          selectedUsers.includes(u.empId) 
-                            ? "bg-blue-50/80 border-blue-200 text-slate-900 shadow-sm" 
-                            : "bg-transparent border-transparent text-slate-600 hover:bg-slate-100/70"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-8 h-8 rounded flex items-center justify-center text-[10px] font-black shrink-0",
-                          selectedUsers.includes(u.empId) ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 group-hover:bg-slate-200"
-                        )}>
-                           {u.fullName.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                            <p className="text-sm font-bold truncate leading-tight">{u.fullName}</p>
-                            <p className={cn(
-                                "text-[10px] font-medium tracking-tight mt-0.5",
-                                selectedUsers.includes(u.empId) ? "text-blue-500" : "text-slate-400"
-                            )}>ID: {u.empId}</p>
-                        </div>
-                        {selectedUsers.includes(u.empId) && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
-                      </button>
-                    ))}
+                    {filteredUsers.map((u) => {
+                      const isSelected = selectedUser === u.empId;
+                      return (
+                        <button 
+                          key={u.empId} 
+                          onClick={() => handleUserSelect(u.empId)}
+                          className={cn(
+                            "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3 group px-4",
+                            isSelected 
+                              ? "bg-blue-50/80 border-blue-200 text-slate-900 shadow-sm" 
+                              : "bg-transparent border-transparent text-slate-600 hover:bg-slate-100/70"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-8 h-8 rounded flex items-center justify-center text-[10px] font-black shrink-0",
+                            isSelected ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 group-hover:bg-slate-200"
+                          )}>
+                             {u.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 overflow-hidden">
+                              <p className="text-sm font-bold truncate leading-tight">{u.fullName}</p>
+                              <p className={cn(
+                                  "text-[10px] font-medium tracking-tight mt-0.5",
+                                  isSelected ? "text-blue-500" : "text-slate-400"
+                              )}>ID: {u.empId}</p>
+                          </div>
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -544,7 +635,7 @@ export default function AuthorizationPage() {
                     </label>
                     <h2 className="text-sm font-bold text-slate-700">Assign Module Visibility</h2>
                 </div>
-                {selectedUsers.length > 0 && (
+                {selectedUser && (
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold text-green-600 px-2 py-0.5 bg-green-50 border border-green-100 rounded-full">Editing Mode</span>
                     </div>
@@ -563,13 +654,13 @@ export default function AuthorizationPage() {
                 </div>
               )}
 
-              {!selectedUsers.length ? (
+              {!selectedUser ? (
                 <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center opacity-40">
                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 mb-4">
                         <Filter className="w-8 h-8" />
                     </div>
                     <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Select a user to begin</p>
-                    <p className="text-xs mt-2 font-medium max-w-[240px]">Access configurations are loaded in real-time for each individual user.</p>
+                    <p className="text-xs mt-2 font-medium max-w-[240px]">Access configurations are loaded in real-time for the selected user.</p>
                 </div>
               ) : filteredMenus.length === 0 ? (
                 <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center py-12">
@@ -643,6 +734,118 @@ export default function AuthorizationPage() {
           background: #cbd5e1;
         }
       `}</style>
+
+      {/* Copy Authorization Modal */}
+      <Dialog open={showCopyModal} onOpenChange={setShowCopyModal}>
+        <DialogContent className="bg-white border-zinc-200 shadow-2xl rounded-2xl max-w-lg p-6">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
+              <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
+                <Copy className="w-5 h-5" />
+              </div>
+              Copy Authorization
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 leading-relaxed">
+              Copy rights from <span className="font-bold text-slate-900">{sourceUser?.fullName}</span> (ID: {selectedUser}) to target users below.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Search and Select All header */}
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input 
+                  placeholder="Search target users..." 
+                  className="pl-9 h-10 border-slate-200 bg-slate-50/50 shadow-none text-sm font-medium focus-visible:ring-slate-900"
+                  value={copySearchQuery}
+                  onChange={(e) => setCopySearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between px-1 py-1 border-b border-slate-100 text-xs">
+                <label className="flex items-center gap-2 cursor-pointer text-slate-600 font-bold hover:text-slate-900">
+                  <Checkbox 
+                    checked={copyFilteredUsers.length > 0 && selectedCopyUsers.length === copyFilteredUsers.length}
+                    onCheckedChange={(checked) => handleSelectAllCopyUsers(!!checked)}
+                    className="h-4 w-4 border-slate-400 data-[state=checked]:bg-slate-900 rounded"
+                  />
+                  <span>Select All ({copyFilteredUsers.length})</span>
+                </label>
+                <span className="text-slate-400 text-[11px]">
+                  {selectedCopyUsers.length} user(s) selected
+                </span>
+              </div>
+            </div>
+
+            {/* Users List with Checkboxes */}
+            <div className="max-h-[300px] overflow-y-auto custom-scrollbar space-y-1 pr-1">
+              {copyFilteredUsers.length === 0 ? (
+                <div className="py-8 text-center text-slate-400 text-xs font-medium">
+                  No matching target users found.
+                </div>
+              ) : (
+                copyFilteredUsers.map((u) => {
+                  const isChecked = selectedCopyUsers.includes(u.empId);
+                  return (
+                    <label 
+                      key={u.empId} 
+                      className={cn(
+                        "flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer",
+                        isChecked ? "bg-blue-50/70 border-blue-200 text-slate-900" : "bg-white border-slate-100 hover:bg-slate-50 text-slate-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Checkbox 
+                          checked={isChecked}
+                          onCheckedChange={() => handleCopyUserToggle(u.empId)}
+                          className="h-4 w-4 border-slate-400 data-[state=checked]:bg-slate-900 border-2 rounded shrink-0"
+                        />
+                        <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
+                          {u.fullName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold truncate leading-tight">{u.fullName}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">ID: {u.empId}</p>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2 gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowCopyModal(false)}
+              disabled={savingCopy}
+              className="h-9 px-4 text-xs font-bold border-slate-200"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveCopyAuthorization}
+              disabled={savingCopy || selectedCopyUsers.length === 0}
+              className="h-9 px-6 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm disabled:opacity-50"
+            >
+              {savingCopy ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Copying...
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Save & Copy ({selectedCopyUsers.length})
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <AlertDialogContent className="bg-white border-zinc-200 shadow-2xl rounded-2xl max-w-md">
           <AlertDialogHeader>
