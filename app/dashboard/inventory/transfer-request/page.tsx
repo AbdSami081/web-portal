@@ -119,7 +119,9 @@ export default function InvTransferRequestPage() {
 
         result = await postInventoryTransferRequest(payload);
 
-        if (result?.DocEntry) {
+        if (result?.IsDraft) {
+          toast.success("Inventory Transfer Request submitted for approval.");
+        } else if (result?.DocEntry) {
           toast.success(`Inventory Transfer Request created! #${result.DocNum}`);
         }
       }

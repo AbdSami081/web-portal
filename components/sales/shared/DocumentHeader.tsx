@@ -17,6 +17,7 @@ import { List } from "lucide-react";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { useSearchParams } from "next/navigation";
+import { useDocNavParams } from "@/lib/docNavParams";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 const statusMap: Record<string, string> = {
@@ -52,19 +53,21 @@ export function DocumentHeader() {
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
   const searchParams = useSearchParams();
+  const docNav = useDocNavParams();
   const autoCreatedRef = React.useRef(false);
 
   useEffect(() => {
-    const draftParam = searchParams.get("draft") === "1";
+    const draftParam = (docNav.draft ?? searchParams.get("draft")) === "1";
 
-    const docEntryParam = searchParams.get("docEntry") || "";
-    const draftEntryParam = searchParams.get("draftEntry") || "";
+    const docEntryParam = docNav.docEntry ?? searchParams.get("docEntry") ?? "";
+    const draftEntryParam = docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
 
     // Only auto-fetch if we have a regular docEntry, or a proper draftEntry with draft=1 flag
     if (!docEntryParam && !(draftParam && draftEntryParam)) return;
 
     setSearchValue(docEntryParam);
     fetchDocument(docEntryParam, { isDraft: draftParam }, Number(draftEntryParam));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

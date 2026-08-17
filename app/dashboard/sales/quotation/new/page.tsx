@@ -118,8 +118,10 @@ export default function NewQuotationPage() {
 
     try {
       const documentData = await postQuotation(payload);
-      if (!documentData?.DocEntry) throw new Error("Failed to create quotation");
-      if (attachments.length > 0) {
+      if (!documentData?.DocEntry && !documentData?.IsDraft) throw new Error("Failed to create quotation");
+      // When an approval process applies, SAP creates a DRAFT and the approval request
+      // natively - the document is not final yet, so skip attachment upload/loading.
+      if (attachments.length > 0 && !documentData?.IsDraft) {
         const attachmentResult = await uploadAndPatchAttachments(
           attachments,
           "SalesQuotation",
@@ -131,8 +133,12 @@ export default function NewQuotationPage() {
           toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
         }
       }
-      loadFromDocument(documentData, DocumentType.Quotation);
-      toast.success(`Quotation #${documentData.DocNum} created successfully`);
+      if (documentData?.IsDraft) {
+        toast.success("Quotation submitted for approval.");
+      } else {
+        loadFromDocument(documentData, DocumentType.Quotation);
+        toast.success(`Quotation #${documentData.DocNum} created successfully`);
+      }
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create quotation. Please try again.");

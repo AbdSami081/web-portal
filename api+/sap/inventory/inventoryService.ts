@@ -1,5 +1,6 @@
 import apiClient from "@/lib/apiClient";
 import { getSapErrorMessage } from "@/lib/errorHelper";
+import { withDefaultBPLId } from "@/lib/sap/helpers/documentPayloadHelper";
 
 export interface InventoryTransferLine {
     ItemCode: string;
@@ -36,8 +37,8 @@ export const postInventoryTransferRequest = async (payload: InventoryTransferPay
     return response.data;
 };
 
-export const postInventoryTransfer = async (payload: InventoryTransferPayload) => {
-    const response = await apiClient.post("api/Inventory/InventoryTransfer", payload);
+export const postInventoryTransfer = async (payload: any) => {
+    const response = await apiClient.post("api/Inventory/InventoryTransfer", withDefaultBPLId(payload));
     return response.data;
 };
 

@@ -80,8 +80,10 @@ export default function ReturnPage() {
 
     try {
       const response = await postSalesReturn(payload);
-      if (response?.DocEntry) {
-        if (attachments.length > 0) {
+      if (response?.DocEntry || response?.IsDraft) {
+        // When an approval process applies, SAP creates a DRAFT and the approval request
+        // natively - the document is not final yet, so skip attachment upload.
+        if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
             "SalesReturn",
@@ -93,7 +95,11 @@ export default function ReturnPage() {
             toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
           }
         }
-        toast.success(`Sales Return #${response.DocNum} created successfully!`);
+        if (response?.IsDraft) {
+          toast.success("Sales Return submitted for approval.");
+        } else {
+          toast.success(`Sales Return #${response.DocNum} created successfully!`);
+        }
       } else {
         throw new Error("Failed to create Sales Return");
       }

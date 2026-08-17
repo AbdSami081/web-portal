@@ -21,6 +21,7 @@ import { Item } from "@/types/sales/Item.type";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useSearchParams } from "next/navigation";
+import { useDocNavParams } from "@/lib/docNavParams";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { List } from "lucide-react";
@@ -100,12 +101,13 @@ export function PRDDocumentHeader() {
   const watchedPlannedQty = watch("PlannedQuantity");
 
   const searchParams = useSearchParams();
+  const docNav = useDocNavParams();
   const autoCreatedRef = useState(() => ({ current: false }))[0];
 
   useEffect(() => {
-    const isDraft = searchParams.get("draft") === "1";
-    const draftEntryParam = searchParams.get("draftEntry") || "";
-    const docEntryParam = searchParams.get("docEntry") || "";
+    const isDraft = (docNav.draft ?? searchParams.get("draft")) === "1";
+    const draftEntryParam = docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
+    const docEntryParam = docNav.docEntry ?? searchParams.get("docEntry") ?? "";
 
     if (isDraft && draftEntryParam) {
       const draftId = parseInt(draftEntryParam);
@@ -113,6 +115,7 @@ export function PRDDocumentHeader() {
         loadDraftDoc(draftId);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadDraftDoc = async (draftId: number) => {

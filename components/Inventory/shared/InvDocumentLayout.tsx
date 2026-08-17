@@ -1,5 +1,5 @@
 "use client"
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { FieldValues, FormProvider, useForm, DefaultValues, SubmitErrorHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/inventory/documentConfig";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { resolveDocNavParams } from "@/lib/docNavParams";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/api+/sap/inventory/inventoryService";
@@ -20,6 +21,10 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import HeaderActions from "@/components/Custom/HeaderAction";
+import { useAuth } from "@/context/authContext";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+/sap/Templates/approvalTemplate";
+import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
+import { ApprovalTemplate } from "@/types/template.type";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -52,12 +57,14 @@ export function InvDocumentLayout<T extends FieldValues>({
   const config = getDocumentConfig(docType);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
 
 
   const [badgeState, setBadgeState] = useState<"draft" | "approved" | null>(() => {
-    const draftEntryParam = searchParams.get("draftEntry");
-    const docEntryParam = searchParams.get("docEntry");
-    const isDraft = Boolean(draftEntryParam) && searchParams.get("draft") === "1";
+    const draftEntryParam = docNav.draftEntry;
+    const docEntryParam = docNav.docEntry;
+    const isDraft = Boolean(draftEntryParam) && (docNav.draft ?? searchParams.get("draft")) === "1";
 
     if (isDraft) return "draft";
     if (docEntryParam) return "approved";
@@ -79,6 +86,10 @@ export function InvDocumentLayout<T extends FieldValues>({
   const { reset: resetStore, DocEntry, loadFromDocument, setIsCopyingTo } = useInventoryDocument();
   const store = useInventoryDocument();
   const [isSaving, setIsSaving] = useState(false);
+  const { user } = useAuth();
+  const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
 
   const previousDocTypeRef = React.useRef<DocumentType | null>(null);
 
@@ -302,6 +313,29 @@ export function InvDocumentLayout<T extends FieldValues>({
   const canCopyFrom = docType === DocumentType.InvTransfer;
 
   const onSubmitValid = async (data: T) => {
+    // Converting an existing draft (draft page) skips the approval modal - the draft
+    // already went through its approval process; submitting creates the document directly.
+    if (!docNav.draftEntry) {
+      const state = useInventoryDocument.getState();
+      const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
+
+      const currentUserId = user?.sapUserId;
+      if (currentUserId) {
+        try {
+          const docTypeStr = getApprovalDocumentType(docType);
+          const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+          if (activeTemplates && activeTemplates.length > 0) {
+            setApprovalTemplates(activeTemplates);
+            setPendingFinalData(finalData);
+            setApprovalModalOpen(true);
+            return;
+          }
+        } catch (err) {
+          console.error("Failed to check approval templates:", err);
+        }
+      }
+    }
+
     setIsSaving(true);
     try {
       await onSubmit(data);
@@ -452,6 +486,29 @@ export function InvDocumentLayout<T extends FieldValues>({
             searchValue={itrSearch}
           />
           <UDFLayout docType={docType} values={store.udfs} />
+
+          <RequestDocumentGenerationModal
+            open={approvalModalOpen}
+            onClose={() => setApprovalModalOpen(false)}
+            templates={approvalTemplates}
+            onConfirm={async (remarksMap) => {
+              if (!pendingFinalData) return;
+              const firstRemarks = approvalTemplates[0]
+                ? (remarksMap[approvalTemplates[0].Code] ?? "").trim()
+                : "";
+              const finalData = {
+                ...(pendingFinalData as any),
+                Comments: firstRemarks || (pendingFinalData as any).Comments || "",
+              } as T;
+
+              // The document is posted here - when an approval process applies, SAP
+              // creates a draft + approval request natively (ODBC -2028 handled backend-side).
+              await onSubmit(finalData);
+              setPendingFinalData(null);
+              reset(defaultValues as any);
+              resetStore();
+            }}
+          />
         </form>
       </FormProvider>
     </InvDocContext.Provider>

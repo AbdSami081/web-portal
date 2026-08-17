@@ -78,8 +78,10 @@ export default function DeliveryPage() {
     try {
       const response = await postDelivery(payload);
    
-      if (response?.DocEntry) {
-        if (attachments.length > 0) {
+      if (response?.DocEntry || response?.IsDraft) {
+        // When an approval process applies, SAP creates a DRAFT and the approval request
+        // natively - the document is not final yet, so skip attachment upload.
+        if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
             "Delivery",
@@ -91,7 +93,11 @@ export default function DeliveryPage() {
             toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
           }
         }
-        toast.success(`Delivery Note #${response.DocNum} created successfully!`);
+        if (response?.IsDraft) {
+          toast.success("Delivery Note submitted for approval.");
+        } else {
+          toast.success(`Delivery Note #${response.DocNum} created successfully!`);
+        }
       } else {
         throw new Error("Failed to create Delivery Note");
       }

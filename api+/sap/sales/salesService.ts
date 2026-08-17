@@ -1,5 +1,6 @@
 import { BaseSalesDocument } from "@/types/sales/salesDocuments.type";
 import apiClient from "@/lib/apiClient";
+import { withDefaultBPLId } from "@/lib/sap/helpers/documentPayloadHelper";
 
 export const getQuotationDocument = async (docNum: number): Promise<BaseSalesDocument | null> => {
   const res = await apiClient.get(`api/Sales/Quotations?docNum=${docNum}`);
@@ -77,7 +78,7 @@ export const getSalesReturnDocument = async (docNum: number): Promise<BaseSalesD
 };
 
 export const postQuotation = async (payload: any): Promise<any | null> => {
-  const res = await apiClient.post(`api/Sales/Quotations`, payload);
+  const res = await apiClient.post(`api/Sales/Quotations`, withDefaultBPLId(payload));
   if (!res.data) return null;
 
   const doc: BaseSalesDocument = {
@@ -92,7 +93,7 @@ export const postQuotation = async (payload: any): Promise<any | null> => {
 };
 
 export const postSalesReturn = async (payload: any): Promise<any | null> => {
-  const res = await apiClient.post(`api/Sales/Returns`, payload);
+  const res = await apiClient.post(`api/Sales/Returns`, withDefaultBPLId(payload));
   if (!res.data) return null;
 
   const doc: BaseSalesDocument = {
@@ -107,7 +108,7 @@ export const postSalesReturn = async (payload: any): Promise<any | null> => {
 };
 
 export const postSalesOrder = async (payload: any): Promise<any | null> => {
-  const res = await apiClient.post(`api/Sales/Orders`, payload);
+  const res = await apiClient.post(`api/Sales/Orders`, withDefaultBPLId(payload));
   if (!res.data) return null;
 
   const doc: BaseSalesDocument = {
@@ -122,7 +123,7 @@ export const postSalesOrder = async (payload: any): Promise<any | null> => {
 };
 
 export const postDelivery = async (payload: any): Promise<any | null> => {
-  const res = await apiClient.post(`api/Sales/DeliveryNote`, payload);
+  const res = await apiClient.post(`api/Sales/DeliveryNote`, withDefaultBPLId(payload));
   if (!res.data) return null;
 
   const doc: BaseSalesDocument = {
@@ -137,7 +138,7 @@ export const postDelivery = async (payload: any): Promise<any | null> => {
 };
 
 export const postARInvoice = async (payload: any): Promise<any | null> => {
-  const res = await apiClient.post(`api/Sales/Invoices`, payload);
+  const res = await apiClient.post(`api/Sales/Invoices`, withDefaultBPLId(payload));
   if (!res.data) return null;
 
   const doc: BaseSalesDocument = {

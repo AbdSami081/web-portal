@@ -9,6 +9,7 @@ import { clearApiResponseCache } from "@/lib/apiClient";
 
 interface User {
   empId: string;
+  sapUserId?: number;
   userName: string;
   role: string;
   allowedModules?: string[];
@@ -64,8 +65,12 @@ const buildUser = (
     decoded.issuperadmin === "True" ||
     decoded.isSuperAdmin === true;
 
+  const rawSapUserId = overrides?.sapUserId ?? decoded.SapUserId ?? decoded.sapUserId ?? decoded.SAPUserId ?? decoded.userId;
+  const sapUserId = rawSapUserId !== undefined && rawSapUserId !== null ? Number(rawSapUserId) : undefined;
+
   return {
     empId: overrides?.empId || decoded.sub || decoded.nameid,
+    sapUserId,
     userName: overrides?.userName || decoded.unique_name || decoded.name || "",
     role: overrides?.role || role || (isAdmin ? "Admin" : "User"),
     allowedModules: uniqueAllowed,
@@ -116,15 +121,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const companyDB = decoded.CompanyDB || decoded.companyDB || "SBODemoAU";
     const empId = decoded.sub || decoded.nameid;
 
+    const savedSapUserId = typeof window !== "undefined" ? localStorage.getItem("sapUserId") : null;
+    const initialOverrides = savedSapUserId ? { sapUserId: Number(savedSapUserId) } : undefined;
+
     setAccessToken(token);
     useAuthStore.getState().startExpiryTimer(token);
-    setUser(buildUser(decoded, null, companyDB));
+    setUser(buildUser(decoded, null, companyDB, initialOverrides));
 
     void refreshPermissions(
       decoded,
       empId,
       companyDB,
-      undefined,
+      initialOverrides,
       setUser,
       setIsPermissionsLoading
     );
@@ -172,8 +180,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const companyDB = decoded.CompanyDB || decoded.companyDB || dbParams?.companyDB || "SBODemoAU";
       const empId = data.user.empId || String(decoded.sub || decoded.nameid || "");
+
+      if (data.user.sapUserId !== undefined && data.user.sapUserId !== null) {
+        localStorage.setItem("sapUserId", String(data.user.sapUserId));
+      }
+
       const overrides = {
         empId,
+        sapUserId: data.user.sapUserId,
         userName: data.user.userName,
         role: data.user.role,
       };
@@ -220,6 +234,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setAccessToken(null);
     setIsPermissionsLoading(false);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("sapUserId");
+    }
     clearTokens();
     clearPermissionsCache();
     clearApiResponseCache();

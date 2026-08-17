@@ -79,8 +79,10 @@ export default function InvoicePage() {
 
     try {
       const response = await postARInvoice(payload);
-      if (response?.DocEntry) {
-        if (attachments.length > 0) {
+      if (response?.DocEntry || response?.IsDraft) {
+        // When an approval process applies, SAP creates a DRAFT and the approval request
+        // natively - the document is not final yet, so skip attachment upload.
+        if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
             "Invoice",
@@ -92,7 +94,11 @@ export default function InvoicePage() {
             toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
           }
         }
-        toast.success(`A/R Invoice #${response.DocNum} created successfully!`);
+        if (response?.IsDraft) {
+          toast.success("A/R Invoice submitted for approval.");
+        } else {
+          toast.success(`A/R Invoice #${response.DocNum} created successfully!`);
+        }
       } else {
         throw new Error("Failed to create AR Invoice");
       }

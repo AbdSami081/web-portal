@@ -127,7 +127,30 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/invoice/new",
                 objectCode: 18,
                 isReporting: true,
-            }
+            },
+            {
+                id: "a1dd9b32-38c1-4c1e-9672-298c6302833a",
+                title: "A/P Credit Memo",
+                url: "/dashboard/purchase/apcreditmemo",
+                objectCode: 19,
+            },
+            {
+                id: "41cab34b-5457-43f6-b325-8c5daf395586",
+                title: "A/P Down Payment Invoice",
+                url: "/dashboard/purchase/apdownpaymentinvoice",
+                objectCode: 204,
+            },{
+                id: "fc37b27e-b139-48da-8d1d-eff1563c104f",
+                title: "A/P Down Payment Request",
+                url: "/dashboard/purchase/apdownpaymentrequest",
+                objectCode: 1470000113,
+            },
+            {
+                id: "aec23e2c-f38c-4864-9938-16ba3619c1a6",
+                title: "Goods Return Request",
+                url: "/dashboard/purchase/goodsreturnrequest",
+                objectCode: 234000032,
+            },
         ],
     },
     {
@@ -157,6 +180,17 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/inventory/Good_Issue",
                 objectCode: 60,
                 isReporting: true,
+            },{
+                id: "d159c928-1124-4a49-a9cb-fe3fc928b6e1",
+                title: "Item Master Data",
+                url: "/dashboard/inventory/item_master",
+                objectCode: 4,
+            },
+            {
+                id: "02256c89-56c0-40e6-bbd6-0be2d2bbd360",
+                title: "Goods Return",
+                url: "/dashboard/purchase/goodsreturn",
+                objectCode: 21,
             }
         ],
     },
@@ -237,8 +271,8 @@ export const SERVER_MENUS: MenuItem[] = [
                 id: "7b157858-90e3-4295-9ea8-1412a7b6ea3e",
                 title: "Report Access",
                 url: "/dashboard/administration/report-access",
-            }
+            },
         ],
-    }
+    },
 
 ];

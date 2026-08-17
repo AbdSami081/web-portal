@@ -1,5 +1,5 @@
 "use client"
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { FieldValues, FormProvider, useForm, DefaultValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/sales/documentConfig";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { resolveDocNavParams } from "@/lib/docNavParams";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotationDocument, getSalesOrderDocument, getSalesDeliveryDocument } from "@/api+/sap/sales/salesService";
-import { FilePlus2, Loader2, Keyboard } from "lucide-react";
+import { FilePlus2, Loader2, Keyboard, Circle } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { HeaderModalAction } from "@/components/header-modal-action";
 import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
@@ -23,6 +24,10 @@ import { UDFLayout } from "@/components/shared/UDFSheet";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import HeaderActions from "@/components/Custom/HeaderAction";
+import { useAuth } from "@/context/authContext";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+/sap/Templates/approvalTemplate";
+import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
+import { ApprovalTemplate } from "@/types/template.type";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -55,11 +60,19 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
   const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  // Document params (draftEntry/docEntry/approvalStatus) may arrive via the URL or via the
+  // hidden sessionStorage nav params staged by the Messages page - resolve both here.
+  const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  // When the user opens an ALREADY APPROVED draft (from Messages -> Pending Approvals link),
+  // the approval process is already done - submitting must create the document directly
+  // instead of showing the approval modal again.
+  const isApprovedDraft = docNav.approvalStatus === "arsApproved";
 
 
   const [badgeState, setBadgeState] = useState<"draft" | "approved" | null>(() => {
-    const draftEntryParam = searchParams.get("draftEntry");
-    const docEntryParam = searchParams.get("docEntry");
+    const draftEntryParam = docNav.draftEntry;
+    const docEntryParam = docNav.docEntry;
 
     if (draftEntryParam) return "draft";       
     if (docEntryParam) return "approved";
@@ -112,9 +125,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [selectedCopyFrom, setSelectedCopyFrom] = useState<string>("");
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
+  const { user } = useAuth();
   const [serialModalOpen, setSerialModalOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<T | null>(null);
+  const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
+  const [isCheckingApproval, setIsCheckingApproval] = useState(false);
 
   const copyFromOptions = (() => {
     if (docType === DocumentType.Order) return [DocumentType.Quotation];
@@ -213,6 +231,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   };
 
   const getSubmitButtonText = () => {
+    if (isCheckingApproval) return <Circle />;
     if (isSubmitting) return "Saving...";
     if (isLoadingDocument) return "Loading...";
     
@@ -223,7 +242,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
     
     return "Submit";
   };
-0
+
   const copyToOptions = (() => {
     if (docType === DocumentType.Quotation)
       return [DocumentType.Order, DocumentType.Delivery, DocumentType.ARInvoice];
@@ -270,6 +289,28 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
           const state = useSalesDocument.getState();
           const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
+
+          const currentUserId = user?.sapUserId;
+          // An approved draft skips the approval check entirely - it was already approved,
+          // so submitting converts the draft straight into the final document.
+          if (currentUserId && !isApprovedDraft) {
+            setIsCheckingApproval(true);
+            try {
+              const docTypeStr = getApprovalDocumentType(docType);
+              const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+              if (activeTemplates && activeTemplates.length > 0) {
+                setApprovalTemplates(activeTemplates);
+                setPendingFinalData(finalData);
+                setApprovalModalOpen(true);
+                setIsCheckingApproval(false);
+                return;
+              }
+            } catch (err) {
+              console.error("Failed to check approval templates:", err);
+            } finally {
+              setIsCheckingApproval(false);
+            }
+          }
 
           const needsSerialManagement = (docType === DocumentType.Delivery || docType === DocumentType.ARInvoice) && 
                               state.lines.some(l => {
@@ -496,6 +537,30 @@ export function SalesDocumentLayout<T extends FieldValues>({
               }
             }}
             lines={useSalesDocument.getState().lines}
+          />
+
+          <RequestDocumentGenerationModal
+            open={approvalModalOpen}
+            onClose={() => setApprovalModalOpen(false)}
+            templates={approvalTemplates}
+            onConfirm={async (remarksMap) => {
+              // Submit the document - SAP natively creates the approval request
+              // when a matching approval template is linked to the document type.
+              if (!pendingFinalData) return;
+
+              const firstRemarks = approvalTemplates[0]
+                ? (remarksMap[approvalTemplates[0].Code] ?? "").trim()
+                : "";
+              const finalData = {
+                ...(pendingFinalData as any),
+                Comments: firstRemarks || (pendingFinalData as any).Comments || "",
+              } as T;
+
+              await onSubmit(finalData);
+              setPendingFinalData(null);
+              ResetForm();
+              setBadgeState(null);
+            }}
           />
         </form>
       </FormProvider>

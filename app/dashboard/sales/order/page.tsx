@@ -81,8 +81,10 @@ export default function OrderPage() {
     try {
       const response = await postSalesOrder(payload);
 
-      if (response?.DocEntry) {
-        if (attachments.length > 0) {
+      if (response?.DocEntry || response?.IsDraft) {
+        // When an approval process applies, SAP creates a DRAFT and the approval request
+        // natively - the document is not final yet, so skip attachment upload.
+        if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
             "SalesOrder",
@@ -94,7 +96,11 @@ export default function OrderPage() {
             toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
           }
         }
-        toast.success(`Sales Order #${response.DocNum} created successfully!`);
+        if (response?.IsDraft) {
+          toast.success("Sales Order submitted for approval.");
+        } else {
+          toast.success(`Sales Order #${response.DocNum} created successfully!`);
+        }
       } else {
         throw new Error("Failed to create Sales Order");
       }

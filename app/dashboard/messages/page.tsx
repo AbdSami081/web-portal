@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "@/context/NotificationContext";
 import { SAPMessage, getMyAlerts, PAGE_SIZE } from "@/api+/sap/notification";
+import apiClient from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,12 +14,42 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Mail, MailOpen, AlertOctagon, Info, Paperclip,
   Trash2, CornerUpRight, Reply, CheckCircle, RefreshCw,
-  FolderOpen, ArrowRight, ArrowUpRight, XCircle, Clock
+  FolderOpen, ArrowRight, ArrowUpRight, XCircle, Clock, ThumbsUp, User2, FileText, Calendar
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+} from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { buildDocumentUrl, getMenuInfoByObjectCode } from "@/lib/menu-lookup";
+import { stageDocNavParams } from "@/lib/docNavParams";
+
+interface PendingApproval {
+  ApprovalRequestCode: number;
+  ObjectType: string;
+  ObjectEntry: number;
+  DraftEntry: number;
+  Status: string;
+  Remarks: string;
+  ApprovalCreationDate: string;
+  OriginatorID: number;
+  CurrentStage: number;
+}
+
+const getPendingApprovals = async (): Promise<PendingApproval[]> => {
+  try {
+    const res = await apiClient.get("api/Notifications/GetPendingApprovals");
+    const data = res.data as any;
+    if (data?.value && Array.isArray(data.value)) return data.value;
+    if (Array.isArray(data)) return data;
+    if (data?.ApprovalRequests && Array.isArray(data.ApprovalRequests)) return data.ApprovalRequests;
+    return [];
+  } catch {
+    return [];
+  }
+};
 
 export default function MessagesOverviewPage() {
   const { messages: contextMessages, isLoading, refreshNotifications, clearUnread } = useNotifications();
@@ -28,6 +59,12 @@ export default function MessagesOverviewPage() {
   const [hasMore, setHasMore] = useState(false);
   const [nextSkip, setNextSkip] = useState(PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const [isLoadingApprovals, setIsLoadingApprovals] = useState(false);
+  const [selectedApproval, setSelectedApproval] = useState<PendingApproval | null>(null);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approveRemarks, setApproveRemarks] = useState("");
+  const [isApproving, setIsApproving] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -46,9 +83,49 @@ export default function MessagesOverviewPage() {
     }
   }, [messages, selectedMessage]);
 
+  const fetchPendingApprovals = async () => {
+    setIsLoadingApprovals(true);
+    try {
+      const data = await getPendingApprovals();
+      setPendingApprovals(data);
+    } catch {
+      toast.error("Failed to load pending approvals");
+    } finally {
+      setIsLoadingApprovals(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchPendingApprovals();
+  }, []);
+
   const handleRefresh = async () => {
-    await refreshNotifications();
-    toast.success("Messages refreshed successfully");
+    const ok = await refreshNotifications();
+    await fetchPendingApprovals();
+    if (ok) {
+      toast.success("Messages refreshed successfully");
+    } else {
+      toast.error("Failed to refresh messages. Please try again.");
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedApproval) return;
+    setIsApproving(true);
+    try {
+      await apiClient.patch(`api/Approval/ApprovalRequests/${selectedApproval.ApprovalRequestCode}/approve`, {
+        Remarks: approveRemarks || "Approved"
+      });
+      toast.success(`Approval request #${selectedApproval.ApprovalRequestCode} approved successfully!`);
+      setApproveDialogOpen(false);
+      setApproveRemarks("");
+      setSelectedApproval(null);
+      await fetchPendingApprovals();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.Message || "Failed to approve request");
+    } finally {
+      setIsApproving(false);
+    }
   };
 
   const handleLoadMore = async () => {
@@ -172,18 +249,32 @@ export default function MessagesOverviewPage() {
       return;
     }
 
-    router.push(
-      buildDocumentUrl(menuInfo.url, {
-        objectType: link.objectType,
-        objectEntry: link.isDraft
-          ? undefined
-          : (link.sourceDraftNumber ? String(link.sourceDraftNumber) : link.objectEntry),
-        draftEntry: link.draftEntry,
-        isDraft: link.isDraft,
-        approvalRequestCode: link.approvalRequestCode,
-        approvalStatus: selectedMessage?.ApprovalStatus
-      })
-    );
+    const url = buildDocumentUrl(menuInfo.url, {
+      objectType: link.objectType,
+      objectEntry: link.isDraft
+        ? undefined
+        : (link.sourceDraftNumber ? String(link.sourceDraftNumber) : link.objectEntry),
+      draftEntry: link.draftEntry,
+      isDraft: link.isDraft,
+      approvalRequestCode: link.approvalRequestCode,
+      approvalStatus: selectedMessage?.ApprovalStatus
+    });
+
+    // Keep the document params out of the browser URL - they are carried internally
+    // via sessionStorage and re-joined on the target page (also survives a refresh).
+    const cleanPath = url.split("?")[0];
+    stageDocNavParams(cleanPath, {
+      draftEntry: link.draftEntry,
+      docEntry: link.isDraft
+        ? undefined
+        : (link.sourceDraftNumber ? String(link.sourceDraftNumber) : link.objectEntry),
+      docType: link.isDraft ? String(link.objectType) : undefined,
+      draft: link.isDraft ? "1" : undefined,
+      approvalRequestCode: link.approvalRequestCode ? String(link.approvalRequestCode) : undefined,
+      approvalStatus: selectedMessage?.ApprovalStatus,
+    });
+
+    router.push(cleanPath);
   };
   
   const formatDate = (dateStr: string) => {
@@ -220,20 +311,20 @@ export default function MessagesOverviewPage() {
         <Card className="lg:col-span-7 flex flex-col min-h-0 bg-white border-slate-200 shadow-sm rounded-xl overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <div className="px-4 pt-4 border-b border-slate-100 flex items-center justify-between">
-              {/* <TabsList className="bg-slate-100/80 p-0.5 gap-1 rounded-lg h-9">
+              <TabsList className="bg-slate-100/80 p-0.5 gap-1 rounded-lg h-9">
                 <TabsTrigger value="inbox" className="text-xs font-semibold rounded-md h-8 px-4 data-[state=active]:bg-white data-[state=active]:text-slate-950">
                   Inbox
+                  {messages.length > 0 && (
+                    <span className="ml-1.5 text-[9px] bg-slate-200 text-slate-600 rounded-full px-1.5 py-0.5 font-bold">{messages.length}</span>
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="outbox" className="text-xs font-semibold rounded-md h-8 px-4 data-[state=active]:bg-white data-[state=active]:text-slate-950">
-                  Outbox
+                <TabsTrigger value="approvals" className="text-xs font-semibold rounded-md h-8 px-4 data-[state=active]:bg-white data-[state=active]:text-slate-950">
+                  Pending Approvals
+                  {pendingApprovals.length > 0 && (
+                    <span className="ml-1.5 text-[9px] bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5 font-bold">{pendingApprovals.length}</span>
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="sent" className="text-xs font-semibold rounded-md h-8 px-4 data-[state=active]:bg-white data-[state=active]:text-slate-950">
-                  Sent
-                </TabsTrigger>
-              </TabsList> */}
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                Total: {messages.length} alerts
-              </div>
+              </TabsList>
             </div>
 
             <TabsContent value="inbox" className="flex-1 flex flex-col min-h-0 m-0 border-0 outline-none">
@@ -323,38 +414,149 @@ export default function MessagesOverviewPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="outbox" className="flex-1 flex flex-col min-h-0 m-0 border-0 outline-none">
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
-                  <FolderOpen className="h-6 w-6 text-slate-300" />
+            <TabsContent value="approvals" className="flex-1 flex flex-col min-h-0 m-0 border-0 outline-none">
+              {isLoadingApprovals ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <RefreshCw className="h-5 w-5 animate-spin text-slate-400" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-sm">Outbox is empty</h3>
-                  <p className="text-xs text-slate-500 max-w-xs mt-1">
-                    No pending messages waiting to be sent to the SAP system.
-                  </p>
+              ) : pendingApprovals.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
+                    <CheckCircle className="h-6 w-6 text-slate-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm">No pending approvals</h3>
+                    <p className="text-xs text-slate-500 max-w-xs mt-1">
+                      All approval requests have been processed. New pending approvals will appear here.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="sent" className="flex-1 flex flex-col min-h-0 m-0 border-0 outline-none">
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
-                  <MailOpen className="h-6 w-6 text-slate-300" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-sm">No sent messages</h3>
-                  <p className="text-xs text-slate-500 max-w-xs mt-1">
-                    Alerts and replies you send to other SAP Business One users will appear here.
-                  </p>
-                </div>
-              </div>
+              ) : (
+                <ScrollArea className="flex-1">
+                  <Table>
+                    <TableHeader className="bg-slate-50/70 border-b border-slate-100">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Request #</TableHead>
+                        <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Object Type</TableHead>
+                        <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Remarks</TableHead>
+                        <TableHead className="w-[100px] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Status</TableHead>
+                        <TableHead className="w-[90px] text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingApprovals.map((ap) => {
+                        const isSelected = selectedApproval?.ApprovalRequestCode === ap.ApprovalRequestCode;
+                        return (
+                          <TableRow
+                            key={ap.ApprovalRequestCode}
+                            onClick={() => setSelectedApproval(ap)}
+                            className={`cursor-pointer transition-colors border-b border-slate-100 hover:bg-amber-50/40 ${isSelected ? "bg-amber-50" : ""}`}
+                          >
+                            <TableCell className="py-3 font-mono text-sm font-bold text-slate-700">#{ap.ApprovalRequestCode}</TableCell>
+                            <TableCell className="py-3">
+                              <span className="text-xs font-semibold text-slate-700">
+                                {getMenuInfoByObjectCode(ap.ObjectType)?.title || `Type ${ap.ObjectType}`}
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-3 text-xs text-slate-500 truncate max-w-[140px]">{ap.Remarks || "—"}</TableCell>
+                            <TableCell className="py-3">
+                              <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200/50 flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5 w-fit">
+                                <Clock className="h-3 w-3" /> Pending
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-3 text-right text-[11px] text-slate-400 font-bold whitespace-nowrap">
+                              {ap.ApprovalCreationDate ? formatDate(ap.ApprovalCreationDate) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
             </TabsContent>
           </Tabs>
         </Card>
 
         <Card className="lg:col-span-5 flex flex-col min-h-0 bg-white border-slate-200 shadow-sm rounded-xl overflow-hidden">
-          {selectedMessage ? (
+          {activeTab === "approvals" ? (
+            selectedApproval ? (
+              <div className="flex-1 flex flex-col min-h-0">
+                {/* Approval Detail Header */}
+                <div className="p-5 border-b border-slate-100 bg-amber-50/30 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-base font-black text-slate-900 leading-tight">
+                      Approval Request
+                      <span className="ml-2 font-mono text-amber-600">#{selectedApproval.ApprovalRequestCode}</span>
+                    </h2>
+                    <Badge className="bg-amber-50 text-amber-700 border border-amber-200/50 flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5">
+                      <Clock className="h-3 w-3" /> Pending
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-y-2.5 text-xs">
+                    <div className="flex items-center gap-1.5 text-slate-500">
+                      <FileText className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="text-slate-400">Object Type:</span>
+                      <span className="text-slate-800 font-bold">
+                        {getMenuInfoByObjectCode(selectedApproval.ObjectType)?.title || `Type ${selectedApproval.ObjectType}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-500 text-right justify-end">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="text-slate-400">Date:</span>
+                      <span className="text-slate-800 font-bold">
+                        {selectedApproval.ApprovalCreationDate ? formatDate(selectedApproval.ApprovalCreationDate) : "—"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-500">
+                      <User2 className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="text-slate-400">Originator:</span>
+                      <span className="text-slate-800 font-bold">User #{selectedApproval.OriginatorID}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-500 text-right justify-end">
+                      <span className="text-slate-400">Stage:</span>
+                      <span className="text-slate-800 font-bold">#{selectedApproval.CurrentStage}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Remarks */}
+                <ScrollArea className="flex-1 p-5">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Request Remarks</h4>
+                      <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                        {selectedApproval.Remarks || "No remarks provided."}
+                      </p>
+                    </div>
+                  </div>
+                </ScrollArea>
+
+                {/* Approve Action */}
+                <div className="p-4 border-t border-slate-100 bg-slate-50/30">
+                  <Button
+                    className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 rounded-lg transition-colors shadow-sm"
+                    onClick={() => { setApproveRemarks(""); setApproveDialogOpen(true); }}
+                  >
+                    <ThumbsUp className="h-4 w-4" />
+                    Approve Request
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-4">
+                <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center border border-amber-100">
+                  <ThumbsUp className="h-6 w-6 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Select a pending approval</h3>
+                  <p className="text-xs text-slate-500 max-w-xs mt-1">
+                    Click on any pending approval request to review details and take action.
+                  </p>
+                </div>
+              </div>
+            )
+          ) : selectedMessage ? (
             <div className="flex-1 flex flex-col min-h-0">
 
               <div className="p-5 border-b border-slate-100 bg-slate-50/30 space-y-4">
@@ -447,26 +649,6 @@ export default function MessagesOverviewPage() {
                   )}
                 </div>
               </ScrollArea>
-
-              {/* Action Buttons Footer */}
-              {/* <div className="p-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="h-9 px-3 gap-1.5 rounded-lg border-slate-200 text-slate-700 bg-white">
-                    <Reply className="h-4 w-4" /> Reply
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-9 px-3 gap-1.5 rounded-lg border-slate-200 text-slate-700 bg-white">
-                    <CornerUpRight className="h-4 w-4" /> Forward
-                  </Button>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteMessage(selectedMessage.MessageCode)}
-                  className="h-9 px-3 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" /> Delete
-                </Button>
-              </div> */}
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-4">
@@ -483,6 +665,48 @@ export default function MessagesOverviewPage() {
           )}
         </Card>
       </div>
+
+      {/* Approve Confirmation Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ThumbsUp className="h-5 w-5 text-emerald-600" />
+              Approve Request #{selectedApproval?.ApprovalRequestCode}
+            </DialogTitle>
+            <DialogDescription>
+              Add optional remarks before approving this request. This action will notify the originator.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Approval Remarks</label>
+            <Textarea
+              placeholder="e.g. Approved by Manager — all conditions met."
+              value={approveRemarks}
+              onChange={(e) => setApproveRemarks(e.target.value)}
+              className="resize-none min-h-[90px] text-sm"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setApproveDialogOpen(false)}
+              disabled={isApproving}
+              className="h-9"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApprove}
+              disabled={isApproving}
+              className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
+            >
+              {isApproving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
+              {isApproving ? "Approving..." : "Confirm Approve"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

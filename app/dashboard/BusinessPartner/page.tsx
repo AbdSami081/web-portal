@@ -1,4 +1,5 @@
 "use client";
+
 import {
   BusinessPartnerCategory,
   BusinessPartnerGroup,
@@ -18,9 +19,13 @@ import {
   getFactoringIndicators,
   saveBusinessPartner,
 } from "@/api+/sap/BusinessPartner/BPService";
-import { Search, List, ChevronDown, Loader2 } from "lucide-react";
-import React, { useCallback, useState, useEffect, useRef } from "react";
+
+import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+
+import { Search, List, Loader2 } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -37,14 +42,17 @@ import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { DocumentType } from "@/types/master/DocumentType";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
-import { getDocumentsList } from "@/api+/sap/common/documentService";
 
 export default function BPMasterDataPage() {
   const [documentsList, setDocumentsList] = useState<BusinessPartner[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [listSearch, setListSearch] = useState("");
   const PAGE_SIZE = 20;
+
+  const searchRequestIdRef = useRef(0);
+
   const [cardTypes, setCardTypes] = useState<BusinessPartnerCategory[]>([]);
   const [groups, setGroups] = useState<BusinessPartnerGroup[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
@@ -53,15 +61,17 @@ export default function BPMasterDataPage() {
   const [companies, setCompanies] = useState<BusinessPartnerType[]>([]);
   const [shippingTypes, setShippingTypes] = useState<ShippingType[]>([]);
   const [factoringIndicators, setFactoringIndicators] = useState<FactoringIndicator[]>([]);
+
   const [isSaving, setIsSaving] = useState(false);
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const [listSearch, setListSearch] = useState("");
+
   const [openShipping, setOpenShipping] = useState(false);
   const [openIndicator, setOpenIndicator] = useState(false);
   const [openProject, setOpenProject] = useState(false);
   const [openIndustry, setOpenIndustry] = useState(false);
   const [openCompany, setOpenCompany] = useState(false);
+
   const [formData, setFormData] = useState({
     CardCode: "",
     CardName: "",
@@ -78,9 +88,11 @@ export default function BPMasterDataPage() {
     Remarks: "",
     FreeText: "",
     Industry: "",
+    IndustryCode: "",
     Indicator: "",
     Project: "",
     ShippingType: "",
+    ShippingTypeCode: "",
     Company: "",
     Status: "active",
   });
@@ -104,25 +116,22 @@ export default function BPMasterDataPage() {
     }
   };
 
-  const searchRequestIdRef = useRef(0);
-
   const fetchDocumentsList = useCallback(
     async (isLoadMore = false, searchText?: string) => {
       const resourceName = getResourceName(DocumentType.BusinessPartner);
 
-      if (!resourceName) return;
+      if (!resourceName) {
+        console.error("Resource name not found");
+        return;
+      }
 
       const requestId = ++searchRequestIdRef.current;
       const currentSkip = isLoadMore ? skip + PAGE_SIZE : 0;
 
       setIsLoadingList(true);
+
       try {
-        const data = await getDocumentsList(
-          resourceName,
-          currentSkip,
-          PAGE_SIZE,
-          searchText
-        );
+        const data = await getDocumentsList(resourceName, currentSkip, PAGE_SIZE, searchText);
 
         if (requestId !== searchRequestIdRef.current) return;
 
@@ -134,10 +143,11 @@ export default function BPMasterDataPage() {
           setSkip(0);
         }
 
-        setHasMore(data.length === PAGE_SIZE); 
-      } catch {
+        setHasMore(data.length === PAGE_SIZE);
+      } catch (error) {
         if (requestId === searchRequestIdRef.current) {
-          toast.error("Failed to fetch documents list.");
+          console.error("Get Business Partners Error:", error);
+          toast.error("Failed to fetch Business Partners.");
         }
       } finally {
         if (requestId === searchRequestIdRef.current) {
@@ -152,24 +162,6 @@ export default function BPMasterDataPage() {
     fetchDocumentsList(false, val);
   }, 400);
 
-  // Server-side search: opens modal and fetches filtered results from backend
-  const handleSearch = () => {
-    const val = searchValue.trim();
-    if (!val) {
-      setDocumentsList([]);
-      setSkip(0);
-      setListSearch("");
-      setOpen(true);
-      fetchDocumentsList(false);
-      return;
-    }
-    setListSearch(val);
-    setDocumentsList([]);
-    setSkip(0);
-    setOpen(true);
-    fetchDocumentsList(false, val);
-  };
-
   const openBPModal = useCallback(() => {
     setOpen(true);
   }, []);
@@ -178,118 +170,94 @@ export default function BPMasterDataPage() {
     if (open) {
       fetchDocumentsList(false);
     }
-  }, [open]);
+  }, [open, fetchDocumentsList]);
 
   useEffect(() => {
-    const loadCardTypes = async () => {
+    (async () => {
       try {
-        const data = await getBusinessPartnerCategories();
-        setCardTypes(data);
-      } catch (err) {
-        console.error(err);
+        setCardTypes(await getBusinessPartnerCategories());
+      } catch (error) {
+        console.error(error);
         toast.error("Failed to load Card Types");
       }
-    };
-
-    loadCardTypes();
+    })();
   }, []);
 
   useEffect(() => {
-    const loadGroups = async () => {
+    (async () => {
       try {
-        const data = await getBusinessPartnerGroups();
-        setGroups(data);
-      } catch (err) {
-        console.error(err);
+        setGroups(await getBusinessPartnerGroups());
+      } catch (error) {
+        console.error(error);
         toast.error("Failed to load Groups");
       }
-    };
-
-    loadGroups();
+    })();
   }, []);
 
   useEffect(() => {
-    const loadCurrencies = async () => {
+    (async () => {
       try {
-        const data = await getCurrencies();
-        setCurrencies(data);
-      } catch (err) {
-        console.error(err);
+        setCurrencies(await getCurrencies());
+      } catch (error) {
+        console.error(error);
         toast.error("Failed to load Currencies");
       }
-    };
-
-    loadCurrencies();
+    })();
   }, []);
 
   useEffect(() => {
-    const loadProjects = async () => {
+    (async () => {
       try {
-        const data = await getBusinessPartnerProjects();
-        setProjects(data);
-      } catch (err) {
-        console.error(err);
+        setProjects(await getBusinessPartnerProjects());
+      } catch (error) {
+        console.error(error);
         toast.error("Failed to load Projects");
       }
-    };
-
-    loadProjects();
+    })();
   }, []);
 
   useEffect(() => {
-    const loadIndustries = async () => {
+    (async () => {
       try {
-        const data = await getIndustries();
-        setIndustries(data);
-      } catch (err) {
-        console.error(err);
+        setIndustries(await getIndustries());
+      } catch (error) {
+        console.error(error);
         toast.error("Failed to load Industries");
       }
-    };
-
-    loadIndustries();
+    })();
   }, []);
 
   useEffect(() => {
-    const loadCompanies = async () => {
+    (async () => {
       try {
-        const data = await getBusinessPartnerTypes();
-        setCompanies(data);
-      } catch (err) {
-        console.error(err);
+        setCompanies(await getBusinessPartnerTypes());
+      } catch (error) {
+        console.error(error);
         toast.error("Failed to load Companies");
       }
-    };
-
-    loadCompanies();
+    })();
   }, []);
 
   useEffect(() => {
-    const loadShippingTypes = async () => {
+    (async () => {
       try {
-        const data = await getShippingTypes();
-        setShippingTypes(data);
-      } catch (err) {
-        console.error(err);
+        setShippingTypes(await getShippingTypes());
+      } catch (error) {
+        console.error(error);
         toast.error("Failed to load Shipping Types");
       }
-    };
-
-    loadShippingTypes();
+    })();
   }, []);
 
   useEffect(() => {
-    const loadFactoringIndicators = async () => {
+    (async () => {
       try {
-        const data = await getFactoringIndicators();
-        setFactoringIndicators(data);
-      } catch (err) {
-        console.error(err);
+        setFactoringIndicators(await getFactoringIndicators());
+      } catch (error) {
+        console.error(error);
         toast.error("Failed to load Factoring Indicators");
       }
-    };
-
-    loadFactoringIndicators();
+    })();
   }, []);
 
   useEffect(() => {
@@ -301,58 +269,114 @@ export default function BPMasterDataPage() {
       }
     };
     document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [openBPModal]);
 
+  const handleChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleSubmit = async () => {
+    if (!formData.CardCode.trim()) {
+      toast.error("Please enter Card Code");
+      return;
+    }
+    if (!formData.CardName.trim()) {
+      toast.error("Please enter Card Name");
+      return;
+    }
+    if (!formData.CardType.trim()) {
+      toast.error("Please select Card Type");
+      return;
+    }
+    if (!formData.Group) {
+      toast.error("Please select Group");
+      return;
+    }
+    if (!formData.ShippingTypeCode) {
+      toast.error("Please select Shipping Type");
+      return;
+    }
+
     const payload = {
       CardCode: formData.CardCode.trim(),
       CardName: formData.CardName.trim(),
       CardType: formData.CardType,
+      Valid: formData.Status === "active" ? "tYES" : "tNO",
       GroupCode: Number(formData.Group),
       Phone1: formData.Phone1,
       Phone2: formData.Phone2,
-      Website: formData.Website,
       Cellular: formData.Cellular,
       Fax: formData.Fax,
-      ShippingType: Number(formData.ShippingType),
-      Indicator: formData.Indicator
-        ? formData.Indicator.split(" - ")[0]
-        : "",
-      CompanyPrivate: formData.Company
-        ? formData.Company.split(" - ")[0]
-        : "",
-      Industry: formData.Industry
-        ? formData.Industry.split(" - ")[0]
-        : "",
-      //Status: formData.Status,
-      ProjectCode: formData.Project
-        ? formData.Project.split(" - ")[0]
-        : "",
+      EmailAddress: formData.EmailAddress,
+      Website: formData.Website,
+      Currency: formData.Currency,
+      ShippingType: Number(formData.ShippingTypeCode),
+      Indicator: formData.Indicator ? formData.Indicator.split(" - ")[0] : "",
+      CompanyPrivate: formData.Company ? formData.Company.split(" - ")[0] : "",
+      Industry: formData.Industry || "",
+      ProjectCode: formData.Project ? formData.Project.split(" - ")[0] : "",
       U_NTNRegistered: "Registered",
       Notes: formData.Remarks,
       FreeText: formData.FreeText,
     };
 
     setIsSaving(true);
+
     try {
       const response = await saveBusinessPartner(payload);
+      console.log("Save Response:", response);
+
       toast.success("Business Partner Saved Successfully");
+
+      setFormData({
+        CardCode: "",
+        CardName: "",
+        CardType: "",
+        Phone1: "",
+        Phone2: "",
+        Cellular: "",
+        Fax: "",
+        EmailAddress: "",
+        Website: "",
+        Currency: "",
+        Group: "",
+        ForeignName: "",
+        Remarks: "",
+        FreeText: "",
+        Industry: "",
+        IndustryCode: "",
+        Indicator: "",
+        Project: "",
+        ShippingType: "",
+        ShippingTypeCode: "",
+        Company: "",
+        Status: "active",
+      });
+
+      setSearchValue("");
     } catch (error: any) {
       console.error("Save Business Partner Error:", error);
-      toast.error("Failed to Save Business Partner");
+      console.error("Status:", error?.response?.status);
+      console.error("Response:", error?.response?.data);
+      console.error("Validation Errors:", error?.response?.data?.errors);
+
+      const validationErrors = error?.response?.data?.errors;
+
+      if (validationErrors) {
+        console.error(JSON.stringify(validationErrors, null, 2));
+      }
+
+      if (validationErrors?.document) {
+        toast.error("Document data is required by the API.");
+      } else if (validationErrors?.["$.Industry"]) {
+        toast.error("Invalid Industry value.");
+      } else {
+        toast.error("Failed to Save Business Partner");
+      }
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleChange = (field: keyof typeof formData, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
   };
 
   const handleRowDoubleClick = (item: any) => {
@@ -360,7 +384,7 @@ export default function BPMasterDataPage() {
       CardCode: item.CardCode ?? "",
       CardName: item.CardName ?? "",
       CardType: item.CardType ?? "",
-      Group: item.GroupCode?.toString() ?? "",
+      Group: item.GroupCode != null ? item.GroupCode.toString() : "",
       Phone1: item.Phone1 ?? "",
       Phone2: item.Phone2 ?? "",
       Cellular: item.Cellular ?? "",
@@ -372,9 +396,11 @@ export default function BPMasterDataPage() {
       Remarks: item.Remarks ?? "",
       FreeText: item.FreeText ?? "",
       Industry: item.Industry ?? "",
+      IndustryCode: item.IndustryCode != null ? item.IndustryCode.toString() : "",
+      ShippingType: item.ShippingTypeName ?? "",
+      ShippingTypeCode: item.ShippingType != null ? item.ShippingType.toString() : "",
       Indicator: item.Indicator ?? "",
       Project: item.Project ?? "",
-      ShippingType: item.ShippingType ?? "",
       Company: item.CompanyPrivate ?? "",
       Status: item.Status ?? "active",
     });
@@ -382,51 +408,67 @@ export default function BPMasterDataPage() {
     setOpen(false);
   };
 
-  const isFormValid =
-    formData.CardCode.trim() !== "" &&
-    formData.CardType.trim() !== "";
+  const handleSearch = () => {
+    const val = searchValue.trim();
+
+    if (!val) {
+      setDocumentsList([]);
+      setSkip(0);
+      setListSearch("");
+      setOpen(true);
+      fetchDocumentsList(false);
+      return;
+    }
+
+    setListSearch(val);
+    setDocumentsList([]);
+    setSkip(0);
+    setOpen(true);
+    fetchDocumentsList(false, val);
+  };
+
+  const isFormValid = formData.CardCode.trim() !== "" && formData.CardType.trim() !== "";
+
   return (
     <div className="min-h-screen bg-[#fafafa]">
       <div className="mx-auto max-w-[1500px] bg-white shadow-sm">
-        <div className="flex justify-between items-center px-6 py-3 border-b bg-muted shrink-0">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold">Business Partner Master Data</h1>
-          </div>
+        <div className="flex items-center justify-between border-b bg-muted px-6 py-3">
+          <h1 className="text-xl font-semibold">Business Partner Master Data</h1>
         </div>
 
-      <GenericModal
-        title="Select Business Partner"
-        open={open}
-        onClose={() => {
-          setOpen(false);
-          setListSearch("");
-        }}
-        data={documentsList}
-        isLoading={isLoadingList}
-        getSelectValue={(item) => item.CardCode}
-        onSelect={(value) => {
-          const selected = documentsList.find((item) => item.CardCode === value);
-          if (selected) {
-            handleRowDoubleClick(selected);
-          }
-          setOpen(false);
-        }}
-        columns={[
-          { key: "CardCode", label: "Card Code" },
-          { key: "CardName", label: "Card Name" },
-          { key: "CardType", label: "Card Type" },
-        ]}
-        onLoadMore={() => fetchDocumentsList(true, listSearch)}
-        hasMore={hasMore}
-        onSearch={(value) => {
-          setListSearch(value);
-          setDocumentsList([]);
-          setSkip(0);
-          setIsLoadingList(true);
-          debouncedFetchDocumentsList(value);
-        }}
-        searchValue={listSearch}
-    />
+        <GenericModal
+          title="Select Business Partner"
+          open={open}
+          onClose={() => {
+            setOpen(false);
+            setListSearch("");
+          }}
+          data={documentsList}
+          isLoading={isLoadingList}
+          getSelectValue={(item) => item.CardCode}
+          onSelect={(value) => {
+            const selected = documentsList.find((item) => item.CardCode === value);
+            if (selected) {
+              handleRowDoubleClick(selected);
+            }
+            setOpen(false);
+          }}
+          columns={[
+            { key: "CardCode", label: "Card Code" },
+            { key: "CardName", label: "Card Name" },
+            { key: "CardType", label: "Card Type" },
+          ]}
+          onLoadMore={() => fetchDocumentsList(true, listSearch)}
+          hasMore={hasMore}
+          onSearch={(value) => {
+            setListSearch(value);
+            setDocumentsList([]);
+            setSkip(0);
+            setIsLoadingList(true);
+            debouncedFetchDocumentsList(value);
+          }}
+          searchValue={listSearch}
+        />
 
         <GenericModal
           title="Select Shipping Type"
@@ -435,16 +477,13 @@ export default function BPMasterDataPage() {
           data={shippingTypes}
           getSelectValue={(item) => item.Code.toString()}
           onSelect={(value) => {
-          const selected = shippingTypes.find(
-          (item) => item.Code.toString() === value
-          );
-
-         if (selected) {
-         handleChange("ShippingType", selected.Code.toString());
-         }
-
-         setOpenShipping(false);
-        }}
+            const selected = shippingTypes.find((item) => item.Code.toString() === value);
+            if (selected) {
+              handleChange("ShippingType", selected.Name);
+              handleChange("ShippingTypeCode", selected.Code.toString());
+            }
+            setOpenShipping(false);
+          }}
           columns={[
             { key: "Code", label: "Code" },
             { key: "Name", label: "Name" },
@@ -456,20 +495,15 @@ export default function BPMasterDataPage() {
           title="Select Indicator"
           open={openIndicator}
           onClose={() => setOpenIndicator(false)}
-          isLoading={isLoadingList}
           data={factoringIndicators}
           getSelectValue={(item: any) => item.IndicatorCode}
           onSelect={(value) => {
-          const selected = factoringIndicators.find(
-         (item) => item.IndicatorCode === value
-         );
-
-         if (selected) {
-         handleChange("Indicator", selected.IndicatorCode);
-         }
-
-        setOpenIndicator(false);
-        }}
+            const selected = factoringIndicators.find((item) => item.IndicatorCode === value);
+            if (selected) {
+              handleChange("Indicator", selected.IndicatorCode);
+            }
+            setOpenIndicator(false);
+          }}
           columns={[
             { key: "IndicatorCode", label: "Code" },
             { key: "IndicatorName", label: "Name" },
@@ -480,18 +514,15 @@ export default function BPMasterDataPage() {
           title="Select Project"
           open={openProject}
           onClose={() => setOpenProject(false)}
-          isLoading={isLoadingList}
           data={projects}
           getSelectValue={(item: any) => item.Code}
           onSelect={(value) => {
-          const selected = projects.find((item) => item.Code === value);
-
-          if (selected) {
-          handleChange("Project", selected.Code);
-          }
-
-         setOpenProject(false);
-         }}
+            const selected = projects.find((item) => item.Code === value);
+            if (selected) {
+              handleChange("Project", selected.Code);
+            }
+            setOpenProject(false);
+          }}
           columns={[
             { key: "Code", label: "Code" },
             { key: "Name", label: "Name" },
@@ -501,135 +532,123 @@ export default function BPMasterDataPage() {
           ]}
         />
 
-       <GenericModal
-         title="Select Industry"
-         open={openIndustry}
-         onClose={() => setOpenIndustry(false)}
-         isLoading={isLoadingList}
-         data={industries}
-         getSelectValue={(item) => item.IndustryCode.toString()}
-         onSelect={(value) => {
-         const selected = industries.find(
-         (item) => item.IndustryCode.toString() === value
-         );
+        <GenericModal
+          title="Select Industry"
+          open={openIndustry}
+          onClose={() => setOpenIndustry(false)}
+          data={industries}
+          getSelectValue={(item) => item.IndustryCode.toString()}
+          onSelect={(value) => {
+            const selected = industries.find((item) => item.IndustryCode.toString() === value);
+            if (selected) {
+              handleChange("Industry", selected.IndustryName);
+              handleChange("IndustryCode", selected.IndustryCode.toString());
+            }
+            setOpenIndustry(false);
+          }}
+          columns={[
+            { key: "IndustryCode", label: "Code" },
+            { key: "IndustryName", label: "Name" },
+            { key: "IndustryDescription", label: "Description" },
+          ]}
+        />
 
-        if (selected) {
-        handleChange("Industry", selected.IndustryCode.toString());
-        }
+        <GenericModal
+          title="Select Company"
+          open={openCompany}
+          onClose={() => setOpenCompany(false)}
+          data={companies}
+          getSelectValue={(item: BusinessPartnerType) => item.Code}
+          onSelect={(value) => {
+            const selected = companies.find((item) => item.Code === value);
+            if (selected) {
+              handleChange("Company", selected.Code);
+            }
+            setOpenCompany(false);
+          }}
+          columns={[
+            { key: "Code", label: "Code" },
+            { key: "Name", label: "Name" },
+          ]}
+        />
 
-        setOpenIndustry(false);
-        }}
-       columns={[
-       { key: "IndustryCode", label: "Code" },
-       { key: "IndustryName", label: "Name" },
-       { key: "IndustryDescription", label: "Description" },
-       ]}
-       />
+        <div className="bg-white px-6 py-5">
+          <div className="space-y-3">
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-2">
+                <label className="w-20 shrink-0 text-sm">Code</label>
+                <Input
+                  value={formData.CardCode}
+                  onChange={(e) => handleChange("CardCode", e.target.value)}
+                  placeholder="Enter Code"
+                  disabled={formData.CardCode.trim() !== ""}
+                  className="h-7 w-45"
+                />
+              </div>
 
-       <GenericModal
-         title="Select Company"
-         open={openCompany}
-         onClose={() => setOpenCompany(false)}
-         isLoading={isLoadingList}
-         data={companies}
-         getSelectValue={(item: BusinessPartnerType) => item.Code}
-         onSelect={(value) => {
-         const selected = companies.find((item) => item.Code === value);
-        if (selected) {
-        handleChange("Company", selected.Code);
-        }
+              <div className="flex items-center gap-2">
+                <Select
+                  value={formData.CardType}
+                  onValueChange={(value) => handleChange("CardType", value)}
+                  disabled={formData.CardType.trim() !== ""}
+                >
+                  <SelectTrigger className="h-7 w-45">
+                    <SelectValue placeholder="Select Card Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cardTypes.map((item) => (
+                      <SelectItem key={item.Code} value={item.Code}>
+                        {item.Name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        setOpenCompany(false);
-        }}
-       columns={[
-       { key: "Code", label: "Code" },
-       { key: "Name", label: "Name" },
-       ]}
-     />
-        <div className="bg-white px-6 py-4 border-b">
-          <div className="flex justify-between items-center gap-4 mb-3">
-            <div className="flex items-center gap-2">
-              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Code</label>
-              <Input
-                value={formData.CardCode}
-                onChange={(e) => handleChange("CardCode", e.target.value)}
-                placeholder="Enter Code"
-                className="h-8 w-48 text-xs"
-              />
+              <div className="ml-auto flex items-center gap-2">
+                <Input
+                  type="text"
+                  placeholder="Search By Code"
+                  className="h-8 w-38"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSearch();
+                    }
+                  }}
+                />
+
+                <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={handleSearch}>
+                  <Search className="h-5 w-5" />
+                </Button>
+
+                <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={openBPModal}>
+                  <List className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                placeholder="Search document..."
-                className="h-8 w-48 text-xs"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSearch();
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 cursor-pointer shrink-0"
-                onClick={handleSearch}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 cursor-pointer shrink-0"
-                onClick={openBPModal}
-                title="List Business Partners"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Group</label>
-              <Select value={formData.Group} onValueChange={(value) => handleChange("Group", value)}>
-                <SelectTrigger className="h-8 w-48 text-xs">
-                  <SelectValue placeholder="Select Group" />
-                </SelectTrigger>
-                <SelectContent>
-                  {groups.map((item) => (
-                    <SelectItem key={item.Code} value={item.Code.toString()} className="text-xs">
-                      {item.Name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Name</label>
+              <label className="w-20 shrink-0 text-sm">Name</label>
               <Input
                 value={formData.CardName}
                 onChange={(e) => handleChange("CardName", e.target.value)}
                 placeholder="Enter Name"
-                className="h-8 w-48 text-xs"
+                className="h-7 w-45"
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Card Type</label>
-              <Select value={formData.CardType} onValueChange={(value) => handleChange("CardType", value)}>
-                <SelectTrigger className="h-8 w-48 text-xs">
-                  <SelectValue placeholder="Select Card Type" />
+              <label className="w-20 shrink-0 text-sm">Group</label>
+              <Select value={formData.Group} onValueChange={(value) => handleChange("Group", value)}>
+                <SelectTrigger className="h-7 w-45">
+                  <SelectValue placeholder="Select Group" />
                 </SelectTrigger>
                 <SelectContent>
-                  {cardTypes.map((item) => (
-                    <SelectItem key={item.Code} value={item.Code} className="text-xs">
+                  {groups.map((item) => (
+                    <SelectItem key={item.Code} value={item.Code.toString()}>
                       {item.Name}
                     </SelectItem>
                   ))}
@@ -638,14 +657,14 @@ export default function BPMasterDataPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="w-24 shrink-0 text-xs font-medium text-zinc-700">Currency</label>
+              <label className="w-20 shrink-0 text-sm">Currency</label>
               <Select value={formData.Currency} onValueChange={(value) => handleChange("Currency", value)}>
-                <SelectTrigger className="h-8 w-48 text-xs">
+                <SelectTrigger className="h-7 w-45">
                   <SelectValue placeholder="Select Currency" />
                 </SelectTrigger>
                 <SelectContent>
                   {currencies.map((currency) => (
-                    <SelectItem key={currency.Code} value={currency.Code} className="text-xs">
+                    <SelectItem key={currency.Code} value={currency.Code}>
                       {currency.Code} - {currency.Name}
                     </SelectItem>
                   ))}
@@ -655,99 +674,88 @@ export default function BPMasterDataPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="general" className="mt-4 bg-white px-6 pb-6">
-          <TabsList className="h-9 w-[260px] bg-[#1f1f1f] p-1 rounded-lg inline-flex mb-3">
+        <Tabs defaultValue="general" className="mt-6 bg-white px-6 pb-6">
+          <TabsList className="h-11 w-[300px] rounded-xl bg-[#1f1f1f] p-1">
             <TabsTrigger
               value="general"
-              className="flex-1 px-4 py-1 text-xs font-medium rounded-md text-gray-300 data-[state=active]:bg-[#2d2d2d] data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="flex-1 rounded-lg font-semibold text-gray-300 data-[state=active]:bg-[#2d2d2d] data-[state=active]:text-white"
             >
               General
             </TabsTrigger>
             <TabsTrigger
               value="remarks"
-              className="flex-1 px-4 py-1 text-xs font-medium rounded-md text-gray-300 data-[state=active]:bg-[#2d2d2d] data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="flex-1 rounded-lg font-semibold text-gray-300 data-[state=active]:bg-[#2d2d2d] data-[state=active]:text-white"
             >
               Remarks
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="mt-0">
+          <TabsContent value="general">
             <div className="rounded-md border bg-white p-5">
-              <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-3 gap-x-5 gap-y-3">
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Tel 1</label>
+                  <label className="w-28 shrink-0 text-sm font-medium">Tel 1</label>
                   <Input
                     value={formData.Phone1}
                     onChange={(e) => handleChange("Phone1", e.target.value)}
-                    placeholder="Tel 1"
-                    className="h-8 w-48 text-xs"
+                    className="h-7 flex-1 min-w-0"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Tel 2</label>
+                  <label className="w-28 shrink-0 text-sm font-medium">Tel 2</label>
                   <Input
                     value={formData.Phone2}
                     onChange={(e) => handleChange("Phone2", e.target.value)}
-                    placeholder="Tel 2"
-                    className="h-8 w-48 text-xs"
+                    className="h-7 flex-1 min-w-0"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Mobile Phone</label>
+                  <label className="w-28 shrink-0 text-sm font-medium">Mobile Phone</label>
                   <Input
                     value={formData.Cellular}
                     onChange={(e) => handleChange("Cellular", e.target.value)}
-                    placeholder="Mobile Phone"
-                    className="h-8 w-48 text-xs"
+                    className="h-7 flex-1 min-w-0"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Fax</label>
+                  <label className="w-28 shrink-0 text-sm font-medium">Fax</label>
                   <Input
                     value={formData.Fax}
                     onChange={(e) => handleChange("Fax", e.target.value)}
-                    placeholder="Fax"
-                    className="h-8 w-48 text-xs"
+                    className="h-7 flex-1 min-w-0"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">E-Mail</label>
+                  <label className="w-28 shrink-0 text-sm font-medium">E-Mail</label>
                   <Input
                     value={formData.EmailAddress}
                     onChange={(e) => handleChange("EmailAddress", e.target.value)}
-                    placeholder="E-Mail"
-                    className="h-8 w-48 text-xs"
+                    className="h-7 flex-1 min-w-0"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Web Site</label>
+                  <label className="w-28 shrink-0 text-sm font-medium">Web Site</label>
                   <Input
                     value={formData.Website}
                     onChange={(e) => handleChange("Website", e.target.value)}
-                    placeholder="Web Site"
-                    className="h-8 w-48 text-xs"
+                    className="h-7 flex-1 min-w-0"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Shipping Type</label>
-                  <div className="flex items-center gap-1.5 w-48">
-                    <Input
-                      value={formData.ShippingType}
-                      readOnly
-                      placeholder="Select Shipping Type"
-                      className="h-8 w-48 text-xs"
-                    />
+                  <label className="w-28 shrink-0 text-sm font-medium">Shipping Type</label>
+                  <div className="flex flex-1 min-w-0 items-center gap-1">
+                    <Input value={formData.ShippingType} readOnly className="h-7 flex-1 min-w-0" />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-8 w-8 shrink-0 cursor-pointer"
+                      className="h-7 w-7"
                       onClick={() => setOpenShipping(true)}
                     >
                       <Search className="h-4 w-4" />
@@ -756,24 +764,19 @@ export default function BPMasterDataPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Password</label>
-                  <Input type="password" placeholder="Password" className="h-8 w-48 text-xs" />
+                  <label className="w-28 shrink-0 text-sm font-medium">Password</label>
+                  <Input type="password" className="h-7 flex-1 min-w-0" />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Factoring Indicator</label>
-                  <div className="flex items-center gap-1.5 w-48">
-                    <Input
-                      value={formData.Indicator}
-                      readOnly
-                      placeholder="Select Indicator"
-                      className="h-8 w-48 text-xs"
-                    />
+                  <label className="w-28 shrink-0 text-sm font-medium">Factoring</label>
+                  <div className="flex flex-1 min-w-0 items-center gap-1">
+                    <Input value={formData.Indicator} readOnly className="h-7 flex-1 min-w-0" />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-8 w-8 shrink-0 cursor-pointer"
+                      className="h-7 w-7"
                       onClick={() => setOpenIndicator(true)}
                     >
                       <Search className="h-4 w-4" />
@@ -782,19 +785,14 @@ export default function BPMasterDataPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">BP Project</label>
-                  <div className="flex items-center gap-1.5 w-48">
-                    <Input
-                      value={formData.Project}
-                      readOnly
-                      placeholder="Select Project"
-                      className="h-8 w-48 text-xs"
-                    />
+                  <label className="w-28 shrink-0 text-sm font-medium">Project</label>
+                  <div className="flex flex-1 min-w-0 items-center gap-1">
+                    <Input value={formData.Project} readOnly className="h-7 flex-1 min-w-0" />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-8 w-8 shrink-0 cursor-pointer"
+                      className="h-7 w-7"
                       onClick={() => setOpenProject(true)}
                     >
                       <Search className="h-4 w-4" />
@@ -803,19 +801,14 @@ export default function BPMasterDataPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Industry</label>
-                  <div className="flex items-center gap-1.5 w-48">
-                    <Input
-                      value={formData.Industry}
-                      readOnly
-                      placeholder="Select Industry"
-                      className="h-8 w-48 text-xs"
-                    />
+                  <label className="w-28 shrink-0 text-sm font-medium">Industry</label>
+                  <div className="flex flex-1 min-w-0 items-center gap-1">
+                    <Input value={formData.Industry} readOnly className="h-7 flex-1 min-w-0" />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-8 w-8 shrink-0 cursor-pointer"
+                      className="h-7 w-7"
                       onClick={() => setOpenIndustry(true)}
                     >
                       <Search className="h-4 w-4" />
@@ -824,71 +817,63 @@ export default function BPMasterDataPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="w-32 shrink-0 text-xs font-medium text-zinc-700">Type of Business</label>
-                  <div className="flex items-center gap-1.5 w-48">
-                    <Input
-                      value={formData.Company}
-                      readOnly
-                      placeholder="Select Company"
-                      className="h-8 w-48 text-xs"
-                    />
+                  <label className="w-28 shrink-0 text-sm font-medium">Business Type</label>
+                  <div className="flex flex-1 min-w-0 items-center gap-1">
+                    <Input value={formData.Company} readOnly className="h-7 flex-1 min-w-0" />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-8 w-8 shrink-0 cursor-pointer"
+                      className="h-7 w-7"
                       onClick={() => setOpenCompany(true)}
                     >
                       <Search className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-              </div>
 
-              {/* <div className="mt-5 pt-4 border-t flex items-center gap-6">
-                <span className="text-xs font-medium text-zinc-700 w-32 shrink-0">Status</span>
-                <RadioGroup defaultValue="active" className="flex gap-6">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="active" id="active" />
-                    <label htmlFor="active" className="text-xs cursor-pointer">
-                      Active
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="inactive" id="inactive" />
-                    <label htmlFor="inactive" className="text-xs cursor-pointer">
-                      Inactive
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="advanced" id="advanced" />
-                    <label htmlFor="advanced" className="text-xs cursor-pointer">
-                      Advanced
-                    </label>
-                  </div>
-                </RadioGroup>
-              </div> */}
+                <div className="col-span-3 mt-1 flex items-start gap-2">
+                  <label className="w-28 shrink-0 pt-2 text-sm font-medium">Remarks</label>
+                  <Textarea
+                    value={formData.Remarks}
+                    onChange={(e) => handleChange("Remarks", e.target.value)}
+                    className="h-20 max-w-[500px] resize-none"
+                  />
+                </div>
 
-              <div className="mt-4 pt-4 border-t">
-                <label className="mb-1.5 block text-xs font-medium text-zinc-700">Remarks</label>
-                <Textarea
-                  value={formData.Remarks}
-                  onChange={(e) => handleChange("Remarks", e.target.value)}
-                  placeholder="Enter Remarks..."
-                  className="h-20 w-48 text-xs resize-none"
-                />
+                <div className="col-span-3 mt-1 flex items-center gap-2">
+                  <label className="w-28 shrink-0 text-sm font-medium">Status</label>
+                  <RadioGroup
+                    value={formData.Status}
+                    onValueChange={(value) => handleChange("Status", value)}
+                    className="flex items-center gap-5"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="active" id="active" />
+                      <label htmlFor="active" className="text-sm">Active</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="inactive" id="inactive" />
+                      <label htmlFor="inactive" className="text-sm">Inactive</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="advanced" id="advanced" />
+                      <label htmlFor="advanced" className="text-sm">Advanced</label>
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="remarks" className="mt-0">
-            <div className="rounded-md border bg-white p-5">
-              <label className="mb-1.5 block text-xs font-medium text-zinc-700">Remarks</label>
+          <TabsContent value="remarks">
+            <div className="mt-6 rounded-md border p-5">
+              <label className="mb-2 block text-sm font-medium">Remarks</label>
               <Textarea
                 value={formData.FreeText}
                 onChange={(e) => handleChange("FreeText", e.target.value)}
                 placeholder="Enter Remarks..."
-                className="h-32 w-48 text-xs"
+                rows={6}
               />
             </div>
           </TabsContent>
@@ -896,19 +881,19 @@ export default function BPMasterDataPage() {
 
         <div className="mt-4 flex items-center justify-end border-t bg-white px-4 py-3">
           <Button
-             type="button"
-             onClick={handleSubmit}
-             disabled={!isFormValid || isSaving}
-             className="h-9 min-w-[92px] rounded-md px-6 font-medium disabled:opacity-50"
-            >
-             {isSaving ? (
-             <>
-             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-             </>
-              ) : (
-               "Submit"
-              )}
+            type="button"
+            onClick={handleSubmit}
+            disabled={!isFormValid || isSaving}
+            className="h-9 min-w-[92px] rounded-md px-6 font-medium"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Submit"
+            )}
           </Button>
         </div>
       </div>

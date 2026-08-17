@@ -1,6 +1,7 @@
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import apiClient from "@/lib/apiClient";
 import { DocumentType } from "@/types/master/DocumentType";
+import { withDefaultBPLId } from "@/lib/sap/helpers/documentPayloadHelper";
 
 export const getBOMList = async (isMultiBom: boolean = false, search: string = "", skip: number = 0, top: number = 100): Promise<any[]> => {
   const res = await apiClient.get(`api/Production/GetBOMForProduction?isMultiBom=${isMultiBom}&search=${search}&skip=${skip}&top=${top}`);
@@ -9,7 +10,7 @@ export const getBOMList = async (isMultiBom: boolean = false, search: string = "
 };
 
 export const postProductionOrder = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Production/Production`, data);
+  const res = await apiClient.post(`api/Production/Production`, withDefaultBPLId(data));
   return res.data;
 };
 
@@ -32,12 +33,12 @@ export const getDisassembleProductionOrders = async (skip: number = 0, top: numb
 };
 
 export const postIssueForProduction = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Production/IssueForProduction`, data);
+  const res = await apiClient.post(`api/Production/IssueForProduction`, withDefaultBPLId(data));
   return res.data;
 };
 
 export const postReceiptFromProduction = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Production/ReceiptForProduction`, data);
+  const res = await apiClient.post(`api/Production/ReceiptForProduction`, withDefaultBPLId(data));
   return res.data;
 };
 

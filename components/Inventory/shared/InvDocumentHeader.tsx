@@ -9,6 +9,7 @@ import { Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { List } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useDocNavParams } from "@/lib/docNavParams";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { useInvDocConfig } from "./InvDocumentLayout";
@@ -86,6 +87,7 @@ export function InvDocumentHeader() {
   }>({ open: false, type: null, value: "" });
 
   const searchParams = useSearchParams();
+  const docNav = useDocNavParams();
   const autoCreatedRef = useRef(false);
 
   useEffect(() => {
@@ -102,9 +104,9 @@ export function InvDocumentHeader() {
   }, [loadWarehouses, setWarehouses]);
 
   useEffect(() => {
-    const isDraft = searchParams.get("draft") === "1";
-    const draftEntryParam = searchParams.get("draftEntry") || "";
-    const docEntryParam = searchParams.get("docEntry") || "";
+    const isDraft = (docNav.draft ?? searchParams.get("draft")) === "1";
+    const draftEntryParam = docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
+    const docEntryParam = docNav.docEntry ?? searchParams.get("docEntry") ?? "";
 
     if (isDraft && draftEntryParam) {
       const draftId = parseInt(draftEntryParam);
@@ -115,6 +117,7 @@ export function InvDocumentHeader() {
       setDocNumSearch(docEntryParam);
       fetchDocument(docEntryParam);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadDraftDoc = async (draftId: number) => {

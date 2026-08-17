@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
+import { HubConnection, HubConnectionBuilder, HubConnectionState, HttpTransportType, LogLevel } from "@microsoft/signalr";
 import { useAuth } from "./authContext";
 import { toast } from "sonner";
 import { SAPMessage, getMyAlerts } from "@/api+/sap/notification";
@@ -11,7 +11,8 @@ interface NotificationContextType {
   messages: SAPMessage[];
   unreadCount: number;
   isLoading: boolean;
-  refreshNotifications: () => Promise<void>;
+  /** Re-fetches the user's alerts. Resolves true on success, false on failure (never throws). */
+  refreshNotifications: () => Promise<boolean>;
   clearUnread: () => void;
 }
 
@@ -25,14 +26,16 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const connectionRef = useRef<HubConnection | null>(null);
 
-  const refreshNotifications = async () => {
-    if (!accessToken) return;
+  const refreshNotifications = async (): Promise<boolean> => {
+    if (!accessToken) return false;
     setIsLoading(true);
     try {
       const page = await getMyAlerts(0);
       setMessages(page.messages || []);
+      return true;
     } catch (error) {
       console.error("Failed to fetch messages", error);
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -70,25 +73,11 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
     const connection = new HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => accessToken,
+        accessTokenFactory: () => accessToken || "",
+        transport: HttpTransportType.WebSockets | HttpTransportType.LongPolling,
       })
-      .configureLogging({
-        log(logLevel, message) {
-          if (
-            message.includes("stopped during negotiation") ||
-            message.includes("negotiate") ||
-            message.includes("No Connection with that ID")
-          ) {
-            return; // Suppress internal negotiation cancel/stale connection noise
-          }
-          if (logLevel === LogLevel.Error) {
-            console.error("[SignalR]", message);
-          } else if (logLevel === LogLevel.Warning) {
-            console.warn("[SignalR]", message);
-          }
-        }
-      })
-      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Warning)
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .build();
 
     connectionRef.current = connection;
@@ -110,7 +99,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         }
         console.error("SignalR Notification Hub connection failed: ", err);
         setTimeout(() => {
-          if (accessToken) void startHubConnection();
+          if (accessToken && connectionRef.current?.state === HubConnectionState.Disconnected) {
+            void startHubConnection();
+          }
         }, 5000);
       }
     };

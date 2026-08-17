@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { resolveDocNavParams } from "@/lib/docNavParams";
 import { toast } from "sonner";
 import { z } from "zod";
 import { InvDocumentHeader } from "@/components/Inventory/shared/InvDocumentHeader";
@@ -32,8 +33,10 @@ type DraftFormData = z.infer<typeof draftSchema>;
 
 export default function InventoryDraftPage() {
   const searchParams = useSearchParams();
-  const draftEntryStr = searchParams.get("draftEntry");
-  const docTypeParam = searchParams.get("docType");
+  const pathname = usePathname();
+  const docNav = resolveDocNavParams(searchParams, pathname);
+  const draftEntryStr = docNav.draftEntry ?? null;
+  const docTypeParam = docNav.docType ?? null;
 
   const [isLoading, setIsLoading] = useState(true);
   const [targetDocType, setTargetDocType] = useState<DocumentType>(() => {

@@ -11,6 +11,7 @@ export interface LoginResponse {
   refreshToken: string;
   user: {
     empId: string;
+    sapUserId?: number;
     userName: string;
     role: string;
   };
@@ -51,6 +52,7 @@ export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
         refreshToken: rawData.RefreshToken || rawData.refreshToken,
         user: {
           empId: String(rawUser.empId || rawUser.EmpId || rawUser.EmpID || ""),
+          sapUserId: rawUser.SapUserId ?? rawUser.sapUserId ?? rawUser.SAPUserId ?? undefined,
           userName: rawUser.userName || rawUser.UserName || "",
           role: rawUser.role || rawUser.Role || "",
         },

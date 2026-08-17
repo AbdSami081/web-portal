@@ -1,5 +1,5 @@
 "use client"
-import React, { createContext, useContext, useEffect, useRef } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef } from "react";
 import { FieldValues, FormProvider, useForm, DefaultValues, SubmitErrorHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,7 +15,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { DocumentType } from "@/types/master/DocumentType";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { resolveDocNavParams } from "@/lib/docNavParams";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 
 
@@ -55,12 +56,14 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const config = getDocumentConfig(docType);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
 
 
   const [badgeState, setBadgeState] = React.useState<"draft" | "approved" | null>(() => {
-    const draftEntryParam = searchParams.get("draftEntry");
-    const docEntryParam = searchParams.get("docEntry");
-    const isDraft = Boolean(draftEntryParam) && searchParams.get("draft") === "1";
+    const draftEntryParam = docNav.draftEntry;
+    const docEntryParam = docNav.docEntry;
+    const isDraft = Boolean(draftEntryParam) && (docNav.draft ?? searchParams.get("draft")) === "1";
 
     if (isDraft) return "draft";
     if (docEntryParam) return "approved";
