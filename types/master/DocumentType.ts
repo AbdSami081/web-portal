@@ -15,6 +15,11 @@ export enum DocumentType {
   PurchaseOrder = 22,
   GoodsReceiptPO = 20,
   APInvoice = 18,
+  APCreditMemo = 19,
+  GoodsReturn = 21,
+  APDownPaymentInvoice = 204,
+  GoodsReturnRequest = 234000032,
+  APDownPaymentRequest = 1470000113,
   BusinessPartner = 2,
 }
 

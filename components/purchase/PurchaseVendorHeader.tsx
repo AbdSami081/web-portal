@@ -12,6 +12,11 @@ import {
   getPurchaseQuotationDocument,
   getAPInvoiceDocument,
   getPurchaseRequestDocument,
+  getAPCreditMemoDocument,
+  getGoodsReturnDocument,
+  getGoodsReturnRequestDocument,
+  getAPDownPaymentRequestDocument,
+  getAPDownPaymentInvoiceDocument,
 } from "@/api+/sap/purchase/purchaseService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
@@ -30,6 +35,7 @@ import { toast } from "sonner";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { usePathname } from "next/navigation";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -44,10 +50,18 @@ const dateLabel2: Record<number, string> = {
 };
 
 interface PurchaseVendorHeaderProps {
-  docType: PurchaseDocumentType;
+  docType: PurchaseDocumentType | DocumentType;
 }
 
-const getResourceName = (type: number) => {
+const getResourceName = (type: number, pathname = "") => {
+  const currentPath = pathname.toLowerCase();
+
+  // APDownPaymentRequest and PurchaseRequests share the same SAP object code
+  // (1470000113), so disambiguate by route path instead of by object code.
+  if (currentPath.includes("apdownpaymentrequest")) return "PurchaseDownPayments";
+  if (currentPath.includes("apdownpaymentinvoice")) return "PurchaseDownPayments";
+  if (currentPath.includes("purchase/request")) return "PurchaseRequests";
+
   switch (type) {
     case PurchaseDocumentType.PurchaseRequests:
       return "PurchaseRequests";
@@ -59,12 +73,21 @@ const getResourceName = (type: number) => {
       return "PurchaseDeliveryNotes";
     case PurchaseDocumentType.APInvoice:
       return "PurchaseInvoices";
+    case DocumentType.APCreditMemo:
+      return "PurchaseCreditNotes";
+    case DocumentType.GoodsReturn:
+      return "PurchaseReturns";
+    case DocumentType.GoodsReturnRequest:
+      return "GoodsReturnRequest";
+    case DocumentType.APDownPaymentInvoice:
+      return "PurchaseDownPayments";
     default:
       return "";
   }
 };
 
 export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
+  const pathname = usePathname();
   const {
     register,
     watch,
@@ -96,7 +119,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
   const fetchDocumentsList = useCallback(
     async (isLoadMore = false, searchText?: string) => {
-      const resourceName = getResourceName(config.type);
+      const resourceName = getResourceName(config.type, pathname);
       if (!resourceName) {
         console.error("Resource name not found for docType:", config.type);
         return;
@@ -172,16 +195,33 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     setIsLoading(true);
 
     try {
-      if (config.type === DocumentType.PurchaseRequests) {
+      // APDownPaymentRequest and PurchaseRequests share the same SAP object code
+      // (1470000113), so disambiguate those by route path first, then dispatch the
+      // rest by object code.
+      const currentPath = pathname.toLowerCase();
+
+      if (currentPath.includes("apdownpaymentrequest")) {
+        documentData = await getAPDownPaymentRequestDocument(docNumInt);
+      } else if (currentPath.includes("apdownpaymentinvoice")) {
+        documentData = await getAPDownPaymentInvoiceDocument(docNumInt);
+      } else if (currentPath.includes("purchase/request")) {
         documentData = await getPurchaseRequestDocument(docNumInt);
-      } else if (config.type === DocumentType.PurchaseQuotation) {
-        documentData = await getPurchaseQuotationDocument(docNumInt);
-      } else if (config.type === DocumentType.PurchaseOrder) {
-        documentData = await getPurchaseOrderDocument(docNumInt);
-      } else if (config.type === DocumentType.GoodsReceiptPO) {
-        documentData = await getPurchaseDeliveryDocument(docNumInt);
-      } else if (config.type === DocumentType.APInvoice) {
-        documentData = await getAPInvoiceDocument(docNumInt);
+      } else {
+        const documentFetchers: Record<number, (docNum: number) => Promise<any>> = {
+          [DocumentType.PurchaseQuotation]: getPurchaseQuotationDocument,
+          [DocumentType.PurchaseOrder]: getPurchaseOrderDocument,
+          [DocumentType.GoodsReceiptPO]: getPurchaseDeliveryDocument,
+          [DocumentType.APInvoice]: getAPInvoiceDocument,
+          [DocumentType.APCreditMemo]: getAPCreditMemoDocument,
+          [DocumentType.GoodsReturn]: getGoodsReturnDocument,
+          [DocumentType.GoodsReturnRequest]: getGoodsReturnRequestDocument,
+          [DocumentType.APDownPaymentInvoice]: getAPDownPaymentInvoiceDocument,
+        };
+
+        const fetcher = documentFetchers[config.type as number];
+        if (fetcher) {
+          documentData = await fetcher(docNumInt);
+        }
       }
 
       if (!documentData?.DocEntry) {
@@ -225,6 +265,14 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         return "Due Date";
       case DocumentType.GoodsReceiptPO:
         return "Delivery Date";
+      case DocumentType.GoodsReturn:
+        return "Return Date";
+      case DocumentType.GoodsReturnRequest:
+        return "Return Date";
+      case DocumentType.APDownPaymentRequest:
+        return "Due Date";
+      case DocumentType.APDownPaymentInvoice:
+        return "Due Date";
       default:
         return "Date";
     }
@@ -409,7 +457,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
           cardType="S"
         />
         <GenericModal
-          title={`Select ${getResourceName(config.type).replace(/([A-Z])/g, ' $1').trim()}`}
+          title={`Select ${getResourceName(config.type, pathname).replace(/([A-Z])/g, ' $1').trim()}`}
           open={docListModalOpen}
           onClose={() => setDocListModalOpen(false)}
           onSelect={(val) => {

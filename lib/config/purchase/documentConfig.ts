@@ -164,6 +164,131 @@ export const invoiceConfig: DocumentConfig = {
   }
 };
 
+export const APCreditMemoConfig: DocumentConfig = {
+  type: DocumentType.APCreditMemo,
+  title: "A/P Credit Memo",
+  headerFields: {
+    showValidUntil: false,
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: true,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel")
+      return true;
+    if (line.OrderedQty && line.OrderedQty > 0) return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+};
+
+export const GoodsReturnConfig: DocumentConfig = {
+  type: DocumentType.GoodsReturn,
+  title: "Goods Return",
+  headerFields: {
+    showValidUntil: false,
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: true,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel")
+      return true;
+    if (line.OrderedQty && line.OrderedQty > 0) return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+};
+
+export const APDownPaymentInvoiceConfig: DocumentConfig = {
+  type: DocumentType.APDownPaymentInvoice,
+  title: "A/P Down Payment Invoice",
+  headerFields: {
+    showValidUntil: false,
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: true,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel")
+      return true;
+    if (line.OrderedQty && line.OrderedQty > 0) return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+};
+
+export const APDownPaymentRequestConfig: DocumentConfig = {
+  type: DocumentType.APDownPaymentRequest,
+  title: "A/P Down Payment Request",
+  headerFields: {
+    showValidUntil: false,
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: true,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel")
+      return true;
+    if (line.OrderedQty && line.OrderedQty > 0) return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+};
+
+export const GoodsReturnRequestConfig: DocumentConfig = {
+  type: DocumentType.GoodsReturnRequest,
+  title: "Goods Return Request",
+  headerFields: {
+    showValidUntil: false,
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: true,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel")
+      return true;
+    if (line.OrderedQty && line.OrderedQty > 0) return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+};
+
 export const getDocumentConfig = (type: DocumentType): DocumentConfig => {
   switch (type) {
     case DocumentType.PurchaseRequests: return requestConfig;
@@ -171,6 +296,11 @@ export const getDocumentConfig = (type: DocumentType): DocumentConfig => {
     case DocumentType.PurchaseOrder: return orderConfig;
     case DocumentType.GoodsReceiptPO: return GRPOConfig;
     case DocumentType.APInvoice: return invoiceConfig;
+    case DocumentType.APCreditMemo: return APCreditMemoConfig;
+    case DocumentType.GoodsReturn: return GoodsReturnConfig;
+    case DocumentType.APDownPaymentInvoice: return APDownPaymentInvoiceConfig;
+    case DocumentType.APDownPaymentRequest: return APDownPaymentRequestConfig;
+    case DocumentType.GoodsReturnRequest: return GoodsReturnRequestConfig;
     default: return quotationConfig; 
   }
 };

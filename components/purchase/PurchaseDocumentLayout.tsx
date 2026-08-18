@@ -83,6 +83,7 @@ interface PurchaseDocumentLayoutProps<T extends FieldValues> {
   children?: React.ReactNode;
   actions?: React.ReactNode;
   docType: DocumentType;
+  title?: string;
 }
 
 export function PurchaseDocumentLayout<T extends FieldValues>({
@@ -92,6 +93,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   children,
   actions,
   docType,
+  title,
 }: PurchaseDocumentLayoutProps<T>) {
 
   const methods = useForm<T>({
@@ -366,7 +368,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted shrink-0">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold">{config.title}</h1>
+              <h1 className="text-xl font-semibold">{title || config.title}</h1>
             </div>
 
             {actions && <div>{actions}</div>}

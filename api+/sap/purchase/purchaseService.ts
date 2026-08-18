@@ -195,3 +195,118 @@ export const getPurchaseRequestsByBP = async (cardCode: string, skip = 0, top = 
   const res = await apiClient.get(`api/Purchase/GetPurchaseRequestsByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
   return res.data || [];
 };
+
+export const getAPCreditMemoDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseCreditNotes?docNum=${docNum}`);
+  if (!res.data) return null;
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+  return doc;
+};
+
+export const getGoodsReturnDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseReturns?docNum=${docNum}`);
+  if (!res.data) return null;
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+  return doc;
+};
+
+export const getGoodsReturnRequestDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/GoodsReturnRequest?docNum=${docNum}`);
+  if (!res.data) return null;
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+  return doc;
+};
+
+export const getAPDownPaymentRequestDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseDownPayments?docNum=${docNum}`);
+  if (!res.data) return null;
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+  return doc;
+};
+
+export const getAPDownPaymentInvoiceDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseDownPayments?docNum=${docNum}`);
+  if (!res.data) return null;
+  const doc: BasePurchaseDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+  return doc;
+};
+
+export const postApCreditMemo = async (data: any): Promise<any> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseCreditNotes`, data);
+  return res.data;
+};
+
+export const patchApCreditMemo = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseCreditNotes/${docEntry}`, payload);
+  return res.data;
+};
+
+export const postGoodsReturn = async (data: any): Promise<any> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseReturns`, data);
+  return res.data;
+};
+
+export const patchGoodsReturn = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseReturns/${docEntry}`, payload);
+  return res.data;
+};
+
+export const postGoodsReturnRequest = async (data: any): Promise<any> => {
+  const res = await apiClient.post(`api/Purchase/GoodsReturnRequest`, data);
+  return res.data;
+};
+
+export const patchGoodsReturnRequest = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/GoodsReturnRequest/${docEntry}`, payload);
+  return res.data;
+};
+
+export const postAPDownPaymentInvoice = async (data: any): Promise<any> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseDownPayments`, data);
+  return res.data;
+};
+
+export const patchAPDownPaymentInvoice = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseDownPayments/${docEntry}`, payload);
+  return res.data;
+};
+
+export const postAPDownPaymentRequest = async (data: any): Promise<any> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseDownPayments`, data);
+  return res.data;
+};
+
+export const patchAPDownPaymentRequest = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/PurchaseDownPayments/${docEntry}`, payload);
+  return res.data;
+};
