@@ -117,9 +117,17 @@ export const getLayouts = async (objectCode: string | number): Promise<ReportDat
 };
 
 export const downloadReport = async (payload: any) => {
+  const normalized = {
+    FilePath: payload?.FilePath,
+    database: payload?.database ?? "",
+    format: payload?.format || "pdf",
+    parameters: payload?.parameters ?? payload?.Parameters ?? {},
+  };
+
+  
   const response = await reportingApiClient.post(
     "api/reports/render",
-    payload,
+    normalized,
     { responseType: "blob" }
   );
 

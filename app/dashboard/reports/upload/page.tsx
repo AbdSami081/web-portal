@@ -177,11 +177,16 @@ export default function ReportsManagePage() {
       for (const item of Array.from(selectedItems)) {
         const cls = getClassification(item.name);
         const paramsData = await getReportParameters(item.path);
-        const paramsArray = Object.entries(paramsData || {}).map(([name, type]) => ({
-          name,
-          type: String(type),
-          componentType: "Input",
-        }));
+        const paramsArray = Object.entries(paramsData || {}).map(([name, type]) => {
+          const typeStr = String(type);
+          return {
+            name,
+            type: typeStr,
+            // Auto-select the Date picker for date-kind parameters so date
+            // filters don't end up as plain text inputs.
+            componentType: /date/i.test(typeStr) ? "Date" : "Input",
+          };
+        });
         
         payloads.push({
           reportName: item.name.replace(".rpt", ""),
@@ -199,7 +204,7 @@ export default function ReportsManagePage() {
         paramsArray.forEach(p => {
           const configKey = `${item.name}_${p.name}`;
           if (!initialConfigs[configKey]) {
-            initialConfigs[configKey] = { componentType: "Input" };
+            initialConfigs[configKey] = { componentType: p.componentType };
           }
         });
       }

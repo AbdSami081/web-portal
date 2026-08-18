@@ -22,12 +22,6 @@ const resolveApiBaseUrl = () => {
 
 const resolveReportingApiBaseUrl = () => {
     if (typeof window !== "undefined") {
-        if (!useApiProxy) {
-            const directUrl = process.env.NEXT_PUBLIC_ReportingApi_URL;
-            if (directUrl) {
-                return directUrl.endsWith("/") ? directUrl : `${directUrl}/`;
-            }
-        }
         return "/reporting/";
     }
     const url = process.env.NEXT_PUBLIC_ReportingApi_URL ?? "";

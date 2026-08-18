@@ -114,9 +114,9 @@ export default function ReportGeneratePage() {
 
         const payload = {
           FilePath: fullPath,
-          ReportFileName: report.U_ActualFileName,
-          FileType: 0,
-          Parameters: parameters,
+          database: user?.companyDB || "SBODemoAU",
+          format: "pdf",
+          parameters,
         };
 
         const pdfUrl = await downloadReport(payload);
@@ -160,9 +160,9 @@ export default function ReportGeneratePage() {
 
       const payload = {
         FilePath: fullPath,
-        ReportFileName: selectedReport.U_ActualFileName,
-        FileType: 0,
-        Parameters: parametersObject,
+        database: user?.companyDB || "SBODemoAU",
+        format: "pdf",
+        parameters: parametersObject,
       };
       
       const pdfUrl = await downloadReport(payload);

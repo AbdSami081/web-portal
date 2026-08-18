@@ -118,9 +118,9 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
 
       const pdfUrl = await downloadReport({
         FilePath: layout.U_FilePath + "\\" + layout.U_ActualFileName,
-        ReportFileName: layout.U_FileName,
-        FileType: 0,
-        Parameters: parameters,
+        database: user?.companyDB,
+        format: "pdf",
+        parameters,
       });
 
       setViewerUrl(pdfUrl);
