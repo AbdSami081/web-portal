@@ -1,19 +1,18 @@
-import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
-import { QuotationFormData } from "@/lib/schemas/quotationSchema";
-import { DocumentType } from "@/types/master/DocumentType";
+import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
 
-interface BuildSalesPayloadOptions {
-  data: QuotationFormData;
-  lines: SalesDocumentLine[];
+interface BuildPurchasePayloadOptions {
+  data: any;
+  lines: PurchaseDocumentLine[];
   docEntry?: number;
-  lastLoadedDocType?: DocumentType | null;
-  targetDocType: DocumentType;
+  lastLoadedDocType?: number | null;
+  targetDocType: number;
   discountPercent?: number;
   freight?: number;
+  rounding?: number;
   additionalExpenses?: Array<{ ExpenseCode: number; LineTotal: number; VatGroup?: string; TaxCode?: string }>;
 }
 
-function mapLineExpenses(line: SalesDocumentLine) {
+function mapLineExpenses(line: PurchaseDocumentLine) {
   const expenses: Array<{ ExpenseCode: number; LineTotal: number; VatGroup: string }> = [];
 
   if (line.Freight1Type && Number(line.Freight1LCAmount) > 0) {
@@ -41,7 +40,7 @@ function mapLineExpenses(line: SalesDocumentLine) {
   return expenses;
 }
 
-export function buildSalesDocumentPayload({
+export function buildPurchaseDocumentPayload({
   data,
   lines,
   docEntry,
@@ -49,8 +48,9 @@ export function buildSalesDocumentPayload({
   targetDocType,
   discountPercent = 0,
   freight = 0,
+  rounding = 0,
   additionalExpenses = [],
-}: BuildSalesPayloadOptions) {
+}: BuildPurchasePayloadOptions) {
   const hasCopyFrom =
     docEntry &&
     Number(docEntry) > 0 &&
@@ -65,6 +65,8 @@ export function buildSalesDocumentPayload({
     TaxDate: data.TaxDate,
     Comments: data.Comments,
     DiscountPercent: discountPercent || 0,
+    Freight: freight || 0,
+    Rounding: rounding || 0,
     DocumentLines: lines.map((line) => {
       const baseFields: Record<string, unknown> = {
         ItemCode: line.ItemCode,
@@ -91,6 +93,13 @@ export function buildSalesDocumentPayload({
         baseFields.DocumentLineAdditionalExpenses = lineExpenses;
       }
 
+      if (line.SerialNumbers && line.SerialNumbers.length > 0) {
+        baseFields.SerialNumbers = line.SerialNumbers;
+      }
+      if (line.BatchNumbers && line.BatchNumbers.length > 0) {
+        baseFields.BatchNumbers = line.BatchNumbers;
+      }
+
       return baseFields;
     }),
     ...(additionalExpenses.length > 0 && {
@@ -100,27 +109,29 @@ export function buildSalesDocumentPayload({
         VatGroup: e.VatGroup || e.TaxCode || "",
       })),
     }),
-    ...(freight > 0 && { Freight: freight }),
   };
 }
 
-
-export function buildSalesDocumentPatchPayload({
+export function buildPurchaseDocumentPatchPayload({
   data,
   lines,
   discountPercent = 0,
   freight = 0,
+  rounding = 0,
   additionalExpenses = [],
 }: Pick<
-  BuildSalesPayloadOptions,
-  "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses"
+  BuildPurchasePayloadOptions,
+  "data" | "lines" | "discountPercent" | "freight" | "rounding" | "additionalExpenses"
 >) {
   return {
     Comments: data.Comments,
+    // Only send dates that actually have a value
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
     DiscountPercent: discountPercent || 0,
+    Freight: freight || 0,
+    Rounding: rounding || 0,
     DocumentLines: lines.map((line) => {
       const baseFields: Record<string, unknown> = {
         ItemCode: line.ItemCode,
@@ -144,6 +155,13 @@ export function buildSalesDocumentPatchPayload({
         baseFields.DocumentLineAdditionalExpenses = lineExpenses;
       }
 
+      if (line.SerialNumbers && line.SerialNumbers.length > 0) {
+        baseFields.SerialNumbers = line.SerialNumbers;
+      }
+      if (line.BatchNumbers && line.BatchNumbers.length > 0) {
+        baseFields.BatchNumbers = line.BatchNumbers;
+      }
+
       return baseFields;
     }),
     ...(additionalExpenses.length > 0 && {
@@ -153,6 +171,5 @@ export function buildSalesDocumentPatchPayload({
         VatGroup: e.VatGroup || e.TaxCode || "",
       })),
     }),
-    ...(freight > 0 && { Freight: freight }),
   };
 }

@@ -13,6 +13,7 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { patchPurchaseQuotation, postPurchaseQuotation } from "@/api+/sap/purchase/purchaseService";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
+import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -62,17 +63,29 @@ export default function NewPurchaseQuotationPage() {
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
 
-    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Quotation) {
-      const patchPayload = {
-        Comments: data.Comments,
-        Attachments2_Lines: processedAttachments.map((att) => ({
+    const rounding = 0;
+
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.PurchaseQuotation) {
+      const patchPayload = buildPurchaseDocumentPatchPayload({
+        data,
+        lines,
+        discountPercent,
+        freight,
+        rounding,
+        additionalExpenses,
+      });
+
+      // Add attachments to payload
+      if (processedAttachments.length > 0) {
+        (patchPayload as any).Attachments2_Lines = processedAttachments.map((att) => ({
           FileExtension: att.FileName.split('.').pop(),
           FileName: att.FileName.split('.').slice(0, -1).join('.'),
           SourcePath: att.SourcePath,
           FreeText: att.FreeText,
           CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-        }))
-      };
+        }));
+      }
+
       try {
         await patchPurchaseQuotation(Number(DocEntry), patchPayload);
         const docNum = usePurchaseDocument.getState().DocNum;
@@ -84,60 +97,27 @@ export default function NewPurchaseQuotationPage() {
       return;
     }
 
-    const payload = {
-      CardCode: data.CardCode,
-      CardName: data.CardName,
-      DocDate: data.DocDate,
-      DocDueDate: data.DocDueDate,
-      RequriedDate: data.DocDueDate, 
-      TaxDate: data.TaxDate,
-      Comments: data.Comments,
-      DiscountPercent: discountPercent || 0,
-      DocumentLines: lines.map((line) => {
-        const baseFields: any = {
-          ItemCode: line.ItemCode,
-          Quantity: Number(line.Quantity) || 1,
-          UnitPrice: Number(line.Price) || 0,
-          DiscountPercent: Number(line.DiscountPercent) || 0,
-          VatGroup: line.TaxCode || "",
-          WarehouseCode: line.WarehouseCode || "",
-          UoMCode: line.UoMCode || "",
-        };
-        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Quotation) {
-          baseFields.BaseType = lastLoadedDocType;
-          baseFields.BaseEntry = DocEntry;
-          baseFields.BaseLine = line.LineNum;
-        }
-        const lineExpenses: any[] = [];
-        if (line.Freight1Type && Number(line.Freight1LCAmount) > 0) {
-          lineExpenses.push({ ExpenseCode: Number(line.Freight1Type), LineTotal: Number(line.Freight1LCAmount), VatGroup: line.Freight1TaxGroup || "" });
-        }
-        if (line.Freight2Type && Number(line.Freight2LCAmount) > 0) {
-          lineExpenses.push({ ExpenseCode: Number(line.Freight2Type), LineTotal: Number(line.Freight2LCAmount), VatGroup: line.Freight2TaxGroup || "" });
-        }
-        if (line.Freight3Type && Number(line.Freight3LCAmount) > 0) {
-          lineExpenses.push({ ExpenseCode: Number(line.Freight3Type), LineTotal: Number(line.Freight3LCAmount), VatGroup: line.Freight3TaxGroup || "" });
-        }
-        if (lineExpenses.length > 0) baseFields.DocumentLineAdditionalExpenses = lineExpenses;
-        return baseFields;
-      }),
-      ...(additionalExpenses.length > 0 && {
-        DocumentAdditionalExpenses: additionalExpenses.map(e => ({
-          ExpenseCode: e.ExpenseCode,
-          LineTotal: e.LineTotal,
-          VatGroup: e.VatGroup || e.TaxCode || "",
-        }))
-      }),
-      ...(freight > 0 && { Freight: freight }),
-      ...(processedAttachments.length > 0 && {
-        Attachments2_Lines: processedAttachments.map((att) => ({
-          FileExtension: att.FileName.split('.').pop(),
-          FileName: att.FileName.split('.').slice(0, -1).join('.'),
-          SourcePath: att.SourcePath,
-          FreeText: att.FreeText,
-        }))
-      }),
-    };
+    const payload = buildPurchaseDocumentPayload({
+      data,
+      lines,
+      docEntry: DocEntry,
+      lastLoadedDocType,
+      targetDocType: DocumentType.PurchaseQuotation,
+      discountPercent,
+      freight,
+      rounding,
+      additionalExpenses,
+    });
+
+    // Add attachments to payload
+    if (processedAttachments.length > 0) {
+      (payload as any).Attachments2_Lines = processedAttachments.map((att) => ({
+        FileExtension: att.FileName.split('.').pop(),
+        FileName: att.FileName.split('.').slice(0, -1).join('.'),
+        SourcePath: att.SourcePath,
+        FreeText: att.FreeText,
+      }));
+    }
 
     try {
       console.log("Submitting Purchase Quotation with payload:", payload);

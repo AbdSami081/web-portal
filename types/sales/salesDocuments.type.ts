@@ -73,6 +73,7 @@ export interface SalesDocumentLine {
   CommittedQty?: number;
   OrderedQty?: number;
   IsClosed?: string; // "tYES" | "tNO"
+  LineStatus?: "bost_Open" | "bost_Close"; 
 
   InvQty?: number;
   TotalDoc?: number;

@@ -374,7 +374,9 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           BaseEntry: line.BaseEntry,
           BaseLine: line.BaseLine,
           Comments: line.Comments,
-         
+          LineStatus: line.LineStatus,
+          IsClosed: line.IsClosed || (line.LineStatus === "bost_Close" ? "tYES" : "tNO"),
+
           Freight1Type: line.DocumentLineAdditionalExpenses?.[0]?.ExpenseCode?.toString() || "",
           Freight1LCAmount: parseSafe(line.DocumentLineAdditionalExpenses?.[0]?.LineTotal),
           Freight1TaxGroup: line.DocumentLineAdditionalExpenses?.[0]?.TaxCode || line.DocumentLineAdditionalExpenses?.[0]?.VatGroup || "",

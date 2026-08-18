@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { List } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
@@ -17,7 +17,7 @@ import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorD
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-import { getGoodIssue, getGoodIssueList, getInventoryTransfer, getInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
+import { getGoodIssue, getGoodIssueList, getInventoryTransfer, getInventoryTransferRequest, closeInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
 import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { GenericModal } from "@/modals/GenericModal";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
@@ -72,7 +72,9 @@ export function InvDocumentHeader() {
   const [documentsList, setDocumentsList] = useState<any[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [listSkip, setListSkip] = useState(0);
+  const listSkipRef = useRef(0);
   const [listHasMore, setListHasMore] = useState(true);
+  const listHasMoreRef = useRef(true);
   const [listSearch, setListSearch] = useState("");
   const LIST_PAGE_SIZE = 20;
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -85,6 +87,35 @@ export function InvDocumentHeader() {
     type: "from" | "to" | null;
     value: string;
   }>({ open: false, type: null, value: "" });
+
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const isLoadedDocument = !!DocEntry && DocEntry > 0;
+  const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
+  const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
+
+  const closeDocumentByType = (type: number, entry: number) => {
+    switch (type) {
+      case DocumentType.InvTransferReq: return closeInventoryTransferRequest(entry);
+      default: return Promise.reject(new Error("Close is not supported for this document type"));
+    }
+  };
+
+  const handleCloseDocument = async (entry: number) => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setValue("DocStatus", "bost_Close");
+    try {
+      await closeDocumentByType(config.type, entry);
+      toast.success("Document closed successfully");
+    } catch (error: any) {
+      setValue("DocStatus", "bost_Open");
+      toast.error(error?.response?.data?.error || "Failed to close document");
+    } finally {
+      setIsClosing(false);
+      setCloseModalOpen(false);
+    }
+  };
 
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
@@ -170,6 +201,8 @@ export function InvDocumentHeader() {
 
   const searchRequestIdRef = useRef(0);
 
+  const isModalOpenRef = useRef(false);
+
   const fetchDocumentsList = async (isLoadMore = false, searchText?: string) => {
     const resourceName = getResourceName(config.type);
     if (!resourceName) return;
@@ -183,13 +216,15 @@ export function InvDocumentHeader() {
       if (config.type === DocumentType.GoodIssue) {
         rawList = await getGoodIssueList();
       } else {
-        const currentSkip = isLoadMore ? listSkip + LIST_PAGE_SIZE : 0;
+        const currentSkip = isLoadMore ? listSkipRef.current + LIST_PAGE_SIZE : 0;
         rawList = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE, searchText);
         if (requestId !== searchRequestIdRef.current) return;
         if (isLoadMore) {
           setListSkip(currentSkip);
+          listSkipRef.current = currentSkip;
         } else {
           setListSkip(0);
+          listSkipRef.current = 0;
         }
       }
 
@@ -205,9 +240,12 @@ export function InvDocumentHeader() {
       } else {
         setDocumentsList(newDocs);
         setDocListModalOpen(true);
+        isModalOpenRef.current = true;
       }
 
-      setListHasMore(config.type !== DocumentType.GoodIssue && newDocs.length === LIST_PAGE_SIZE);
+      const hasMore = config.type !== DocumentType.GoodIssue && newDocs.length === LIST_PAGE_SIZE;
+      setListHasMore(hasMore);
+      listHasMoreRef.current = hasMore;
     } catch (error) {
       if (requestId === searchRequestIdRef.current) {
         toast.error("Failed to fetch documents list.");
@@ -220,7 +258,9 @@ export function InvDocumentHeader() {
   };
 
   const debouncedFetchDocumentsList = useDebouncedCallback((val: string) => {
-    fetchDocumentsList(false, val);
+    if (isModalOpenRef.current) {
+      fetchDocumentsList(false, val);
+    }
   }, 400);
 
   useEffect(() => {
@@ -233,7 +273,7 @@ export function InvDocumentHeader() {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [config.type, listSkip, listHasMore]);
+  }, [config.type]);
 
   const handleSelectBP = (bp: BusinessPartner) => {
     setCustomer(bp);
@@ -442,6 +482,37 @@ export function InvDocumentHeader() {
           </div>
         </div>
 
+        {config.type === DocumentType.InvTransferReq && (
+          <div className="flex justify-end items-center gap-3 w-full">
+            <AppLabel className="w-28 shrink-0 text-right">Status</AppLabel>
+            <Select
+              value={watchedStatus}
+              onValueChange={(val) => {
+                if (val === "bost_Close") {
+                  setCloseModalOpen(true);
+                } else {
+                  setValue("DocStatus", val);
+                }
+              }}
+              disabled={!canChangeStatus}
+            >
+              <SelectTrigger className="h-8 w-56">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Select Status</SelectLabel>
+                  {Object.entries(statusMap).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="flex justify-end items-center gap-3 w-full">
           <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
           <Input
@@ -466,10 +537,14 @@ export function InvDocumentHeader() {
       <GenericModal
         title={`Select ${getResourceName(config.type).replace(/([A-Z])/g, ' $1').trim()}`}
         open={docListModalOpen}
-        onClose={() => setDocListModalOpen(false)}
+        onClose={() => {
+          setDocListModalOpen(false);
+          isModalOpenRef.current = false;
+        }}
         onSelect={(val) => {
           fetchDocument(val.toString());
           setDocListModalOpen(false);
+          isModalOpenRef.current = false;
         }}
         data={documentsList}
         getSelectValue={(item) => item.DocNum || item.DocumentNumber}
@@ -548,6 +623,21 @@ export function InvDocumentHeader() {
           }
           setSyncDialog({ open: false, type: null, value: "" });
         }}
+      />
+
+      <ConfirmationModal
+        open={closeModalOpen}
+        onOpenChange={setCloseModalOpen}
+        title="Close Document"
+        description="Are you sure you want to close this document? Once closed, it cannot be edited."
+        cancelText="No"
+        confirmText="Yes"
+        onConfirm={() => {
+          if (DocEntry) {
+            handleCloseDocument(DocEntry);
+          }
+        }}
+        onCancel={() => setCloseModalOpen(false)}
       />
     </div >
   );

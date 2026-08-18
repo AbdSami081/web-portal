@@ -24,6 +24,9 @@ export function InvDocumentLineRow({ index, line }: Props) {
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
 
+  const docStatus = watch("DocStatus") || "bost_Open";
+  const isClosed = docStatus === "bost_Close";
+
   // Fetch QtyInWhs from Item API if not present on the line (e.g. when loading existing documents)
   useEffect(() => {
     if (!line.QtyInWhs || line.QtyInWhs.length === 0) {
@@ -80,9 +83,9 @@ export function InvDocumentLineRow({ index, line }: Props) {
           variant="ghost"
           className="h-6 w-6 p-0 hover:bg-red-100/10"
           onClick={() => removeLine(index)}
-          disabled={Boolean(watch("DocEntry") && watch("DocEntry") > 0)}
+          disabled={isClosed}
         >
-          <Trash className={`h-4 w-4 ${watch("DocEntry") && watch("DocEntry") > 0 ? "text-gray-500" : "text-red-500"}`} />
+          <Trash className={`h-4 w-4 ${isClosed ? "text-gray-500" : "text-red-500"}`} />
         </Button>
       </td>
 

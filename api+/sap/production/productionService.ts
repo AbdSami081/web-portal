@@ -52,6 +52,22 @@ export const patchReceiptFromProduction = async (docEntry: number, payload: any)
   return res.data;
 };
 
+// Close functions
+export const closeProductionOrder = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Production/Production/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closeIssueForProduction = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Production/IssueForProduction/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closeReceiptForProduction = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Production/ReceiptForProduction/${docEntry}/Close`);
+  return res.data;
+};
+
 const mapAttachment = (att: any) => {
   const sourcePath = att.SourcePath || "";
   const storedFileName = att.FileName || "";

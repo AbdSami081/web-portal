@@ -13,6 +13,7 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { patchPurchaseInvoice, postPurchaseInvoice } from "@/api+/sap/purchase/purchaseService";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
+import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -58,17 +59,28 @@ export default function NewAPInvoicePage() {
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
 
-    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Order) {
-      const payload = {
-        Comments: data.Comments,
-        Attachments2_Lines: processedAttachments.map((att) => ({
+    const { discountPercent, freight, rounding, additionalExpenses } = usePurchaseDocument.getState();
+
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.APInvoice) {
+      const payload = buildPurchaseDocumentPatchPayload({
+        data,
+        lines,
+        discountPercent,
+        freight,
+        rounding,
+        additionalExpenses,
+      });
+
+      // Add attachments to payload
+      if (processedAttachments.length > 0) {
+        (payload as any).Attachments2_Lines = processedAttachments.map((att) => ({
           FileExtension: att.FileName.split('.').pop(),
           FileName: att.FileName.split('.').slice(0, -1).join('.'),
           SourcePath: att.SourcePath,
           FreeText: att.FreeText,
           CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-        }))
-      };
+        }));
+      }
 
       try {
         await patchPurchaseInvoice(Number(DocEntry), payload);
@@ -80,30 +92,29 @@ export default function NewAPInvoicePage() {
       return;
     }
 
-    const payload = {
-      ...data,
-      DocumentLines: lines.map((line) => {
-        const lineData: any = { ...line };
+    const payload = buildPurchaseDocumentPayload({
+      data,
+      lines,
+      docEntry: DocEntry,
+      lastLoadedDocType,
+      targetDocType: DocumentType.APInvoice,
+      discountPercent,
+      freight,
+      rounding,
+      additionalExpenses,
+    });
 
-        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Order) {
-          lineData.BaseType = lastLoadedDocType;
-          lineData.BaseEntry = DocEntry;
-          lineData.BaseLine = line.LineNum;
-        } else {
-          lineData.BaseType = -1;
-          lineData.BaseEntry = null;
-          lineData.BaseLine = null;
-        }
-        return lineData;
-      }),
-      Attachments2_Lines: processedAttachments.map((att) => ({
+    // Add attachments to payload
+    if (processedAttachments.length > 0) {
+      (payload as any).Attachments2_Lines = processedAttachments.map((att) => ({
         FileExtension: att.FileName.split('.').pop(),
         FileName: att.FileName.split('.').slice(0, -1).join('.'),
         SourcePath: att.SourcePath,
         UserID: "1",
-        FreeText: att.FreeText
-      }))
-    };
+        FreeText: att.FreeText,
+        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
+      }));
+    }
 
     try {
       const response = await postPurchaseInvoice(payload);

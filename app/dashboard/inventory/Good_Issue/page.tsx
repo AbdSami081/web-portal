@@ -12,6 +12,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { DocumentType } from "@/types/master/DocumentType";
+import { buildGoodIssuePayload, buildGoodIssuePatchPayload } from "@/lib/sap/helpers/inventoryPayloadHelper";
 
 const InventoryGenLineSchema = z.object({
   ItemCode: z.string(),
@@ -85,46 +86,24 @@ export default function InvTransferPage() {
 
   const handleSubmit = async (data: FormData) => {
     try {
-      const basePayload: any = {
-        Comments: comments,
-        JournalMemo: journalMemo,
-      };
-
       let result;
 
       if (DocEntry && DocEntry > 0) {
-        result = await patchGoodIssue(DocEntry, basePayload);
+        // Update: send lines with LineNum for existing, without for new
+        const payload = buildGoodIssuePatchPayload({
+          data,
+          lines,
+        });
+        result = await patchGoodIssue(DocEntry, payload);
         toast.success(`Good Issue updated!`);
       } else {
-        const payload = {
-          Comments: comments,
-          JournalMemo: journalMemo,
-          DocDate: postingDate || new Date().toISOString().split("T")[0],
-          DocDueDate: postingDate || new Date().toISOString().split("T")[0],
-          TaxDate: postingDate || new Date().toISOString().split("T")[0],
-          DocumentLines: lines.map((line) => {
-            const item: any = {
-              ItemCode: line.ItemCode,
-              Quantity: line.Quantity,
-              WarehouseCode: line.WhsCode || toWarehouse || "",
-            };
+        // Create new document
+        const payload = buildGoodIssuePayload({
+          data,
+          lines,
+        });
 
-            if (line.BaseType !== undefined && line.BaseType !== -1)
-              item.BaseType = line.BaseType;
-
-            if (line.BaseEntry !== undefined && line.BaseEntry !== -1)
-              item.BaseEntry = line.BaseEntry;
-            
-            if (line.BaseLine !== undefined && line.BaseLine !== -1)
-              item.BaseLine = line.BaseLine;
-            
-            return item;
-          }),
-        };
-
-        console.log("Submitting Good Issue with payload:", payload);
         result = await postGoodIssue(payload);
-        console.log("Good Issue result:", result);
 
         if (result?.DocEntry) {
           toast.success(`Good Issue created! #${result.DocNum} as Draft`);

@@ -12,6 +12,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { DocumentType } from "@/types/master/DocumentType";
+import { buildInventoryTransferPayload, buildInventoryTransferPatchPayload } from "@/lib/sap/helpers/inventoryPayloadHelper";
 
 const inventoryLineSchema = z.object({
   ItemCode: z.string().optional(),
@@ -85,46 +86,27 @@ export default function InvTransferPage() {
 
  const handleSubmit = async (data: FormData) => {
   try {
-    const basePayload: any = {
-      Comments: comments,
-      JournalMemo: journalMemo,
-    };
-
     let result;
 
     if (DocEntry && DocEntry > 0) {
-      result = await patchInventoryTransfer(DocEntry, basePayload);
+      // Update: send lines with LineNum for existing, without for new
+      const payload = buildInventoryTransferPatchPayload({
+        data,
+        lines,
+        fromWarehouse,
+        toWarehouse,
+      });
+      result = await patchInventoryTransfer(DocEntry, payload);
       toast.success(`Inventory Transfer updated!`);
     }
     else {
-      const payload = {
-        ...basePayload,
-        CardCode: customer?.CardCode || "",
-        FromWarehouse: fromWarehouse || "",
-        ToWarehouse: toWarehouse || "",
-        StockTransferLines: lines.map((line) => {
-          const item: any = {
-            ItemCode: line.ItemCode,
-            Quantity: line.Quantity,
-            UnitPrice: line.ItemCost || 0,
-            UoMCode: line.UoMCode || line.unitMsr || "",
-            MeasureUnit: line.unitMsr || line.UoMCode || "",
-            WarehouseCode: line.WhsCode || toWarehouse || "",
-            FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
-          };
-
-          if (line.BaseType !== undefined && line.BaseType !== -1)
-            item.BaseType = line.BaseType;
-
-          if (line.BaseEntry !== undefined && line.BaseEntry !== -1)
-            item.BaseEntry = line.BaseEntry;
-
-          if (line.BaseLine !== undefined && line.BaseLine !== -1)
-            item.BaseLine = line.BaseLine;
-
-          return item;
-        }),
-      };
+      // Create new document
+      const payload = buildInventoryTransferPayload({
+        data,
+        lines,
+        fromWarehouse,
+        toWarehouse,
+      });
 
       result = await postInventoryTransfer(payload);
 

@@ -60,6 +60,12 @@ interface IOPRDDocumentStore {
 
 const today = () => new Date().toISOString().split("T")[0];
 
+function toNumberOrUndefined(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  const num = Number(value);
+  return Number.isNaN(num) ? undefined : num;
+}
+
 export const useInventoryDocument = create<IOPRDDocumentStore>()(
   devtools((set, get) => ({
     customer: null,
@@ -181,9 +187,9 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           UoMCode: uomCode,
           unitMsr,
           LineNum: line.LineNum ?? idx,
-          BaseType: line.BaseType ?? (isCopy ? type : undefined),
-          BaseEntry: line.BaseEntry ?? (isCopy ? doc.DocEntry : undefined),
-          BaseLine: line.BaseLine ?? (line.LineNum ?? idx),
+          BaseType: toNumberOrUndefined(line.BaseType) ?? (isCopy ? type : undefined),
+          BaseEntry: toNumberOrUndefined(line.BaseEntry) ?? (isCopy ? doc.DocEntry : undefined),
+          BaseLine: toNumberOrUndefined(line.BaseLine) ?? (line.LineNum ?? idx),
         };
       });
 

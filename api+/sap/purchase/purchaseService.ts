@@ -1,6 +1,52 @@
 import apiClient from "@/lib/apiClient";
 import { BasePurchaseDocument } from "@/types/purchase/purchaseDocuments.type";
 
+// Close functions
+export const closePurchaseQuotation = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseQuotations/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closePurchaseOrder = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseOrders/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closePurchaseDeliveryNote = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseDeliveryNotes/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closePurchaseInvoice = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseInvoices/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closePurchaseReturn = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseReturns/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closePurchaseCreditNote = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseCreditNotes/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closePurchaseRequest = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseRequests/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closePurchaseDownPayment = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/PurchaseDownPayments/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closeGoodsReturnRequest = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/GoodsReturnRequest/${docEntry}/Close`);
+  return res.data;
+};
+
 export const getPurchaseQuotationDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
   const res = await apiClient.get(`api/Purchase/PurchaseQuotation?docNum=${docNum}`);
   if (!res.data) return null;

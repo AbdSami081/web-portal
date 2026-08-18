@@ -5,6 +5,11 @@ import { Button } from "@/components/ui/button";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { Loader2, Search } from "lucide-react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { closePurchaseOrder, closePurchaseQuotation, closePurchaseRequest, closePurchaseDeliveryNote, closePurchaseInvoice, closePurchaseReturn, closePurchaseCreditNote } from "@/api+/sap/purchase/purchaseService";
+import { ConfirmationModal } from "@/modals/ConfirmationModal";
+import { DocumentType } from "@/types/master/DocumentType";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -13,13 +18,49 @@ const statusMap: Record<string, string> = {
 
 export function PurchaseHeader() {
   const { register, watch, setValue } = useFormContext();
-  const { setDocDate, requester, setDocDueDate, setTaxDate, setRequiredDate, setRequester, setRequesterName, setBranch, setDepartment } = usePurchaseDocument();
+  const { setDocDate, requester, setDocDueDate, setTaxDate, setRequiredDate, setRequester, setRequesterName, setBranch, setDepartment, DocEntry, lastLoadedDocType } = usePurchaseDocument();
 
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const docNum = watch("DocNum");
+  const docEntry = watch("DocEntry");
 
   const [searchValue, setSearchValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const isLoadedDocument = !!docEntry && Number(docEntry) > 0;
+  const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
+  const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
+
+  const closeDocumentByType = (type: number | null, entry: number) => {
+    switch (type) {
+      case DocumentType.Order: return closePurchaseOrder(entry);
+      case DocumentType.PurchaseQuotation: return closePurchaseQuotation(entry);
+      case DocumentType.PurchaseRequests: return closePurchaseRequest(entry);
+      case DocumentType.GoodsReceiptPO: return closePurchaseDeliveryNote(entry);
+      case DocumentType.APInvoice: return closePurchaseInvoice(entry);
+      case DocumentType.GoodsReturn: return closePurchaseReturn(entry);
+      case DocumentType.APCreditMemo: return closePurchaseCreditNote(entry);
+      default: return Promise.reject(new Error("Close is not supported for this document type"));
+    }
+  };
+
+  const handleCloseDocument = async (entry: number) => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setValue("DocStatus", "bost_Close");
+    try {
+      await closeDocumentByType(lastLoadedDocType, entry);
+      toast.success("Document closed successfully");
+    } catch (error: any) {
+      setValue("DocStatus", "bost_Open");
+      toast.error(error?.response?.data?.error || "Failed to close document");
+    } finally {
+      setIsClosing(false);
+      setCloseModalOpen(false);
+    }
+  };
 
   useEffect(() => {
     if (docNum) setSearchValue(docNum.toString());
@@ -123,11 +164,48 @@ export function PurchaseHeader() {
         <div className="grid grid-cols-3 items-center gap-4">
           <AppLabel>Status</AppLabel>
           <div className="col-span-2">
-            <div className="h-8 px-3 py-1 bg-slate-100 border border-slate-200 rounded-md text-sm text-slate-900 flex items-center">
-              {statusMap[watchedStatus] || watchedStatus}
-            </div>
+            <Select
+              value={watchedStatus}
+              onValueChange={(val) => {
+                if (val === "bost_Close") {
+                  setCloseModalOpen(true);
+                } else {
+                  setValue("DocStatus", val);
+                }
+              }}
+              disabled={!canChangeStatus}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Select Status</SelectLabel>
+                  {Object.entries(statusMap).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         </div>
+
+        <ConfirmationModal
+          open={closeModalOpen}
+          onOpenChange={setCloseModalOpen}
+          title="Close Document"
+          description="Are you sure you want to close this document? Once closed, it cannot be edited."
+          cancelText="No"
+          confirmText="Yes"
+          onConfirm={() => {
+            if (docEntry) {
+              handleCloseDocument(Number(docEntry));
+            }
+          }}
+          onCancel={() => setCloseModalOpen(false)}
+        />
 
         <div className="grid grid-cols-3 items-center gap-4">
           <AppLabel>Posting Date</AppLabel>

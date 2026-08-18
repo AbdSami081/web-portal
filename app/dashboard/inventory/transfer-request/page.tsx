@@ -84,6 +84,32 @@ export default function InvTransferRequestPage() {
   }), []);
 
 
+  const buildTransferRequestLinePayload = (line: any) => {
+    const item: any = {
+      ItemCode: line.ItemCode,
+      Quantity: line.Quantity,
+      UnitPrice: line.ItemCost || 0,
+      UoMCode: line.UoMCode || line.unitMsr || "",
+      MeasureUnit: line.unitMsr || line.UoMCode || "",
+      WarehouseCode: line.WhsCode || toWarehouse || "",
+      FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
+    };
+
+    if (line.BaseType !== undefined && line.BaseType !== null && line.BaseType !== -1) {
+      item.BaseType = line.BaseType;
+    }
+
+    if (line.BaseEntry !== undefined && line.BaseEntry !== null && line.BaseEntry !== -1) {
+      item.BaseEntry = line.BaseEntry;
+    }
+
+    if (line.BaseLine !== undefined && line.BaseLine !== null && line.BaseLine !== -1) {
+      item.BaseLine = line.BaseLine;
+    }
+
+    return item;
+  };
+
   const handleSubmit = async (data: FormData) => {
     try {
       const basePayload: any = {
@@ -94,7 +120,17 @@ export default function InvTransferRequestPage() {
       let result;
 
       if (DocEntry && DocEntry > 0) {
-        result = await patchInventoryTransferRequest(DocEntry, basePayload);
+        const mappedLines = lines.map(buildTransferRequestLinePayload);
+        const payload = {
+          ...basePayload,
+          CardCode: customer?.CardCode || "",
+          FromWarehouse: fromWarehouse || "",
+          ToWarehouse: toWarehouse || "",
+          StockTransferLines: mappedLines,
+          DocumentLines: mappedLines,
+        };
+
+        result = await patchInventoryTransferRequest(DocEntry, payload);
         toast.success(`Inventory Transfer Request updated!`);
       }
       else {
@@ -103,18 +139,7 @@ export default function InvTransferRequestPage() {
           CardCode: customer?.CardCode || "",
           FromWarehouse: fromWarehouse || "",
           ToWarehouse: toWarehouse || "",
-          StockTransferLines: lines.map((line) => ({
-            ItemCode: line.ItemCode,
-            Quantity: line.Quantity,
-            UnitPrice: line.ItemCost || 0,
-            UoMCode: line.UoMCode || line.unitMsr || "",
-            MeasureUnit: line.unitMsr || line.UoMCode || "",
-            WarehouseCode: line.WhsCode || toWarehouse || "",
-            FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
-            BaseType: line.BaseType ?? null,
-            BaseEntry: line.BaseEntry ?? null,
-            BaseLine: line.BaseLine ?? null,
-          })),
+          StockTransferLines: lines.map(buildTransferRequestLinePayload),
         };
 
         result = await postInventoryTransferRequest(payload);

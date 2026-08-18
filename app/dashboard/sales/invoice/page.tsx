@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
-import { buildSalesDocumentPayload } from "@/lib/sap/helpers/salesPayloadHelper";
+import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 
 export default function InvoicePage() {
@@ -40,9 +40,13 @@ export default function InvoicePage() {
     const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.ARInvoice) {
-      const payload = {
-        Comments: data.Comments,
-      };
+      const payload = buildSalesDocumentPatchPayload({
+        data,
+        lines,
+        discountPercent,
+        freight,
+        additionalExpenses,
+      });
 
       try {
         await patchARInvoice(Number(DocEntry), payload);

@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
-import { buildSalesDocumentPayload } from "@/lib/sap/helpers/salesPayloadHelper";
+import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 
 export default function DeliveryPage() {
@@ -53,8 +53,16 @@ export default function DeliveryPage() {
 
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Delivery) {
+      const patchPayload = buildSalesDocumentPatchPayload({
+        data,
+        lines,
+        discountPercent,
+        freight,
+        additionalExpenses,
+      });
+
       try {
-        await patchDeliveryNote(Number(DocEntry), payload);
+        await patchDeliveryNote(Number(DocEntry), patchPayload);
         if (attachments.length > 0) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,

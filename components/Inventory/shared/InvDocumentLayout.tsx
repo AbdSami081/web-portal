@@ -458,7 +458,14 @@ export function InvDocumentLayout<T extends FieldValues>({
               </Select>
             )}
 
-            <Button type="submit" disabled={isSaving}>
+            <Button
+              type="submit"
+              disabled={isSaving}
+              onMouseDown={() => {
+                // Show saving state immediately on click, before validation
+                if (!isSaving) setIsSaving(true);
+              }}
+            >
               {isSaving ? "Saving..." : (DocEntry && DocEntry > 0 ? "Update" : "Submit")}
             </Button>
           </div>

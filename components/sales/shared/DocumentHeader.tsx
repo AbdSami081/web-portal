@@ -10,8 +10,9 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { toast } from "sonner";
-import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument, getDraftDocument } from "@/api+/sap/sales/salesService";
+import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument, getDraftDocument, closeQuotation, closeSalesOrder, closeDeliveryNote, closeARInvoice, closeSalesReturn } from "@/api+/sap/sales/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
+import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { GenericModal } from "@/modals/GenericModal";
 import { List } from "lucide-react";
 import { DocumentType } from "@/types/master/DocumentType";
@@ -50,8 +51,41 @@ export function DocumentHeader() {
   const [listSearch, setListSearch] = useState("");
   const PAGE_SIZE = 20;
 
-  const isLoadedDocument = docEntry && Number(docEntry) > 0;
+  // Use a real boolean so falsy short-circuits never render stray "0" in the DOM.
+  const isLoadedDocument = !!docEntry && Number(docEntry) > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const closeDocumentByType = (type: number, entry: number) => {
+    switch (type) {
+      case DocumentType.Quotation: return closeQuotation(entry);
+      case DocumentType.Order: return closeSalesOrder(entry);
+      case DocumentType.Delivery: return closeDeliveryNote(entry);
+      case DocumentType.ARInvoice: return closeARInvoice(entry);
+      case DocumentType.SalesReturn: return closeSalesReturn(entry);
+      default: return Promise.reject(new Error("Close is not supported for this document type"));
+    }
+  };
+
+  const handleCloseDocument = async (entry: number) => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setValue("DocStatus", "bost_Close");
+    try {
+      await closeDocumentByType(config.type, entry);
+      toast.success("Document closed successfully");
+    } catch (error: any) {
+      setValue("DocStatus", "bost_Open");
+      toast.error(error?.response?.data?.error || error?.response?.data?.message || "Failed to close document");
+    } finally {
+      setIsClosing(false);
+      setCloseModalOpen(false);
+    }
+  };
+
+  // Status can only be changed when an OPEN document is loaded (edit mode).
+  const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
   const autoCreatedRef = React.useRef(false);
@@ -377,8 +411,15 @@ export function DocumentHeader() {
               <AppLabel className="w-28 shrink-0 text-right">Status</AppLabel>
               <Select
                 value={watchedStatus}
-                onValueChange={(val) => setValue("DocStatus", val)}
-                disabled={true || !getFieldSettings(config.type, "headerFieds", "DocStatus").enable}
+                onValueChange={(val) => {
+                  if (val === "bost_Close") {
+                    // Ask for confirmation first - DocStatus only flips to Closed on Yes.
+                    setCloseModalOpen(true);
+                  } else {
+                    setValue("DocStatus", val);
+                  }
+                }}
+                disabled={!canChangeStatus || !getFieldSettings(config.type, "headerFieds", "DocStatus").enable}
               >
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Select status" />
@@ -438,6 +479,21 @@ export function DocumentHeader() {
             setModalOpen(false);
           }}
           cardType="C"
+        />
+
+        <ConfirmationModal
+          open={closeModalOpen}
+          onOpenChange={setCloseModalOpen}
+          title="Close Document"
+          description={`Are you sure you want to close this ${config.title}? Once closed, it cannot be edited.`}
+          cancelText="No"
+          confirmText="Yes"
+          onConfirm={() => {
+            if (docEntry) {
+              handleCloseDocument(Number(docEntry));
+            }
+          }}
+          onCancel={() => setCloseModalOpen(false)}
         />
         <GenericModal
           title={`Select ${getResourceName(config.type).replace(/([A-Z])/g, ' $1').trim()}`}

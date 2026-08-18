@@ -12,6 +12,7 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { patchGoodsReturn,postGoodsReturn} from "@/api+/sap/purchase/purchaseService";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
+import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 const today = new Date().toISOString().split("T")[0];
 
 export default function GoodReturnPage() {
@@ -56,35 +57,29 @@ export default function GoodReturnPage() {
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
     
-    const payload = {
-      ...data,
-      DocumentLines: lines.map((line) => {
-        const lineData: any = { ...line };
-
-        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.GoodsReturn) {
-          lineData.BaseType = lastLoadedDocType;
-          lineData.BaseEntry = DocEntry;
-          lineData.BaseLine = line.LineNum;
-        } else if (!(DocEntry && Number(DocEntry) > 0)) {
-          lineData.BaseType = -1;
-          lineData.BaseEntry = null;
-          lineData.BaseLine = null;
-        }
-        return lineData;
-      }),
-      Attachments2_Lines: processedAttachments.map((att) => ({
-        FileExtension: att.FileName.split('.').pop(),
-        FileName: att.FileName.split('.').slice(0, -1).join('.'),
-        SourcePath: att.SourcePath,
-        UserID: "1",
-        FreeText: att.FreeText,
-        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
-      }))
-    };
-
-    console.log("Final Goods Return Payload:", JSON.stringify(payload, null, 2));
+    const { discountPercent, freight, rounding, additionalExpenses } = usePurchaseDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.GoodsReturn) {
+      const payload = buildPurchaseDocumentPatchPayload({
+        data,
+        lines,
+        discountPercent,
+        freight,
+        rounding,
+        additionalExpenses,
+      });
+
+      // Add attachments to payload
+      if (processedAttachments.length > 0) {
+        (payload as any).Attachments2_Lines = processedAttachments.map((att) => ({
+          FileExtension: att.FileName.split('.').pop(),
+          FileName: att.FileName.split('.').slice(0, -1).join('.'),
+          SourcePath: att.SourcePath,
+          FreeText: att.FreeText,
+          CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
+        }));
+      }
+
       try {
         await patchGoodsReturn(Number(DocEntry), payload);
         const docNum = usePurchaseDocument.getState().DocNum;
@@ -93,6 +88,30 @@ export default function GoodReturnPage() {
         toast.error("Failed to update Goods Return");
       }
       return;
+    }
+
+    const payload = buildPurchaseDocumentPayload({
+      data,
+      lines,
+      docEntry: DocEntry,
+      lastLoadedDocType,
+      targetDocType: DocumentType.GoodsReturn,
+      discountPercent,
+      freight,
+      rounding,
+      additionalExpenses,
+    });
+
+    // Add attachments to payload
+    if (processedAttachments.length > 0) {
+      (payload as any).Attachments2_Lines = processedAttachments.map((att) => ({
+        FileExtension: att.FileName.split('.').pop(),
+        FileName: att.FileName.split('.').slice(0, -1).join('.'),
+        SourcePath: att.SourcePath,
+        UserID: "1",
+        FreeText: att.FreeText,
+        CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
+      }));
     }
 
     try {

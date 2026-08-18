@@ -12,6 +12,7 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { ReactJsxRuntime } from "next/dist/server/route-modules/app-page/vendored/rsc/entrypoints";
 import { UDFLayout } from "@/components/shared/UDFSheet";
+import { buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 
 export default function NewQuotationPage() {
@@ -42,9 +43,13 @@ export default function NewQuotationPage() {
     }
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Quotation) {
-      const patchPayload = {
-        Comments: data.Comments,
-      };
+      const patchPayload = buildSalesDocumentPatchPayload({
+        data,
+        lines,
+        discountPercent,
+        freight,
+        additionalExpenses,
+      });
       try {
         await patchQuotation(Number(DocEntry), patchPayload);
         if (attachments.length > 0) {

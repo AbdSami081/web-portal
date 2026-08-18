@@ -44,6 +44,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
+const friendlyParamType = (type: string): string => {
+  const t = String(type || "").toUpperCase();
+  if (t.includes("DATETIME")) return "Date Time";
+  if (t.includes("DATE")) return "Date";
+  if (t.includes("CURRENCY")) return "Currency";
+  if (t.includes("NUMBER")) return "Number";
+  if (t.includes("BOOLEAN") || t.includes("BOOL")) return "Yes/No";
+  if (t.includes("STRING") || t.includes("TEXT")) return "Text";
+  return String(type || "");
+};
+
 const ALL_REPORTING_DOCS = SERVER_MENUS.flatMap(
   (group) =>
     (group.items ?? [])
@@ -207,6 +218,10 @@ export default function ReportsManagePage() {
             initialConfigs[configKey] = { componentType: p.componentType };
           }
         });
+
+        // Store the friendly label (e.g. "Date") instead of the raw Crystal type
+        // name so the saved record stays clean for new imports.
+        paramsArray.forEach(p => { p.type = friendlyParamType(p.type); });
       }
 
       setPendingImportPayloads(payloads);
@@ -523,7 +538,7 @@ export default function ReportsManagePage() {
                             {param.name}
                           </span>
                           <Badge variant="secondary" className="text-[10px] uppercase font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                            {param.type}
+                            {friendlyParamType(param.type)}
                           </Badge>
                         </div>
 

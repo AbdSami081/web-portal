@@ -15,7 +15,7 @@ import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentServ
 import { postSalesOrder, patchSalesOrder } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { UDFLayout } from "@/components/shared/UDFSheet";
-import { buildSalesDocumentPayload } from "@/lib/sap/helpers/salesPayloadHelper";
+import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 
 export default function OrderPage() {
@@ -41,9 +41,13 @@ export default function OrderPage() {
     const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Order) {
-      const payload = {
-        Comments: data.Comments,
-      };
+      const payload = buildSalesDocumentPatchPayload({
+        data,
+        lines,
+        discountPercent,
+        freight,
+        additionalExpenses,
+      });
 
       try {
         await patchSalesOrder(Number(DocEntry), payload);

@@ -39,6 +39,11 @@ export function DocumentLineRow({ index, line }: Props) {
   const isFieldVisible = (fieldName: string) => {
     return getFieldSettings(config.type, "linesFieds", fieldName).visible !== false;
   };
+
+  // A line that is closed (line-level status bost_Close / IsClosed = tYES)
+  // must stay locked: no remove, no field edits.
+  const isLineClosed = line.IsClosed === "tYES" || line.LineStatus === "bost_Close";
+  const isCellEditable = (fieldName: string) => isFieldEnabled(fieldName) && !isLineClosed;
   const { updateLine, removeLine, lines } = useSalesDocument();
   const { freightsWithCharges, freightTypes } = useMasterDataStore();
 
@@ -175,9 +180,10 @@ export function DocumentLineRow({ index, line }: Props) {
           variant="ghost"
           className="h-6 w-6 p-0 hover:bg-red-100/10"
           onClick={() => removeLine(line.ItemCode)}
-          disabled={Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)}
+          disabled={isLineClosed}
+          title={isLineClosed ? "Line is closed" : "Remove line"}
         >
-          <Trash className={`h-4 w-4 ${watch("DocEntry") && Number(watch("DocEntry")) > 0 ? "text-gray-500" : "text-red-500"}`} />
+          <Trash className={`h-4 w-4 ${isLineClosed ? "text-gray-400" : "text-red-500"}`} />
         </Button>
       </td>
 
@@ -204,7 +210,7 @@ export function DocumentLineRow({ index, line }: Props) {
               const val = Number(e.target.value);
               setDraftLine({ ...draftLine, Quantity: val });
             }}
-            disabled={!isFieldEnabled("Quantity")}
+            disabled={!isCellEditable("Quantity")}
           />
         </td>
       )}
@@ -228,7 +234,7 @@ export function DocumentLineRow({ index, line }: Props) {
             className="h-6 w-full text-right"
             type="number"
             step="any"
-            disabled={!isFieldEnabled("Price")}
+            disabled={!isCellEditable("Price")}
             min={0}
             value={draftLine.Price}
             onChange={(e) => {
@@ -247,7 +253,7 @@ export function DocumentLineRow({ index, line }: Props) {
             step="any"
             min={0}
             max={100}
-            disabled={!isFieldEnabled("DiscountPercent")}
+            disabled={!isCellEditable("DiscountPercent")}
             value={draftLine.DiscountPercent || 0}
             onChange={(e) => {
               const val = Number(e.target.value);
@@ -261,7 +267,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <td className="py-2 px-2">
           <Select
             value={draftLine.TaxCode || ""}
-            disabled={!isFieldEnabled("TaxCode")}
+            disabled={!isCellEditable("TaxCode")}
             onValueChange={(val) => setDraftLine({ ...draftLine, TaxCode: val })}
           >
             <SelectTrigger className="h-6 w-full border rounded px-2 text-xs">
@@ -313,7 +319,7 @@ export function DocumentLineRow({ index, line }: Props) {
               size="icon"
               className="h-6 w-6 shrink-0"
               onClick={() => setWhDialogOpen(true)}
-              disabled={!isFieldEnabled("WarehouseCode")}
+              disabled={!isCellEditable("WarehouseCode")}
             >
               <Search className="h-4 w-4" />
             </Button>
@@ -358,7 +364,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <td className="py-2 px-2">
           <Select
             value={draftLine.Freight1Type || ""}
-            disabled={!isFieldEnabled("Freight1Type")}
+            disabled={!isCellEditable("Freight1Type")}
             onValueChange={(val) => {
               const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
               const defaultTax = selectedType?.VatGroupO || "";
@@ -391,7 +397,7 @@ export function DocumentLineRow({ index, line }: Props) {
             className="h-6 w-full text-right"
             type="number"
             step="any"
-            disabled={!isFieldEnabled("Freight1LCAmount")}
+            disabled={!isCellEditable("Freight1LCAmount")}
             value={draftLine.Freight1LCAmount || 0}
             onChange={(e) => {
               const value = Number(e.target.value);
@@ -407,7 +413,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <td className="py-2 px-2">
           <Select
             value={draftLine.Freight2Type || ""}
-            disabled={!isFieldEnabled("Freight2Type")}
+            disabled={!isCellEditable("Freight2Type")}
             onValueChange={(val) => {
               const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
               const defaultTax = selectedType?.VatGroupO || "";
@@ -440,7 +446,7 @@ export function DocumentLineRow({ index, line }: Props) {
             className="h-6 w-full text-right"
             type="number"
             step="any"
-            disabled={!isFieldEnabled("Freight2LCAmount")}
+            disabled={!isCellEditable("Freight2LCAmount")}
             value={draftLine.Freight2LCAmount || 0}
             onChange={(e) => {
               const value = Number(e.target.value);
@@ -456,7 +462,7 @@ export function DocumentLineRow({ index, line }: Props) {
         <td className="py-2 px-2">
           <Select
             value={draftLine.Freight3Type || ""}
-            disabled={!isFieldEnabled("Freight3Type")}
+            disabled={!isCellEditable("Freight3Type")}
             onValueChange={(val) => {
               const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
               const defaultTax = selectedType?.VatGroupO || "";
@@ -489,7 +495,7 @@ export function DocumentLineRow({ index, line }: Props) {
             className="h-6 w-full text-right"
             type="number"
             step="any"
-            disabled={!isFieldEnabled("Freight3LCAmount")}
+            disabled={!isCellEditable("Freight3LCAmount")}
             value={draftLine.Freight3LCAmount || 0}
             onChange={(e) => {
               const value = Number(e.target.value);

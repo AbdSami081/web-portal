@@ -22,6 +22,9 @@ export function InvDocumentItems() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
 
+  const docStatus = watch("DocStatus") || "bost_Open";
+  const isClosed = docStatus === "bost_Close";
+
   const columns = [
     { key: "actions",      title: "Actions",      width: 80  },
     { key: "ItemCode",     title: "Item",         width: 180 },
@@ -109,26 +112,28 @@ export function InvDocumentItems() {
         <TabsContent value="content" className="min-w-0 overflow-visible mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6">
           <div className="relative min-w-0 overflow-visible">
             <div className="absolute -top-7 left-2 z-50">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      onClick={() => setDialogOpen(true)}
-                      className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
+              {!isClosed && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={() => setDialogOpen(true)}
+                        className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
+                      >
+                        <Plus className="h-5 w-5 stroke-[2.5px]" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
                     >
-                      <Plus className="h-5 w-5 stroke-[2.5px]" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="right"
-                    className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
-                  >
-                    Add Item
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                      Add Item
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             <div className="relative border rounded overflow-hidden max-w-full min-w-0">
               <div className="overflow-x-auto pb-2 max-w-full min-w-0">

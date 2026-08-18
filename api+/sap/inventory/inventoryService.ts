@@ -114,6 +114,12 @@ export const patchGoodIssue = async (docEntry: number, payload: any) => {
     return response.data;
 };
 
+// Close functions
+export const closeInventoryTransferRequest = async (docEntry: number): Promise<any | null> => {
+    const response = await apiClient.post(`api/Inventory/InventoryTransferRequest/${docEntry}/Close`);
+    return response.data;
+};
+
 export const getSerialsByItemCodes = async (itemCodes: string[]) => {
     const response = await apiClient.get(`api/Inventory/items/stock/ManageBySerials?itemCodes=${itemCodes.join(',')}`);
     return response.data;
@@ -122,4 +128,64 @@ export const getSerialsByItemCodes = async (itemCodes: string[]) => {
 export const getBatchesByItemCodes = async (itemCodes: string[]) => {
     const response = await apiClient.get(`api/Inventory/items/stock/ManageByBatches?itemCodes=${itemCodes.join(',')}`);
     return response.data;
+};
+
+export const getItemMasterDataDocument = async (
+  itemCode: string
+): Promise<any[] | null> => {
+  const normalizedCode = itemCode?.trim();
+
+  if (!normalizedCode) {
+    return [];
+  }
+
+  const response = await apiClient.get("api/ItemMaster/Items", {
+    params: {
+      itemCode: normalizedCode,
+    },
+  });
+
+  return response.data ?? [];
+};
+
+export const updateItemMasterData = async (
+  itemCode: string,
+  payload: Record<string, any>,
+): Promise<any | null> => {
+  const normalizedCode = itemCode?.trim();
+
+  if (!normalizedCode) {
+    throw new Error("Item code is required to update Item Master Data.");
+  }
+
+  const cleanPayload = Object.fromEntries(
+    Object.entries(payload ?? {}).filter(
+      ([, value]) =>
+        value !== undefined &&
+        value !== null &&
+        !(typeof value === "string" && value.trim() === "")
+    )
+  );
+
+  delete cleanPayload.ItemCode;
+
+  const escapedCode = normalizedCode.replace(/'/g, "''");
+  const endpoint = `api/ItemMaster/Items('${escapedCode}')`;
+
+  try {
+    const res = await apiClient.patch(endpoint, cleanPayload);
+    return res.data ?? null;
+  } catch (error: any) {
+    const status = error?.response?.status;
+
+    if (status === 400 || status === 404 || status === 405) {
+      throw new Error(
+        error?.response?.data?.error?.message?.value ||
+          error?.response?.data?.message ||
+          error?.message ||
+          "Failed to update item master data."
+      );
+    }
+    throw error;
+  }
 };

@@ -192,6 +192,31 @@ export const patchSalesReturn = async (docEntry: number, payload: any): Promise<
   return res.data;
 };
 
+export const closeQuotation = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/Quotations/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closeSalesOrder = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/Orders/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closeDeliveryNote = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/DeliveryNote/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closeARInvoice = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/Invoices/${docEntry}/Close`);
+  return res.data;
+};
+
+export const closeSalesReturn = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/Returns/${docEntry}/Close`);
+  return res.data;
+};
+
 export const getAttachment = async (filePath: string) => {
   const res = await apiClient.get(`api/Sales/DisplayAttachment?filePath=${encodeURIComponent(filePath)}`, {
     responseType: 'blob'
