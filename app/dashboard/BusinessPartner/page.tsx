@@ -18,12 +18,13 @@ import {
   getShippingTypes,
   getFactoringIndicators,
   saveBusinessPartner,
+  updateBusinessPartner,
 } from "@/api+/sap/BusinessPartner/BPService";
 
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
-import { Search, List, Loader2 } from "lucide-react";
+import { Search, List, Loader2, X } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,41 @@ import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { DocumentType } from "@/types/master/DocumentType";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
+
+const EMPTY_FORM = {
+  CardCode: "",
+  CardName: "",
+  CardType: "",
+
+  Phone1: "",
+  Phone2: "",
+  Cellular: "",
+  Fax: "",
+
+  EmailAddress: "",
+  Website: "",
+
+  Currency: "",
+  Group: "",
+
+  ForeignName: "",
+  Remarks: "",
+  FreeText: "",
+
+  Industry: "",
+  IndustryCode: "",
+
+  Indicator: "",
+
+  Project: "",
+
+  ShippingType: "",
+  ShippingTypeCode: "",
+
+  Company: "",
+
+  Status: "active",
+};
 
 export default function BPMasterDataPage() {
   const [documentsList, setDocumentsList] = useState<BusinessPartner[]>([]);
@@ -72,30 +108,11 @@ export default function BPMasterDataPage() {
   const [openIndustry, setOpenIndustry] = useState(false);
   const [openCompany, setOpenCompany] = useState(false);
 
-  const [formData, setFormData] = useState({
-    CardCode: "",
-    CardName: "",
-    CardType: "",
-    Phone1: "",
-    Phone2: "",
-    Cellular: "",
-    Fax: "",
-    EmailAddress: "",
-    Website: "",
-    Currency: "",
-    Group: "",
-    ForeignName: "",
-    Remarks: "",
-    FreeText: "",
-    Industry: "",
-    IndustryCode: "",
-    Indicator: "",
-    Project: "",
-    ShippingType: "",
-    ShippingTypeCode: "",
-    Company: "",
-    Status: "active",
-  });
+  // Tracks whether the form currently holds a Business Partner that already
+  // exists in SAP (loaded via search/list), which puts the form in update mode.
+  const [isExistingBP, setIsExistingBP] = useState(false);
+
+  const [formData, setFormData] = useState({ ...EMPTY_FORM });
 
   const getResourceName = (type: number) => {
     switch (type) {
@@ -168,8 +185,11 @@ export default function BPMasterDataPage() {
 
   useEffect(() => {
     if (open) {
-      fetchDocumentsList(false);
+      // Keep whatever search text is already active (e.g. set by handleSearch)
+      // instead of always reloading the unfiltered list.
+      fetchDocumentsList(false, listSearch || undefined);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, fetchDocumentsList]);
 
   useEffect(() => {
@@ -276,6 +296,13 @@ export default function BPMasterDataPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleClearLock = () => {
+    setFormData({ ...EMPTY_FORM });
+    setIsExistingBP(false);
+    setSearchValue("");
+    setListSearch("");
+  };
+
   const handleSubmit = async () => {
     if (!formData.CardCode.trim()) {
       toast.error("Please enter Card Code");
@@ -293,6 +320,10 @@ export default function BPMasterDataPage() {
       toast.error("Please select Group");
       return;
     }
+    if (!formData.Currency) {
+      toast.error("Please select Currency");
+      return;
+    }
     if (!formData.ShippingTypeCode) {
       toast.error("Please select Shipping Type");
       return;
@@ -302,64 +333,98 @@ export default function BPMasterDataPage() {
       CardCode: formData.CardCode.trim(),
       CardName: formData.CardName.trim(),
       CardType: formData.CardType,
+
       Valid: formData.Status === "active" ? "tYES" : "tNO",
+
       GroupCode: Number(formData.Group),
-      Phone1: formData.Phone1,
-      Phone2: formData.Phone2,
-      Cellular: formData.Cellular,
-      Fax: formData.Fax,
-      EmailAddress: formData.EmailAddress,
-      Website: formData.Website,
-      Currency: formData.Currency,
+
+      Phone1: formData.Phone1 || "",
+      Phone2: formData.Phone2 || "",
+      Cellular: formData.Cellular || "",
+      Fax: formData.Fax || "",
+
+      EmailAddress: formData.EmailAddress || "",
+      Website: formData.Website || "",
+
+      Currency: formData.Currency || "",
+
       ShippingType: Number(formData.ShippingTypeCode),
-      Indicator: formData.Indicator ? formData.Indicator.split(" - ")[0] : "",
-      CompanyPrivate: formData.Company ? formData.Company.split(" - ")[0] : "",
-      Industry: formData.Industry || "",
-      ProjectCode: formData.Project ? formData.Project.split(" - ")[0] : "",
+
+      Indicator: formData.Indicator ? String(formData.Indicator).split(" - ")[0] : "",
+
+      CompanyPrivate: formData.Company ? String(formData.Company).split(" - ")[0] : "C",
+
+      Industry:
+        formData.IndustryCode &&
+        industries.some((i) => String(i.IndustryCode) === String(formData.IndustryCode))
+          ? String(formData.IndustryCode)
+          : "-1",
+
+      ProjectCode: formData.Project ? String(formData.Project).split(" - ")[0] : "",
+
       U_NTNRegistered: "Registered",
-      Notes: formData.Remarks,
-      FreeText: formData.FreeText,
+
+      Notes: formData.Remarks || "",
+      FreeText: formData.FreeText || "",
+    };
+
+    const updatePayload = {
+      CardName: formData.CardName.trim(),
+
+      Valid: formData.Status === "active" ? "tYES" : "tNO",
+
+      GroupCode: Number(formData.Group),
+
+      Phone1: formData.Phone1 || "",
+      Phone2: formData.Phone2 || "",
+      Cellular: formData.Cellular || "",
+      Fax: formData.Fax || "",
+
+      EmailAddress: formData.EmailAddress || "",
+      Website: formData.Website || "",
+
+      Currency: formData.Currency || "",
+
+      ShippingType: Number(formData.ShippingTypeCode),
+
+      Indicator: formData.Indicator ? String(formData.Indicator).split(" - ")[0] : "",
+
+      CompanyPrivate: formData.Company ? String(formData.Company).split(" - ")[0] : "C",
+
+      Industry:
+        formData.IndustryCode &&
+        industries.some((i) => String(i.IndustryCode) === String(formData.IndustryCode))
+          ? String(formData.IndustryCode)
+          : "-1",
+
+      ProjectCode: formData.Project ? String(formData.Project).split(" - ")[0] : "",
+
+      U_NTNRegistered: "Registered",
+
+      Notes: formData.Remarks || "",
+      FreeText: formData.FreeText || "",
     };
 
     setIsSaving(true);
 
     try {
-      const response = await saveBusinessPartner(payload);
-      console.log("Save Response:", response);
+      const response = isUpdateMode
+        ? await updateBusinessPartner(formData.CardCode, updatePayload)
+        : await saveBusinessPartner(payload);
 
-      toast.success("Business Partner Saved Successfully");
+      console.log(isUpdateMode ? "Update Response:" : "Save Response:", response);
 
-      setFormData({
-        CardCode: "",
-        CardName: "",
-        CardType: "",
-        Phone1: "",
-        Phone2: "",
-        Cellular: "",
-        Fax: "",
-        EmailAddress: "",
-        Website: "",
-        Currency: "",
-        Group: "",
-        ForeignName: "",
-        Remarks: "",
-        FreeText: "",
-        Industry: "",
-        IndustryCode: "",
-        Indicator: "",
-        Project: "",
-        ShippingType: "",
-        ShippingTypeCode: "",
-        Company: "",
-        Status: "active",
-      });
+      toast.success(
+        isUpdateMode ? "Business Partner Updated Successfully" : "Business Partner Saved Successfully"
+      );
 
-      setSearchValue("");
+      if (!isUpdateMode) {
+        handleClearLock();
+      }
     } catch (error: any) {
-      console.error("Save Business Partner Error:", error);
+      console.error(isUpdateMode ? "Update Business Partner Error:" : "Save Business Partner Error:", error);
       console.error("Status:", error?.response?.status);
       console.error("Response:", error?.response?.data);
-      console.error("Validation Errors:", error?.response?.data?.errors);
 
       const validationErrors = error?.response?.data?.errors;
 
@@ -370,9 +435,9 @@ export default function BPMasterDataPage() {
       if (validationErrors?.document) {
         toast.error("Document data is required by the API.");
       } else if (validationErrors?.["$.Industry"]) {
-        toast.error("Invalid Industry value.");
+        toast.error("Industry must be a string.");
       } else {
-        toast.error("Failed to Save Business Partner");
+        toast.error(isUpdateMode ? "Failed to Update Business Partner." : "Failed to Save Business Partner.");
       }
     } finally {
       setIsSaving(false);
@@ -384,28 +449,52 @@ export default function BPMasterDataPage() {
       CardCode: item.CardCode ?? "",
       CardName: item.CardName ?? "",
       CardType: item.CardType ?? "",
-      Group: item.GroupCode != null ? item.GroupCode.toString() : "",
+
+      Group: item.GroupCode != null ? String(item.GroupCode) : "",
+
       Phone1: item.Phone1 ?? "",
       Phone2: item.Phone2 ?? "",
       Cellular: item.Cellular ?? "",
       Fax: item.Fax ?? "",
+
       EmailAddress: item.EmailAddress ?? "",
       Website: item.Website ?? "",
+
       Currency: item.Currency ?? "",
+
       ForeignName: item.ForeignName ?? "",
       Remarks: item.Remarks ?? "",
       FreeText: item.FreeText ?? "",
-      Industry: item.Industry ?? "",
-      IndustryCode: item.IndustryCode != null ? item.IndustryCode.toString() : "",
+
+      Industry: item.IndustryName ?? item.Industry ?? "",
+      IndustryCode: item.IndustryCode != null ? String(item.IndustryCode) : "",
+
       ShippingType: item.ShippingTypeName ?? "",
-      ShippingTypeCode: item.ShippingType != null ? item.ShippingType.toString() : "",
+      ShippingTypeCode: item.ShippingType != null ? String(item.ShippingType) : "",
+
       Indicator: item.Indicator ?? "",
-      Project: item.Project ?? "",
+
+      Project: item.ProjectCode ?? item.Project ?? "",
+
       Company: item.CompanyPrivate ?? "",
-      Status: item.Status ?? "active",
+
+      Status: item.Valid === "tNO" ? "inactive" : "active",
     });
 
+    const hasValidIndustry =
+      !item.IndustryCode ||
+      industries.length === 0 ||
+      industries.some((i) => String(i.IndustryCode) === String(item.IndustryCode));
+
+    if (!hasValidIndustry) {
+      toast.warning(
+        `This Business Partner has an invalid Industry code on file ("${item.IndustryCode}"). Please reselect the Industry.`
+      );
+    }
+
+    setIsExistingBP(true);
     setOpen(false);
+    setListSearch("");
   };
 
   const handleSearch = () => {
@@ -427,7 +516,14 @@ export default function BPMasterDataPage() {
     fetchDocumentsList(false, val);
   };
 
-  const isFormValid = formData.CardCode.trim() !== "" && formData.CardType.trim() !== "";
+  const matchedExistingBP = documentsList.find(
+    (item) => item.CardCode?.trim().toLowerCase() === formData.CardCode.trim().toLowerCase()
+  );
+
+  const isUpdateMode = isExistingBP || Boolean(formData.CardCode.trim() && matchedExistingBP);
+
+  const isFormValid =
+    formData.CardCode.trim() !== "" && formData.CardName.trim() !== "" && formData.CardType.trim() !== "";
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
@@ -480,7 +576,7 @@ export default function BPMasterDataPage() {
             const selected = shippingTypes.find((item) => item.Code.toString() === value);
             if (selected) {
               handleChange("ShippingType", selected.Name);
-              handleChange("ShippingTypeCode", selected.Code.toString());
+              handleChange("ShippingTypeCode", String(selected.Code));
             }
             setOpenShipping(false);
           }}
@@ -542,7 +638,7 @@ export default function BPMasterDataPage() {
             const selected = industries.find((item) => item.IndustryCode.toString() === value);
             if (selected) {
               handleChange("Industry", selected.IndustryName);
-              handleChange("IndustryCode", selected.IndustryCode.toString());
+              handleChange("IndustryCode", String(selected.IndustryCode));
             }
             setOpenIndustry(false);
           }}
@@ -577,20 +673,34 @@ export default function BPMasterDataPage() {
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-2">
                 <label className="w-20 shrink-0 text-sm">Code</label>
-                <Input
-                  value={formData.CardCode}
-                  onChange={(e) => handleChange("CardCode", e.target.value)}
-                  placeholder="Enter Code"
-                  disabled={formData.CardCode.trim() !== ""}
-                  className="h-7 w-45"
-                />
+
+                <div className="relative w-45">
+                  <Input
+                    value={formData.CardCode}
+                    onChange={(e) => handleChange("CardCode", e.target.value)}
+                    placeholder="Enter Code"
+                    disabled={isExistingBP}
+                    className={isExistingBP ? "h-7 w-45 pr-7" : "h-7 w-45"}
+                  />
+
+                  {isExistingBP && (
+                    <button
+                      type="button"
+                      onClick={handleClearLock}
+                      title="Clear and enter a new Business Partner"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <Select
                   value={formData.CardType}
                   onValueChange={(value) => handleChange("CardType", value)}
-                  disabled={formData.CardType.trim() !== ""}
+                  disabled={isExistingBP}
                 >
                   <SelectTrigger className="h-7 w-45">
                     <SelectValue placeholder="Select Card Type" />
@@ -648,7 +758,7 @@ export default function BPMasterDataPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {groups.map((item) => (
-                    <SelectItem key={item.Code} value={item.Code.toString()}>
+                    <SelectItem key={item.Code} value={String(item.Code)}>
                       {item.Name}
                     </SelectItem>
                   ))}
@@ -850,15 +960,21 @@ export default function BPMasterDataPage() {
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="active" id="active" />
-                      <label htmlFor="active" className="text-sm">Active</label>
+                      <label htmlFor="active" className="text-sm">
+                        Active
+                      </label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="inactive" id="inactive" />
-                      <label htmlFor="inactive" className="text-sm">Inactive</label>
+                      <label htmlFor="inactive" className="text-sm">
+                        Inactive
+                      </label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="advanced" id="advanced" />
-                      <label htmlFor="advanced" className="text-sm">Advanced</label>
+                      <label htmlFor="advanced" className="text-sm">
+                        Advanced
+                      </label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -889,8 +1005,10 @@ export default function BPMasterDataPage() {
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                {isUpdateMode ? "Updating..." : "Saving..."}
               </>
+            ) : isUpdateMode ? (
+              "Update"
             ) : (
               "Submit"
             )}

@@ -12,6 +12,7 @@ import {
   UserAccessEntry,
   WebPortalConfigEntry
 } from "@/api+/sap/authorization/authorizationService";
+import { clearPermissionsCache } from "@/lib/api/permissionsCache";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -307,6 +308,7 @@ export default function AuthorizationPage() {
         throw apiError; 
       }
 
+      clearPermissionsCache();
       setShowSuccessModal(true);
     } catch (error: any) {
       console.error("Full Save Error:", error);
@@ -344,13 +346,12 @@ export default function AuthorizationPage() {
           permissions
         };
         await saveUserAccess(payload);
-      }
-
-      setShowCopyModal(false);
-      const count = selectedCopyUsers.length;
-      setSelectedCopyUsers([]);
-      setShowSuccessModal(true);
-      toast.success(`Authorizations copied to ${count} user(s) successfully.`);
+      }        clearPermissionsCache();
+        setShowCopyModal(false);
+        const count = selectedCopyUsers.length;
+        setSelectedCopyUsers([]);
+        setShowSuccessModal(true);
+        toast.success(`Authorizations copied to ${count} user(s) successfully.`);
     } catch (error: any) {
       console.error("Copy Save Error:", error);
       const serverMessage = error.response?.data?.message || error.message;

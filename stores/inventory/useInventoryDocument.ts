@@ -189,7 +189,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           LineNum: line.LineNum ?? idx,
           BaseType: toNumberOrUndefined(line.BaseType) ?? (isCopy ? type : undefined),
           BaseEntry: toNumberOrUndefined(line.BaseEntry) ?? (isCopy ? doc.DocEntry : undefined),
-          BaseLine: toNumberOrUndefined(line.BaseLine) ?? (line.LineNum ?? idx),
+          BaseLine: toNumberOrUndefined(line.BaseLine) ?? (isCopy ? (line.LineNum ?? idx) : undefined),
         };
       });
 

@@ -18,6 +18,7 @@ export const SERVER_MENUS: MenuItem[] = [
         isMain: true,
         iconName: "LayoutDashboardIcon",
     },
+
     {
         id: "05057fb5-59d0-4084-85ef-b79248a401a4",
         title: "Analytics",
@@ -33,6 +34,7 @@ export const SERVER_MENUS: MenuItem[] = [
             },
         ],
     },
+
     {
         id: "d4b1e0ee-2db9-4915-9007-834d173a3da6",
         title: "Business Partner",
@@ -49,6 +51,7 @@ export const SERVER_MENUS: MenuItem[] = [
             },
         ],
     },
+
     {
         id: "135e11d0-4f7a-4290-840c-102486b4bd78",
         title: "Sales",
@@ -83,7 +86,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/invoice",
                 objectCode: 13,
                 isReporting: true,
-            }
+            },
         ],
     },
     {
@@ -133,26 +136,32 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "A/P Credit Memo",
                 url: "/dashboard/purchase/apcreditmemo",
                 objectCode: 19,
+                isReporting: true,
+            },
+            {
+                id: "fc37b27e-b139-48da-8d1d-eff1563c104f",
+                title: "A/P Down Payment Request",
+                url: "/dashboard/purchase/apdownpaymentrequest",
+                objectCode: 1470000113,
+                isReporting: true,
             },
             {
                 id: "41cab34b-5457-43f6-b325-8c5daf395586",
                 title: "A/P Down Payment Invoice",
                 url: "/dashboard/purchase/apdownpaymentinvoice",
                 objectCode: 204,
-            },{
-                id: "fc37b27e-b139-48da-8d1d-eff1563c104f",
-                title: "A/P Down Payment Request",
-                url: "/dashboard/purchase/apdownpaymentrequest",
-                objectCode: 1470000113,
+                isReporting: true,
             },
             {
                 id: "aec23e2c-f38c-4864-9938-16ba3619c1a6",
                 title: "Goods Return Request",
                 url: "/dashboard/purchase/goodsreturnrequest",
                 objectCode: 234000032,
+                isReporting: true,
             },
         ],
     },
+
     {
         id: "9ba8eab6-540c-4603-8dab-85b1641c8400",
         title: "Inventory",
@@ -180,20 +189,24 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/inventory/Good_Issue",
                 objectCode: 60,
                 isReporting: true,
-            },{
+            },
+            {
                 id: "d159c928-1124-4a49-a9cb-fe3fc928b6e1",
                 title: "Item Master Data",
                 url: "/dashboard/inventory/item_master",
                 objectCode: 4,
+                isReporting: true,
             },
             {
                 id: "02256c89-56c0-40e6-bbd6-0be2d2bbd360",
                 title: "Goods Return",
                 url: "/dashboard/purchase/goodsreturn",
                 objectCode: 21,
-            }
+                isReporting: true,
+            },
         ],
     },
+
     {
         id: "6e90c734-ab74-4dcb-9d08-66c3cc21123f",
         title: "Production",
@@ -221,9 +234,10 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/production/receipt-from-production",
                 objectCode: 59,
                 isReporting: true,
-            }
+            },
         ],
     },
+
     {
         id: "41d32b37-f60a-4f85-879b-9ef904695054",
         title: "Reporting",
@@ -245,16 +259,17 @@ export const SERVER_MENUS: MenuItem[] = [
                         id: "3351796e-25ad-4bc1-8e47-28a47c19bceb",
                         title: "Update Report",
                         url: "/dashboard/reports/update",
-                    }
-                ]
+                    },
+                ],
             },
             {
                 id: "278db848-0aa3-4dff-a8d3-dad1206c5b84",
                 title: "Report Generate",
                 url: "/dashboard/reports/generate",
-            }
+            },
         ],
     },
+
     {
         id: "debc3362-4bc4-4664-9726-a143aea26ec2",
         title: "Administration",
@@ -274,5 +289,4 @@ export const SERVER_MENUS: MenuItem[] = [
             },
         ],
     },
-
 ];

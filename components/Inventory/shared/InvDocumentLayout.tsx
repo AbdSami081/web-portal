@@ -25,6 +25,7 @@ import { useAuth } from "@/context/authContext";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+/sap/Templates/approvalTemplate";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { ApprovalTemplate } from "@/types/template.type";
+import { getSapErrorMessage } from "@/lib/errorHelper";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -311,11 +312,20 @@ export function InvDocumentLayout<T extends FieldValues>({
 
   const canCopyTo = docType === DocumentType.InvTransferReq;
   const canCopyFrom = docType === DocumentType.InvTransfer;
+  const isEditMode = Boolean(DocEntry && DocEntry > 0);
+  const isClosed = (store.docStatus || "").toLowerCase() === "bost_close" || (store.docStatus || "").toLowerCase() === "close";
+
+  const getSubmitButtonText = () => {
+    if (isSaving) {
+      if (isEditMode) return "Updating...";
+      return "Submitting...";
+    }
+    if (isEditMode) return "Update";
+    return "Submit";
+  };
 
   const onSubmitValid = async (data: T) => {
-    // Converting an existing draft (draft page) skips the approval modal - the draft
-    // already went through its approval process; submitting creates the document directly.
-    if (!docNav.draftEntry) {
+    if (!docNav.draftEntry && !isEditMode) {
       const state = useInventoryDocument.getState();
       const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
 
@@ -342,13 +352,15 @@ export function InvDocumentLayout<T extends FieldValues>({
       reset(defaultValues as any);
       resetStore();
     } catch (err: any) {
-      toast.error(err?.message || "Error submitting document");
+      const message = getSapErrorMessage(err);
+      toast.error(message || "Error submitting document");
     } finally {
       setIsSaving(false);
     }
   };
 
   const onSubmitInvalid: SubmitErrorHandler<T> = (errors) => {
+    setIsSaving(false);
     console.error("Validation Errors:", errors);
     const getFirstErrorMessage = (errs: any): string | null => {
       if (!errs || typeof errs !== "object") return null;
@@ -460,13 +472,10 @@ export function InvDocumentLayout<T extends FieldValues>({
 
             <Button
               type="submit"
-              disabled={isSaving}
-              onMouseDown={() => {
-                // Show saving state immediately on click, before validation
-                if (!isSaving) setIsSaving(true);
-              }}
+              disabled={isSaving || (isEditMode && isClosed)}
+              className="min-w-[100px]"
             >
-              {isSaving ? "Saving..." : (DocEntry && DocEntry > 0 ? "Update" : "Submit")}
+              {getSubmitButtonText()}
             </Button>
           </div>
 

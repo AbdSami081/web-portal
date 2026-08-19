@@ -215,3 +215,19 @@ export const getFactoringIndicators = async (): Promise<FactoringIndicator[]> =>
     throw error;
   }
 };
+
+export const updateBusinessPartner = async (
+  cardCode: string,
+  payload: any
+) => {
+  try {
+    const res = await apiClient.patch(
+      `api/BusinessPartner/BusinessPartners/${encodeURIComponent(cardCode)}`,
+      payload
+    );
+
+    return res.data;
+  } catch (error: any) {
+    throw error;
+  }
+};

@@ -1,7 +1,7 @@
 "use client"
 
 import { toast } from "sonner";
-import { postInventoryTransferRequest, patchInventoryTransferRequest, InventoryTransferPayload } from "@/api+/sap/inventory/inventoryService";
+import { postInventoryTransferRequest, patchInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
 import { z } from "zod";
 import { InvDocumentLayout } from "@/components/Inventory/shared/InvDocumentLayout";
 import { InvDocumentHeader } from "@/components/Inventory/shared/InvDocumentHeader";
@@ -12,6 +12,8 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { DocumentType } from "@/types/master/DocumentType";
+import { buildInventoryTransferRequestPayload, buildInventoryTransferRequestPatchPayload } from "@/lib/sap/helpers/inventoryPayloadHelper";
+import { getSapErrorMessage } from "@/lib/errorHelper";
 
 const inventoryLineSchema = z.object({
   ItemCode: z.string().optional(),
@@ -51,18 +53,6 @@ type FormData = z.infer<typeof schema>;
 
 export default function InvTransferRequestPage() {
   const router = useRouter();
-  const {
-    lines,
-    reset: resetStore,
-    fromWarehouse,
-    toWarehouse,
-    comments,
-    journalMemo,
-    customer,
-    DocEntry,
-    attachments,
-  } = useInventoryDocument();
-
 
   const defaultValues: FormData = useMemo(() => ({
     CardCode: "",
@@ -83,82 +73,33 @@ export default function InvTransferRequestPage() {
     ToWarehouse: "",
   }), []);
 
-
-  const buildTransferRequestLinePayload = (line: any) => {
-    const item: any = {
-      ItemCode: line.ItemCode,
-      Quantity: line.Quantity,
-      UnitPrice: line.ItemCost || 0,
-      UoMCode: line.UoMCode || line.unitMsr || "",
-      MeasureUnit: line.unitMsr || line.UoMCode || "",
-      WarehouseCode: line.WhsCode || toWarehouse || "",
-      FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
-    };
-
-    if (line.BaseType !== undefined && line.BaseType !== null && line.BaseType !== -1) {
-      item.BaseType = line.BaseType;
-    }
-
-    if (line.BaseEntry !== undefined && line.BaseEntry !== null && line.BaseEntry !== -1) {
-      item.BaseEntry = line.BaseEntry;
-    }
-
-    if (line.BaseLine !== undefined && line.BaseLine !== null && line.BaseLine !== -1) {
-      item.BaseLine = line.BaseLine;
-    }
-
-    return item;
-  };
-
   const handleSubmit = async (data: FormData) => {
+    const {
+      lines,
+      fromWarehouse,
+      toWarehouse,
+      DocEntry,
+      DocNum,
+      attachments,
+      lastLoadedDocType,
+    } = useInventoryDocument.getState();
+
     try {
-      const basePayload: any = {
-        Comments: comments,
-        JournalMemo: journalMemo,
-      };
+      if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.InvTransferReq) {
+        const payload = buildInventoryTransferRequestPatchPayload({
+          data,
+          lines,
+          fromWarehouse,
+          toWarehouse,
+        });
 
-      let result;
+        await patchInventoryTransferRequest(Number(DocEntry), payload);
 
-      if (DocEntry && DocEntry > 0) {
-        const mappedLines = lines.map(buildTransferRequestLinePayload);
-        const payload = {
-          ...basePayload,
-          CardCode: customer?.CardCode || "",
-          FromWarehouse: fromWarehouse || "",
-          ToWarehouse: toWarehouse || "",
-          StockTransferLines: mappedLines,
-          DocumentLines: mappedLines,
-        };
-
-        result = await patchInventoryTransferRequest(DocEntry, payload);
-        toast.success(`Inventory Transfer Request updated!`);
-      }
-      else {
-        const payload = {
-          ...basePayload,
-          CardCode: customer?.CardCode || "",
-          FromWarehouse: fromWarehouse || "",
-          ToWarehouse: toWarehouse || "",
-          StockTransferLines: lines.map(buildTransferRequestLinePayload),
-        };
-
-        result = await postInventoryTransferRequest(payload);
-
-        if (result?.IsDraft) {
-          toast.success("Inventory Transfer Request submitted for approval.");
-        } else if (result?.DocEntry) {
-          toast.success(`Inventory Transfer Request created! #${result.DocNum}`);
-        }
-      }
-
-      if (result || (DocEntry && DocEntry > 0)) {
-        const savedDocEntry = Number(DocEntry || result?.DocEntry || 0);
-
-        if (savedDocEntry > 0 && attachments.length > 0) {
+        if (attachments.length > 0) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
             "InventoryTransferRequest",
-            savedDocEntry,
+            Number(DocEntry),
             patchInventoryTransferRequest
           );
 
@@ -167,14 +108,42 @@ export default function InvTransferRequestPage() {
           }
         }
 
-        resetStore();
-        router.push("/dashboard/inventory/transfer-request");
+        toast.success(`Inventory Transfer Request #${DocNum || DocEntry} updated successfully!`);
+        return;
+      }
+
+      // Create new document
+      const payload = buildInventoryTransferRequestPayload({
+        data,
+        lines,
+        fromWarehouse,
+        toWarehouse,
+      });
+
+      const result = await postInventoryTransferRequest(payload);
+
+      if (result?.IsDraft) {
+        toast.success("Inventory Transfer Request submitted for approval.");
+      } else if (result?.DocEntry) {
+        if (attachments.length > 0) {
+          const attachmentResult = await uploadAndPatchAttachments(
+            attachments,
+            "InventoryTransferRequest",
+            Number(result.DocEntry),
+            patchInventoryTransferRequest
+          );
+
+          if (attachmentResult.uploadedCount > 0) {
+            toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+          }
+        }
+        toast.success(`Inventory Transfer Request created! #${result.DocNum || result.DocEntry}`);
       } else {
         throw new Error("Failed to process request");
       }
-
     } catch (error: any) {
-      toast.error(error.message || "Failed to create request");
+      const message = getSapErrorMessage(error);
+      toast.error(message || "Failed to process request");
       throw error;
     }
   };

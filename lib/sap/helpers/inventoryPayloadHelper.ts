@@ -1,4 +1,5 @@
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
+import { InventoryTransferLine } from "@/api+/sap/inventory/inventoryService";
 
 interface BuildInventoryPayloadOptions {
   data: any;
@@ -10,22 +11,25 @@ interface BuildInventoryPayloadOptions {
 }
 
 function getValidLines(lines: InventoryDocumentLine[]) {
-  return lines.filter(
+  return (lines || []).filter(
     (line) => line.ItemCode && String(line.ItemCode).trim() !== ""
   );
 }
 
 function attachBaseFields(
-  baseFields: Record<string, unknown>,
+  baseFields: Record<string, any>,
   line: InventoryDocumentLine
 ) {
-  if (line.BaseType != null && Number(line.BaseType) !== -1) {
+  if (
+    line.BaseType != null &&
+    Number(line.BaseType) !== -1 &&
+    line.BaseEntry != null &&
+    Number(line.BaseEntry) !== -1 &&
+    line.BaseLine != null &&
+    Number(line.BaseLine) !== -1
+  ) {
     baseFields.BaseType = Number(line.BaseType);
-  }
-  if (line.BaseEntry != null && Number(line.BaseEntry) !== -1) {
     baseFields.BaseEntry = Number(line.BaseEntry);
-  }
-  if (line.BaseLine != null && Number(line.BaseLine) !== -1) {
     baseFields.BaseLine = Number(line.BaseLine);
   }
   return baseFields;
@@ -34,21 +38,37 @@ function attachBaseFields(
 function buildDocumentLines(
   lines: InventoryDocumentLine[],
   fromWarehouse?: string,
-  toWarehouse?: string
-) {
+  toWarehouse?: string,
+  isPatch: boolean = false
+): InventoryTransferLine[] {
   return getValidLines(lines).map((line) => {
-    const baseFields: Record<string, unknown> = {
+    const baseFields: Record<string, any> = {
       ItemCode: line.ItemCode,
       Quantity: Number(line.Quantity) || 0,
       WarehouseCode: line.WhsCode || toWarehouse || "",
       FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
     };
 
-    if (line.LineNum !== undefined && line.LineNum >= 0) {
-      baseFields.LineNum = line.LineNum;
+    if (line.ItemCost !== undefined && Number(line.ItemCost) > 0) {
+      baseFields.UnitPrice = Number(line.ItemCost);
     }
 
-    return attachBaseFields(baseFields, line);
+    if (line.UoMCode && String(line.UoMCode).trim() !== "") {
+      baseFields.UoMCode = line.UoMCode;
+    }
+
+    if (isPatch) {
+      // Existing lines carry their SAP LineNum - the backend sends
+      // B1S-ReplaceCollectionsOnPatch so omitted lines get deleted.
+      // New lines must NOT carry LineNum ("-1" is rejected by SAP).
+      if (line.LineNum !== undefined && line.LineNum !== null && Number(line.LineNum) >= 0) {
+        baseFields.LineNum = Number(line.LineNum);
+      }
+    } else {
+      attachBaseFields(baseFields, line);
+    }
+
+    return baseFields as InventoryTransferLine;
   });
 }
 
@@ -64,7 +84,7 @@ export function buildInventoryTransferRequestPayload({
     ToWarehouse: toWarehouse || "",
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse),
+    StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, false),
   };
 }
 
@@ -77,7 +97,7 @@ export function buildInventoryTransferRequestPatchPayload({
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse),
+    StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, true),
   };
 }
 
@@ -93,7 +113,7 @@ export function buildInventoryTransferPayload({
     ToWarehouse: toWarehouse || "",
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse),
+    StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, false),
   };
 }
 
@@ -106,7 +126,7 @@ export function buildInventoryTransferPatchPayload({
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse),
+    StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, true),
   };
 }
 
@@ -122,7 +142,7 @@ export function buildGoodIssuePayload({
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    DocumentLines: buildDocumentLines(lines),
+    DocumentLines: buildDocumentLines(lines, undefined, undefined, false),
   };
 }
 
@@ -133,6 +153,6 @@ export function buildGoodIssuePatchPayload({
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    DocumentLines: buildDocumentLines(lines),
+    DocumentLines: buildDocumentLines(lines, undefined, undefined, true),
   };
 }

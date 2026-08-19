@@ -24,6 +24,7 @@ import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { getSapErrorMessage } from "@/lib/errorHelper";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -201,13 +202,9 @@ export function InvDocumentHeader() {
 
   const searchRequestIdRef = useRef(0);
 
-  const isModalOpenRef = useRef(false);
-
   const fetchDocumentsList = async (isLoadMore = false, searchText?: string) => {
     const resourceName = getResourceName(config.type);
     if (!resourceName) return;
-
-    const requestId = ++searchRequestIdRef.current;
 
     setIsLoadingList(true);
     try {
@@ -218,7 +215,6 @@ export function InvDocumentHeader() {
       } else {
         const currentSkip = isLoadMore ? listSkipRef.current + LIST_PAGE_SIZE : 0;
         rawList = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE, searchText);
-        if (requestId !== searchRequestIdRef.current) return;
         if (isLoadMore) {
           setListSkip(currentSkip);
           listSkipRef.current = currentSkip;
@@ -227,8 +223,6 @@ export function InvDocumentHeader() {
           listSkipRef.current = 0;
         }
       }
-
-      if (requestId !== searchRequestIdRef.current) return;
 
       const newDocs = (rawList || []).map((d: any) => ({
         ...d,
@@ -239,35 +233,37 @@ export function InvDocumentHeader() {
         setDocumentsList(prev => [...prev, ...newDocs]);
       } else {
         setDocumentsList(newDocs);
-        setDocListModalOpen(true);
-        isModalOpenRef.current = true;
       }
 
       const hasMore = config.type !== DocumentType.GoodIssue && newDocs.length === LIST_PAGE_SIZE;
       setListHasMore(hasMore);
       listHasMoreRef.current = hasMore;
-    } catch (error) {
-      if (requestId === searchRequestIdRef.current) {
-        toast.error("Failed to fetch documents list.");
-      }
+    } catch (error: any) {
+      const message = getSapErrorMessage(error);
+      toast.error(message || "Failed to fetch documents list.");
     } finally {
-      if (requestId === searchRequestIdRef.current) {
-        setIsLoadingList(false);
-      }
+      setIsLoadingList(false);
     }
   };
 
   const debouncedFetchDocumentsList = useDebouncedCallback((val: string) => {
-    if (isModalOpenRef.current) {
-      fetchDocumentsList(false, val);
-    }
+    fetchDocumentsList(false, val);
   }, 400);
+
+  useEffect(() => {
+    if (!docListModalOpen) {
+      setDocumentsList([]);
+      setIsLoadingList(false);
+      setListSearch("");
+    }
+  }, [docListModalOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         e.stopPropagation();
+        setDocListModalOpen(true);
         fetchDocumentsList(false);
       }
     };
@@ -288,13 +284,7 @@ export function InvDocumentHeader() {
       return;
     }
 
-    if (isFetchingRef.current) {
-      abortControllerRef.current?.abort();
-    }
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    isFetchingRef.current = true;
+    setDocNumSearch(docNumInt.toString());
     setIsLoading(true);
 
     try {
@@ -303,12 +293,9 @@ export function InvDocumentHeader() {
         documentData = await getInventoryTransferRequest(docNumInt);
       } else if (config.type === DocumentType.InvTransfer) {
         documentData = await getInventoryTransfer(docNumInt);
-      }
-      else if (config.type === DocumentType.GoodIssue) {
+      } else if (config.type === DocumentType.GoodIssue) {
         documentData = await getGoodIssue(docNumInt);
       } 
-
-      if (abortController.signal.aborted) return;
 
       if (documentData) {
         fetchUdfDefinitions(config.type, true);
@@ -317,17 +304,14 @@ export function InvDocumentHeader() {
         toast.error("Document not found.");
       }
     } catch (error: any) {
-      if (abortController.signal.aborted) return;
       if (error.response?.status === 404) {
         toast.info("Document not found.");
       } else {
-        toast.error(error.message || "An error occurred while fetching the document.");
+        const message = getSapErrorMessage(error);
+        toast.error(message || "An error occurred while fetching the document.");
       }
     } finally {
-      if (!abortController.signal.aborted) {
-        setIsLoading(false);
-        isFetchingRef.current = false;
-      }
+      setIsLoading(false);
     }
   };
 
@@ -470,7 +454,10 @@ export function InvDocumentHeader() {
               variant="outline"
               size="icon"
               className="h-8 w-8 cursor-pointer"
-              onClick={() => fetchDocumentsList(false)}
+              onClick={() => {
+                setDocListModalOpen(true);
+                fetchDocumentsList(false);
+              }}
               title="List documents (Ctrl+F)"
             >
               {isLoadingList ? (
@@ -539,12 +526,12 @@ export function InvDocumentHeader() {
         open={docListModalOpen}
         onClose={() => {
           setDocListModalOpen(false);
-          isModalOpenRef.current = false;
+          setIsLoadingList(false);
         }}
         onSelect={(val) => {
-          fetchDocument(val.toString());
           setDocListModalOpen(false);
-          isModalOpenRef.current = false;
+          setIsLoadingList(false);
+          fetchDocument(val.toString());
         }}
         data={documentsList}
         getSelectValue={(item) => item.DocNum || item.DocumentNumber}
@@ -560,9 +547,6 @@ export function InvDocumentHeader() {
         hasMore={listHasMore}
         onSearch={(value) => {
           setListSearch(value);
-          setDocumentsList([]);
-          setListSkip(0);
-          setIsLoadingList(true);
           debouncedFetchDocumentsList(value);
         }}
         searchValue={listSearch}

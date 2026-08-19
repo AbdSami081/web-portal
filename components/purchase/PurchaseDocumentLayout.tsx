@@ -42,6 +42,7 @@ import {
 import { HeaderActionPortal } from "@/components/header-portal";
 import { HeaderModalAction } from "@/components/header-modal-action";
 import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
+import HeaderActions from "@/components/Custom/HeaderAction";
 
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { useUDFStore } from "@/stores/useUDFStore";
@@ -332,38 +333,13 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
           className="flex flex-col min-h-screen bg-background"
         >
           <HeaderActionPortal>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="inline-block">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={ResetForm}
-                      disabled={!DocEntry || DocEntry === 0}
-                      className="border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 w-8 disabled:opacity-50 transition-all active:scale-95"
-                    >
-                      <FilePlus2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="bottom"
-                  className="bg-blue-600 text-white border-blue-500 font-semibold shadow-[0_0_20px_rgba(37,99,235,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
-                >
-                  New Document
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <HeaderModalAction
-              triggerIcon={Keyboard}
-              triggerTooltip="Shortcut Keys"
-              modalTitle="Keyboard Shortcuts"
-              modalDescription="Quick reference for available keyboard shortcuts in the portal."
-            >
-              <KeyboardShortcutsContent />
-            </HeaderModalAction>
+            <HeaderActions
+              DocEntry={DocEntry || 0}
+              objectCode={docType}
+              reset={reset}
+              defaultValues={defaultValues}
+              resetStore={ResetForm}
+            />
           </HeaderActionPortal>
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted shrink-0">
