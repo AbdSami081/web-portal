@@ -72,7 +72,7 @@ export const orderConfig: DocumentConfig = {
 
 export const deliveryConfig: DocumentConfig = {
   type: DocumentType.Delivery,
-  title: "Delivery Order",
+  title: "Delivery",
   headerFields: {
     showValidUntil: false
   },
