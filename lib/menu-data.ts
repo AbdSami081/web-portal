@@ -18,23 +18,6 @@ export const SERVER_MENUS: MenuItem[] = [
         isMain: true,
         iconName: "LayoutDashboardIcon",
     },
-
-    {
-        id: "05057fb5-59d0-4084-85ef-b79248a401a4",
-        title: "Analytics",
-        url: "#",
-        isMain: true,
-        iconName: "BarChart2",
-        isActive: true,
-        items: [
-            {
-                id: "fff64255-b781-4c97-be4b-ef87ae8ca013",
-                title: "Inventory Dashboard",
-                url: "/dashboard/analytics/inventory",
-            },
-        ],
-    },
-
     {
         id: "d4b1e0ee-2db9-4915-9007-834d173a3da6",
         title: "Business Partner",
