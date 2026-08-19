@@ -3,7 +3,13 @@ export enum PurchaseDocumentType {
   PurchaseQuotation = 54,
   PurchaseOrder = 22,
   GoodsReceiptPO = 20,
-  APInvoice = 18
+  APInvoice = 18,
+  APReserveInvoice = 18,
+  APCreditMemo = 19,
+  GoodsReturn = 21,
+  APDownPaymentInvoice = 204,
+  GoodsReturnRequest = 234000032,
+  APDownPaymentRequest = 1470000113,
 }
 
 export interface BasePurchaseDocument {

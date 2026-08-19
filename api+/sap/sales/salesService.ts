@@ -217,6 +217,86 @@ export const closeSalesReturn = async (docEntry: number): Promise<any | null> =>
   return res.data;
 };
 
+export const getSalesReturnRequestDocument = async (docNum: number): Promise<BaseSalesDocument | null> => {
+  const res = await apiClient.get(`api/Sales/ReturnRequest/${docNum}`);
+  if (!res.data) return null;
+
+  const doc: BaseSalesDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const postReturnRequest = async (payload: any): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/ReturnRequest`, withDefaultBPLId(payload));
+  if (!res.data) return null;
+
+  const doc: BaseSalesDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const patchReturnRequestNote = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Sales/ReturnRequest/${docEntry}`, payload);
+  return res.data;
+};
+
+export const closeReturnRequest = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/ReturnRequest/${docEntry}/Close`);
+  return res.data;
+};
+
+export const getSalesCreditMemoDocument = async (docNum: number): Promise<BaseSalesDocument | null> => {
+  const res = await apiClient.get(`api/Sales/CreditNotes/${docNum}`);
+  if (!res.data) return null;
+
+  const doc: BaseSalesDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const postCreditMemo = async (payload: any): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/CreditNotes`, withDefaultBPLId(payload));
+  if (!res.data) return null;
+
+  const doc: BaseSalesDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const patchCreditMemo = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Sales/CreditNotes/${docEntry}`, payload);
+  return res.data;
+};
+
+export const closeCreditMemo = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/CreditNotes/${docEntry}/Close`);
+  return res.data;
+};
+
 export const getAttachment = async (filePath: string) => {
   const res = await apiClient.get(`api/Sales/DisplayAttachment?filePath=${encodeURIComponent(filePath)}`, {
     responseType: 'blob'
@@ -238,6 +318,5 @@ export const getDraftDocument = async (draftID: number): Promise<BaseSalesDocume
 
   return doc;
 };
-
 
 export { getDocumentsList } from "@/api+/sap/common/documentService";

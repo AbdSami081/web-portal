@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useRef } from "react";
 
+export type DebouncedCallback<T extends (...args: any[]) => any> = {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+};
+
 export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 400
-): (...args: Parameters<T>) => void {
+): DebouncedCallback<T> {
   const callbackRef = useRef(callback);
   const timeoutRef = useRef<NodeJS.Timeout | number | null>(null);
 
@@ -21,7 +26,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
     };
   }, []);
 
-  return useCallback(
+  const debounced = useCallback(
     (...args: Parameters<T>) => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -31,5 +36,14 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
       }, delay);
     },
     [delay]
-  );
+  ) as DebouncedCallback<T>;
+
+  debounced.cancel = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  return debounced;
 }

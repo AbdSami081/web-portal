@@ -1,16 +1,12 @@
-"use client"
+"use client";
+
 import DocumentFooter from "@/components/sales/shared/DocumentFooter";
 import { DocumentHeader } from "@/components/sales/shared/DocumentHeader";
 import { DocumentItems } from "@/components/sales/shared/DocumentItems";
 import { SalesDocumentLayout } from "@/components/sales/shared/SalesDocumentLayout";
-
-import { useRouter } from "next/navigation";
-import {
-  QuotationFormData,
-  quotationSchema,
-} from "@/lib/schemas/quotationSchema";
+import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { postSalesReturn, patchSalesReturn } from "@/api+/sap/sales/salesService";
+import { postCreditMemo, patchCreditMemo } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
@@ -18,9 +14,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 
-export default function ReturnPage() {
-  const router = useRouter();
-
+export default function ARCreditMemoPage() {
   const defaultValues: QuotationFormData = {
     CardCode: "",
     CardName: "",
@@ -40,7 +34,7 @@ export default function ReturnPage() {
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
 
-    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.SalesReturn) {
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.CreditMemo) {
       const patchPayload = buildSalesDocumentPatchPayload({
         data,
         lines,
@@ -50,13 +44,13 @@ export default function ReturnPage() {
       });
 
       try {
-        await patchSalesReturn(Number(DocEntry), patchPayload);
+        await patchCreditMemo(Number(DocEntry), patchPayload);
         if (attachments.length > 0) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
-            "SalesReturn",
+            "CreditMemo",
             Number(DocEntry),
-            patchSalesReturn
+            patchCreditMemo
           );
 
           if (attachmentResult.uploadedCount > 0) {
@@ -64,10 +58,10 @@ export default function ReturnPage() {
           }
         }
         const docNum = useSalesDocument.getState().DocNum;
-        toast.success(`Sales Return #${docNum || DocEntry} updated successfully`);
+        toast.success(`A/R Credit Memo #${docNum || DocEntry} updated successfully`);
       } catch (error) {
         const message = getSapErrorMessage(error);
-        toast.error(message || "Failed to update Sales Return");
+        toast.error(message || "Failed to update A/R Credit Memo");
         throw error;
       }
       return;
@@ -78,21 +72,21 @@ export default function ReturnPage() {
       lines,
       docEntry: DocEntry,
       lastLoadedDocType,
-      targetDocType: DocumentType.SalesReturn,
+      targetDocType: DocumentType.CreditMemo,
       discountPercent,
       freight,
       additionalExpenses,
     });
 
     try {
-      const response = await postSalesReturn(payload);
+      const response = await postCreditMemo(payload);
       if (response?.DocEntry || response?.IsDraft) {
         if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
-            "SalesReturn",
+            "CreditMemo",
             Number(response.DocEntry),
-            patchSalesReturn
+            patchCreditMemo
           );
 
           if (attachmentResult.uploadedCount > 0) {
@@ -100,16 +94,16 @@ export default function ReturnPage() {
           }
         }
         if (response?.IsDraft) {
-          toast.success("Sales Return submitted for approval.");
+          toast.success("A/R Credit Memo submitted for approval.");
         } else {
-          toast.success(`Sales Return #${response.DocNum} created successfully!`);
+          toast.success(`A/R Credit Memo #${response.DocNum} created successfully!`);
         }
       } else {
-        throw new Error("Failed to create Sales Return");
+        throw new Error("Failed to create A/R Credit Memo");
       }
     } catch (error: any) {
       const message = getSapErrorMessage(error);
-      toast.error(message || "Failed to create Sales Return. Please try again.");
+      toast.error(message || "Failed to create A/R Credit Memo. Please try again.");
       throw error;
     }
   };
@@ -119,11 +113,11 @@ export default function ReturnPage() {
       schema={quotationSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={DocumentType.SalesReturn}
+      docType={DocumentType.CreditMemo}
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.SalesReturn} />
+      <UDFLayout docType={DocumentType.CreditMemo} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

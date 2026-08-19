@@ -147,8 +147,16 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     setDocTotal: (dt) => set({ DocTotal: dt }),
 
     addLine: (line) => {
-      set((state) => ({ lines: [...state.lines, line] }));
-      get().calculateTotals();
+      const existingLine = get().lines.find((l) => l.ItemCode === line.ItemCode);
+      if (existingLine) {
+        get().updateLine(existingLine.ItemCode, {
+          Quantity: (Number(existingLine.Quantity) || 0) + (Number(line.Quantity) || 1),
+          Price: line.Price !== undefined ? line.Price : existingLine.Price,
+        });
+      } else {
+        set((state) => ({ lines: [...state.lines, line] }));
+        get().calculateTotals();
+      }
     },
     updateLine: (itemCode: string, updated: Partial<PurchaseDocumentLine>) => {
       set((state) => {

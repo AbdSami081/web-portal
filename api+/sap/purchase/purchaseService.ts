@@ -356,3 +356,18 @@ export const patchAPDownPaymentRequest = async (docEntry: number, payload: any):
   const res = await apiClient.patch(`api/Purchase/PurchaseDownPayments/${docEntry}`, payload);
   return res.data;
 };
+
+export const postReservePurchaseInvoice = async (data: any): Promise<any> => {
+  const res = await apiClient.post(`api/Purchase/ReservePurchaseInvoices`, data);
+  return res.data;
+};
+
+export const patchReservePurchaseInvoice = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Purchase/ReservePurchaseInvoices/${docEntry}`, payload);
+  return res.data;
+};
+
+export const closeReservePurchaseInvoice = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Purchase/ReservePurchaseInvoices/${docEntry}/Close`);
+  return res.data;
+};

@@ -68,6 +68,10 @@ import { UDFLayout } from "../shared/UDFSheet";
 import { GenericModal } from "@/modals/GenericModal";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+/sap/Templates/approvalTemplate";
+import { ApprovalTemplate } from "@/types/template.type";
+import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
+import { useAuth } from "@/context/authContext";
 
 const PurchaseDocContext = createContext<DocumentConfig | null>(null);
 
@@ -96,6 +100,11 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   docType,
   title,
 }: PurchaseDocumentLayoutProps<T>) {
+  const { user } = useAuth();
+  const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
+  const [isCheckingApproval, setIsCheckingApproval] = useState(false);
 
   const methods = useForm<T>({
     resolver: zodResolver(schema as any),
@@ -302,6 +311,27 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
           onSubmit={handleSubmit(async (data) => {
             console.log("Submit Clicked. Data:", data);
             const state = usePurchaseDocument.getState();
+            const currentUserId = user?.sapUserId;
+
+            if (currentUserId && !isEditMode) {
+              setIsCheckingApproval(true);
+              try {
+                const docTypeStr = getApprovalDocumentType(docType);
+                const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+                if (activeTemplates && activeTemplates.length > 0) {
+                  setApprovalTemplates(activeTemplates);
+                  setPendingFinalData(data as unknown as T);
+                  setApprovalModalOpen(true);
+                  setIsCheckingApproval(false);
+                  return;
+                }
+              } catch (err) {
+                console.error("Failed to check approval templates:", err);
+              } finally {
+                setIsCheckingApproval(false);
+              }
+            }
+
             const needsStockManagement = (docType === DocumentType.GoodsReceiptPO || docType === DocumentType.APInvoice) && 
               state.lines.some(l => {
                 const isSerial = l.ManSerNum === 'Y' || l.ManSerNum === 'tYES';
@@ -490,6 +520,27 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               }
             }}
             lines={usePurchaseDocument.getState().lines}
+          />
+
+          <RequestDocumentGenerationModal
+            open={approvalModalOpen}
+            onClose={() => setApprovalModalOpen(false)}
+            templates={approvalTemplates}
+            onConfirm={async (remarksMap) => {
+              if (!pendingFinalData) return;
+
+              const firstRemarks = approvalTemplates[0]
+                ? (remarksMap[approvalTemplates[0].Code] ?? "").trim()
+                : "";
+              const finalData = {
+                ...(pendingFinalData as any),
+                Comments: firstRemarks || (pendingFinalData as any).Comments || "",
+              } as T;
+
+              await onSubmit(finalData);
+              setPendingFinalData(null);
+              ResetForm();
+            }}
           />
         </form>
       </FormProvider>

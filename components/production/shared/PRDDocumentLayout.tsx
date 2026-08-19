@@ -24,6 +24,10 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import HeaderActions from "@/components/Custom/HeaderAction";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+/sap/Templates/approvalTemplate";
+import { ApprovalTemplate } from "@/types/template.type";
+import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
+import { useAuth } from "@/context/authContext";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
@@ -59,6 +63,12 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
 
+
+  const { user } = useAuth();
+  const [approvalTemplates, setApprovalTemplates] = React.useState<ApprovalTemplate[]>([]);
+  const [approvalModalOpen, setApprovalModalOpen] = React.useState(false);
+  const [pendingFinalData, setPendingFinalData] = React.useState<T | null>(null);
+  const [isCheckingApproval, setIsCheckingApproval] = React.useState(false);
 
   const [badgeState, setBadgeState] = React.useState<"draft" | "approved" | null>(() => {
     const draftEntryParam = docNav.draftEntry;
@@ -216,7 +226,31 @@ export function PRDDocumentLayout<T extends FieldValues>({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            handleSubmit((data) => onSubmit(data as any), onSubmitError)(e);
+            handleSubmit(async (data) => {
+              const currentUserId = user?.sapUserId;
+              const isEditMode = Boolean(watch("AbsoluteEntry" as any) || watch("DocEntry" as any));
+
+              if (currentUserId && !isEditMode && badgeState !== "approved") {
+                setIsCheckingApproval(true);
+                try {
+                  const docTypeStr = getApprovalDocumentType(docType);
+                  const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+                  if (activeTemplates && activeTemplates.length > 0) {
+                    setApprovalTemplates(activeTemplates);
+                    setPendingFinalData(data as any);
+                    setApprovalModalOpen(true);
+                    setIsCheckingApproval(false);
+                    return;
+                  }
+                } catch (err) {
+                  console.error("Failed to check approval templates:", err);
+                } finally {
+                  setIsCheckingApproval(false);
+                }
+              }
+
+              await onSubmit(data as any);
+            }, onSubmitError)(e);
           }}
           className="flex flex-col min-h-screen bg-background"
         >
@@ -292,6 +326,29 @@ export function PRDDocumentLayout<T extends FieldValues>({
             </div>
           </div>
           <UDFLayout docType={docType} values={udfs} />
+
+          <RequestDocumentGenerationModal
+            open={approvalModalOpen}
+            onClose={() => setApprovalModalOpen(false)}
+            templates={approvalTemplates}
+            onConfirm={async (remarksMap) => {
+              if (!pendingFinalData) return;
+
+              const firstRemarks = approvalTemplates[0]
+                ? (remarksMap[approvalTemplates[0].Code] ?? "").trim()
+                : "";
+              const finalData = {
+                ...(pendingFinalData as any),
+                Comments: firstRemarks || (pendingFinalData as any).Comments || (pendingFinalData as any).Remarks || "",
+                Remarks: firstRemarks || (pendingFinalData as any).Remarks || "",
+              } as T;
+
+              await onSubmit(finalData);
+              setPendingFinalData(null);
+              ResetForm();
+              setBadgeState(null);
+            }}
+          />
         </form>
 
       </FormProvider>

@@ -20,14 +20,49 @@ export const getApprovalDocumentType = (docType: number | string): string => {
       return "atdtDelivery";
     case DocumentType.ARInvoice:
       return "atdtInvoice";
+    case DocumentType.Return:
     case DocumentType.SalesReturn:
       return "atdtReturns";
+    case DocumentType.ReturnRequest:
+    case DocumentType.SalesReturnRequest:
+      return "atdtReturnsRequest";
+    case DocumentType.CreditMemo:
+    case DocumentType.ARCreditMemo:
+      return "atdtCreditNotes";
+    case DocumentType.DownPaymentInvoice:
+    case DocumentType.ARDownPaymentInvoice:
+    case DocumentType.DownPaymentRequest:
+    case DocumentType.ARDownPaymentRequest:
+      return "atdtDownPayment";
+    case DocumentType.PurchaseRequests:
+      return "atdtPurchaseRequest";
+    case DocumentType.PurchaseQuotation:
+      return "atdtPurchaseQuotation";
+    case DocumentType.PurchaseOrder:
+      return "atdtPurchaseOrder";
+    case DocumentType.GoodsReceiptPO:
+      return "atdtGoodsReceiptPO";
+    case DocumentType.APInvoice:
+    case DocumentType.APReserveInvoice:
+      return "atdtPurchaseInvoice";
+    case DocumentType.APCreditMemo:
+      return "atdtPurchaseCreditNote";
+    case DocumentType.GoodsReturn:
+      return "atdtPurchaseDeliveryNotes";
+    case DocumentType.GoodsReturnRequest:
+      return "atdtGoodsReturnRequest";
+    case DocumentType.APDownPaymentInvoice:
+    case DocumentType.APDownPaymentRequest:
+      return "atdtPurchaseDownPayment";
     case DocumentType.InvTransferReq:
       return "atdtInventoryTransferRequest";
     case DocumentType.InvTransfer:
       return "atdtInventoryTransfer";
     case DocumentType.GoodIssue:
+    case DocumentType.IssueForProduction:
       return "atdtGoodIssue";
+    case DocumentType.ReceiptFromProduction:
+      return "atdtGoodsReceipt";
     case DocumentType.ProductionOrder:
       return "atdtProductionOrder";
     default:

@@ -97,7 +97,7 @@ export const deliveryConfig: DocumentConfig = {
 
 export const returnConfig: DocumentConfig = {
   type: DocumentType.SalesReturn,
-  title: "Return",
+  title: "Sales Return",
   headerFields: {
     showValidUntil: false
   },
@@ -145,13 +145,114 @@ export const invoiceConfig: DocumentConfig = {
   }
 };
 
+export const returnRequestConfig: DocumentConfig = {
+  type: DocumentType.ReturnRequest,
+  title: "Sales Return Request",
+  headerFields: {
+    showValidUntil: false
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: false,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel") return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  }
+};
+
+export const creditMemoConfig: DocumentConfig = {
+  type: DocumentType.CreditMemo,
+  title: "A/R Credit Memo",
+  headerFields: {
+    showValidUntil: false
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: false,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel") return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  }
+};
+
+export const downPaymentRequestConfig: DocumentConfig = {
+  type: DocumentType.DownPaymentRequest,
+  title: "A/R Down Payment Request",
+  headerFields: {
+    showValidUntil: false
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: false,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel") return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  }
+};
+
+export const downPaymentInvoiceConfig: DocumentConfig = {
+  type: DocumentType.DownPaymentInvoice,
+  title: "A/R Down Payment Invoice",
+  headerFields: {
+    showValidUntil: false
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: false,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel") return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  }
+};
+
 export const getDocumentConfig = (type: DocumentType): DocumentConfig => {
   switch (type) {
     case DocumentType.Quotation: return quotationConfig;
     case DocumentType.Order: return orderConfig;
     case DocumentType.Delivery: return deliveryConfig;
-    case DocumentType.SalesReturn: return returnConfig;
+    case DocumentType.SalesReturn:
+    case DocumentType.Return: return returnConfig;
     case DocumentType.ARInvoice: return invoiceConfig;
+    case DocumentType.ReturnRequest:
+    case DocumentType.SalesReturnRequest: return returnRequestConfig;
+    case DocumentType.CreditMemo:
+    case DocumentType.ARCreditMemo: return creditMemoConfig;
+    case DocumentType.DownPaymentRequest:
+    case DocumentType.ARDownPaymentRequest: return downPaymentRequestConfig;
+    case DocumentType.DownPaymentInvoice:
+    case DocumentType.ARDownPaymentInvoice: return downPaymentInvoiceConfig;
     default: return quotationConfig; 
   }
 };

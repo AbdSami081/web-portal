@@ -250,7 +250,6 @@ export function PRDDocumentHeader() {
       } else {
         setDocumentsList(newDocs);
         setListSkip(0);
-        setDocListModalOpen(true);
       }
 
       setListHasMore(newDocs.length === LIST_PAGE_SIZE);
@@ -270,10 +269,20 @@ export function PRDDocumentHeader() {
   }, 400);
 
   useEffect(() => {
+    if (!docListModalOpen) {
+      setDocumentsList([]);
+      setListSearch("");
+      setIsLoadingList(false);
+      debouncedFetchDocumentsList.cancel();
+    }
+  }, [docListModalOpen]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         e.stopPropagation();
+        setDocListModalOpen(true);
         fetchDocumentsList(false);
       }
     };
@@ -635,7 +644,10 @@ export function PRDDocumentHeader() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8 cursor-pointer"
-                onClick={() => fetchDocumentsList(false)}
+                onClick={() => {
+                  setDocListModalOpen(true);
+                  fetchDocumentsList(false);
+                }}
                 title="List documents (Ctrl+F)"
               >
                 {isLoadingList ? (
@@ -857,8 +869,9 @@ export function PRDDocumentHeader() {
         open={docListModalOpen}
         onClose={() => setDocListModalOpen(false)}
         onSelect={(val) => {
-          fetchDocument(val.toString());
+          debouncedFetchDocumentsList.cancel();
           setDocListModalOpen(false);
+          fetchDocument(val.toString());
         }}
         data={documentsList}
         getSelectValue={(item) => item.DocNum || item.DocumentNumber}

@@ -57,9 +57,36 @@ export function AttachmentsTab({
         const att = attachments.find((a) => a.LineNum === selectedLineNum);
         if (!att) return;
 
+        if (att.File) {
+            const url = window.URL.createObjectURL(att.File);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.target = "_blank";
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 1000);
+            return;
+        }
+
         try {
             toast.loading("Fetching attachment...", { id: "attachment-fetch" });
-            const blob = await downloadAttachment(att.SourcePath);
+            let targetPath = att.SourcePath || "";
+            if (att.FileName) {
+                if (targetPath && !targetPath.toLowerCase().endsWith(att.FileName.toLowerCase())) {
+                    const separator = targetPath.includes("/") ? "/" : "\\";
+                    targetPath = targetPath.endsWith("/") || targetPath.endsWith("\\")
+                        ? `${targetPath}${att.FileName}`
+                        : `${targetPath}${separator}${att.FileName}`;
+                } else if (!targetPath) {
+                    targetPath = att.FileName;
+                }
+            }
+
+            const blob = await downloadAttachment(targetPath);
             toast.dismiss("attachment-fetch");
 
             if (blob) {
@@ -75,11 +102,12 @@ export function AttachmentsTab({
                 setTimeout(() => {
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(url);
-                }, 100);
+                }, 1000);
             } else {
                 toast.error("Failed to fetch attachment.");
             }
         } catch (err) {
+            toast.dismiss("attachment-fetch");
             toast.error("Error loading attachment.");
         }
     };

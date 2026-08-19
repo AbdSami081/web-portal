@@ -1,16 +1,12 @@
-"use client"
+"use client";
+
 import DocumentFooter from "@/components/sales/shared/DocumentFooter";
 import { DocumentHeader } from "@/components/sales/shared/DocumentHeader";
 import { DocumentItems } from "@/components/sales/shared/DocumentItems";
 import { SalesDocumentLayout } from "@/components/sales/shared/SalesDocumentLayout";
-
-import { useRouter } from "next/navigation";
-import {
-  QuotationFormData,
-  quotationSchema,
-} from "@/lib/schemas/quotationSchema";
+import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { postSalesReturn, patchSalesReturn } from "@/api+/sap/sales/salesService";
+import { postDelivery, patchDeliveryNote } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
@@ -18,9 +14,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 
-export default function ReturnPage() {
-  const router = useRouter();
-
+export default function ARDownPaymentInvoicePage() {
   const defaultValues: QuotationFormData = {
     CardCode: "",
     CardName: "",
@@ -40,7 +34,7 @@ export default function ReturnPage() {
   const handleSubmit = async (data: QuotationFormData) => {
     const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
 
-    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.SalesReturn) {
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.DownPaymentInvoice) {
       const patchPayload = buildSalesDocumentPatchPayload({
         data,
         lines,
@@ -50,13 +44,13 @@ export default function ReturnPage() {
       });
 
       try {
-        await patchSalesReturn(Number(DocEntry), patchPayload);
+        await patchDeliveryNote(Number(DocEntry), patchPayload);
         if (attachments.length > 0) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
-            "SalesReturn",
+            "DownPaymentInvoice",
             Number(DocEntry),
-            patchSalesReturn
+            patchDeliveryNote
           );
 
           if (attachmentResult.uploadedCount > 0) {
@@ -64,10 +58,10 @@ export default function ReturnPage() {
           }
         }
         const docNum = useSalesDocument.getState().DocNum;
-        toast.success(`Sales Return #${docNum || DocEntry} updated successfully`);
+        toast.success(`A/R Down Payment Invoice #${docNum || DocEntry} updated successfully`);
       } catch (error) {
         const message = getSapErrorMessage(error);
-        toast.error(message || "Failed to update Sales Return");
+        toast.error(message || "Failed to update A/R Down Payment Invoice");
         throw error;
       }
       return;
@@ -78,21 +72,21 @@ export default function ReturnPage() {
       lines,
       docEntry: DocEntry,
       lastLoadedDocType,
-      targetDocType: DocumentType.SalesReturn,
+      targetDocType: DocumentType.DownPaymentInvoice,
       discountPercent,
       freight,
       additionalExpenses,
     });
 
     try {
-      const response = await postSalesReturn(payload);
+      const response = await postDelivery(payload);
       if (response?.DocEntry || response?.IsDraft) {
         if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
-            "SalesReturn",
+            "DownPaymentInvoice",
             Number(response.DocEntry),
-            patchSalesReturn
+            patchDeliveryNote
           );
 
           if (attachmentResult.uploadedCount > 0) {
@@ -100,16 +94,16 @@ export default function ReturnPage() {
           }
         }
         if (response?.IsDraft) {
-          toast.success("Sales Return submitted for approval.");
+          toast.success("A/R Down Payment Invoice submitted for approval.");
         } else {
-          toast.success(`Sales Return #${response.DocNum} created successfully!`);
+          toast.success(`A/R Down Payment Invoice #${response.DocNum} created successfully!`);
         }
       } else {
-        throw new Error("Failed to create Sales Return");
+        throw new Error("Failed to create A/R Down Payment Invoice");
       }
     } catch (error: any) {
       const message = getSapErrorMessage(error);
-      toast.error(message || "Failed to create Sales Return. Please try again.");
+      toast.error(message || "Failed to create A/R Down Payment Invoice. Please try again.");
       throw error;
     }
   };
@@ -119,11 +113,11 @@ export default function ReturnPage() {
       schema={quotationSchema}
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      docType={DocumentType.SalesReturn}
+      docType={DocumentType.DownPaymentInvoice}
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.SalesReturn} />
+      <UDFLayout docType={DocumentType.DownPaymentInvoice} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );
