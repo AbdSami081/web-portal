@@ -347,85 +347,93 @@ export function InvDocumentHeader() {
   return (
     <div className="flex flex-col lg:flex-row gap-4">
       <div className="flex flex-col gap-2 w-full lg:w-1/2">
-        <div className="flex items-center gap-3">
-          <AppLabel className="w-28 shrink-0">Customer</AppLabel>
-          <div className="flex items-center gap-2">
+        {config.type !== DocumentType.GoodIssue && (
+          <div className="flex items-center gap-3">
+            <AppLabel className="w-28 shrink-0">Customer</AppLabel>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                value={customer?.CardCode || ""}
+                className="h-8 w-56 pr-10"
+                placeholder="Card Code"
+                readOnly
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer"
+                disabled={DocEntry > 0}
+                onClick={() => {
+                  setModalOpen(true);
+                }}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {config.type !== DocumentType.GoodIssue && (
+          <div className="flex items-center gap-3 w-full">
+            <AppLabel className="w-28 shrink-0">Name</AppLabel>
             <Input
               type="text"
-              value={customer?.CardCode || ""}
-              className="h-8 w-56 pr-10"
-              placeholder="Card Code"
+              value={customer?.CardName || ""}
+              className="h-8 w-56"
+              placeholder="Card Name"
               readOnly
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 cursor-pointer"
-              disabled={DocEntry > 0}
-              onClick={() => {
-                setModalOpen(true);
-              }}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
           </div>
-        </div>
+        )}
 
-        <div className="flex items-center gap-3 w-full">
-          <AppLabel className="w-28 shrink-0">Name</AppLabel>
-          <Input
-            type="text"
-            value={customer?.CardName || ""}
-            className="h-8 w-56"
-            placeholder="Card Name"
-            readOnly
-          />
-        </div>
-
-        <div className="flex items-center gap-3 w-full">
-          <AppLabel className="w-28 shrink-0">From Warehouse</AppLabel>
-          <div className="flex items-center gap-2">
-            <Input
-              type="text"
-              value={fromWarehouse}
-              className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
-              readOnly
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 cursor-pointer"
-              disabled={DocEntry > 0}
-              onClick={() => setFromWhsModalOpen(true)}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+        {config.type !== DocumentType.GoodIssue && (
+          <div className="flex items-center gap-3 w-full">
+            <AppLabel className="w-28 shrink-0">From Warehouse</AppLabel>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                value={fromWarehouse}
+                className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
+                readOnly
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer"
+                disabled={DocEntry > 0}
+                onClick={() => setFromWhsModalOpen(true)}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="flex items-center gap-3 w-full">
-          <AppLabel className="w-28 shrink-0">To Warehouse</AppLabel>
-          <div className="flex items-center gap-2">
-            <Input
-              type="text"
-              value={toWarehouse}
-              className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
-              readOnly
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 cursor-pointer"
-              disabled={DocEntry > 0}
-              onClick={() => setToWhsModalOpen(true)}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+        {config.type !== DocumentType.GoodIssue && (
+          <div className="flex items-center gap-3 w-full">
+            <AppLabel className="w-28 shrink-0">To Warehouse</AppLabel>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                value={toWarehouse}
+                className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
+                readOnly
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer"
+                disabled={DocEntry > 0}
+                onClick={() => setToWhsModalOpen(true)}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 w-full lg:w-1/2">

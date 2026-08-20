@@ -1,5 +1,6 @@
 import apiClient from "@/lib/apiClient";
 import { BasePurchaseDocument } from "@/types/purchase/purchaseDocuments.type";
+import { withDefaultBPLId } from "@/lib/sap/helpers/documentPayloadHelper";
 
 // Close functions
 export const closePurchaseQuotation = async (docEntry: number): Promise<any | null> => {
@@ -318,7 +319,7 @@ export const patchApCreditMemo = async (docEntry: number, payload: any): Promise
 };
 
 export const postGoodsReturn = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Purchase/PurchaseReturns`, data);
+  const res = await apiClient.post(`api/Purchase/PurchaseReturns`, withDefaultBPLId(data));
   return res.data;
 };
 

@@ -42,20 +42,8 @@ export const postInventoryTransfer = async (payload: any) => {
     return response.data;
 };
 
-export const postGoodIssue = async (payload: GoodIssuePayload) => {
-    const response = await apiClient.post("api/Inventory/GoodIssue", payload, {
-        headers: {
-            Prefer: "return-no-content",
-            "Content-Type": "application/json"
-        }
-    });
-
-    if (response.status === 204) {
-        return {
-            isDraft: true,
-        };
-    }
-
+export const postGoodIssue = async (payload: any) => {
+    const response = await apiClient.post("api/Inventory/GoodIssue", withDefaultBPLId(payload));
     return response.data;
 };
 

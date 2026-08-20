@@ -105,8 +105,10 @@ export default function InvTransferPage() {
 
         result = await postGoodIssue(payload);
 
-        if (result?.DocEntry) {
-          toast.success(`Good Issue created! #${result.DocNum} as Draft`);
+        if (result?.IsDraft) {
+          toast.success("Good Issue submitted for approval.");
+        } else if (result?.DocEntry) {
+          toast.success(`Good Issue created! #${result.DocNum || result.DocEntry}`);
         }
       }
 
@@ -124,9 +126,6 @@ export default function InvTransferPage() {
           if (attachmentResult.uploadedCount > 0) {
             toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
           }
-        }
-        if (result?.isDraft) {
-          toast.success("Document created as draft");
         }
         resetStore();
         router.push("/dashboard/inventory/Good_Issue");

@@ -14,10 +14,14 @@ import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
+import { useInvDocConfig } from "./InvDocumentLayout";
+import { DocumentType } from "@/types/master/DocumentType";
 
 export function InvDocumentItems() {
   const { watch } = useFormContext();
   const { lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment } = useInventoryDocument();
+  const config = useInvDocConfig();
+  const isGoodIssue = config.type === DocumentType.GoodIssue;
   const uoms = useUoMStore((state) => state.uoms);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
@@ -25,17 +29,28 @@ export function InvDocumentItems() {
   const docStatus = watch("DocStatus") || "bost_Open";
   const isClosed = docStatus === "bost_Close";
 
-  const columns = [
-    { key: "actions",      title: "Actions",      width: 80  },
-    { key: "ItemCode",     title: "Item",         width: 180 },
-    { key: "Dscription",   title: "Description",  width: 300 },
-    { key: "FromWhsCode",  title: "From Whs",     width: 180 },
-    { key: "WhsCode",      title: "To Whs",       width: 180 },
-    { key: "Quantity",     title: "Quantity",     width: 140 },
-    { key: "OnHand",       title: "Qty In Whs",   width: 120 },
-    { key: "UoMCode",      title: "UoM Code",          width: 140 },
-    { key: "UoMName",      title: "UoM Name",          width: 140 },
-  ];
+  const columns = isGoodIssue
+    ? [
+        { key: "actions",   title: "Actions",     width: 80  },
+        { key: "ItemCode",  title: "Item",        width: 180 },
+        { key: "Dscription",title: "Description", width: 300 },
+        { key: "WhsCode",   title: "Warehouse",   width: 180 },
+        { key: "Quantity",  title: "Quantity",    width: 140 },
+        { key: "OnHand",    title: "Qty In Whs",  width: 120 },
+        { key: "UoMCode",   title: "UoM Code",    width: 140 },
+        { key: "UoMName",   title: "UoM Name",    width: 140 },
+      ]
+    : [
+        { key: "actions",   title: "Actions",      width: 80  },
+        { key: "ItemCode",  title: "Item",         width: 180 },
+        { key: "Dscription",title: "Description",  width: 300 },
+        { key: "FromWhsCode",title: "From Whs",     width: 180 },
+        { key: "WhsCode",   title: "To Whs",       width: 180 },
+        { key: "Quantity",  title: "Quantity",     width: 140 },
+        { key: "OnHand",    title: "Qty In Whs",   width: 120 },
+        { key: "UoMCode",   title: "UoM Code",     width: 140 },
+        { key: "UoMName",   title: "UoM Name",     width: 140 },
+      ];
 
   const handleOnSelectItems = (items: Item[]) => {
     const firstWhs = warehouses.length > 0 ? warehouses[0].WhsCode : "";
@@ -56,19 +71,20 @@ export function InvDocumentItems() {
       // Resolve warehouse-specific OnHand from item's QtyInWhs array
       const qtyInWhs: any[] = item.QtyInWhs || [];
       const fromWhs = fromWarehouse || defaultWhsLine;
+      const whsCode = isGoodIssue ? (toWarehouse || defaultWhsLine) : (fromWarehouse || defaultWhsLine);
       const whRecord = qtyInWhs.find(
-        (w: any) => (w.WarehouseCode || w.warehouseCode) === fromWhs
+        (w: any) => (w.WarehouseCode || w.warehouseCode) === whsCode
       );
       const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
 
       addLine({
         ItemCode: item.ItemCode,
         Dscription: item.ItemName || item.ItemDescription || "",
-        FromWhsCode: fromWhs,
+        ...(isGoodIssue ? {} : { FromWhsCode: fromWhs }),
         FromBinLoc: "",
         ToBinLoc: "",
         FisrtBin: "",
-        WhsCode: toWarehouse || defaultWhsLine,
+        WhsCode: whsCode,
         Quantity: quantity,
         OnHand: initialOnHand,
         ItemCost: price,
@@ -142,7 +158,7 @@ export function InvDocumentItems() {
                   data={lines}
                   emptyMessage="No items added yet."
                   renderRow={(line, idx) => (
-                    <InvDocumentLineRow index={idx} line={line} />
+                    <InvDocumentLineRow index={idx} line={line} isGoodIssue={isGoodIssue} />
                   )}
                 />
               </div>

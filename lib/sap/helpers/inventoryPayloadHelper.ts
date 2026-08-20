@@ -135,6 +135,38 @@ interface BuildGoodIssuePayloadOptions {
   lines: InventoryDocumentLine[];
 }
 
+function buildGoodIssueLines(
+  lines: InventoryDocumentLine[],
+  isPatch: boolean = false
+): InventoryTransferLine[] {
+  return getValidLines(lines).map((line) => {
+    const baseFields: Record<string, any> = {
+      ItemCode: line.ItemCode,
+      Quantity: Number(line.Quantity) || 0,
+      // Good Issue uses a single line-level warehouse only (no From/To).
+      WarehouseCode: line.WhsCode || "",
+    };
+
+    if (line.ItemCost !== undefined && Number(line.ItemCost) > 0) {
+      baseFields.UnitPrice = Number(line.ItemCost);
+    }
+
+    if (line.UoMCode && String(line.UoMCode).trim() !== "") {
+      baseFields.UoMCode = line.UoMCode;
+    }
+
+    if (isPatch) {
+      if (line.LineNum !== undefined && line.LineNum !== null && Number(line.LineNum) >= 0) {
+        baseFields.LineNum = Number(line.LineNum);
+      }
+    } else {
+      attachBaseFields(baseFields, line);
+    }
+
+    return baseFields as InventoryTransferLine;
+  });
+}
+
 export function buildGoodIssuePayload({
   data,
   lines,
@@ -142,7 +174,7 @@ export function buildGoodIssuePayload({
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    DocumentLines: buildDocumentLines(lines, undefined, undefined, false),
+    DocumentLines: buildGoodIssueLines(lines, false),
   };
 }
 
@@ -153,6 +185,6 @@ export function buildGoodIssuePatchPayload({
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    DocumentLines: buildDocumentLines(lines, undefined, undefined, true),
+    DocumentLines: buildGoodIssueLines(lines, true),
   };
 }

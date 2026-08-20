@@ -15,9 +15,10 @@ import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 interface Props {
   index: number;
   line: InventoryDocumentLine;
+  isGoodIssue?: boolean;
 }
 
-export function InvDocumentLineRow({ index, line }: Props) {
+export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) {
   const { watch } = useFormContext();
   const { updateLine, removeLine } = useInventoryDocument();
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
@@ -106,29 +107,31 @@ export function InvDocumentLineRow({ index, line }: Props) {
       </td>
 
       {/* From Warehouse */}
-      <td className="py-2 px-4">
-        <div className="flex items-center gap-1 w-full">
-          <Input
-            className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
-            value={draftLine.FromWhsCode || ""}
-            disabled
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={() => {
-              setWhsMode("from");
-              setIsWhsModalOpen(true);
-            }}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-        </div>
-      </td>
+      {!isGoodIssue && (
+        <td className="py-2 px-4">
+          <div className="flex items-center gap-1 w-full">
+            <Input
+              className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
+              value={draftLine.FromWhsCode || ""}
+              disabled
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={() => {
+                setWhsMode("from");
+                setIsWhsModalOpen(true);
+              }}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </td>
+      )}
 
-      {/* To Warehouse */}
+      {/* Warehouse (To Warehouse for transfers; single warehouse for Good Issue) */}
       <td className="py-2 px-4">
         <div className="flex items-center gap-1 w-full">
           <Input
