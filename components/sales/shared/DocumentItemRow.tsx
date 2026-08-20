@@ -32,6 +32,25 @@ export function DocumentLineRow({ index, line }: Props) {
   const { watch } = useFormContext();
   const config = useSalesDocConfig();
 
+  const isFinancialDoc = [
+    DocumentType.ARInvoice,
+    DocumentType.CreditMemo,
+    DocumentType.ARCreditMemo,
+    DocumentType.Delivery,
+    DocumentType.Return,
+    DocumentType.SalesReturn,
+    DocumentType.ReturnRequest,
+    DocumentType.SalesReturnRequest,
+    DocumentType.DownPaymentInvoice,
+    DocumentType.ARDownPaymentInvoice,
+    DocumentType.DownPaymentRequest,
+    DocumentType.ARDownPaymentRequest,
+  ].includes(config.type);
+
+  const docEntry = watch("DocEntry");
+  const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
+  const isLineUpdateBlocked = isFinancialDoc && isEditMode;
+
   const isFieldEnabled = (fieldName: string) => {
     return getFieldSettings(config.type, "linesFieds", fieldName).enable !== false;
   };
@@ -41,9 +60,10 @@ export function DocumentLineRow({ index, line }: Props) {
   };
 
   // A line that is closed (line-level status bost_Close / IsClosed = tYES)
-  // must stay locked: no remove, no field edits.
+  // or on a financial document in update mode must stay locked: no remove, no field edits.
   const isLineClosed = line.IsClosed === "tYES" || line.LineStatus === "bost_Close";
-  const isCellEditable = (fieldName: string) => isFieldEnabled(fieldName) && !isLineClosed;
+  const isLineDisabled = isLineClosed || isLineUpdateBlocked;
+  const isCellEditable = (fieldName: string) => isFieldEnabled(fieldName) && !isLineDisabled;
   const { updateLine, removeLine, lines } = useSalesDocument();
   const { freightsWithCharges, freightTypes } = useMasterDataStore();
 
@@ -180,10 +200,10 @@ export function DocumentLineRow({ index, line }: Props) {
           variant="ghost"
           className="h-6 w-6 p-0 hover:bg-red-100/10"
           onClick={() => removeLine(line.ItemCode)}
-          disabled={isLineClosed}
-          title={isLineClosed ? "Line is closed" : "Remove line"}
+          disabled={isLineDisabled}
+          title={isLineUpdateBlocked ? "Lines cannot be removed on financial documents in update mode" : isLineClosed ? "Line is closed" : "Remove line"}
         >
-          <Trash className={`h-4 w-4 ${isLineClosed ? "text-gray-400" : "text-red-500"}`} />
+          <Trash className={`h-4 w-4 ${isLineDisabled ? "text-gray-400" : "text-red-500"}`} />
         </Button>
       </td>
 

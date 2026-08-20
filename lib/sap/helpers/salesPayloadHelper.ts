@@ -91,6 +91,13 @@ export function buildSalesDocumentPayload({
         baseFields.DocumentLineAdditionalExpenses = lineExpenses;
       }
 
+      if (line.SerialNumbers && line.SerialNumbers.length > 0) {
+        baseFields.SerialNumbers = line.SerialNumbers;
+      }
+      if (line.BatchNumbers && line.BatchNumbers.length > 0) {
+        baseFields.BatchNumbers = line.BatchNumbers;
+      }
+
       return baseFields;
     }),
     ...(additionalExpenses.length > 0 && {
@@ -142,6 +149,13 @@ export function buildSalesDocumentPatchPayload({
       const lineExpenses = mapLineExpenses(line);
       if (lineExpenses.length > 0) {
         baseFields.DocumentLineAdditionalExpenses = lineExpenses;
+      }
+
+      if (line.SerialNumbers && line.SerialNumbers.length > 0) {
+        baseFields.SerialNumbers = line.SerialNumbers;
+      }
+      if (line.BatchNumbers && line.BatchNumbers.length > 0) {
+        baseFields.BatchNumbers = line.BatchNumbers;
       }
 
       return baseFields;

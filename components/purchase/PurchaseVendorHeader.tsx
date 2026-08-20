@@ -36,6 +36,8 @@ import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/authContext";
+import { getAdminSettings } from "@/api+/sap/administration/administrationService";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -94,6 +96,11 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     setValue,
   } = useFormContext();
   const { requester, setRequester, loadFromDocument, setDocDate, setDocDueDate, setTaxDate } = usePurchaseDocument();
+  const { user } = useAuth();
+
+  const config = usePurchaseDocConfig();
+  const isPurchaseRequest = (config.type as number) === DocumentType.PurchaseRequests;
+  const [notifyRqr, setNotifyRqr] = useState<string>("N");
 
   const docEntry = watch("DocEntry");
   const watchedStatus = watch("DocStatus") || "bost_Open";
@@ -113,9 +120,28 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const [listSearch, setListSearch] = useState("");
   const PAGE_SIZE = 20;
 
-  const config = usePurchaseDocConfig();
-
   const searchRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    if (isPurchaseRequest) {
+      getAdminSettings().then((settings) => {
+        if (settings?.notifyRqr || settings?.NotifyRequester) {
+          setNotifyRqr(settings.notifyRqr || settings.NotifyRequester);
+        }
+      });
+    }
+  }, [isPurchaseRequest]);
+
+  useEffect(() => {
+    if (isPurchaseRequest && user) {
+      if (!watch("Requester")) {
+        setValue("Requester", user.userName || user.empId || "");
+      }
+      if (!watch("RequesterName")) {
+        setValue("RequesterName", user.fullName || user.userName || "");
+      }
+    }
+  }, [isPurchaseRequest, user, setValue, watch]);
 
   const fetchDocumentsList = useCallback(
     async (isLoadMore = false, searchText?: string) => {
@@ -163,7 +189,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         }
       }
     },
-    [config.type, skip, PAGE_SIZE],
+    [config.type, skip, PAGE_SIZE, pathname],
   );
 
   const debouncedFetchDocumentsList = useDebouncedCallback((val: string) => {
@@ -177,11 +203,11 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   }, [docNum]);
 
   useEffect(() => {
-    if (requester) {
+    if (requester && !isPurchaseRequest) {
       setValue("CardCode", requester.CardCode);
       setValue("CardName", requester.CardName);
     }
-  }, [requester, setValue]);
+  }, [requester, setValue, isPurchaseRequest]);
 
   const fetchDocument = async (docNum: string) => {
     let documentData;
@@ -195,9 +221,6 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     setIsLoading(true);
 
     try {
-      // APDownPaymentRequest and PurchaseRequests share the same SAP object code
-      // (1470000113), so disambiguate those by route path first, then dispatch the
-      // rest by object code.
       const currentPath = pathname.toLowerCase();
 
       if (currentPath.includes("apdownpaymentrequest")) {
@@ -207,75 +230,68 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
       } else if (currentPath.includes("purchase/request")) {
         documentData = await getPurchaseRequestDocument(docNumInt);
       } else {
-        const documentFetchers: Record<number, (docNum: number) => Promise<any>> = {
-          [DocumentType.PurchaseQuotation]: getPurchaseQuotationDocument,
-          [DocumentType.PurchaseOrder]: getPurchaseOrderDocument,
-          [DocumentType.GoodsReceiptPO]: getPurchaseDeliveryDocument,
-          [DocumentType.APInvoice]: getAPInvoiceDocument,
-          [DocumentType.APCreditMemo]: getAPCreditMemoDocument,
-          [DocumentType.GoodsReturn]: getGoodsReturnDocument,
-          [DocumentType.GoodsReturnRequest]: getGoodsReturnRequestDocument,
-          [DocumentType.APDownPaymentInvoice]: getAPDownPaymentInvoiceDocument,
-        };
-
-        const fetcher = documentFetchers[config.type as number];
-        if (fetcher) {
-          documentData = await fetcher(docNumInt);
+        switch (config.type) {
+          case DocumentType.PurchaseOrder:
+            documentData = await getPurchaseOrderDocument(docNumInt);
+            break;
+          case DocumentType.GoodsReceiptPO:
+            documentData = await getPurchaseDeliveryDocument(docNumInt);
+            break;
+          case DocumentType.PurchaseQuotation:
+            documentData = await getPurchaseQuotationDocument(docNumInt);
+            break;
+          case DocumentType.APInvoice: // covers APReserveInvoice too (same value=18)
+            documentData = await getAPInvoiceDocument(docNumInt);
+            break;
+          case DocumentType.APCreditMemo:
+            documentData = await getAPCreditMemoDocument(docNumInt);
+            break;
+          case DocumentType.GoodsReturn:
+            documentData = await getGoodsReturnDocument(docNumInt);
+            break;
+          case DocumentType.GoodsReturnRequest:
+            documentData = await getGoodsReturnRequestDocument(docNumInt);
+            break;
+          default:
+            toast.error("Document type not supported.");
+            return;
         }
       }
 
-      if (!documentData?.DocEntry) {
-        toast.info(`Document number ${docNumInt} not found.`);
-      } else {
+      if (documentData) {
         loadFromDocument(documentData, config.type);
-        setValue("DocDate", documentData.DocDate?.split("T")[0]);
-        setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
-        setValue("CardCode", documentData.CardCode);
-        setValue("CardName", documentData.CardName);
-        setValue("DocStatus", documentData.DocumentStatus);
-        setValue("Address2", documentData.Address2);
-        setValue("Address", documentData.Address);
-        setValue("DocEntry", documentData.DocEntry);
+        setValue("DocDate", (documentData.DocDate || "").split("T")[0]);
+        setValue("DocDueDate", (documentData.DocDueDate || "").split("T")[0]);
+        setValue("TaxDate", (documentData.TaxDate || "").split("T")[0]);
+        setValue("Comments", documentData.Comments || "");
+        setValue("DocStatus", documentData.DocumentStatus || documentData.DocStatus || "bost_Open");
         setValue("DocNum", documentData.DocNum);
-        setValue("Comments", documentData.Comments);
-        toast.success(`Document ${documentData.DocNum} loaded successfully.`);
-      }
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        toast.info("Document not found.");
+        setValue("DocEntry", documentData.DocEntry);
+
+        if (isPurchaseRequest) {
+          setValue("Requester", documentData.Requester || user?.userName || "");
+          setValue("RequesterName", documentData.RequesterName || user?.fullName || "");
+          setValue("RequesterEmail", documentData.RequesterEmail || "");
+          setValue("SendNotification", documentData.SendNotification || "tNO");
+        } else {
+          setValue("CardCode", documentData.CardCode || "");
+          setValue("CardName", documentData.CardName || "");
+        }
+
+        toast.success(`Document #${docNumInt} loaded successfully.`);
       } else {
-        toast.error(
-          error.message || "An error occurred while fetching the document.",
-        );
+        toast.error("Document not found.");
       }
+    } catch (error) {
+      toast.error("Error fetching document.");
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const getDateLabel = (type: number) => {
-    switch (type) {
-      case DocumentType.PurchaseRequests:
-        return "Required Date";
-      case DocumentType.PurchaseQuotation:
-        return "Valid Until";
-      case DocumentType.PurchaseOrder:
-        return "Delivery Date";
-      case DocumentType.APInvoice:
-        return "Due Date";
-      case DocumentType.GoodsReceiptPO:
-        return "Delivery Date";
-      case DocumentType.GoodsReturn:
-        return "Return Date";
-      case DocumentType.GoodsReturnRequest:
-        return "Return Date";
-      case DocumentType.APDownPaymentRequest:
-        return "Due Date";
-      case DocumentType.APDownPaymentInvoice:
-        return "Due Date";
-      default:
-        return "Date";
-    }
+    return dateLabel2[type] || "Required Date";
   };
 
   const handleSelectBP = (bp: BusinessPartner) => {
@@ -310,27 +326,45 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <AppLabel className="w-28 shrink-0">Vendor</AppLabel>
-          <div className="flex items-center">
-            <Input
-              id="card-code-field"
-              type="text"
-              {...register("CardCode")}
-              className="h-8 w-48 pr-10"
-              placeholder="Card Code"
-              disabled
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="ml-2 h-8 w-8 cursor-pointer"
-              onClick={() => setModalOpen(true)}
-              disabled={isHeaderDisabled}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-          </div>
+          {isPurchaseRequest ? (
+            <>
+              <AppLabel className="w-28 shrink-0">Requester</AppLabel>
+              <div className="flex items-center">
+                <Input
+                  id="requester-field"
+                  type="text"
+                  {...register("Requester")}
+                  className="h-8 w-48"
+                  placeholder="Requester"
+                  disabled
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <AppLabel className="w-28 shrink-0">Vendor</AppLabel>
+              <div className="flex items-center">
+                <Input
+                  id="card-code-field"
+                  type="text"
+                  {...register("CardCode")}
+                  className="h-8 w-48 pr-10"
+                  placeholder="Card Code"
+                  disabled
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="ml-2 h-8 w-8 cursor-pointer"
+                  onClick={() => setModalOpen(true)}
+                  disabled={isHeaderDisabled}
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -385,15 +419,52 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
       <div className="flex flex-col lg:flex-row justify-between gap-4">
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
           <div className="flex items-center w-full gap-3">
-            <AppLabel className="w-28 shrink-0">Name</AppLabel>
+            <AppLabel className="w-28 shrink-0">
+              {isPurchaseRequest ? "Requester Full Name" : "Name"}
+            </AppLabel>
             <Input
               type="text"
-              {...register("CardName")}
+              {...register(isPurchaseRequest ? "RequesterName" : "CardName")}
               className="h-8 w-48"
-              placeholder="Card Name"
+              placeholder={isPurchaseRequest ? "Requester Full Name" : "Card Name"}
               disabled
             />
           </div>
+
+          {isPurchaseRequest && (
+            <>
+              <div className="flex items-center w-full gap-3 pt-1">
+                <div className="flex items-center h-8">
+                  <input
+                    type="checkbox"
+                    id="send-notification-checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    checked={watch("SendNotification") === "tYES"}
+                    disabled={isHeaderDisabled}
+                    onChange={(e) =>
+                      setValue("SendNotification", e.target.checked ? "tYES" : "tNO", {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  />
+                  <label htmlFor="send-notification-checkbox" className="ml-2 text-xs text-slate-600 cursor-pointer select-none">
+                    Send E-Mail if PO or GRPO is Added
+                  </label>
+                </div>
+              </div>
+              <div className="flex items-center w-full gap-3">
+                <AppLabel className="w-28 shrink-0">E-mail Address</AppLabel>
+                <Input
+                  type="email"
+                  {...register("RequesterEmail")}
+                  className="h-8 w-48"
+                  placeholder=""
+                  disabled={isHeaderDisabled || watch("SendNotification") !== "tYES"}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
@@ -447,15 +518,14 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
             }} />
           </div>
         </div>
-        <BusinessPartnerSelectorDialog
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          onSelect={(bp) => {
-            handleSelectBP(bp);
-            setModalOpen(false);
-          }}
-          cardType="S"
-        />
+        {!isPurchaseRequest && (
+          <BusinessPartnerSelectorDialog
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onSelect={handleSelectBP}
+            cardType="cSupplier"
+          />
+        )}
         <GenericModal
           title={`Select ${getResourceName(config.type, pathname).replace(/([A-Z])/g, ' $1').trim()}`}
           open={docListModalOpen}

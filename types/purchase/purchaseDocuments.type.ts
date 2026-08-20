@@ -16,7 +16,8 @@ export interface BasePurchaseDocument {
   DocEntry?: number;
   DocNum?: number;
   DocType?: string; 
-  DocumentStatus: "bost_Open" | "bost_Close" | "bost_Cancel";
+  DocumentStatus?: "bost_Open" | "bost_Close" | "bost_Cancel";
+  DocStatus?: "bost_Open" | "bost_Close" | "bost_Cancel";
   DocObjectCode?: string;
   DocDate: string; 
   DocDueDate: string; 
@@ -29,6 +30,8 @@ export interface BasePurchaseDocument {
   Address?: string;
   Requester?: string;
   RequesterName?: string;
+  RequesterEmail?: string;
+  SendNotification?: string;
   Branch?: string;
   Department?: string;
   RequiredDate?: string;

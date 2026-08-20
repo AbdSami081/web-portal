@@ -315,13 +315,30 @@ export function DocumentItems() {
     return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
+  const isFinancialDoc = [
+    DocumentType.ARInvoice,
+    DocumentType.CreditMemo,
+    DocumentType.ARCreditMemo,
+    DocumentType.Delivery,
+    DocumentType.Return,
+    DocumentType.SalesReturn,
+    DocumentType.ReturnRequest,
+    DocumentType.SalesReturnRequest,
+    DocumentType.DownPaymentInvoice,
+    DocumentType.ARDownPaymentInvoice,
+    DocumentType.DownPaymentRequest,
+    DocumentType.ARDownPaymentRequest,
+  ].includes(config.type);
+
+  const docEntry = watch("DocEntry");
+  const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
+  const isLineUpdateBlocked = isFinancialDoc && isEditMode;
+
   return (
     <div className="grid w-full relative pt-2 overflow-visible">
       <Tabs
         value={activeTab}
-        onValueChange={
-          setActiveTab
-        }
+        onValueChange={setActiveTab}
         className="w-full pt-1 overflow-x-auto"
       >
         <TabsList className="grid w-[240px] grid-cols-2 mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800">
@@ -337,6 +354,12 @@ export function DocumentItems() {
             className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400"
           >
             Attachments
+            {attachments.length >
+              0 && (
+              <span className="ml-1.5 px-1.5 py-0.2 text-[10px] bg-blue-500 text-white rounded-full font-bold">
+                {attachments.length}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -345,56 +368,58 @@ export function DocumentItems() {
           className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto"
         >
           <div className="relative overflow-visible">
-            <div className="absolute -top-6 left-2 z-50">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      onClick={() => {
-                        if (
-                          !selectedCardCode
-                        ) {
-                          const field =
-                            document.getElementById(
-                              "card-code-field"
-                            );
+            {!isLineUpdateBlocked && !isTableDisabled && (
+              <div className="absolute -top-6 left-2 z-50">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={() => {
+                          if (
+                            !selectedCardCode
+                          ) {
+                            const field =
+                              document.getElementById(
+                                "card-code-field"
+                              );
 
-                          if (field) {
-                            field.classList.add(
-                              "animate-glow-red-blink"
-                            );
-
-                            setTimeout(() => {
-                              field.classList.remove(
+                            if (field) {
+                              field.classList.add(
                                 "animate-glow-red-blink"
                               );
-                            }, 3000);
+
+                              setTimeout(() => {
+                                field.classList.remove(
+                                  "animate-glow-red-blink"
+                                );
+                              }, 3000);
+                            }
+
+                            return;
                           }
 
-                          return;
-                        }
+                          setDialogOpen(
+                            true
+                          );
+                        }}
+                        className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
+                      >
+                        <Plus className="h-5 w-5 stroke-[2.5px]" />
+                      </Button>
+                    </TooltipTrigger>
 
-                        setDialogOpen(
-                          true
-                        );
-                      }}
-                      className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
+                    <TooltipContent
+                      side="right"
+                      className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
                     >
-                      <Plus className="h-5 w-5 stroke-[2.5px]" />
-                    </Button>
-                  </TooltipTrigger>
-
-                  <TooltipContent
-                    side="right"
-                    className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
-                  >
-                    Add Item
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+                      Add Item
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
 
             <div className="relative border rounded overflow-x-auto">
               <div

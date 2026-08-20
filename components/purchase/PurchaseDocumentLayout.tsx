@@ -20,8 +20,11 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { FilePlus2, Loader2, Keyboard } from "lucide-react";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { resolveDocNavParams } from "@/lib/docNavParams";
+import { patchDraftDocument } from "@/api+/sap/draft/draftService";
+import { buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 
 import {
   Tooltip,
@@ -101,6 +104,12 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   title,
 }: PurchaseDocumentLayoutProps<T>) {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const docNav = React.useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const isApprovedDraft = docNav.approvalStatus === "arsApproved";
+  const isPendingApproval = (docNav.approvalStatus === "arsPending" || !!docNav.approvalRequestCode) && !!docNav.draftEntry;
+
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
@@ -313,7 +322,33 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             const state = usePurchaseDocument.getState();
             const currentUserId = user?.sapUserId;
 
-            if (currentUserId && !isEditMode) {
+            // If this document is an existing pending approval draft, update the draft instead of creating a new approval request
+            if (isPendingApproval && docNav.draftEntry) {
+              try {
+                const patchPayload = buildPurchaseDocumentPatchPayload({
+                  data: data as any,
+                  lines: state.lines,
+                  discountPercent: state.discountPercent,
+                  freight: state.freight,
+                  rounding: state.rounding,
+                  additionalExpenses: state.additionalExpenses,
+                  includeLines: [
+                    DocumentType.PurchaseRequests,
+                    DocumentType.PurchaseQuotation,
+                    DocumentType.PurchaseOrder,
+                  ].includes(docType),
+                });
+                await patchDraftDocument(Number(docNav.draftEntry), patchPayload);
+                toast.success("Approval request modified successfully.");
+                ResetForm();
+                return;
+              } catch (err: any) {
+                toast.error(err?.response?.data?.Message || "Failed to update approval draft");
+                return;
+              }
+            }
+
+            if (currentUserId && !isEditMode && !isApprovedDraft) {
               setIsCheckingApproval(true);
               try {
                 const docTypeStr = getApprovalDocumentType(docType);
@@ -332,14 +367,24 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               }
             }
 
-            const needsStockManagement = (docType === DocumentType.GoodsReceiptPO || docType === DocumentType.APInvoice) && 
+            const isSerialBatchPurchaseDoc = [
+              DocumentType.GoodsReceiptPO,
+              DocumentType.APInvoice,
+              DocumentType.APCreditMemo,
+            ].includes(docType);
+
+            const needsSerialManagement = isSerialBatchPurchaseDoc && 
               state.lines.some(l => {
                 const isSerial = l.ManSerNum === 'Y' || l.ManSerNum === 'tYES';
-                const isBatch = l.ManBtchNum === 'Y' || l.ManBtchNum === 'tYES';
-                
                 if (isSerial) {
                   return !l.SerialNumbers || l.SerialNumbers.length < l.Quantity;
                 }
+                return false;
+              });
+
+            const needsBatchManagement = isSerialBatchPurchaseDoc && 
+              state.lines.some(l => {
+                const isBatch = String(l.ManBtchNum).toLowerCase() === 'y' || String(l.ManBtchNum).toLowerCase() === 'tyes';
                 if (isBatch) {
                   const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
                   return totalBatch < l.Quantity;
@@ -347,9 +392,15 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 return false;
               });
 
-            if (needsStockManagement) {
+            if (needsSerialManagement) {
               setPendingData(data as unknown as T);
               setSerialModalOpen(true);
+              return;
+            }
+
+            if (needsBatchManagement) {
+              setPendingData(data as unknown as T);
+              setBatchModalOpen(true);
               return;
             }
 
@@ -487,17 +538,41 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
           <SerialNumberSelectionDialog
             open={serialModalOpen}
-            onClose={() => setSerialModalOpen(false)}
+            onClose={() => {
+              setSerialModalOpen(false);
+              setPendingData(null);
+            }}
             onConfirm={async (selections) => {
-              if (pendingData) {
-                const state = usePurchaseDocument.getState();
-                
-                if (selections.serials) {
-                  Object.entries(selections.serials).forEach(([itemCode, serials]) => {
-                    state.setLineSerials(itemCode, serials);
-                  });
+              const state = usePurchaseDocument.getState();
+              
+              if (selections.serials) {
+                Object.entries(selections.serials).forEach(([itemCode, serials]) => {
+                  state.setLineSerials(itemCode, serials);
+                });
+              }
+
+              const updatedLines = usePurchaseDocument.getState().lines;
+              const stillNeedsBatch = updatedLines.some((l) => {
+                const isBatch = String(l.ManBtchNum).toLowerCase() === "y" || String(l.ManBtchNum).toLowerCase() === "tyes";
+                if (isBatch) {
+                  const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
+                  return totalBatch < l.Quantity;
                 }
+                return false;
+              });
+
+              setSerialModalOpen(false);
+              if (stillNeedsBatch) {
+                setBatchModalOpen(true);
+              } else if (pendingData) {
+                const dataToSubmit = { ...pendingData, DocumentLines: updatedLines } as unknown as T;
                 setPendingData(null);
+                try {
+                  await onSubmit(dataToSubmit);
+                  ResetForm();
+                } catch (e) {
+                  console.error("Submit error after serial selection:", e);
+                }
               }
             }}
             lines={usePurchaseDocument.getState().lines}
@@ -505,18 +580,30 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
           <BatchNumberSelectionDialog
             open={batchModalOpen}
-            onClose={() => setBatchModalOpen(false)}
+            onClose={() => {
+              setBatchModalOpen(false);
+              setPendingData(null);
+            }}
             onConfirm={async (selections) => {
+              const state = usePurchaseDocument.getState();
+              
+              if (selections.batches) {
+                Object.entries(selections.batches).forEach(([itemCode, batches]) => {
+                  state.setLineBatches(itemCode, batches);
+                });
+              }
+
+              const updatedLines = usePurchaseDocument.getState().lines;
+              setBatchModalOpen(false);
               if (pendingData) {
-                const state = usePurchaseDocument.getState();
-                
-                if (selections.batches) {
-                  Object.entries(selections.batches).forEach(([itemCode, batches]) => {
-                    state.setLineBatches(itemCode, batches);
-                  });
-                }
-                
+                const dataToSubmit = { ...pendingData, DocumentLines: updatedLines } as unknown as T;
                 setPendingData(null);
+                try {
+                  await onSubmit(dataToSubmit);
+                  ResetForm();
+                } catch (e) {
+                  console.error("Submit error after batch selection:", e);
+                }
               }
             }}
             lines={usePurchaseDocument.getState().lines}

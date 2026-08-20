@@ -67,6 +67,28 @@ export default function MessagesOverviewPage() {
   const [isApproving, setIsApproving] = useState(false);
   const router = useRouter();
 
+  const sortedMessages = useMemo(() => {
+    return [...messages].sort((a, b) => {
+      const timeA = a.ApprovalCreationDate ? new Date(a.ApprovalCreationDate).getTime() : 0;
+      const timeB = b.ApprovalCreationDate ? new Date(b.ApprovalCreationDate).getTime() : 0;
+      if (timeB !== timeA) return timeB - timeA;
+      const codeA = Number(a.MessageCode || a.ApprovalRequestCode || 0);
+      const codeB = Number(b.MessageCode || b.ApprovalRequestCode || 0);
+      return codeB - codeA;
+    });
+  }, [messages]);
+
+  const sortedPendingApprovals = useMemo(() => {
+    return [...pendingApprovals].sort((a, b) => {
+      const timeA = a.ApprovalCreationDate ? new Date(a.ApprovalCreationDate).getTime() : 0;
+      const timeB = b.ApprovalCreationDate ? new Date(b.ApprovalCreationDate).getTime() : 0;
+      if (timeB !== timeA) return timeB - timeA;
+      const codeA = Number(a.ApprovalRequestCode || 0);
+      const codeB = Number(b.ApprovalRequestCode || 0);
+      return codeB - codeA;
+    });
+  }, [pendingApprovals]);
+
   useEffect(() => {
     setMessages(contextMessages);
     setHasMore(contextMessages.length === PAGE_SIZE);
@@ -78,10 +100,10 @@ export default function MessagesOverviewPage() {
   }, [clearUnread]);
 
   useEffect(() => {
-    if (messages.length > 0 && !selectedMessage) {
-      setSelectedMessage(messages[0]);
+    if (sortedMessages.length > 0 && !selectedMessage) {
+      setSelectedMessage(sortedMessages[0]);
     }
-  }, [messages, selectedMessage]);
+  }, [sortedMessages, selectedMessage]);
 
   const fetchPendingApprovals = async () => {
     setIsLoadingApprovals(true);
@@ -311,17 +333,27 @@ export default function MessagesOverviewPage() {
         <Card className="lg:col-span-7 flex flex-col min-h-0 bg-white border-slate-200 shadow-sm rounded-xl overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <div className="px-4 pt-4 border-b border-slate-100 flex items-center justify-between">
-              <TabsList className="bg-slate-100/80 p-0.5 gap-1 rounded-lg h-9">
-                <TabsTrigger value="inbox" className="text-xs font-semibold rounded-md h-8 px-4 data-[state=active]:bg-white data-[state=active]:text-slate-950">
+              <TabsList className="bg-neutral-900 p-1 gap-1 rounded-lg h-9 border border-neutral-800">
+                <TabsTrigger
+                  value="inbox"
+                  className="rounded-md font-bold text-[10px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
+                >
                   Inbox
                   {messages.length > 0 && (
-                    <span className="ml-1.5 text-[9px] bg-slate-200 text-slate-600 rounded-full px-1.5 py-0.5 font-bold">{messages.length}</span>
+                    <span className="ml-1.5 text-[9px] bg-neutral-800 text-neutral-200 rounded-full px-1.5 py-0.5 font-bold">
+                      {messages.length}
+                    </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="approvals" className="text-xs font-semibold rounded-md h-8 px-4 data-[state=active]:bg-white data-[state=active]:text-slate-950">
+                <TabsTrigger
+                  value="approvals"
+                  className="rounded-md font-bold text-[10px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
+                >
                   Pending Approvals
                   {pendingApprovals.length > 0 && (
-                    <span className="ml-1.5 text-[9px] bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5 font-bold">{pendingApprovals.length}</span>
+                    <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full px-1.5 py-0.5 font-bold">
+                      {pendingApprovals.length}
+                    </span>
                   )}
                 </TabsTrigger>
               </TabsList>
@@ -342,48 +374,69 @@ export default function MessagesOverviewPage() {
                 </div>
               ) : (
                 <>
-                  <ScrollArea className="flex-1">
-                    <Table>
+                  <ScrollArea className="flex-1 w-full">
+                    <div className="overflow-x-auto">
+                    <Table className="w-full table-fixed">
                       <TableHeader className="bg-slate-50/70 border-b border-slate-100">
                         <TableRow className="hover:bg-transparent">
-                          <TableHead className="w-[45px] text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">!</TableHead>
-                          <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Subject</TableHead>
-                          <TableHead className="w-[110px] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Status</TableHead>
-                          <TableHead className="w-[110px] text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Date</TableHead>
+                          <TableHead className="w-[36px] text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">!</TableHead>
+                          <TableHead className="w-[45%] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Subject</TableHead>
+                          <TableHead className="w-[22%] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Document</TableHead>
+                          <TableHead className="w-[18%] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Status</TableHead>
+                          <TableHead className="w-[15%] text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3 pr-4">Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {messages.map((msg) => {
+                        {sortedMessages.map((msg) => {
                           const isSelected = selectedMessage?.MessageCode === msg.MessageCode;
                           const hasLinkedDoc = !!(msg.ObjectEntry?.toString().trim() || msg.DraftEntry?.toString().trim());
+                          const isDraft = !!(msg.DraftEntry?.toString().trim() || !msg.ObjectEntry?.toString().trim());
+                          let code = msg.ObjectType;
+                          if (!code || String(code) === "112") {
+                            code = msg.DraftType;
+                          }
+                          if (!code || String(code) === "112") {
+                            code = msg.ObjectType;
+                          }
+                          const menuInfo = code ? getMenuInfoByObjectCode(code) : undefined;
+                          const docName = menuInfo?.title || (String(code) === "112" ? "Document" : `Document (${code || '112'})`);
                           return (
                             <TableRow
                               key={msg.MessageCode}
                               onClick={() => setSelectedMessage(msg)}
                               className={`cursor-pointer transition-colors border-b border-slate-100 hover:bg-slate-50/50 ${isSelected ? "bg-slate-50 font-medium" : ""}`}
                             >
-                              <TableCell className="text-center py-3.5">
+                              <TableCell className="text-center py-3.5 pl-2 align-top">
                                 <div className="flex justify-center">
                                   {getPriorityIcon(msg.Priority)}
                                 </div>
                               </TableCell>
-                              <TableCell className="py-3.5">
-                                <div className="flex flex-col gap-1 pr-4">
-                                  <span className={`text-sm text-slate-900 leading-snug truncate max-w-sm ${isSelected ? "font-semibold" : "font-normal"}`}>
-                                    {msg.Subject}
-                                  </span>
-                                  {hasLinkedDoc && (
-                                    <span className="text-[10px] font-bold text-orange-600 flex items-center gap-1">
-                                      <Paperclip className="h-3 w-3 shrink-0" />
-                                      {getObjectName(msg.ObjectEntry?.toString().trim() ? msg.ObjectType : msg.DraftType)}
-                                    </span>
-                                  )}
-                                </div>
+                              <TableCell className="py-3.5 align-top">
+                                <span className={`text-sm text-slate-900 leading-snug break-words whitespace-normal ${isSelected ? "font-semibold" : "font-normal"}`}>
+                                  {msg.Subject}
+                                </span>
                               </TableCell>
-                              <TableCell className="py-3.5">
+                              <TableCell className="py-3.5 align-top">
+                                {hasLinkedDoc ? (
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                      <Paperclip className="h-3 w-3 shrink-0 text-orange-600" />
+                                      {docName}
+                                    </span>
+                                    {isDraft && (
+                                      <span className="text-[10px] text-slate-400 font-medium pl-4">
+                                        Draft
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-slate-400">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-3.5 align-top whitespace-nowrap">
                                 {getApprovalStatusBadge(msg.ApprovalStatus)}
                               </TableCell>
-                              <TableCell className="py-3.5 text-right text-[11px] text-slate-400 font-bold whitespace-nowrap">
+                              <TableCell className="py-3.5 text-right text-[11px] text-slate-400 font-bold whitespace-nowrap pr-4 align-top">
                                 {formatDate(msg.ApprovalCreationDate)}
                               </TableCell>
                             </TableRow>
@@ -391,6 +444,7 @@ export default function MessagesOverviewPage() {
                         })}
                       </TableBody>
                     </Table>
+                    </div>
                   </ScrollArea>
                   {hasMore && (
                     <div className="flex justify-center py-3 border-t border-slate-100">
@@ -432,20 +486,21 @@ export default function MessagesOverviewPage() {
                   </div>
                 </div>
               ) : (
-                <ScrollArea className="flex-1">
-                  <Table>
+                <ScrollArea className="flex-1 w-full overflow-x-auto">
+                  <Table className="min-w-[580px]">
                     <TableHeader className="bg-slate-50/70 border-b border-slate-100">
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Request #</TableHead>
-                        <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Object Type</TableHead>
-                        <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Remarks</TableHead>
+                        <TableHead className="w-[80px] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Request #</TableHead>
+                        <TableHead className="min-w-[120px] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Remarks</TableHead>
+                        <TableHead className="w-[160px] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Document</TableHead>
                         <TableHead className="w-[100px] font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Status</TableHead>
-                        <TableHead className="w-[90px] text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3">Date</TableHead>
+                        <TableHead className="w-[85px] text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider py-3 pr-4">Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pendingApprovals.map((ap) => {
+                      {sortedPendingApprovals.map((ap) => {
                         const isSelected = selectedApproval?.ApprovalRequestCode === ap.ApprovalRequestCode;
+                        const docTitle = getMenuInfoByObjectCode(ap.ObjectType)?.title || `Document (${ap.ObjectType})`;
                         return (
                           <TableRow
                             key={ap.ApprovalRequestCode}
@@ -453,18 +508,23 @@ export default function MessagesOverviewPage() {
                             className={`cursor-pointer transition-colors border-b border-slate-100 hover:bg-amber-50/40 ${isSelected ? "bg-amber-50" : ""}`}
                           >
                             <TableCell className="py-3 font-mono text-sm font-bold text-slate-700">#{ap.ApprovalRequestCode}</TableCell>
+                            <TableCell className="py-3 text-xs text-slate-500 truncate max-w-[120px]">{ap.Remarks || "—"}</TableCell>
                             <TableCell className="py-3">
-                              <span className="text-xs font-semibold text-slate-700">
-                                {getMenuInfoByObjectCode(ap.ObjectType)?.title || `Type ${ap.ObjectType}`}
-                              </span>
+                              <div className="flex flex-col">
+                                <span className="text-xs font-semibold text-slate-700">
+                                  {docTitle}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                  Draft
+                                </span>
+                              </div>
                             </TableCell>
-                            <TableCell className="py-3 text-xs text-slate-500 truncate max-w-[140px]">{ap.Remarks || "—"}</TableCell>
-                            <TableCell className="py-3">
+                            <TableCell className="py-3 whitespace-nowrap">
                               <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200/50 flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5 w-fit">
                                 <Clock className="h-3 w-3" /> Pending
                               </Badge>
                             </TableCell>
-                            <TableCell className="py-3 text-right text-[11px] text-slate-400 font-bold whitespace-nowrap">
+                            <TableCell className="py-3 text-right text-[11px] text-slate-400 font-bold whitespace-nowrap pr-4">
                               {ap.ApprovalCreationDate ? formatDate(ap.ApprovalCreationDate) : "—"}
                             </TableCell>
                           </TableRow>

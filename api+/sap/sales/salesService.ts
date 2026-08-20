@@ -297,6 +297,50 @@ export const closeCreditMemo = async (docEntry: number): Promise<any | null> => 
   return res.data;
 };
 
+export const getARDownPaymentRequestDocument = async (docNum: number): Promise<BaseSalesDocument | null> => {
+  const res = await apiClient.get(`api/Sales/DownPayments/${docNum}`);
+  if (!res.data) return null;
+
+  const doc: BaseSalesDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const getARDownPaymentInvoiceDocument = async (docNum: number): Promise<BaseSalesDocument | null> => {
+  return getARDownPaymentRequestDocument(docNum);
+};
+
+export const postARDownPayment = async (payload: any): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/DownPayments`, withDefaultBPLId(payload));
+  if (!res.data) return null;
+
+  const doc: BaseSalesDocument = {
+    ...res.data,
+    comments: res.data.Comments ?? "",
+    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+      ...line,
+    })),
+  };
+
+  return doc;
+};
+
+export const patchARDownPayment = async (docEntry: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Sales/DownPayments/${docEntry}`, payload);
+  return res.data;
+};
+
+export const closeARDownPayment = async (docEntry: number): Promise<any | null> => {
+  const res = await apiClient.post(`api/Sales/DownPayments/${docEntry}/Close`);
+  return res.data;
+};
+
 export const getAttachment = async (filePath: string) => {
   const res = await apiClient.get(`api/Sales/DisplayAttachment?filePath=${encodeURIComponent(filePath)}`, {
     responseType: 'blob'

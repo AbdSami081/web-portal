@@ -69,6 +69,7 @@ export default function NewAPInvoicePage() {
         freight,
         rounding,
         additionalExpenses,
+        includeLines: false,
       });
 
       // Add attachments to payload

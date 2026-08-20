@@ -50,12 +50,9 @@ export function RequestDocumentGenerationModal({
   const handleOk = async () => {
     setIsSubmitting(true);
     try {
-      // The actual document submission happens in onConfirm - SAP creates the
-      // approval request natively when the document is submitted.
       if (onConfirm) {
         await onConfirm(remarksMap);
       }
-      toast.success("Document submitted for approval.");
       onClose();
     } catch (error: any) {
       console.error("Submit document for approval error:", error);

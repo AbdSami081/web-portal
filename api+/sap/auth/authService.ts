@@ -13,6 +13,7 @@ export interface LoginResponse {
     empId: string;
     sapUserId?: number;
     userName: string;
+    fullName?: string;
     role: string;
   };
 }
@@ -54,6 +55,7 @@ export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
           empId: String(rawUser.empId || rawUser.EmpId || rawUser.EmpID || ""),
           sapUserId: rawUser.SapUserId ?? rawUser.sapUserId ?? rawUser.SAPUserId ?? undefined,
           userName: rawUser.userName || rawUser.UserName || "",
+          fullName: rawUser.fullName || rawUser.FullName || rawUser.userName || rawUser.UserName || "",
           role: rawUser.role || rawUser.Role || "",
         },
       };

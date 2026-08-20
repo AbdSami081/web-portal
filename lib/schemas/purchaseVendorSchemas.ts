@@ -21,7 +21,12 @@ const vendorDocBase = z.object({
 export const purchaseQuotationSchema = vendorDocBase;
 export type PurchaseQuotationFormData = z.infer<typeof purchaseQuotationSchema>;
 
-export const purchaseRequestSchema = vendorDocBase;
+export const purchaseRequestSchema = vendorDocBase.extend({
+  Requester: z.string().optional(),
+  RequesterName: z.string().optional(),
+  RequesterEmail: z.string().optional(),
+  SendNotification: z.string().optional(),
+});
 export type PurchaseRequestFormData = z.infer<typeof purchaseRequestSchema>;
 
 export const purchaseOrderSchema = vendorDocBase;

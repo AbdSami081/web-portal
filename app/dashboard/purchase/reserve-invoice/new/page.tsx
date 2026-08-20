@@ -68,6 +68,7 @@ export default function NewReserveInvoicePage() {
         freight,
         rounding,
         additionalExpenses,
+        includeLines: false,
       });
 
       if (processedAttachments.length > 0) {

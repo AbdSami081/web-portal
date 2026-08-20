@@ -12,6 +12,16 @@ interface BuildPurchasePayloadOptions {
   additionalExpenses?: Array<{ ExpenseCode: number; LineTotal: number; VatGroup?: string; TaxCode?: string }>;
 }
 
+export interface BuildPurchasePatchPayloadOptions {
+  data: any;
+  lines?: PurchaseDocumentLine[];
+  discountPercent?: number;
+  freight?: number;
+  rounding?: number;
+  additionalExpenses?: Array<{ ExpenseCode: number; LineTotal: number; VatGroup?: string; TaxCode?: string }>;
+  includeLines?: boolean;
+}
+
 function mapLineExpenses(line: PurchaseDocumentLine) {
   const expenses: Array<{ ExpenseCode: number; LineTotal: number; VatGroup: string }> = [];
 
@@ -57,9 +67,19 @@ export function buildPurchaseDocumentPayload({
     lastLoadedDocType &&
     lastLoadedDocType !== targetDocType;
 
+  const isPurchaseRequest = !!data.Requester;
+
   return {
-    CardCode: data.CardCode,
-    CardName: data.CardName,
+    ...(!isPurchaseRequest && {
+      CardCode: data.CardCode,
+      CardName: data.CardName,
+    }),
+    ...(isPurchaseRequest && {
+      Requester: data.Requester,
+      RequesterName: data.RequesterName,
+      ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
+      ...(data.SendNotification && { SendNotification: data.SendNotification }),
+    }),
     DocDate: data.DocDate,
     DocDueDate: data.DocDueDate,
     TaxDate: data.TaxDate,
@@ -114,55 +134,54 @@ export function buildPurchaseDocumentPayload({
 
 export function buildPurchaseDocumentPatchPayload({
   data,
-  lines,
+  lines = [],
   discountPercent = 0,
   freight = 0,
   rounding = 0,
   additionalExpenses = [],
-}: Pick<
-  BuildPurchasePayloadOptions,
-  "data" | "lines" | "discountPercent" | "freight" | "rounding" | "additionalExpenses"
->) {
+  includeLines = true,
+}: BuildPurchasePatchPayloadOptions) {
   return {
     Comments: data.Comments,
     // Only send dates that actually have a value
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
+    ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
+    ...(data.SendNotification && { SendNotification: data.SendNotification }),
     DiscountPercent: discountPercent || 0,
     Freight: freight || 0,
     Rounding: rounding || 0,
-    DocumentLines: lines.map((line) => {
-      const baseFields: Record<string, unknown> = {
-        ItemCode: line.ItemCode,
-        Quantity: Number(line.Quantity) || 0,
-        UnitPrice: Number(line.Price) || 0,
-        DiscountPercent: Number(line.DiscountPercent) || 0,
-        VatGroup: line.TaxCode || "",
-        WarehouseCode: line.WarehouseCode || "",
-        UoMCode: line.UoMCode || "",
-      };
+    ...(includeLines && lines.length > 0 && {
+      DocumentLines: lines.map((line) => {
+        const baseFields: Record<string, unknown> = {
+          ItemCode: line.ItemCode,
+          Quantity: Number(line.Quantity) || 0,
+          UnitPrice: Number(line.Price) || 0,
+          DiscountPercent: Number(line.DiscountPercent) || 0,
+          VatGroup: line.TaxCode || "",
+          WarehouseCode: line.WarehouseCode || "",
+          UoMCode: line.UoMCode || "",
+        };
 
-      // Existing lines carry their SAP LineNum - the backend sends
-      // B1S-ReplaceCollectionsOnPatch so omitted lines get deleted.
-      // New lines must NOT carry LineNum ("-1" is rejected by SAP).
-      if (line.LineNum !== undefined && line.LineNum >= 0) {
-        baseFields.LineNum = line.LineNum;
-      }
+        if (line.LineNum !== undefined && line.LineNum >= 0) {
+          baseFields.LineNum = line.LineNum;
+        }
 
-      const lineExpenses = mapLineExpenses(line);
-      if (lineExpenses.length > 0) {
-        baseFields.DocumentLineAdditionalExpenses = lineExpenses;
-      }
+        const lineExpenses = mapLineExpenses(line);
+        if (lineExpenses.length > 0) {
+          baseFields.DocumentLineAdditionalExpenses = lineExpenses;
+        }
 
-      if (line.SerialNumbers && line.SerialNumbers.length > 0) {
-        baseFields.SerialNumbers = line.SerialNumbers;
-      }
-      if (line.BatchNumbers && line.BatchNumbers.length > 0) {
-        baseFields.BatchNumbers = line.BatchNumbers;
-      }
+        if (line.SerialNumbers && line.SerialNumbers.length > 0) {
+          baseFields.SerialNumbers = line.SerialNumbers;
+        }
+        if (line.BatchNumbers && line.BatchNumbers.length > 0) {
+          baseFields.BatchNumbers = line.BatchNumbers;
+        }
 
-      return baseFields;
+        return baseFields;
+      }),
     }),
     ...(additionalExpenses.length > 0 && {
       DocumentAdditionalExpenses: additionalExpenses.map((e) => ({
@@ -173,3 +192,4 @@ export function buildPurchaseDocumentPatchPayload({
     }),
   };
 }
+

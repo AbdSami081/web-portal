@@ -136,6 +136,11 @@ export function InvDocumentHeader() {
   }, [loadWarehouses, setWarehouses]);
 
   useEffect(() => {
+    // Guard: if we are in a Copy-To flow, InvDocumentLayout already populated the
+    // form — do not auto-fetch any old document.
+    const currentState = useInventoryDocument.getState();
+    if (currentState.isCopyingTo) return;
+
     const isDraft = (docNav.draft ?? searchParams.get("draft")) === "1";
     const draftEntryParam = docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
     const docEntryParam = docNav.docEntry ?? searchParams.get("docEntry") ?? "";
@@ -188,6 +193,9 @@ export function InvDocumentHeader() {
   useEffect(() => {
     if (docNum) {
       setDocNumSearch(docNum.toString());
+    } else {
+      // DocNum was reset (new blank document) — clear the search field
+      setDocNumSearch("");
     }
   }, [docNum]);
 

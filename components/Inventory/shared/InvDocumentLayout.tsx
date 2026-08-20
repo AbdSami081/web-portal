@@ -8,7 +8,7 @@ import { DocumentConfig, getDocumentConfig } from "@/lib/config/inventory/docume
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { resolveDocNavParams } from "@/lib/docNavParams";
+import { resolveDocNavParams, clearDocNavParams } from "@/lib/docNavParams";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getInventoryTransferRequest, getInventoryTransferRequestList } from "@/api+/sap/inventory/inventoryService";
@@ -115,6 +115,10 @@ export function InvDocumentLayout<T extends FieldValues>({
     const state = useInventoryDocument.getState();
 
     if (state.isCopyingTo) {
+      // Coming from a Copy To — clear stale sessionStorage so the header doesn't
+      // accidentally re-fetch the source document (e.g. docEntry=44).
+      clearDocNavParams();
+
       // Sync copied data into the form
       setValue("CardCode" as any, state.customer?.CardCode as any);
       setValue("CardName" as any, state.customer?.CardName as any);
@@ -126,11 +130,21 @@ export function InvDocumentLayout<T extends FieldValues>({
       setValue("DocumentLines" as any, state.lines as any);
 
       setIsCopyingTo(false);
-    } else if (!skipAutoReset) {        
+    } else if (!skipAutoReset) {
+      // Fresh / new document — wipe stale sessionStorage so the header
+      // does not auto-search the last opened doc (e.g. docEntry=44).
+      const hasUrlParams =
+        searchParams.get("docEntry") ||
+        searchParams.get("draftEntry") ||
+        searchParams.get("draft");
+      if (!hasUrlParams) {
+        clearDocNavParams();
+      }
       resetStore();
       reset(defaultValues as any);
     }
-  }, [resetStore, setIsCopyingTo, setValue, reset, defaultValues, skipAutoReset]);
+  }, [resetStore, setIsCopyingTo, setValue, reset, defaultValues, skipAutoReset, searchParams]);
+
 
   useEffect(() => {
    setValue("CardCode" as any, (store.customer?.CardCode || "") as any);

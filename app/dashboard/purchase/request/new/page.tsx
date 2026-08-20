@@ -15,12 +15,19 @@ import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 
+import { useAuth } from "@/context/authContext";
+
 const today = new Date().toISOString().split("T")[0];
 
 export default function PurchaseRequestPage() {
   const loadFromDocument = usePurchaseDocument((state) => state.loadFromDocument);
+  const { user } = useAuth();
 
   const [defaultValues] = useState<PurchaseRequestFormData>({
+    Requester: user?.userName || user?.empId || "",
+    RequesterName: user?.fullName || user?.userName || "",
+    RequesterEmail: "",
+    SendNotification: "tNO",
     CardCode: "",
     CardName: "",
     ContactPersonCode: "",

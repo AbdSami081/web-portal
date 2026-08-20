@@ -28,6 +28,7 @@ import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
+import { patchDraftDocument } from "@/api+/sap/draft/draftService";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
@@ -57,11 +58,12 @@ export function PRDDocumentLayout<T extends FieldValues>({
   skipAutoReset = false,
 }: PRDDocumentLayoutProps<T>) {
 
-  const config = getDocumentConfig(docType);
+  const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const isPendingApproval = (docNav.approvalStatus === "arsPending" || !!docNav.approvalRequestCode) && !!docNav.draftEntry;
 
 
   const { user } = useAuth();
@@ -227,6 +229,19 @@ export function PRDDocumentLayout<T extends FieldValues>({
           onSubmit={async (e) => {
             e.preventDefault();
             handleSubmit(async (data) => {
+              if (isPendingApproval && docNav.draftEntry) {
+                try {
+                  await patchDraftDocument(Number(docNav.draftEntry), data);
+                  toast.success("Approval request modified successfully.");
+                  ResetForm();
+                  setBadgeState(null);
+                  return;
+                } catch (err: any) {
+                  toast.error(err?.response?.data?.Message || "Failed to update approval draft");
+                  return;
+                }
+              }
+
               const currentUserId = user?.sapUserId;
               const isEditMode = Boolean(watch("AbsoluteEntry" as any) || watch("DocEntry" as any));
 

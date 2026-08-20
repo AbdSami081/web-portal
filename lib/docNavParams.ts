@@ -108,3 +108,13 @@ export function useDocNavParams(): DocNavParams {
   const pathname = usePathname();
   return useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
 }
+
+/**
+ * Clears all staged / active doc-nav params from sessionStorage.
+ * Call this when the user intentionally opens a FRESH (new) document so that
+ * stale params from a previous navigation can never bleed into the blank form.
+ */
+export const clearDocNavParams = () => {
+  writeStored(PENDING_KEY, null);
+  writeStored(ACTIVE_KEY, null);
+};

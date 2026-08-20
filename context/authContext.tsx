@@ -11,6 +11,7 @@ interface User {
   empId: string;
   sapUserId?: number;
   userName: string;
+  fullName?: string;
   role: string;
   allowedModules?: string[];
   isSuperAdmin: boolean;
@@ -68,10 +69,14 @@ const buildUser = (
   const rawSapUserId = overrides?.sapUserId ?? decoded.SapUserId ?? decoded.sapUserId ?? decoded.SAPUserId ?? decoded.userId;
   const sapUserId = rawSapUserId !== undefined && rawSapUserId !== null ? Number(rawSapUserId) : undefined;
 
+  const userName = overrides?.userName || decoded.UserName || decoded.userName || decoded.unique_name || decoded.name || "";
+  const fullName = overrides?.fullName || decoded.FullName || decoded.fullName || decoded.unique_name || decoded.name || userName;
+
   return {
     empId: overrides?.empId || decoded.sub || decoded.nameid,
     sapUserId,
-    userName: overrides?.userName || decoded.unique_name || decoded.name || "",
+    userName,
+    fullName,
     role: overrides?.role || role || (isAdmin ? "Admin" : "User"),
     allowedModules: uniqueAllowed,
     isSuperAdmin: overrides?.isSuperAdmin ?? isSuperAdmin,
@@ -189,6 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         empId,
         sapUserId: data.user.sapUserId,
         userName: data.user.userName,
+        fullName: data.user.fullName || data.user.userName,
         role: data.user.role,
       };
 

@@ -67,6 +67,7 @@ export default function GoodReturnPage() {
         freight,
         rounding,
         additionalExpenses,
+        includeLines: false,
       });
 
       // Add attachments to payload

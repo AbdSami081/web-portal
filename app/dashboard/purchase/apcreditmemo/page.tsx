@@ -68,6 +68,7 @@ export default function APCreditMemoPage() {
         freight,
         rounding,
         additionalExpenses,
+        includeLines: false,
       });
 
       // Add attachments to payload

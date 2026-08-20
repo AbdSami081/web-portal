@@ -10,7 +10,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { toast } from "sonner";
-import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument, getDraftDocument, closeQuotation, closeSalesOrder, closeDeliveryNote, closeARInvoice, closeSalesReturn } from "@/api+/sap/sales/salesService";
+import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument, getDraftDocument, closeQuotation, closeSalesOrder, closeDeliveryNote, closeARInvoice, closeSalesReturn, getSalesReturnRequestDocument, getSalesCreditMemoDocument, getARDownPaymentRequestDocument, getARDownPaymentInvoiceDocument } from "@/api+/sap/sales/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { GenericModal } from "@/modals/GenericModal";
@@ -131,6 +131,10 @@ export function DocumentHeader() {
       case DocumentType.Delivery: return "DeliveryNotes";
       case DocumentType.ARInvoice: return "Invoices";
       case DocumentType.SalesReturn: return "Returns";
+      case DocumentType.SalesReturnRequest: return "ReturnRequest";
+      case DocumentType.ARDownPaymentRequest: return "DownPayments";
+      case DocumentType.ARDownPaymentInvoice: return "DownPayments";
+      case DocumentType.ARCreditMemo: return "CreditNotes";
       default: return "";
     }
   };
@@ -218,72 +222,107 @@ export function DocumentHeader() {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
-  const fetchDocument = async (docNum: string, opts?: { isDraft?: boolean }, draftEntry?: number) => {
-    var documentData;
-    clearLines();
-    setIsLoading(true);
+  const fetchDocument = async (
+  docNum: string,
+  opts?: { isDraft?: boolean },
+  draftEntry?: number
+) => {
+  let documentData;
 
-    try {
-      if (opts?.isDraft && draftEntry) {
-        documentData = await getDraftDocument(draftEntry);
-      } else {
-        const docNumInt = parseInt(docNum);
+  clearLines();
+  setIsLoading(true);
 
-        if (isNaN(docNumInt)) {
-          toast.error("Invalid Document Number entered.");
-          return; 
-        }
+  try {
+    if (opts?.isDraft && draftEntry) {
+      documentData = await getDraftDocument(draftEntry);
+    } else {
+      const docNumInt = parseInt(docNum);
 
-        if (config.type === DocumentType.Quotation) {
+      if (isNaN(docNumInt)) {
+        toast.error("Invalid Document Number entered.");
+        return;
+      }
+
+      switch (config.type) {
+        case DocumentType.Quotation:
           documentData = await getQuotationDocument(docNumInt);
-        }
-        else if (config.type === DocumentType.Order) {
-          documentData = await getSalesOrderDocument(docNumInt);
-        }
-        else if (config.type === DocumentType.Delivery) {
-          documentData = await getSalesDeliveryDocument(docNumInt);
-        }
-        else if (config.type === DocumentType.ARInvoice) {
-          documentData = await getARInvoiceDocument(docNumInt);
-        }
-        else if (config.type === DocumentType.SalesReturn) {
-          documentData = await getSalesReturnDocument(docNumInt);
-        }
-      }
+          break;
 
-      if (!documentData?.DocEntry) {
-        toast.info(
-          opts?.isDraft
-            ? `Draft document ${draftEntry} not found.`
-            : `Document number ${docNum} not found.`
-        );
-      } else {
-        fetchUdfDefinitions(config.type, true);
-        loadFromDocument(documentData, config.type);
-        setValue("DocDate", documentData.DocDate?.split("T")[0]);
-        setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
-        setValue("CardCode", documentData.CardCode);
-        setValue("CardName", documentData.CardName);
-        setValue("DocStatus", documentData.DocumentStatus);
-        setValue("Address2", documentData.Address2);
-        setValue("Address", documentData.Address);
-        setValue("DocEntry", documentData.DocEntry);
-        setValue("DocNum", documentData.DocNum);
-        setValue("Comments", documentData.Comments);
-        if (opts?.isDraft) {
-          useSalesDocument.getState().setLoadedDraftData(documentData);
-        }
+        case DocumentType.Order:
+          documentData = await getSalesOrderDocument(docNumInt);
+          break;
+
+        case DocumentType.Delivery:
+          documentData = await getSalesDeliveryDocument(docNumInt);
+          break;
+
+        case DocumentType.ARInvoice:
+          documentData = await getARInvoiceDocument(docNumInt);
+          break;
+
+        case DocumentType.SalesReturn:
+          documentData = await getSalesReturnDocument(docNumInt);
+          break;
+
+        case DocumentType.SalesReturnRequest:
+          documentData = await getSalesReturnRequestDocument(docNumInt);
+          break;
+
+        case DocumentType.ARDownPaymentRequest:
+          documentData = await getARDownPaymentRequestDocument(docNumInt);
+          break;
+
+        case DocumentType.ARDownPaymentInvoice:
+          documentData = await getARDownPaymentInvoiceDocument(docNumInt);
+          break;
+
+        case DocumentType.ARCreditMemo:
+          documentData = await getSalesCreditMemoDocument(docNumInt);
+          break;
+
+        default:
+          toast.error("Document type is not supported.");
+          return;
       }
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        toast.info("Document not found.");
-      } else {
-        toast.error(error.message || "An error occurred while fetching the document.");
-      }
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    if (!documentData?.DocEntry) {
+      toast.info(
+        opts?.isDraft
+          ? `Draft document ${draftEntry} not found.`
+          : `Document number ${docNum} not found.`
+      );
+    } else {
+      fetchUdfDefinitions(config.type, true);
+      loadFromDocument(documentData, config.type);
+
+      setValue("DocDate", documentData.DocDate?.split("T")[0]);
+      setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
+      setValue("CardCode", documentData.CardCode);
+      setValue("CardName", documentData.CardName);
+      setValue("DocStatus", documentData.DocumentStatus);
+      setValue("Address2", documentData.Address2);
+      setValue("Address", documentData.Address);
+      setValue("DocEntry", documentData.DocEntry);
+      setValue("DocNum", documentData.DocNum);
+      setValue("Comments", documentData.Comments);
+
+      if (opts?.isDraft) {
+        useSalesDocument.getState().setLoadedDraftData(documentData);
+      }
+    }
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      toast.info("Document not found.");
+    } else {
+      toast.error(
+        error.message || "An error occurred while fetching the document."
+      );
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleManualSearch = () => {
     const val = searchInputRef.current?.value || searchValue;

@@ -87,8 +87,6 @@ export default function DeliveryPage() {
       const response = await postDelivery(payload);
    
       if (response?.DocEntry || response?.IsDraft) {
-        // When an approval process applies, SAP creates a DRAFT and the approval request
-        // natively - the document is not final yet, so skip attachment upload.
         if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,

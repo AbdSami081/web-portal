@@ -13,6 +13,7 @@ import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
+import { DocumentType } from "@/types/master/DocumentType";
 
 interface Props {
   index: number;
@@ -28,11 +29,27 @@ export function PurchaseItemRow({ index, line }: Props) {
   const { watch } = useFormContext();
   const { updateLine, removeLine } = usePurchaseDocument();
   const { freightsWithCharges, freightTypes } = useMasterDataStore();
-
   const config = usePurchaseDocConfig();
 
+  const isFinancialPurchaseDoc = [
+    DocumentType.GoodsReceiptPO,
+    DocumentType.APInvoice,
+    DocumentType.APCreditMemo,
+    DocumentType.GoodsReturn,
+    DocumentType.GoodsReturnRequest,
+    DocumentType.APReserveInvoice,
+    DocumentType.APDownPaymentInvoice,
+    DocumentType.APDownPaymentRequest,
+  ].includes(config.type);
+
+  const docEntry = watch("DocEntry");
+  const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
+  const isLineClosed = line.IsClosed === "tYES";
+  const isLineUpdateBlocked = isFinancialPurchaseDoc && isEditMode;
+  const isLineDisabled = isLineClosed || isLineUpdateBlocked;
+
   const isFieldEnabled = (fieldName: string) => {
-    return getFieldSettings(config.type, "linesFieds", fieldName).enable !== false;
+    return getFieldSettings(config.type, "linesFieds", fieldName).enable !== false && !isLineDisabled;
   };
 
   const isFieldVisible = (fieldName: string) => {
@@ -120,12 +137,13 @@ export function PurchaseItemRow({ index, line }: Props) {
           variant="ghost"
           className="h-6 w-6 p-0 hover:bg-red-100/10"
           onClick={() => removeLine(line.ItemCode)}
-          disabled={Boolean(watch("DocEntry") && Number(watch("DocEntry")) > 0)}
+          disabled={isLineDisabled}
+          title={isLineUpdateBlocked ? "Lines cannot be removed on financial documents in update mode" : isLineClosed ? "Line is closed" : "Remove line"}
         >
           <Trash
             className={`h-4 w-4 ${
-              watch("DocEntry") && Number(watch("DocEntry")) > 0
-                ? "text-gray-500"
+              isLineDisabled
+                ? "text-gray-400"
                 : "text-red-500"
             }`}
           />

@@ -20,3 +20,9 @@ export const getDraftDocument = async (draftID: number): Promise<any | null> => 
   if (!res.data) return null;
   return res.data;
 };
+
+export const patchDraftDocument = async (draftID: number, payload: any): Promise<any | null> => {
+  const res = await apiClient.patch(`api/Draft/Drafts/${draftID}`, payload);
+  if (!res.data) return null;
+  return res.data;
+};
