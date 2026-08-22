@@ -1,4 +1,5 @@
 import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
+import { resolveBranchId } from "./documentPayloadHelper";
 
 interface BuildPurchasePayloadOptions {
   data: any;
@@ -90,8 +91,10 @@ export function buildPurchaseDocumentPayload({
     DocDueDate: data.DocDueDate,
     TaxDate: data.TaxDate,
     Comments: data.Comments,
-    BPL_IDAssignedToInvoice: data.BPL_IDAssignedToInvoice ?? data.BPLId ?? 5,
-    BPLId: data.BPLId ?? data.BPL_IDAssignedToInvoice ?? 5,
+    ...(() => {
+      const branchId = resolveBranchId(data.BPL_IDAssignedToInvoice ?? data.BPLId);
+      return branchId === undefined ? {} : { BPL_IDAssignedToInvoice: branchId, BPLId: branchId };
+    })(),
     DiscountPercent: discountPercent || 0,
     Freight: freight || 0,
     Rounding: rounding || 0,

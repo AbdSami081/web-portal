@@ -3,6 +3,7 @@ import HeaderNav from "@/components/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RouteGuard } from "@/components/route-guard";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { BranchSelectionModal } from "@/components/shared/BranchSelectionModal";
 
 const DashboardLayout = ({
   children,
@@ -22,6 +23,7 @@ const DashboardLayout = ({
           </div>
         </NotificationProvider>
       </SidebarInset>
+      <BranchSelectionModal />
     </SidebarProvider>
   );
 };

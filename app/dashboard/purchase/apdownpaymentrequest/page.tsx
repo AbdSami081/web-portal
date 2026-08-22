@@ -29,7 +29,6 @@ export default function APDownPaymentRequestPage() {
     TaxDate: today,
     DocStatus: "bost_Open",
     Comments: "",
-    BPL_IDAssignedToInvoice: 5,
     CardCode: "",
   });
   const handleSubmit = async (data: APDownPaymentRequestFormData) => {

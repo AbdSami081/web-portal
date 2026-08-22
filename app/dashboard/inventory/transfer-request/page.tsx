@@ -47,6 +47,7 @@ const schema = z.object({
   TotalBeforeDiscount: z.number().optional(),
   TaxTotal: z.number().optional(),
   DocTotal: z.number().optional(),
+  BPL_IDAssignedToInvoice: z.number().optional(),
 });
 
 type FormData = z.infer<typeof schema>;

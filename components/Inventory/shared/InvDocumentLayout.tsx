@@ -35,6 +35,7 @@ import {
 } from "@/lib/sap/helpers/inventoryPayloadHelper";
 import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
+import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -399,6 +400,16 @@ export function InvDocumentLayout<T extends FieldValues>({
     const state = useInventoryDocument.getState();
     const currentUserId = user?.sapUserId;
     const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
+
+    if (isBranchMissing((finalData as any).BPL_IDAssignedToInvoice)) {
+      toast.error("Please select a branch before submitting.");
+      return;
+    }
+
+    if (isBranchInactive((finalData as any).BPL_IDAssignedToInvoice)) {
+      toast.error("The selected branch is inactive. Please choose an active branch before submitting.");
+      return;
+    }
 
     const buildDraftPatchPayload = () => {
       switch (docType) {

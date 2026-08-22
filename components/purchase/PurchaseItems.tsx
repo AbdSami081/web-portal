@@ -20,6 +20,7 @@ import { ResizableTable } from "../Custom/ResizableTable";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
+import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 
 export function PurchaseItems() {
   const { watch } = useFormContext();
@@ -94,6 +95,7 @@ export function PurchaseItems() {
         TaxCode: targetTaxCode,
         TaxRate: taxRate,
         WarehouseCode: defaultWhsLine,
+        BPLid: resolveBranchForWarehouse(defaultWhsLine, warehouses),
         UoMCode: item.UoM || "",
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
@@ -144,6 +146,7 @@ export function PurchaseItems() {
     { key: "TaxCode", title: "Tax Code", width: 140 },
     { key: "TaxAmount", title: "Tax Amount (LC)", width: 180 },
     { key: "WarehouseCode", title: "Whs", width: 120 },
+    { key: "BPLid", title: "Branch", width: 90 },
     { key: "UoMCode", title: "UoM", width: 120 },
     { key: "LineTotal", title: "Line Total", width: 180 },
     { key: "Freight1Type", title: "Freight 1 Type", width: 180 },

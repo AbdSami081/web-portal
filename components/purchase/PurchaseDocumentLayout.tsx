@@ -28,6 +28,7 @@ import { buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePay
 import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { linesHaveInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
+import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
 
 import {
   Tooltip,
@@ -365,6 +366,16 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
             if (linesHaveInvalidPrice(state.lines)) {
               toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
+              return;
+            }
+
+            if (isBranchMissing((data as any).BPL_IDAssignedToInvoice)) {
+              toast.error("Please select a branch before submitting.");
+              return;
+            }
+
+            if (isBranchInactive((data as any).BPL_IDAssignedToInvoice)) {
+              toast.error("The selected branch is inactive. Please choose an active branch before submitting.");
               return;
             }
 

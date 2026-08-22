@@ -28,6 +28,8 @@ export interface BasePurchaseDocument {
   ContactPersonCode?: string;
   Address2?: string;
   Address?: string;
+  BPL_IDAssignedToInvoice?: number;
+  BPLId?: number;
   Requester?: string;
   RequesterName?: string;
   RequesterEmail?: string;
@@ -67,6 +69,7 @@ export interface PurchaseDocumentLine {
   QtyInWhs?: any[];
   DiscountPercent?: number;
   WarehouseCode?: string;
+  BPLid?: number;
   RequiredDate?: string;
   UoMCode?: string;
   TaxCode?: string;

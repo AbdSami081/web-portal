@@ -27,7 +27,6 @@ export default function GoodsReturnRequestPage() {
     TaxDate: today,
     DocStatus: "bost_Open",
     Comments: "",
-    BPL_IDAssignedToInvoice:5,
     DocNum: 0,
     DocEntry: 0,
   });

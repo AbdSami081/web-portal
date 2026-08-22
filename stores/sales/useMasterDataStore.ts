@@ -77,6 +77,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
         warehousesMap.set(code, {
           WarehouseCode: code,
           WarehouseName: w.WhsName,
+          BPLid: w.BPLid,
         });
       }
     }

@@ -25,6 +25,7 @@ export interface PRDDocumentLine {
     PlannedQuantity: number;
     OriginalPlannedQuantity?: number;
     Warehouse?: string;
+    BPLid?: number;
     ItemType?: string;
     BaseQuantity?: number;
     BaseRatio?: number;

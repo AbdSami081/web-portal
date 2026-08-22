@@ -72,6 +72,7 @@ export function InvDocumentItems() {
         { key: "ItemCode",  title: "Item",        width: 180 },
         { key: "Dscription",title: "Description", width: 300 },
         { key: "WhsCode",   title: "Warehouse",   width: 180 },
+        { key: "BPLid",     title: "Branch",      width: 90  },
         { key: "Quantity",  title: "Quantity",    width: 140 },
         { key: "OnHand",    title: "Qty In Whs",  width: 120 },
         { key: "UoMCode",   title: "UoM Code",    width: 140 },
@@ -83,6 +84,7 @@ export function InvDocumentItems() {
         { key: "Dscription",title: "Description",  width: 300 },
         { key: "FromWhsCode",title: "From Whs",     width: 180 },
         { key: "WhsCode",   title: "To Whs",       width: 180 },
+        { key: "BPLid",     title: "Branch",       width: 90  },
         { key: "Quantity",  title: "Quantity",     width: 140 },
         { key: "OnHand",    title: "Qty In Whs",   width: 120 },
         { key: "UoMCode",   title: "UoM Code",     width: 140 },
@@ -113,6 +115,7 @@ export function InvDocumentItems() {
         (w: any) => (w.WarehouseCode || w.warehouseCode) === whsCode
       );
       const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
+      const branchId = warehouses.find((w: any) => w.WhsCode === whsCode)?.BPLid;
 
       addLine({
         ItemCode: item.ItemCode,
@@ -122,6 +125,7 @@ export function InvDocumentItems() {
         ToBinLoc: "",
         FisrtBin: "",
         WhsCode: whsCode,
+        BPLid: branchId,
         Quantity: quantity,
         OnHand: initialOnHand,
         ItemCost: price,

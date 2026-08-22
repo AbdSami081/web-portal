@@ -16,6 +16,8 @@ import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
+import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
+import { useBranchStore } from "@/stores/useBranchStore";
 
 
 interface Props {
@@ -52,7 +54,8 @@ export function DocumentLineRow({ index, line }: Props) {
   const isLineDisabled = isLineClosed || isLineUpdateBlocked;
   const isCellEditable = (fieldName: string) => isFieldEnabled(fieldName) && !isLineDisabled;
   const { updateLine, removeLine, lines } = useSalesDocument();
-  const { freightsWithCharges, freightTypes } = useMasterDataStore();
+  const { freightsWithCharges, freightTypes, warehouses } = useMasterDataStore();
+  const { allBranches } = useBranchStore();
 
   const [draftLine, setDraftLine] = useState(line);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
@@ -86,6 +89,16 @@ export function DocumentLineRow({ index, line }: Props) {
     const currentOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
     setDraftLine({ ...line, OnHand: currentOnHand });
   }, [line, index]);
+
+  // Backfill BPLid for lines that already have a warehouse but no branch yet (e.g. loaded documents)
+  useEffect(() => {
+    if (line.WarehouseCode && line.BPLid === undefined) {
+      const branchId = resolveBranchForWarehouse(line.WarehouseCode, warehouses);
+      if (branchId !== undefined) {
+        updateLine(line.ItemCode, { BPLid: branchId });
+      }
+    }
+  }, [line.WarehouseCode, line.BPLid, warehouses]);
 
   useEffect(() => {
     calculateAndUpdate(draftLine);
@@ -334,6 +347,17 @@ export function DocumentLineRow({ index, line }: Props) {
         </td>
       )}
 
+      {isFieldVisible("BPLid") && (
+        <td className="py-2 px-2">
+          <Input
+            className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
+            value={resolveBranchName(draftLine.BPLid, allBranches)}
+            disabled
+            readOnly
+          />
+        </td>
+      )}
+
       {isFieldVisible("UoMCode") && (
         <td className="py-2 px-2">
           <Input
@@ -522,7 +546,7 @@ export function DocumentLineRow({ index, line }: Props) {
             (w: any) => (w.WarehouseCode || w.warehouseCode) === wh.WhsCode
           );
           const whOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
-          const updated = { ...draftLine, WarehouseCode: wh.WhsCode, OnHand: whOnHand };
+          const updated = { ...draftLine, WarehouseCode: wh.WhsCode, BPLid: wh.BPLid, OnHand: whOnHand };
           setDraftLine(updated);
           updateLine(line.ItemCode, updated);
         }}

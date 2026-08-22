@@ -3,4 +3,5 @@ export interface Warehouse {
     WhsName: string;
     OnHand?: number;
     ItemCode?: string;
+    BPLid?: number;
 }

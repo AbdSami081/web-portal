@@ -13,6 +13,8 @@ export interface BaseSalesDocument {
   CardName?: string;
   NumAtCard?: string;
   Comments?: string;
+  BPL_IDAssignedToInvoice?: number;
+  BPLId?: number;
   DiscSum?: number;
   DocTotal?: number;
   DocTotalFc?: number;
@@ -61,6 +63,7 @@ export interface SalesDocumentLine {
   Price: number;
   DiscountPercent?: number;
   WarehouseCode?: string;
+  BPLid?: number;
   UoMCode?: string;
   MeasureUnit?: string;
   QtyInWhs?: any[];

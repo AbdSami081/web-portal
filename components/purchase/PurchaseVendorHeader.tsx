@@ -38,6 +38,7 @@ import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/authContext";
 import { getAdminSettings } from "@/api+/sap/administration/administrationService";
+import { useBranchStore } from "@/stores/useBranchStore";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -113,6 +114,15 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const docDueDate = watch("DocDueDate");
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
+
+  const { assignedBranches, sessionDefaultBranch } = useBranchStore();
+  const watchedBranch = watch("BPL_IDAssignedToInvoice");
+
+  useEffect(() => {
+    if (!isLoadedDocument && !watchedBranch && sessionDefaultBranch !== null) {
+      setValue("BPL_IDAssignedToInvoice", sessionDefaultBranch);
+    }
+  }, [isLoadedDocument, watchedBranch, sessionDefaultBranch, setValue]);
 
   useEffect(() => {
     if (isPurchaseRequest && docDueDate) {
@@ -280,6 +290,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         setValue("DocStatus", documentData.DocumentStatus || documentData.DocStatus || "bost_Open");
         setValue("DocNum", documentData.DocNum);
         setValue("DocEntry", documentData.DocEntry);
+        setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
 
         if (isPurchaseRequest) {
           setValue("Requester", documentData.Requester || user?.userName || "");
@@ -442,6 +453,31 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
               placeholder={isPurchaseRequest ? "Requester Full Name" : "Card Name"}
               disabled
             />
+          </div>
+
+          <div className="flex items-center w-full gap-3">
+            <AppLabel className="w-28 shrink-0">Branch</AppLabel>
+            <Select
+              value={watchedBranch ? String(watchedBranch) : ""}
+              onValueChange={(val) => setValue("BPL_IDAssignedToInvoice", Number(val))}
+              disabled={isHeaderDisabled}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select branch" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Select Branch</SelectLabel>
+                  {assignedBranches.map((b) => (
+                    <SelectItem key={b.BPLID} value={String(b.BPLID)}>
+                      {b.BPLName}
+                      {b.Disabled === "tYES" ? " (Inactive)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
 
           {isPurchaseRequest && (

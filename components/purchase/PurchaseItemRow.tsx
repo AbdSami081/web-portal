@@ -14,6 +14,8 @@ import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper";
+import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
+import { useBranchStore } from "@/stores/useBranchStore";
 
 interface Props {
   index: number;
@@ -28,7 +30,8 @@ interface Record {
 export function PurchaseItemRow({ index, line }: Props) {
   const { watch } = useFormContext();
   const { updateLine, removeLine } = usePurchaseDocument();
-  const { freightsWithCharges, freightTypes } = useMasterDataStore();
+  const { freightsWithCharges, freightTypes, warehouses } = useMasterDataStore();
+  const { allBranches } = useBranchStore();
   const config = usePurchaseDocConfig();
 
   const isFinancialPurchaseDoc = isPostedPurchaseDocType(config.type);
@@ -56,6 +59,16 @@ export function PurchaseItemRow({ index, line }: Props) {
   useEffect(() => {
     setDraftLine(line);
   }, [line, index]);
+
+  // Backfill BPLid for lines that already have a warehouse but no branch yet (e.g. loaded documents)
+  useEffect(() => {
+    if (line.WarehouseCode && line.BPLid === undefined) {
+      const branchId = resolveBranchForWarehouse(line.WarehouseCode, warehouses);
+      if (branchId !== undefined) {
+        updateLine(line.ItemCode, { BPLid: branchId });
+      }
+    }
+  }, [line.WarehouseCode, line.BPLid, warehouses]);
 
   useEffect(() => {
     calculateAndUpdate(draftLine);
@@ -279,6 +292,17 @@ export function PurchaseItemRow({ index, line }: Props) {
         </td>
       )}
 
+      {isFieldVisible("BPLid") && (
+        <td className="w-[90px]">
+          <Input
+            className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
+            value={resolveBranchName(draftLine.BPLid, allBranches)}
+            disabled
+            readOnly
+          />
+        </td>
+      )}
+
       {isFieldVisible("UoMCode") && (
         <td className="w-[100px]">
           <Input
@@ -474,6 +498,7 @@ export function PurchaseItemRow({ index, line }: Props) {
           const updated = {
             ...draftLine,
             WarehouseCode: wh.WhsCode,
+            BPLid: wh.BPLid,
             OnHand: whRecord ? whRecord.Qty ?? 0 : 0,
           };
 

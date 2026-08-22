@@ -13,6 +13,8 @@ import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { PRDDocumentLine } from "@/types/production/PRDDoc.type";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { normalizeInventoryUom } from "@/utils/inventoryUom";
+import { resolveBranchName } from "@/lib/sap/helpers/branchHelper";
+import { useBranchStore } from "@/stores/useBranchStore";
 
 interface Props {
   index: number;
@@ -26,6 +28,7 @@ import { usePRDDocConfig } from "./PRDDocumentLayout";
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
   const { updateLine, removeLine, initialStatus } = useIFPRDDocument();
+  const { allBranches } = useBranchStore();
   const [draftLine, setDraftLine] = useState<PRDDocumentLine>(line);
   const config = usePRDDocConfig();
   const headerPlannedQty = watch("PlannedQuantity");
@@ -35,6 +38,16 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   useEffect(() => {
     setDraftLine(line);
   }, [line, index]);
+
+  // Backfill BPLid for lines that already have a warehouse but no branch yet (e.g. loaded orders)
+  useEffect(() => {
+    if (line.Warehouse && line.BPLid === undefined) {
+      const branchId = warehouses.find((w) => w.WhsCode === line.Warehouse)?.BPLid;
+      if (branchId !== undefined) {
+        updateLine(index, { ...line, BPLid: branchId });
+      }
+    }
+  }, [line.Warehouse, line.BPLid, warehouses]);
 
   const saveRow = () => {
     updateLine(index, draftLine);
@@ -196,6 +209,14 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               disabled
               readOnly
             />
+            {draftLine.BPLid !== undefined && (
+              <span
+                className="h-7 shrink-0 flex items-center px-1.5 rounded bg-gray-100 text-gray-500 text-[10px]"
+                title="Branch (derived from warehouse)"
+              >
+                {resolveBranchName(draftLine.BPLid, allBranches)}
+              </span>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -237,7 +258,8 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         open={warehouseModalOpen}
         onClose={() => setWarehouseModalOpen(false)}
         onSelect={(val) => {
-          const updated = { ...draftLine, Warehouse: val };
+          const branchId = warehouses.find((w) => w.WhsCode === val)?.BPLid;
+          const updated = { ...draftLine, Warehouse: val, BPLid: branchId };
           setDraftLine(updated);
           updateLine(index, updated);
         }}

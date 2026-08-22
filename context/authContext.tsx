@@ -6,6 +6,9 @@ import { getUserAccess, UserAccessEntry } from "../api+/sap/authorization/author
 import { useAuthStore } from "@/stores/useAuthStore";
 import { clearPermissionsCache } from "@/lib/api/permissionsCache";
 import { clearApiResponseCache } from "@/lib/apiClient";
+import { useBranchStore } from "@/stores/useBranchStore";
+import { getBranches, getMyBranches } from "@/api+/sap/branch";
+import { toast } from "sonner";
 
 interface User {
   empId: string;
@@ -84,6 +87,39 @@ const buildUser = (
   };
 };
 
+const initializeBranchSession = async (force = false) => {
+  const branchStore = useBranchStore.getState();
+  // Whether to (re-)decide the popup is gated per session; refreshing branch data itself
+  // is not — otherwise anything added to the branch store later (like name lookups for
+  // line items) would stay empty forever for a tab whose sessionStorage predates it.
+  const shouldDecidePopup = force || (branchStore.sessionDefaultBranch === null && !branchStore.needsBranchSelection);
+
+  try {
+    const [allBranches, myBranches] = await Promise.all([
+      getBranches(),
+      getMyBranches(),
+    ]);
+
+    const assignedIds = new Set(myBranches.branches.map((b) => b.BPLID));
+    const assigned = allBranches.filter((b) => assignedIds.has(b.BPLID));
+
+    branchStore.setAllBranches(allBranches);
+    branchStore.setAssignedBranches(assigned);
+    branchStore.setSuggestedDefaultBranch(myBranches.defaultBranch);
+
+    if (!shouldDecidePopup) return;
+
+    if (assigned.length === 0) {
+      toast.error("You are not assigned any branch.");
+      return;
+    }
+
+    branchStore.setNeedsBranchSelection(true);
+  } catch (err) {
+    console.error("Failed to initialize branch session", err);
+  }
+};
+
 const refreshPermissions = async (
   decoded: Record<string, any>,
   empId: string,
@@ -141,6 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser,
       setIsPermissionsLoading
     );
+    void initializeBranchSession();
   }, []);
 
   useEffect(() => {
@@ -214,6 +251,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser,
         setIsPermissionsLoading
       );
+      useBranchStore.getState().clearBranch();
+      void initializeBranchSession(true);
     } catch (error: any) {
       if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
         throw new Error("Server is currently unreachable. Please ensure the API server is running.");
@@ -247,6 +286,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     clearPermissionsCache();
     clearApiResponseCache();
     useAuthStore.getState().resetSession();
+    useBranchStore.getState().clearBranch();
     router.push("/");
   };
 

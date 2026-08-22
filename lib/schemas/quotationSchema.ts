@@ -28,6 +28,7 @@ export const quotationSchema = z.object({
   DocTotal: z.number().optional(),
   Comments: z.string().optional(),
   DocStatus: z.string().optional(),
+  BPL_IDAssignedToInvoice: z.number().optional(),
 });
 
 export type QuotationFormData = z.infer<typeof quotationSchema>;

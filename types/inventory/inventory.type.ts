@@ -16,6 +16,7 @@ export interface InventoryDocumentLine {
     FromWhsCode?: string;
     FromBinLoc?: string;
     WhsCode?: string;
+    BPLid?: number;
     ToBinLoc?: string;
     FisrtBin?: string;
     Quantity: number;

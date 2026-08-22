@@ -89,14 +89,14 @@ export function buildInventoryTransferRequestPayload({
   fromWarehouse,
   toWarehouse,
 }: BuildInventoryPayloadOptions) {
-  return {
+  return withDefaultBPLId({
     CardCode: data.CardCode || "",
     FromWarehouse: fromWarehouse || "",
     ToWarehouse: toWarehouse || "",
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
     StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, false),
-  };
+  }, data.BPL_IDAssignedToInvoice);
 }
 
 export function buildInventoryTransferRequestPatchPayload({
@@ -118,14 +118,14 @@ export function buildInventoryTransferPayload({
   fromWarehouse,
   toWarehouse,
 }: BuildInventoryPayloadOptions) {
-  return {
+  return withDefaultBPLId({
     CardCode: data.CardCode || "",
     FromWarehouse: fromWarehouse || "",
     ToWarehouse: toWarehouse || "",
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
     StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, false),
-  };
+  }, data.BPL_IDAssignedToInvoice);
 }
 
 export function buildInventoryTransferPatchPayload({
@@ -191,7 +191,7 @@ export function buildGoodIssuePayload({
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
     DocumentLines: buildGoodIssueLines(lines, false),
-  });
+  }, data.BPL_IDAssignedToInvoice);
 }
 
 export function buildGoodIssuePatchPayload({

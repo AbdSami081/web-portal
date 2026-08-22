@@ -27,7 +27,6 @@ export default function APCreditMemoPage() {
     DocDueDate: today,
     TaxDate: today,
     DocStatus: "bost_Open",
-    BPL_IDAssignedToInvoice:5,
     Comments: "",
   });
 

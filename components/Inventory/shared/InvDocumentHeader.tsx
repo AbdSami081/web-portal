@@ -25,6 +25,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { getSapErrorMessage } from "@/lib/errorHelper";
+import { useBranchStore } from "@/stores/useBranchStore";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -94,6 +95,25 @@ export function InvDocumentHeader() {
   const isLoadedDocument = !!DocEntry && DocEntry > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
   const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
+
+  const { assignedBranches, sessionDefaultBranch } = useBranchStore();
+  const watchedBranch = watch("BPL_IDAssignedToInvoice");
+
+  // Branch auto-suggests from the destination (To) warehouse when one is selected
+  // (Transfer/Transfer Request); Good Issue has no header warehouse, so it falls back
+  // to the session default instead. Either way it's a normal dropdown the user can
+  // still override, same as the Sales/Purchase headers.
+  useEffect(() => {
+    const branchWhs = toWarehouse || fromWarehouse;
+    const derivedBranch = globalWarehouses.find((w: any) => w.WhsCode === branchWhs)?.BPLid;
+    if (derivedBranch !== undefined) {
+      if (derivedBranch !== watchedBranch) {
+        setValue("BPL_IDAssignedToInvoice", derivedBranch);
+      }
+    } else if (!isLoadedDocument && !watchedBranch && sessionDefaultBranch !== null) {
+      setValue("BPL_IDAssignedToInvoice", sessionDefaultBranch);
+    }
+  }, [toWarehouse, fromWarehouse, globalWarehouses, watchedBranch, isLoadedDocument, sessionDefaultBranch, setValue]);
 
   const closeDocumentByType = (type: number, entry: number) => {
     switch (type) {
@@ -342,6 +362,7 @@ export function InvDocumentHeader() {
     setToWarehouse(documentData.ToWarehouse || "");
     setJournalMemo(documentData.JournalMemo || "");
     setValue("DocStatus", documentData.DocumentStatus);
+    setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
 
     const isCopy = type !== config.type;
     loadFromDocument(documentData, type, isCopy);
@@ -395,6 +416,31 @@ export function InvDocumentHeader() {
           </div>
         )}
 
+        <div className="flex items-center gap-3 w-full">
+          <AppLabel className="w-28 shrink-0">Branch</AppLabel>
+          <Select
+            value={watchedBranch ? String(watchedBranch) : ""}
+            onValueChange={(val) => setValue("BPL_IDAssignedToInvoice", Number(val))}
+            disabled={isHeaderDisabled}
+          >
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Select branch" />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Select Branch</SelectLabel>
+                {assignedBranches.map((b) => (
+                  <SelectItem key={b.BPLID} value={String(b.BPLID)}>
+                    {b.BPLName}
+                    {b.Disabled === "tYES" ? " (Inactive)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+
         {config.type !== DocumentType.GoodIssue && (
           <div className="flex items-center gap-3 w-full">
             <AppLabel className="w-28 shrink-0">From Warehouse</AppLabel>
@@ -442,6 +488,7 @@ export function InvDocumentHeader() {
             </div>
           </div>
         )}
+
       </div>
 
       <div className="flex flex-col gap-2 w-full lg:w-1/2">

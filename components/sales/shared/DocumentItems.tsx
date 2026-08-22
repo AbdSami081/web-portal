@@ -31,6 +31,7 @@ import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
+import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 
 export function DocumentItems() {
   const { watch } = useFormContext();
@@ -146,6 +147,7 @@ export function DocumentItems() {
         TaxCode: targetTaxCode,
         TaxRate: taxRate,
         WarehouseCode: defaultWhsLine,
+        BPLid: resolveBranchForWarehouse(defaultWhsLine, warehouses),
         UoMCode: uomVal,
         MeasureUnit: item.MeasureUnit || getUoMName(uomVal) || "",
         ManSerNum: item.ManSerNum,
@@ -259,6 +261,12 @@ export function DocumentItems() {
       key: "WarehouseCode",
       title: "Whs",
       width: 120,
+    },
+
+    {
+      key: "BPLid",
+      title: "Branch",
+      width: 90,
     },
 
     {

@@ -11,6 +11,9 @@ import { Warehouse } from "@/types/warehouse/warehouse";
 import { fetchItemByCode } from "@/lib/sap/helpers/itemCacheHelper";
 import { normalizeInventoryUom } from "@/utils/inventoryUom";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
+import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { useBranchStore } from "@/stores/useBranchStore";
 
 interface Props {
   index: number;
@@ -21,6 +24,8 @@ interface Props {
 export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) {
   const { watch } = useFormContext();
   const { updateLine, removeLine } = useInventoryDocument();
+  const { warehouses } = useMasterDataStore();
+  const { allBranches } = useBranchStore();
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
@@ -75,11 +80,21 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       const whOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
       updated = { ...draftLine, FromWhsCode: wh.WhsCode, OnHand: whOnHand };
     } else {
-      updated = { ...draftLine, WhsCode: wh.WhsCode };
+      updated = { ...draftLine, WhsCode: wh.WhsCode, BPLid: wh.BPLid };
     }
     setDraftLine(updated);
     saveRow(updated);
   };
+
+  // Backfill BPLid from the primary (To/single) warehouse for lines that already have one but no branch yet
+  useEffect(() => {
+    if (line.WhsCode && line.BPLid === undefined) {
+      const branchId = resolveBranchForWarehouse(line.WhsCode, warehouses);
+      if (branchId !== undefined) {
+        updateLine(line.ItemCode, { BPLid: branchId });
+      }
+    }
+  }, [line.WhsCode, line.BPLid, warehouses]);
 
   return (
     <>
@@ -157,6 +172,16 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
             <Search className="h-4 w-4" />
           </Button>
         </div>
+      </td>
+
+      {/* Branch (derived from Warehouse) */}
+      <td className="py-2 px-4">
+        <Input
+          className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
+          value={resolveBranchName(draftLine.BPLid, allBranches)}
+          disabled
+          readOnly
+        />
       </td>
 
       {/* Quantity */}

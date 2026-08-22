@@ -20,6 +20,7 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { useSearchParams } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { useBranchStore } from "@/stores/useBranchStore";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -56,6 +57,15 @@ export function DocumentHeader() {
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+
+  const { assignedBranches, sessionDefaultBranch } = useBranchStore();
+  const watchedBranch = watch("BPL_IDAssignedToInvoice");
+
+  useEffect(() => {
+    if (!isLoadedDocument && !watchedBranch && sessionDefaultBranch !== null) {
+      setValue("BPL_IDAssignedToInvoice", sessionDefaultBranch);
+    }
+  }, [isLoadedDocument, watchedBranch, sessionDefaultBranch, setValue]);
 
   const closeDocumentByType = (type: number, entry: number) => {
     switch (type) {
@@ -306,6 +316,7 @@ export function DocumentHeader() {
       setValue("DocEntry", documentData.DocEntry);
       setValue("DocNum", documentData.DocNum);
       setValue("Comments", documentData.Comments);
+      setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
 
       if (opts?.isDraft) {
         useSalesDocument.getState().setLoadedDraftData(documentData);
@@ -440,6 +451,33 @@ export function DocumentHeader() {
                 placeholder="Card Name"
                 disabled
               />
+            </div>
+          )}
+
+          {getFieldSettings(config.type, "headerFieds", "BPLId").visible !== false && (
+            <div className="flex items-center w-full gap-3">
+              <AppLabel className="w-28 shrink-0">Branch</AppLabel>
+              <Select
+                value={watchedBranch ? String(watchedBranch) : ""}
+                onValueChange={(val) => setValue("BPL_IDAssignedToInvoice", Number(val))}
+                disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "BPLId").enable}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Select Branch</SelectLabel>
+                    {assignedBranches.map((b) => (
+                      <SelectItem key={b.BPLID} value={String(b.BPLID)}>
+                        {b.BPLName}
+                        {b.Disabled === "tYES" ? " (Inactive)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>
