@@ -6,7 +6,7 @@ import { DocumentItems } from "@/components/sales/shared/DocumentItems";
 import { SalesDocumentLayout } from "@/components/sales/shared/SalesDocumentLayout";
 import { QuotationFormData, quotationSchema } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { postDelivery, patchDeliveryNote } from "@/api+/sap/sales/salesService";
+import { postARDownPayment, patchARDownPayment } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
@@ -45,13 +45,13 @@ export default function ARDownPaymentInvoicePage() {
       });
 
       try {
-        await patchDeliveryNote(Number(DocEntry), patchPayload);
+        await patchARDownPayment(Number(DocEntry), patchPayload);
         if (attachments.length > 0) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
             "DownPaymentInvoice",
             Number(DocEntry),
-            patchDeliveryNote
+            patchARDownPayment
           );
 
           if (attachmentResult.uploadedCount > 0) {
@@ -81,14 +81,14 @@ export default function ARDownPaymentInvoicePage() {
     });
 
     try {
-      const response = await postDelivery(payload);
+      const response = await postARDownPayment(payload);
       if (response?.DocEntry || response?.IsDraft) {
         if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(
             attachments,
             "DownPaymentInvoice",
             Number(response.DocEntry),
-            patchDeliveryNote
+            patchARDownPayment
           );
 
           if (attachmentResult.uploadedCount > 0) {

@@ -36,13 +36,18 @@ function attachBaseFields(
   return baseFields;
 }
 
+function withBaseLineNumber<T extends object>(entries: T[] | undefined, lineIndex: number): T[] | undefined {
+  if (!entries || entries.length === 0) return undefined;
+  return entries.map((entry) => ({ ...entry, BaseLineNumber: lineIndex }));
+}
+
 function buildDocumentLines(
   lines: InventoryDocumentLine[],
   fromWarehouse?: string,
   toWarehouse?: string,
   isPatch: boolean = false
 ): InventoryTransferLine[] {
-  return getValidLines(lines).map((line) => {
+  return getValidLines(lines).map((line, index) => {
     const baseFields: Record<string, any> = {
       ItemCode: line.ItemCode,
       Quantity: Number(line.Quantity) || 0,
@@ -69,12 +74,10 @@ function buildDocumentLines(
       attachBaseFields(baseFields, line);
     }
 
-    if (line.SerialNumbers && line.SerialNumbers.length > 0) {
-      baseFields.SerialNumbers = line.SerialNumbers;
-    }
-    if (line.BatchNumbers && line.BatchNumbers.length > 0) {
-      baseFields.BatchNumbers = line.BatchNumbers;
-    }
+    const serialNumbers = withBaseLineNumber(line.SerialNumbers, index);
+    if (serialNumbers) baseFields.SerialNumbers = serialNumbers;
+    const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
+    if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
     return baseFields as InventoryTransferLine;
   });
@@ -147,7 +150,7 @@ function buildGoodIssueLines(
   lines: InventoryDocumentLine[],
   isPatch: boolean = false
 ): InventoryTransferLine[] {
-  return getValidLines(lines).map((line) => {
+  return getValidLines(lines).map((line, index) => {
     const baseFields: Record<string, any> = {
       ItemCode: line.ItemCode,
       Quantity: Number(line.Quantity) || 0,
@@ -171,12 +174,10 @@ function buildGoodIssueLines(
       attachBaseFields(baseFields, line);
     }
 
-    if (line.SerialNumbers && line.SerialNumbers.length > 0) {
-      baseFields.SerialNumbers = line.SerialNumbers;
-    }
-    if (line.BatchNumbers && line.BatchNumbers.length > 0) {
-      baseFields.BatchNumbers = line.BatchNumbers;
-    }
+    const serialNumbers = withBaseLineNumber(line.SerialNumbers, index);
+    if (serialNumbers) baseFields.SerialNumbers = serialNumbers;
+    const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
+    if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
     return baseFields as InventoryTransferLine;
   });

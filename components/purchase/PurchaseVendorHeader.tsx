@@ -99,7 +99,12 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const { user } = useAuth();
 
   const config = usePurchaseDocConfig();
-  const isPurchaseRequest = (config.type as number) === DocumentType.PurchaseRequests;
+  // APDownPaymentRequest and PurchaseRequests share the same SAP object code, so a
+  // plain numeric check can't tell them apart — disambiguate by route path instead,
+  // matching the same workaround used in getResourceName below.
+  const isPurchaseRequest =
+    (config.type as number) === DocumentType.PurchaseRequests &&
+    !pathname.toLowerCase().includes("apdownpaymentrequest");
   const [notifyRqr, setNotifyRqr] = useState<string>("N");
 
   const docEntry = watch("DocEntry");

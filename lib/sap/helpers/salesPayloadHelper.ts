@@ -17,6 +17,14 @@ interface BuildSalesPayloadOptions {
   downPaymentType?: string;
 }
 
+// SAP Service Layer requires each Serial/BatchNumbers entry to carry BaseLineNumber —
+// the 0-based index of the DocumentLine it belongs to — or the allocation can be
+// silently dropped on save.
+function withBaseLineNumber<T extends object>(entries: T[] | undefined, lineIndex: number): T[] | undefined {
+  if (!entries || entries.length === 0) return undefined;
+  return entries.map((entry) => ({ ...entry, BaseLineNumber: lineIndex }));
+}
+
 function mapLineExpenses(line: SalesDocumentLine) {
   const expenses: Array<{ ExpenseCode: number; LineTotal: number; VatGroup: string }> = [];
 
@@ -70,7 +78,7 @@ export function buildSalesDocumentPayload({
     TaxDate: data.TaxDate,
     Comments: data.Comments,
     DiscountPercent: discountPercent || 0,
-    DocumentLines: lines.map((line) => {
+    DocumentLines: lines.map((line, index) => {
       const baseFields: Record<string, unknown> = {
         ItemCode: line.ItemCode,
         Quantity: Number(line.Quantity) || 0,
@@ -100,12 +108,10 @@ export function buildSalesDocumentPayload({
         baseFields.DocumentLineAdditionalExpenses = lineExpenses;
       }
 
-      if (line.SerialNumbers && line.SerialNumbers.length > 0) {
-        baseFields.SerialNumbers = line.SerialNumbers;
-      }
-      if (line.BatchNumbers && line.BatchNumbers.length > 0) {
-        baseFields.BatchNumbers = line.BatchNumbers;
-      }
+      const serialNumbers = withBaseLineNumber(line.SerialNumbers, index);
+      if (serialNumbers) baseFields.SerialNumbers = serialNumbers;
+      const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
+      if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
       return baseFields;
     }),
@@ -138,7 +144,7 @@ export function buildSalesDocumentPatchPayload({
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
     DiscountPercent: discountPercent || 0,
-    DocumentLines: lines.map((line) => {
+    DocumentLines: lines.map((line, index) => {
       const baseFields: Record<string, unknown> = {
         ItemCode: line.ItemCode,
         Quantity: Number(line.Quantity) || 0,
@@ -165,12 +171,10 @@ export function buildSalesDocumentPatchPayload({
         baseFields.DocumentLineAdditionalExpenses = lineExpenses;
       }
 
-      if (line.SerialNumbers && line.SerialNumbers.length > 0) {
-        baseFields.SerialNumbers = line.SerialNumbers;
-      }
-      if (line.BatchNumbers && line.BatchNumbers.length > 0) {
-        baseFields.BatchNumbers = line.BatchNumbers;
-      }
+      const serialNumbers = withBaseLineNumber(line.SerialNumbers, index);
+      if (serialNumbers) baseFields.SerialNumbers = serialNumbers;
+      const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
+      if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
       return baseFields;
     }),

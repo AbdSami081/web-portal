@@ -22,6 +22,11 @@ export interface BuildPurchasePatchPayloadOptions {
   includeLines?: boolean;
 }
 
+function withBaseLineNumber<T extends object>(entries: T[] | undefined, lineIndex: number): T[] | undefined {
+  if (!entries || entries.length === 0) return undefined;
+  return entries.map((entry) => ({ ...entry, BaseLineNumber: lineIndex }));
+}
+
 function mapLineExpenses(line: PurchaseDocumentLine) {
   const expenses: Array<{ ExpenseCode: number; LineTotal: number; VatGroup: string }> = [];
 
@@ -90,7 +95,7 @@ export function buildPurchaseDocumentPayload({
     DiscountPercent: discountPercent || 0,
     Freight: freight || 0,
     Rounding: rounding || 0,
-    DocumentLines: lines.map((line) => {
+    DocumentLines: lines.map((line, index) => {
       const baseFields: Record<string, unknown> = {
         ItemCode: line.ItemCode,
         Quantity: Number(line.Quantity) || 0,
@@ -120,12 +125,10 @@ export function buildPurchaseDocumentPayload({
         baseFields.DocumentLineAdditionalExpenses = lineExpenses;
       }
 
-      if (line.SerialNumbers && line.SerialNumbers.length > 0) {
-        baseFields.SerialNumbers = line.SerialNumbers;
-      }
-      if (line.BatchNumbers && line.BatchNumbers.length > 0) {
-        baseFields.BatchNumbers = line.BatchNumbers;
-      }
+      const serialNumbers = withBaseLineNumber(line.SerialNumbers, index);
+      if (serialNumbers) baseFields.SerialNumbers = serialNumbers;
+      const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
+      if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
       return baseFields;
     }),
@@ -162,7 +165,7 @@ export function buildPurchaseDocumentPatchPayload({
     Freight: freight || 0,
     Rounding: rounding || 0,
     ...(includeLines && lines.length > 0 && {
-      DocumentLines: lines.map((line) => {
+      DocumentLines: lines.map((line, index) => {
         const baseFields: Record<string, unknown> = {
           ItemCode: line.ItemCode,
           Quantity: Number(line.Quantity) || 0,
@@ -182,12 +185,10 @@ export function buildPurchaseDocumentPatchPayload({
           baseFields.DocumentLineAdditionalExpenses = lineExpenses;
         }
 
-        if (line.SerialNumbers && line.SerialNumbers.length > 0) {
-          baseFields.SerialNumbers = line.SerialNumbers;
-        }
-        if (line.BatchNumbers && line.BatchNumbers.length > 0) {
-          baseFields.BatchNumbers = line.BatchNumbers;
-        }
+        const serialNumbers = withBaseLineNumber(line.SerialNumbers, index);
+        if (serialNumbers) baseFields.SerialNumbers = serialNumbers;
+        const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
+        if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
         return baseFields;
       }),

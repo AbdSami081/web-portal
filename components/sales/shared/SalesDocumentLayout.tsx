@@ -160,6 +160,12 @@ export function SalesDocumentLayout<T extends FieldValues>({
     if (docType === DocumentType.Order) return [DocumentType.Quotation];
     if (docType === DocumentType.Delivery) return [DocumentType.Order, DocumentType.Quotation];
     if (docType === DocumentType.ARInvoice) return [DocumentType.Delivery, DocumentType.Order, DocumentType.Quotation];
+    // AR Down Payments must be created from an existing Quotation/Order in this SAP
+    // company (a standalone BaseType:-1 line is rejected with "ODPI.Posted") — same
+    // requirement as a real Down Payment created from SAP's own client.
+    if (docType === DocumentType.DownPaymentRequest || docType === DocumentType.DownPaymentInvoice) {
+      return [DocumentType.Order, DocumentType.Quotation];
+    }
     return [];
   })();
 
