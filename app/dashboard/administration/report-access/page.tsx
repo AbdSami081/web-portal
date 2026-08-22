@@ -39,10 +39,13 @@ export default function ReportAccessPage() {
       try {
         const [u, r] = await Promise.all([
           getUsers(currentUser.companyDB),
-          getReports(currentUser.empId)
+          getReports(undefined, currentUser.companyDB)
         ]);
         setUsers(u);
-        setReports(r);
+        const importedReports = Array.isArray(r)
+          ? r.filter(item => String(item.U_DocType ?? "report").toLowerCase() === "report")
+          : [];
+        setReports(importedReports);
       } catch (error) {
         toast.error("Failed to load access data");
       } finally {
@@ -52,32 +55,32 @@ export default function ReportAccessPage() {
     fetchData();
   }, [currentUser?.companyDB]);
 
- useEffect(() => {
-  if (selectedUser) {
-    const fetchPermissions = async () => {
-      try {
-        const authReports = await getAuthorizedReports(selectedUser.empId);
+  useEffect(() => {
+    if (selectedUser) {
+      const fetchPermissions = async () => {
+        try {
+          const authReports = await getAuthorizedReports(selectedUser.empId);
 
-        const mapping: Record<string, boolean> = {};
+          const mapping: Record<string, boolean> = {};
 
-        authReports.forEach((r: any) => {
-          const reportCode = String(r.U_ReportCode || "").trim();
-          if (reportCode) {
-            mapping[reportCode] = true;
-          }
-        });
+          authReports.forEach((r: any) => {
+            const reportCode = String(r.U_ReportCode || r.Code || "").trim();
+            if (reportCode) {
+              mapping[reportCode] = true;
+            }
+          });
 
-        setPermissions(mapping);
-      } catch (error) {
-        setPermissions({});
-      }
-    };
+          setPermissions(mapping);
+        } catch (error) {
+          setPermissions({});
+        }
+      };
 
-    fetchPermissions();
-  } else {
-    setPermissions({});
-  }
-}, [selectedUser]);
+      fetchPermissions();
+    } else {
+      setPermissions({});
+    }
+  }, [selectedUser]);
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => 
@@ -89,11 +92,14 @@ export default function ReportAccessPage() {
   const filteredReports = useMemo(() => {
     return reports.filter(r => 
       r.Name?.toLowerCase().includes(reportSearch.toLowerCase()) || 
-      r.U_FileName?.toLowerCase().includes(reportSearch.toLowerCase())
+      r.U_FileName?.toLowerCase().includes(reportSearch.toLowerCase()) ||
+      r.U_ActualFileName?.toLowerCase().includes(reportSearch.toLowerCase()) ||
+      r.Code?.toLowerCase().includes(reportSearch.toLowerCase())
     );
   }, [reports, reportSearch]);
 
   const togglePermission = (reportCode: string) => {
+    if (!reportCode) return;
     setPermissions(prev => ({
       ...prev,
       [reportCode]: !prev[reportCode]
@@ -224,34 +230,44 @@ export default function ReportAccessPage() {
 
               <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-200">
                 <div className="max-w-5xl mx-auto grid grid-cols-1 gap-4">
-                  {filteredReports.map(report => (
-                    <div key={report.Code} className="group border rounded-xl p-4 flex items-center justify-between hover:border-blue-200 hover:shadow-md hover:shadow-blue-50/50 transition-all bg-white">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 bg-slate-50 rounded-lg flex items-center justify-center border group-hover:bg-blue-50 group-hover:border-blue-100">
-                          <FileText className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
+                  {filteredReports.map(report => {
+                    const reportCode = String(report.U_ReportCode || report.Code || "").trim();
+                    const reportTitle = report.Name || report.U_FileName || `Report ${reportCode}`;
+                    const isChecked = Boolean(permissions[reportCode]);
+                    return (
+                      <div key={reportCode || report.Code} className="group border rounded-xl p-4 flex items-center justify-between hover:border-blue-200 hover:shadow-md hover:shadow-blue-50/50 transition-all bg-white">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 bg-slate-50 rounded-lg flex items-center justify-center border group-hover:bg-blue-50 group-hover:border-blue-100">
+                            <FileText className="h-5 w-5 text-slate-400 group-hover:text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{reportTitle}</p>
+                            <p className="text-[11px] text-slate-400 flex items-center gap-2">
+                              <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold text-slate-500">{report.U_ExtType || ".rpt"}</span>
+                              {report.U_FilePath ? `${report.U_FilePath}\\` : ""}{report.U_FileName}
+                              {report.U_UserCode && (
+                                <span className="text-slate-400 text-[10px]">
+                                  (Uploaded by: {report.U_UserCode})
+                                </span>
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-800">{report.U_FileName}</p>
-                          <p className="text-[11px] text-slate-400 flex items-center gap-2">
-                            <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold text-slate-500">{report.U_ExtType || ".rpt"}</span>
-                            {report.U_FilePath}\{report.U_FileName}
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-4 px-4">
-                        <div className="flex flex-col items-center gap-2">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                            Grant Access
-                          </p>
-                          <Switch 
-                            checked={permissions[report.U_ReportCode!] || false}
-                            onCheckedChange={() => togglePermission(report.U_ReportCode!)}
-                          />
+                        <div className="flex items-center gap-4 px-4">
+                          <div className="flex flex-col items-center gap-2">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                              Grant Access
+                            </p>
+                            <Switch 
+                              checked={isChecked}
+                              onCheckedChange={() => togglePermission(reportCode)}
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </>

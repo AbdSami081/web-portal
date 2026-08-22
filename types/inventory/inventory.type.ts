@@ -43,4 +43,8 @@ export interface InventoryDocumentLine {
     BaseEntry?: number;
     BaseLine?: number;
     LineTotal?: number;
+    SerialNumbers?: any[];
+    BatchNumbers?: any[];
+    ManSerNum?: string;
+    ManBtchNum?: string;
 }

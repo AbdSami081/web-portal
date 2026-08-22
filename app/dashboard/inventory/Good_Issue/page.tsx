@@ -89,7 +89,6 @@ export default function InvTransferPage() {
       let result;
 
       if (DocEntry && DocEntry > 0) {
-        // Update: send lines with LineNum for existing, without for new
         const payload = buildGoodIssuePatchPayload({
           data,
           lines,
@@ -97,14 +96,15 @@ export default function InvTransferPage() {
         result = await patchGoodIssue(DocEntry, payload);
         toast.success(`Good Issue updated!`);
       } else {
-        // Create new document
         const payload = buildGoodIssuePayload({
           data,
           lines,
         });
 
+        console.log("Good Issue Result:", payload);
         result = await postGoodIssue(payload);
 
+        
         if (result?.IsDraft) {
           toast.success("Good Issue submitted for approval.");
         } else if (result?.DocEntry) {

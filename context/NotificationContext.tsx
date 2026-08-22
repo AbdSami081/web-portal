@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { HubConnection, HubConnectionBuilder, HubConnectionState, HttpTransportType, LogLevel } from "@microsoft/signalr";
 import { useAuth } from "./authContext";
 import { toast } from "sonner";
-import { SAPMessage, getMyAlerts } from "@/api+/sap/notification";
+import { SAPMessage, getMyAlerts, getMyAlertsCount } from "@/api+/sap/notification";
 
 interface NotificationContextType {
   messages: SAPMessage[];
@@ -30,8 +30,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     if (!accessToken) return false;
     setIsLoading(true);
     try {
-      const page = await getMyAlerts(0);
+      const [page, count] = await Promise.all([getMyAlerts(0), getMyAlertsCount()]);
       setMessages(page.messages || []);
+      setUnreadCount(count);
       return true;
     } catch (error) {
       console.error("Failed to fetch messages", error);

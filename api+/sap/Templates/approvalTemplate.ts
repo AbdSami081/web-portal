@@ -5,12 +5,18 @@ import { DocumentType } from "@/types/master/DocumentType";
 export const getTemplateDocuments = async (): Promise<ApprovalTemplate[]> => {
   const res = await apiClient.get("api/Approval/ApprovalTemplates");
   if (!res.data) return [];
-  console.log("Approval Template Data:", res.data.value);
   return res.data as ApprovalTemplate[];
 };
 
-export const getApprovalDocumentType = (docType: number | string): string => {
+export const getApprovalDocumentType = (docType: number | string, pathname = ""): string => {
   const numType = Number(docType);
+  const currentPath = pathname.toLowerCase();
+
+  // APDownPaymentRequest and PurchaseRequests share the same SAP object type
+  // code, so a plain numeric switch can't tell them apart — disambiguate by
+  // route path first, matching the same workaround used in PurchaseVendorHeader.
+  if (currentPath.includes("apdownpaymentrequest")) return "atdtPurchaseDownPayment";
+
   switch (numType) {
     case DocumentType.Quotation:
       return "atdtQuotation";
@@ -90,7 +96,6 @@ export const getCurrentUserApprovalTemplates = async (
     }
     return [];
   } catch (error) {
-    console.error("Failed to fetch current user approval templates:", error);
     return [];
   }
 };
@@ -110,16 +115,18 @@ export const submitApprovalRequest = async (
   id: number,
   request: SubmitApprovalRequestDto
 ): Promise<any> => {
-  console.log("Submitting approval request:", { id, request });
+  // Re-submitting a previously-rejected (or otherwise existing) approval request
+  // re-opens it via PATCH /ApprovalRequests/{id}. The SAP B1 Service Layer does NOT
+  // support creating an ApprovalRequests entity through POST (it answers
+  // "Command Not Found"). When id is 0, backend dynamically resolves the draft's approval request.
+  const targetId = Number(id) > 0 ? Number(id) : 0;
+  const res = await apiClient.patch(`api/Approval/ApprovalRequests/${targetId}`, request);
+  return res.data;
+};
 
-  // Creation of a NEW request: POST (the backend resolves approvers from the stage).
-  // The PATCH fallback only exists for legacy callers passing a real ApprovalRequest id.
-  try {
-    const res = await apiClient.post("api/Approval/ApprovalRequests", request);
-    return res.data;
-  } catch (error) {
-    console.warn("POST ApprovalRequests failed, falling back to PATCH ApprovalRequests:", error);
-    const res = await apiClient.patch(`api/Approval/ApprovalRequests/${id}`, request);
-    return res.data;
-  }
+export const rejectApprovalRequest = async (id: number, remarks = "Rejected"): Promise<any> => {
+  const res = await apiClient.patch(`api/Approval/ApprovalRequests/${id}/reject`, {
+    Remarks: remarks,
+  });
+  return res.data;
 };

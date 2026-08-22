@@ -29,12 +29,15 @@ import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog"
 import { ResizableTable } from "@/components/Custom/ResizableTable";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
+import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
+import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 
 export function DocumentItems() {
   const { watch } = useFormContext();
 
   const selectedCardCode =
     watch("CardCode");
+  const docStatus = watch("DocStatus");
 
   const {
     lines,
@@ -56,9 +59,7 @@ export function DocumentItems() {
   const config = useSalesDocConfig();
 
   const isTableDisabled =
-    config.isDisabledTable(
-      customer?.DocumentStatus!
-    );
+    config.isDisabledTable(docStatus);
 
   const {
     freightsWithCharges,
@@ -160,13 +161,16 @@ export function DocumentItems() {
   ) => {
     e.preventDefault();
 
-    const isDeliveryOrInvoice =
-      config.type ===
-        DocumentType.Delivery ||
-      config.type ===
-        DocumentType.ARInvoice;
+    const isSerialBatchDocument = [
+      DocumentType.Delivery,
+      DocumentType.ARInvoice,
+      DocumentType.SalesReturn,
+      DocumentType.Return,
+      DocumentType.CreditMemo,
+      DocumentType.ARCreditMemo,
+    ].includes(config.type);
 
-    if (!isDeliveryOrInvoice)
+    if (!isSerialBatchDocument)
       return;
 
     const isSerial =
@@ -315,20 +319,7 @@ export function DocumentItems() {
     return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
-  const isFinancialDoc = [
-    DocumentType.ARInvoice,
-    DocumentType.CreditMemo,
-    DocumentType.ARCreditMemo,
-    DocumentType.Delivery,
-    DocumentType.Return,
-    DocumentType.SalesReturn,
-    DocumentType.ReturnRequest,
-    DocumentType.SalesReturnRequest,
-    DocumentType.DownPaymentInvoice,
-    DocumentType.ARDownPaymentInvoice,
-    DocumentType.DownPaymentRequest,
-    DocumentType.ARDownPaymentRequest,
-  ].includes(config.type);
+  const isFinancialDoc = isPostedSalesDocType(config.type);
 
   const docEntry = watch("DocEntry");
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
@@ -451,6 +442,7 @@ export function DocumentItems() {
                       line={line}
                     />
                   )}
+                  rowClassName={(line) => hasInvalidPrice(line) ? "bg-blue-50 hover:bg-blue-100" : ""}
                 />
 
                 {contextMenu && (

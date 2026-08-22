@@ -123,7 +123,7 @@ export default function NewPurchaseQuotationPage() {
       console.log("Submitting Purchase Quotation with payload:", payload);
       const documentData = await postPurchaseQuotation(payload);
       if (!documentData?.DocEntry) throw new Error("Failed to create quotation");
-      loadFromDocument(documentData, DocumentType.Quotation);
+      loadFromDocument(documentData, DocumentType.PurchaseQuotation);
       toast.success(`Quotation #${documentData.DocNum} created successfully`);
     } catch (error: any) {
       const message = getSapErrorMessage(error);

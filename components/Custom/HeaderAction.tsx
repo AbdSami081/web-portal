@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { FilePlus2, Keyboard, Loader2, Printer } from "lucide-react";
 import { toast } from "sonner";
@@ -15,7 +16,9 @@ import {
 import { HeaderModalAction } from "../header-modal-action";
 import { KeyboardShortcutsContent } from "../keyboard-shortcuts-content";
 import { useAuth } from "@/context/authContext";
+import { clearDocNavParams } from "@/lib/docNavParams";
 import LayoutPreviewModal from "@/modals/LayoutPreviewModal";
+import { getMenuUrlsByObjectCode } from "@/lib/menu-lookup";
 
 interface Props {
   DocEntry: number;
@@ -35,11 +38,31 @@ const HeaderActions: React.FC<Props> = ({
   resetStore,
 }) => {
   const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const [layoutModalOpen, setLayoutModalOpen] = useState(false);
 
   const activeSchema = schemaName || user?.companyDB || "";
 
   const handleNewDocument = () => {
+    clearDocNavParams();
+
+    // Draft/pending-approval views (e.g. /dashboard/sales/draft) live on a different
+    // route than the document's real "create new" page — stripping query params alone
+    // leaves the user on that draft route with no draftEntry, so its submit handler
+    // (which requires one) breaks. Navigate to the canonical create page instead —
+    // but only when the current page isn't itself already a valid page for this
+    // objectCode (some DocumentType values, e.g. GoodIssue/IssueForProduction, are
+    // shared by more than one page, so the mapping isn't always one-to-one).
+    const validUrls = getMenuUrlsByObjectCode(objectCode);
+    if (validUrls.length > 0 && pathname && !validUrls.includes(pathname)) {
+      router.push(validUrls[0]);
+      return;
+    }
+
+    if (typeof window !== "undefined" && window.location.search) {
+     router.replace(pathname || window.location.pathname);
+    }
     reset({
       ...defaultValues,
       DocNum: 0,

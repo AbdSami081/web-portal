@@ -98,7 +98,7 @@ export default function InventoryDraftPage() {
             Comments: documentData.Comments || "",
           }));
 
-          toast.success(`Inventory Draft #${draftId} loaded successfully.`);
+          // Draft loaded — form is populated, no extra toast needed here.
         } else {
           toast.error(`Draft #${draftId} not found.`);
         }

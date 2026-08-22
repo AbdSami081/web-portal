@@ -45,16 +45,16 @@ export default function ReportGeneratePage() {
         setLoading(true);
         try {
           const [allReports, rights] = await Promise.all([
-            getReports(user.empId),
+            getReports(undefined, user.companyDB),
             getAuthorizedReports(user.empId)
           ]);
 
           const authorizedCodes = new Set(
-            rights.map((r: any) => String(r.U_ReportCode || "").trim().toLowerCase())
+            rights.map((r: any) => String(r.U_ReportCode || r.Code || "").trim().toLowerCase())
           );
 
           const filtered = allReports.filter(report => {
-            const reportCode = String(report.U_ReportCode || "").trim().toLowerCase();
+            const reportCode = String(report.U_ReportCode || report.Code || "").trim().toLowerCase();
             return authorizedCodes.has(reportCode);
           });
           

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/inventory/documentConfig";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
+import { useShallow } from "zustand/react/shallow";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { resolveDocNavParams, clearDocNavParams } from "@/lib/docNavParams";
@@ -22,10 +23,18 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useAuth } from "@/context/authContext";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { ApprovalTemplate } from "@/types/template.type";
 import { getSapErrorMessage } from "@/lib/errorHelper";
+import { patchDraftDocument } from "@/api+/sap/draft/draftService";
+import {
+  buildInventoryTransferRequestPatchPayload,
+  buildInventoryTransferPatchPayload,
+  buildGoodIssuePatchPayload,
+} from "@/lib/sap/helpers/inventoryPayloadHelper";
+import { hasDraftChanges } from "@/lib/approval/approvalChanges";
+import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -61,6 +70,27 @@ export function InvDocumentLayout<T extends FieldValues>({
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
 
+  const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
+  const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
+  const isRejectedApproval =
+    statusStr === "arsrejected" ||
+    statusStr === "ardrejected" ||
+    statusStr === "arsnotapproved" ||
+    statusStr === "ardnotapproved" ||
+    statusStr === "rejected" ||
+    statusStr === "notapproved" ||
+    statusStr === "arscancelled" ||
+    statusStr === "arscanceled" ||
+    statusStr === "ardcancelled" ||
+    statusStr === "ardcanceled" ||
+    statusStr === "arscomplete";
+  const isPendingApproval =
+    (statusStr === "arspending" ||
+      statusStr === "ardpending" ||
+      statusStr === "pending" ||
+      (!statusStr && !!docNav.approvalRequestCode && !!docNav.draftEntry)) &&
+    !!docNav.draftEntry;
+
 
   const [badgeState, setBadgeState] = useState<"draft" | "approved" | null>(() => {
     const draftEntryParam = docNav.draftEntry;
@@ -85,26 +115,47 @@ export function InvDocumentLayout<T extends FieldValues>({
 
   const { handleSubmit, reset, setValue } = methods;
   const { reset: resetStore, DocEntry, loadFromDocument, setIsCopyingTo } = useInventoryDocument();
-  const store = useInventoryDocument();
+  const store = useInventoryDocument(
+    useShallow(state => ({
+      customer: state.customer,
+      fromWarehouse: state.fromWarehouse,
+      toWarehouse: state.toWarehouse,
+      comments: state.comments,
+      journalMemo: state.journalMemo,
+      docDate: state.docDate,
+      lines: state.lines,
+      DocEntry: state.DocEntry,
+      DocNum: state.DocNum,
+      docStatus: state.docStatus,
+    }))
+  );
   const [isSaving, setIsSaving] = useState(false);
   const { user } = useAuth();
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
+  const [isCheckingApproval, setIsCheckingApproval] = useState(false);
+  // Set when a REJECTED draft is re-submitted: the draft is patched first, then a NEW
+  // approval request is created (historical approval stays untouched).
+  const [pendingReApproval, setPendingReApproval] = useState<{ draftId: number; docType: string | number } | null>(null);
 
   const previousDocTypeRef = React.useRef<DocumentType | null>(null);
+  const lastDefaultValuesKeyRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     const state = useInventoryDocument.getState();
     const didDocTypeChange = previousDocTypeRef.current !== null && previousDocTypeRef.current !== docType;
+    const defaultValuesKey = JSON.stringify(defaultValues ?? {});
+    const shouldResetForNewDefaults = defaultValuesKey !== lastDefaultValuesKeyRef.current;
 
-    if (!state.isCopyingTo && didDocTypeChange && !skipAutoReset) {
+    if (!state.isCopyingTo && didDocTypeChange && !skipAutoReset && shouldResetForNewDefaults) {
       resetStore();
       reset(defaultValues as any);
+      lastDefaultValuesKeyRef.current = defaultValuesKey;
     }
 
     previousDocTypeRef.current = docType;
-  }, [docType, resetStore, reset, defaultValues]); 
+  }, [docType, resetStore, reset, defaultValues, skipAutoReset]); 
 
   const isInitialMount = React.useRef(true);
 
@@ -113,6 +164,12 @@ export function InvDocumentLayout<T extends FieldValues>({
     isInitialMount.current = false;
 
     const state = useInventoryDocument.getState();
+    const defaultValuesKey = JSON.stringify(defaultValues ?? {});
+
+    if (defaultValuesKey === lastDefaultValuesKeyRef.current) {
+      return;
+    }
+    lastDefaultValuesKeyRef.current = defaultValuesKey;
 
     if (state.isCopyingTo) {
       // Coming from a Copy To — clear stale sessionStorage so the header doesn't
@@ -339,24 +396,159 @@ export function InvDocumentLayout<T extends FieldValues>({
   };
 
   const onSubmitValid = async (data: T) => {
-    if (!docNav.draftEntry && !isEditMode) {
-      const state = useInventoryDocument.getState();
-      const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
+    const state = useInventoryDocument.getState();
+    const currentUserId = user?.sapUserId;
+    const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
 
-      const currentUserId = user?.sapUserId;
+    const buildDraftPatchPayload = () => {
+      switch (docType) {
+        case DocumentType.InvTransferReq:
+          return buildInventoryTransferRequestPatchPayload({
+            data: finalData,
+            lines: state.lines,
+            fromWarehouse: state.fromWarehouse,
+            toWarehouse: state.toWarehouse,
+          });
+        case DocumentType.InvTransfer:
+          return buildInventoryTransferPatchPayload({
+            data: finalData,
+            lines: state.lines,
+            fromWarehouse: state.fromWarehouse,
+            toWarehouse: state.toWarehouse,
+          });
+        case DocumentType.GoodIssue:
+          return buildGoodIssuePatchPayload({ data: finalData, lines: state.lines });
+        default:
+          return {
+            Comments: (finalData as any).Comments || "",
+            JournalMemo: (finalData as any).JournalMemo || "",
+            DocumentLines: state.lines.map((line) => ({
+              ItemCode: line.ItemCode,
+              Quantity: Number(line.Quantity) || 0,
+              WarehouseCode: line.WhsCode || "",
+            })),
+          };
+      }
+    };
+
+    // Validate serial/batch allocation up front, regardless of which submit path
+    // (fresh document, rejected-draft resubmit, approved-draft resubmit) is taken below —
+    // otherwise a resubmit branch could skip this and reach SAP with an unallocated line.
+    if (docType === DocumentType.GoodIssue) {
+      if (linesNeedSerialAllocation(state.lines)) {
+        useInventoryDocument.getState().setSelectedLineForModal(null);
+        useInventoryDocument.getState().setSerialModalOpen(true);
+        return;
+      }
+      if (linesNeedBatchAllocation(state.lines)) {
+        useInventoryDocument.getState().setSelectedLineForModal(null);
+        useInventoryDocument.getState().setBatchModalOpen(true);
+        return;
+      }
+    }
+
+    if (isRejectedApproval && docNav.draftEntry) {
+      setIsSaving(true);
+      try {
+        await patchDraftDocument(Number(docNav.draftEntry), buildDraftPatchPayload());
+      } catch (err) {
+        toast.error(getSapErrorMessage(err) || "Failed to update approval draft");
+        setIsSaving(false);
+        return;
+      }
+
+      let templates = approvalTemplates;
       if (currentUserId) {
         try {
           const docTypeStr = getApprovalDocumentType(docType);
-          const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
-          if (activeTemplates && activeTemplates.length > 0) {
-            setApprovalTemplates(activeTemplates);
-            setPendingFinalData(finalData);
-            setApprovalModalOpen(true);
-            return;
-          }
-        } catch (err) {
-          console.error("Failed to check approval templates:", err);
+          templates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+        } catch {
+          templates = [];
         }
+      }
+      if (templates && templates.length > 0) {
+        setApprovalTemplates(templates);
+        setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+        setIsSaving(false);
+        setApprovalModalOpen(true);
+        return;
+      }
+      toast.success("Draft updated. The approval request will be re-submitted.");
+      reset(defaultValues as any);
+      resetStore();
+      setIsSaving(false);
+      return;
+    }
+
+    if (isPendingApproval && docNav.draftEntry) {
+      toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+      return;
+    }
+
+    if (isApprovedDraft && docNav.draftEntry) {
+      // For approved drafts: only require a NEW approval request if something material
+      // actually changed since the last approval. If nothing changed, submit directly.
+      const approvedChanged = hasDraftChanges(state.loadedDraftData, state.lines, finalData);
+      if (!approvedChanged) {
+        setIsSaving(true);
+        try {
+          await onSubmit(finalData);
+          reset(defaultValues as any);
+          resetStore();
+        } catch (err: any) {
+          toast.error(getSapErrorMessage(err) || "Failed to create document from draft");
+        }
+        setIsSaving(false);
+        return;
+      }
+
+      setIsSaving(true);
+      try {
+        await onSubmit(finalData);
+        reset(defaultValues as any);
+        resetStore();
+      } catch (err: any) {
+        // If onSubmit fails (likely because approval is needed), open the modal
+        let approvedTemplates = approvalTemplates;
+        if (currentUserId) {
+          try {
+            const docTypeApproved = getApprovalDocumentType(docType);
+            approvedTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeApproved);
+          } catch {
+            approvedTemplates = [];
+          }
+        }
+        if (approvedTemplates && approvedTemplates.length > 0) {
+          setApprovalTemplates(approvedTemplates);
+          setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+          setPendingFinalData(finalData);
+          setIsSaving(false);
+          setApprovalModalOpen(true);
+          return;
+        }
+        toast.error(getSapErrorMessage(err) || "Failed to create document from draft");
+      }
+      setIsSaving(false);
+      return;
+    }
+
+    if (currentUserId) {
+      setIsCheckingApproval(true);
+      try {
+        const docTypeStr = getApprovalDocumentType(docType);
+        const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+        if (activeTemplates && activeTemplates.length > 0) {
+          setApprovalTemplates(activeTemplates);
+          setPendingReApproval(null);
+          setPendingFinalData(finalData);
+          setApprovalModalOpen(true);
+          setIsCheckingApproval(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to check approval templates:", err);
+      } finally {
+        setIsCheckingApproval(false);
       }
     }
 
@@ -522,17 +714,37 @@ export function InvDocumentLayout<T extends FieldValues>({
             onClose={() => setApprovalModalOpen(false)}
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
+              if (pendingReApproval) {
+                const tpl = approvalTemplates[0];
+                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
+                const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
+                try {
+                  await submitApprovalRequest(approvalRequestId, {
+                    TemplateCode: tpl?.Code,
+                    ObjectEntry: pendingReApproval.draftId,
+                    ObjectType: pendingReApproval.docType,
+                    IsDraft: "Y",
+                    ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
+                    OriginatorID: user?.sapUserId,
+                    Remarks: remarks || "",
+                  });
+                  toast.success("Draft updated and the approval request was re-submitted.");
+                } catch (err: any) {
+                  toast.error(getSapErrorMessage(err) || "Failed to resubmit the approval request.");
+                }
+                setPendingReApproval(null);
+                setPendingFinalData(null);
+                reset(defaultValues as any);
+                resetStore();
+                return;
+              }
+
               if (!pendingFinalData) return;
-              const firstRemarks = approvalTemplates[0]
-                ? (remarksMap[approvalTemplates[0].Code] ?? "").trim()
-                : "";
               const finalData = {
                 ...(pendingFinalData as any),
-                Comments: firstRemarks || (pendingFinalData as any).Comments || "",
+                Comments: (pendingFinalData as any).Comments || "",
               } as T;
 
-              // The document is posted here - when an approval process applies, SAP
-              // creates a draft + approval request natively (ODBC -2028 handled backend-side).
               await onSubmit(finalData);
               setPendingFinalData(null);
               reset(defaultValues as any);

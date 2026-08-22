@@ -13,7 +13,7 @@ import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
-import { DocumentType } from "@/types/master/DocumentType";
+import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 
 interface Props {
   index: number;
@@ -31,16 +31,7 @@ export function PurchaseItemRow({ index, line }: Props) {
   const { freightsWithCharges, freightTypes } = useMasterDataStore();
   const config = usePurchaseDocConfig();
 
-  const isFinancialPurchaseDoc = [
-    DocumentType.GoodsReceiptPO,
-    DocumentType.APInvoice,
-    DocumentType.APCreditMemo,
-    DocumentType.GoodsReturn,
-    DocumentType.GoodsReturnRequest,
-    DocumentType.APReserveInvoice,
-    DocumentType.APDownPaymentInvoice,
-    DocumentType.APDownPaymentRequest,
-  ].includes(config.type);
+  const isFinancialPurchaseDoc = isPostedPurchaseDocType(config.type);
 
   const docEntry = watch("DocEntry");
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
@@ -358,29 +349,115 @@ export function PurchaseItemRow({ index, line }: Props) {
               })
             }
             onBlur={() => calculateAndUpdate(draftLine)}
+            disabled={!isFieldEnabled("Freight1LCAmount")}
           />
         </td>
       )}
 
-      {isFieldVisible("Vendor") && (
-        <td className="w-[150px]">
+      {isFieldVisible("Freight2Type") && (
+        <td className="w-[140px]">
+          <Select
+            value={draftLine.Freight2Type || ""}
+            onValueChange={(val) => {
+              const selectedType = freightTypes?.find(
+                (t: any) => t.ExpnsCode?.toString() === val
+              );
+              const updated = {
+                ...draftLine,
+                Freight2Type: val,
+                Freight2TaxGroup: selectedType?.VatGroupO || "",
+              };
+              setDraftLine(updated);
+              calculateAndUpdate(updated);
+            }}
+            disabled={!isFieldEnabled("Freight2Type")}
+          >
+            <SelectTrigger className="h-6 w-full text-xs">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              {freightTypes?.map((type: any) => (
+                <SelectItem
+                  key={type.ExpnsCode}
+                  value={type.ExpnsCode?.toString()}
+                  className="text-xs"
+                >
+                  {type.ExpnsName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </td>
+      )}
+
+      {isFieldVisible("Freight2LCAmount") && (
+        <td className="w-[110px]">
           <Input
-            value={draftLine.Requester || ""}
+            className="h-6 w-full text-right"
+            type="number"
+            value={draftLine.Freight2LCAmount || 0}
             onChange={(e) =>
-              setDraftLine({ ...draftLine, Requester: e.target.value })
+              setDraftLine({
+                ...draftLine,
+                Freight2LCAmount: Number(e.target.value),
+              })
             }
+            onBlur={() => calculateAndUpdate(draftLine)}
+            disabled={!isFieldEnabled("Freight2LCAmount")}
           />
         </td>
       )}
 
-      {isFieldVisible("RequiredDate") && (
-        <td className="w-[150px]">
+      {isFieldVisible("Freight3Type") && (
+        <td className="w-[140px]">
+          <Select
+            value={draftLine.Freight3Type || ""}
+            onValueChange={(val) => {
+              const selectedType = freightTypes?.find(
+                (t: any) => t.ExpnsCode?.toString() === val
+              );
+              const updated = {
+                ...draftLine,
+                Freight3Type: val,
+                Freight3TaxGroup: selectedType?.VatGroupO || "",
+              };
+              setDraftLine(updated);
+              calculateAndUpdate(updated);
+            }}
+            disabled={!isFieldEnabled("Freight3Type")}
+          >
+            <SelectTrigger className="h-6 w-full text-xs">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              {freightTypes?.map((type: any) => (
+                <SelectItem
+                  key={type.ExpnsCode}
+                  value={type.ExpnsCode?.toString()}
+                  className="text-xs"
+                >
+                  {type.ExpnsName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </td>
+      )}
+
+      {isFieldVisible("Freight3LCAmount") && (
+        <td className="w-[110px]">
           <Input
-            type="date"
-            value={draftLine.RequiredDate || ""}
+            className="h-6 w-full text-right"
+            type="number"
+            value={draftLine.Freight3LCAmount || 0}
             onChange={(e) =>
-              setDraftLine({ ...draftLine, RequiredDate: e.target.value })
+              setDraftLine({
+                ...draftLine,
+                Freight3LCAmount: Number(e.target.value),
+              })
             }
+            onBlur={() => calculateAndUpdate(draftLine)}
+            disabled={!isFieldEnabled("Freight3LCAmount")}
           />
         </td>
       )}

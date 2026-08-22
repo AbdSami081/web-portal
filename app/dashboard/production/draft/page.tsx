@@ -51,9 +51,12 @@ export default function ProductionDraftPage() {
   });
 
   const { loadFromDocument } = useIFPRDDocument();
+  const loadedDraftIdRef = React.useRef<number | null>(null);
 
   useEffect(() => {
     const draftId = Number(draftEntryStr);
+    if (loadedDraftIdRef.current === draftId) return;
+    loadedDraftIdRef.current = draftId;
     if (!draftId || isNaN(draftId)) {
       toast.error("No valid draft entry provided.");
       setIsLoading(false);

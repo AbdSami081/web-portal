@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useNotifications } from "@/context/NotificationContext";
 import { SAPMessage, getMyAlerts, PAGE_SIZE } from "@/api+/sap/notification";
 import apiClient from "@/lib/apiClient";
+import { rejectApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,6 +18,7 @@ import {
   FolderOpen, ArrowRight, ArrowUpRight, XCircle, Clock, ThumbsUp, User2, FileText, Calendar
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
@@ -26,16 +28,26 @@ import { DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { buildDocumentUrl, getMenuInfoByObjectCode } from "@/lib/menu-lookup";
 import { stageDocNavParams } from "@/lib/docNavParams";
 
+interface ApprovalRemarksEntry {
+  Stage?: string | null;
+  ApproverUserID?: string | null;
+  Status?: string | null;
+  Remarks?: string | null;
+  DecisionDate?: string | null;
+}
+
 interface PendingApproval {
   ApprovalRequestCode: number;
   ObjectType: string;
   ObjectEntry: number;
   DraftEntry: number;
-  Status: string;
+  Status?: string;
+  ApprovalStatus?: string;
   Remarks: string;
+  RemarksHistory?: ApprovalRemarksEntry[];
   ApprovalCreationDate: string;
-  OriginatorID: number;
-  CurrentStage: number;
+  OriginatorID?: number;
+  CurrentStage?: number;
 }
 
 const getPendingApprovals = async (): Promise<PendingApproval[]> => {
@@ -65,6 +77,7 @@ export default function MessagesOverviewPage() {
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [approveRemarks, setApproveRemarks] = useState("");
   const [isApproving, setIsApproving] = useState(false);
+  const [approveDecision, setApproveDecision] = useState<"approve" | "reject">("approve");
   const router = useRouter();
 
   const sortedMessages = useMemo(() => {
@@ -135,19 +148,32 @@ export default function MessagesOverviewPage() {
     if (!selectedApproval) return;
     setIsApproving(true);
     try {
-      await apiClient.patch(`api/Approval/ApprovalRequests/${selectedApproval.ApprovalRequestCode}/approve`, {
-        Remarks: approveRemarks || "Approved"
-      });
-      toast.success(`Approval request #${selectedApproval.ApprovalRequestCode} approved successfully!`);
+      if (approveDecision === "reject") {
+        await rejectApprovalRequest(selectedApproval.ApprovalRequestCode, approveRemarks || "Rejected");
+        toast.success(`Approval request #${selectedApproval.ApprovalRequestCode} rejected.`);
+      } else {
+        await apiClient.patch(
+          `api/Approval/ApprovalRequests/${selectedApproval.ApprovalRequestCode}/approve`,
+          { Remarks: approveRemarks || "Approved" }
+        );
+        toast.success(`Approval request #${selectedApproval.ApprovalRequestCode} approved successfully!`);
+      }
       setApproveDialogOpen(false);
       setApproveRemarks("");
       setSelectedApproval(null);
       await fetchPendingApprovals();
     } catch (err: any) {
-      toast.error(err?.response?.data?.Message || "Failed to approve request");
+      toast.error(err?.response?.data?.Message || "Failed to update request");
     } finally {
       setIsApproving(false);
     }
+  };
+
+  const openApproveDialog = (approval: PendingApproval) => {
+    setSelectedApproval(approval);
+    setApproveDecision("approve");
+    setApproveRemarks("");
+    setApproveDialogOpen(true);
   };
 
   const handleLoadMore = async () => {
@@ -200,28 +226,61 @@ export default function MessagesOverviewPage() {
     }
   };
 
-  const getApprovalStatusBadge = (status: string) => {
-    switch (status) {
-      case "arsApproved":
+  const getApprovalStatusBadge = (status?: string | null) => {
+    const s = (status || "").trim().toLowerCase();
+    switch (s) {
+      case "arsapproved":
+      case "ardapproved":
+      case "approved":
         return (
           <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border border-emerald-200/50 flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5">
             <CheckCircle className="h-3 w-3" /> Approved
           </Badge>
         );
-      case "arsRejected":
+      case "arsrejected":
+      case "ardrejected":
+      case "arsnotapproved":
+      case "ardnotapproved":
+      case "rejected":
+      case "notapproved":
         return (
           <Badge variant="destructive" className="flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5">
             <XCircle className="h-3 w-3" /> Rejected
           </Badge>
         );
-      case "arsPending":
+      case "arspending":
+      case "ardpending":
+      case "pending":
         return (
           <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200/50 flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5">
             <Clock className="h-3 w-3" /> Pending
           </Badge>
         );
+      case "arscancelled":
+      case "arscanceled":
+      case "ardcancelled":
+      case "ardcanceled":
+      case "cancelled":
+      case "canceled":
+        return (
+          <Badge variant="secondary" className="flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5">
+            <XCircle className="h-3 w-3" /> Cancelled
+          </Badge>
+        );
+      case "arsgenerated":
+      case "arsgeneratedbyauthorizer":
+      case "generated":
+        return (
+          <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50 border border-blue-200/50 flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5">
+            <CheckCircle className="h-3 w-3" /> Generated
+          </Badge>
+        );
       default:
-        return null;
+        return (
+          <Badge variant="outline" className="flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5 text-slate-500">
+            <Clock className="h-3 w-3" /> Unknown
+          </Badge>
+        );
     }
   };
 
@@ -500,7 +559,8 @@ export default function MessagesOverviewPage() {
                     <TableBody>
                       {sortedPendingApprovals.map((ap) => {
                         const isSelected = selectedApproval?.ApprovalRequestCode === ap.ApprovalRequestCode;
-                        const docTitle = getMenuInfoByObjectCode(ap.ObjectType)?.title || `Document (${ap.ObjectType})`;
+                        const objCode = ap.ObjectType || (ap as any).DraftType;
+                        const docTitle = getMenuInfoByObjectCode(objCode)?.title || (objCode && String(objCode) !== "112" ? `Document (${objCode})` : (ap.DraftEntry ? `Draft #${ap.DraftEntry}` : "Document"));
                         return (
                           <TableRow
                             key={ap.ApprovalRequestCode}
@@ -520,9 +580,7 @@ export default function MessagesOverviewPage() {
                               </div>
                             </TableCell>
                             <TableCell className="py-3 whitespace-nowrap">
-                              <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200/50 flex items-center gap-1 font-semibold uppercase text-[9px] tracking-wider px-2 py-0.5 w-fit">
-                                <Clock className="h-3 w-3" /> Pending
-                              </Badge>
+                              {getApprovalStatusBadge(ap.ApprovalStatus || ap.Status)}
                             </TableCell>
                             <TableCell className="py-3 text-right text-[11px] text-slate-400 font-bold whitespace-nowrap pr-4">
                               {ap.ApprovalCreationDate ? formatDate(ap.ApprovalCreationDate) : "—"}
@@ -558,7 +616,10 @@ export default function MessagesOverviewPage() {
                       <FileText className="h-3.5 w-3.5 text-slate-400" />
                       <span className="text-slate-400">Object Type:</span>
                       <span className="text-slate-800 font-bold">
-                        {getMenuInfoByObjectCode(selectedApproval.ObjectType)?.title || `Type ${selectedApproval.ObjectType}`}
+                        {(() => {
+                          const objCode = selectedApproval.ObjectType || (selectedApproval as any).DraftType;
+                          return getMenuInfoByObjectCode(objCode)?.title || (objCode && String(objCode) !== "112" ? `Type ${objCode}` : (selectedApproval.DraftEntry ? `Draft #${selectedApproval.DraftEntry}` : "Document"));
+                        })()}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-500 text-right justify-end">
@@ -571,17 +632,17 @@ export default function MessagesOverviewPage() {
                     <div className="flex items-center gap-1.5 text-slate-500">
                       <User2 className="h-3.5 w-3.5 text-slate-400" />
                       <span className="text-slate-400">Originator:</span>
-                      <span className="text-slate-800 font-bold">User #{selectedApproval.OriginatorID}</span>
+                      <span className="text-slate-800 font-bold">{selectedApproval.OriginatorID ? `User #${selectedApproval.OriginatorID}` : "—"}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-500 text-right justify-end">
                       <span className="text-slate-400">Stage:</span>
-                      <span className="text-slate-800 font-bold">#{selectedApproval.CurrentStage}</span>
+                      <span className="text-slate-800 font-bold">{selectedApproval.CurrentStage ? `#${selectedApproval.CurrentStage}` : "—"}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Remarks */}
-                <ScrollArea className="flex-1 p-5">
+                <ScrollArea className="max-h-[45vh] p-5">
                   <div className="space-y-4">
                     <div>
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Request Remarks</h4>
@@ -589,6 +650,25 @@ export default function MessagesOverviewPage() {
                         {selectedApproval.Remarks || "No remarks provided."}
                       </p>
                     </div>
+
+                    {selectedApproval.RemarksHistory && selectedApproval.RemarksHistory.length > 0 && (
+                      <div>
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Prior Approver Remarks</h4>
+                        <div className="space-y-2.5">
+                          {selectedApproval.RemarksHistory.map((entry, idx) => (
+                            <div key={idx} className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+                              <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                                <span>{entry.Stage ? `Stage #${entry.Stage}` : "Stage"} · User #{entry.ApproverUserID ?? "—"}</span>
+                                <span>{entry.DecisionDate ? formatDate(entry.DecisionDate) : ""}</span>
+                              </div>
+                              <p className="text-xs text-slate-700 font-medium mt-1">
+                                {entry.Remarks || "No remarks provided."}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </ScrollArea>
 
@@ -596,7 +676,7 @@ export default function MessagesOverviewPage() {
                 <div className="p-4 border-t border-slate-100 bg-slate-50/30">
                   <Button
                     className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 rounded-lg transition-colors shadow-sm"
-                    onClick={() => { setApproveRemarks(""); setApproveDialogOpen(true); }}
+                    onClick={() => { if (selectedApproval) openApproveDialog(selectedApproval); }}
                   >
                     <ThumbsUp className="h-4 w-4" />
                     Approve Request
@@ -731,14 +811,37 @@ export default function MessagesOverviewPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ThumbsUp className="h-5 w-5 text-emerald-600" />
-              Approve Request #{selectedApproval?.ApprovalRequestCode}
+              {approveDecision === "reject" ? (
+                <XCircle className="h-5 w-5 text-red-500" />
+              ) : (
+                <ThumbsUp className="h-5 w-5 text-emerald-600" />
+              )}
+              {approveDecision === "reject" ? "Reject" : "Approve"} Request #{selectedApproval?.ApprovalRequestCode}
             </DialogTitle>
             <DialogDescription>
               Add optional remarks before approving this request. This action will notify the originator.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Decision</label>
+            <RadioGroup
+              value={approveDecision}
+              onValueChange={(val) => setApproveDecision(val as "approve" | "reject")}
+              className="flex items-center gap-4"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="approve" id="decision-approve" />
+                <label htmlFor="decision-approve" className="text-sm font-medium text-emerald-700">
+                  Approve
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="reject" id="decision-reject" />
+                <label htmlFor="decision-reject" className="text-sm font-medium text-red-600">
+                  Reject
+                </label>
+              </div>
+            </RadioGroup>
             <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Approval Remarks</label>
             <Textarea
               placeholder="e.g. Approved by Manager — all conditions met."
@@ -759,10 +862,22 @@ export default function MessagesOverviewPage() {
             <Button
               onClick={handleApprove}
               disabled={isApproving}
-              className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
+              className={
+                approveDecision === "reject"
+                  ? "h-9 bg-red-600 hover:bg-red-700 text-white font-bold gap-2"
+                  : "h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
+              }
             >
-              {isApproving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
-              {isApproving ? "Approving..." : "Confirm Approve"}
+              {isApproving
+                ? <RefreshCw className="h-4 w-4 animate-spin" />
+                : approveDecision === "reject"
+                  ? <XCircle className="h-4 w-4" />
+                  : <ThumbsUp className="h-4 w-4" />}
+              {isApproving
+                ? "Submitting..."
+                : approveDecision === "reject"
+                  ? "Confirm Reject"
+                  : "Confirm Approve"}
             </Button>
           </DialogFooter>
         </DialogContent>

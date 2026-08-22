@@ -121,6 +121,7 @@ export function InvDocumentHeader() {
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
   const autoCreatedRef = useRef(false);
+  const initialLoadRef = useRef(false);
 
   useEffect(() => {
     const fetchWarehouses = async () => {
@@ -136,6 +137,9 @@ export function InvDocumentHeader() {
   }, [loadWarehouses, setWarehouses]);
 
   useEffect(() => {
+    if (initialLoadRef.current) return;
+    initialLoadRef.current = true;
+
     // Guard: if we are in a Copy-To flow, InvDocumentLayout already populated the
     // form — do not auto-fetch any old document.
     const currentState = useInventoryDocument.getState();
@@ -216,20 +220,25 @@ export function InvDocumentHeader() {
 
     setIsLoadingList(true);
     try {
+      const currentSkip = isLoadMore ? listSkipRef.current + LIST_PAGE_SIZE : 0;
       let rawList: any[] = [];
+      let hasMore = false;
 
       if (config.type === DocumentType.GoodIssue) {
-        rawList = await getGoodIssueList();
+        const page = await getGoodIssueList(currentSkip, LIST_PAGE_SIZE, searchText);
+        rawList = page.value;
+        hasMore = page.hasMore;
       } else {
-        const currentSkip = isLoadMore ? listSkipRef.current + LIST_PAGE_SIZE : 0;
         rawList = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE, searchText);
-        if (isLoadMore) {
-          setListSkip(currentSkip);
-          listSkipRef.current = currentSkip;
-        } else {
-          setListSkip(0);
-          listSkipRef.current = 0;
-        }
+        hasMore = rawList.length === LIST_PAGE_SIZE;
+      }
+
+      if (isLoadMore) {
+        setListSkip(currentSkip);
+        listSkipRef.current = currentSkip;
+      } else {
+        setListSkip(0);
+        listSkipRef.current = 0;
       }
 
       const newDocs = (rawList || []).map((d: any) => ({
@@ -237,13 +246,12 @@ export function InvDocumentHeader() {
         DocumentStatus: d.DocumentStatus?.replace("bost_", "") || d.DocumentStatus,
       }));
 
-      if (isLoadMore && config.type !== DocumentType.GoodIssue) {
+      if (isLoadMore) {
         setDocumentsList(prev => [...prev, ...newDocs]);
       } else {
         setDocumentsList(newDocs);
       }
 
-      const hasMore = config.type !== DocumentType.GoodIssue && newDocs.length === LIST_PAGE_SIZE;
       setListHasMore(hasMore);
       listHasMoreRef.current = hasMore;
     } catch (error: any) {

@@ -11,6 +11,10 @@ interface BuildSalesPayloadOptions {
   discountPercent?: number;
   freight?: number;
   additionalExpenses?: Array<{ ExpenseCode: number; LineTotal: number; VatGroup?: string; TaxCode?: string }>;
+  // Set only for A/R Down Payment Request ("dptRequest") / Invoice ("dptInvoice") — the
+  // DownPayments Service Layer entity is shared by both, so this line-level field is what
+  // tells SAP which one each record actually is.
+  downPaymentType?: string;
 }
 
 function mapLineExpenses(line: SalesDocumentLine) {
@@ -50,6 +54,7 @@ export function buildSalesDocumentPayload({
   discountPercent = 0,
   freight = 0,
   additionalExpenses = [],
+  downPaymentType,
 }: BuildSalesPayloadOptions) {
   const hasCopyFrom =
     docEntry &&
@@ -75,6 +80,10 @@ export function buildSalesDocumentPayload({
         WarehouseCode: line.WarehouseCode || "",
         UoMCode: line.UoMCode || "",
       };
+
+      if (downPaymentType) {
+        baseFields.DownPaymentType = downPaymentType;
+      }
 
       if (hasCopyFrom) {
         baseFields.BaseType = lastLoadedDocType;
@@ -118,9 +127,10 @@ export function buildSalesDocumentPatchPayload({
   discountPercent = 0,
   freight = 0,
   additionalExpenses = [],
+  downPaymentType,
 }: Pick<
   BuildSalesPayloadOptions,
-  "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses"
+  "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses" | "downPaymentType"
 >) {
   return {
     Comments: data.Comments,
@@ -138,6 +148,10 @@ export function buildSalesDocumentPatchPayload({
         WarehouseCode: line.WarehouseCode || "",
         UoMCode: line.UoMCode || "",
       };
+
+      if (downPaymentType) {
+        baseFields.DownPaymentType = downPaymentType;
+      }
 
       // Existing lines carry their SAP LineNum - the backend sends
       // B1S-ReplaceCollectionsOnPatch so omitted lines get deleted.

@@ -18,10 +18,13 @@ import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog"
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { ResizableTable } from "../Custom/ResizableTable";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
+import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper";
+import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 
 export function PurchaseItems() {
   const { watch } = useFormContext();
   const selectedCardCode = watch("CardCode");
+  const docStatus = watch("DocStatus");
   const {
     lines,
     addLine,
@@ -34,9 +37,9 @@ export function PurchaseItems() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
   const config = usePurchaseDocConfig();
-  const isTableDisabled = config.isDisabledTable(requester?.DocumentStatus!);
+  const isTableDisabled = config.isDisabledTable(docStatus);
 
-  const { freightsWithCharges, warehouses, loadMasterData } = useMasterDataStore();
+  const { freightsWithCharges, warehouses, loadMasterData, loadWarehouses } = useMasterDataStore();
   const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -48,16 +51,24 @@ export function PurchaseItems() {
   const [serialModalOpen, setSerialModalOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
 
+  const isPurchaseInvoice = config.type === DocumentType.APInvoice;
+
   useEffect(() => {
-    loadMasterData("S", "I");
-  }, [loadMasterData]);
+    if (isPurchaseInvoice) {
+      loadMasterData("S", "I");
+    } else {
+      loadMasterData("P", "P");
+    }
+  }, [loadMasterData, isPurchaseInvoice]);
 
   const handleOnSelectItems = (items: Item[]) => {
+    const isPurchaseRequest = config.type === DocumentType.PurchaseRequests;
+    const lineRequiredDate = isPurchaseRequest ? new Date().toISOString().split("T")[0] : "";
+
     items.forEach((item) => {
       const price = getCustomerPrice(item.Prices || []);
 
-      const isItem = item.Category === "I" || item.ItemType === "itItems";
-      const targetTaxCode = isItem ? item.VatGourpPu : item.VatGourpSa;
+      const targetTaxCode = item.VatGourpPu;
       const selectedTax = freightsWithCharges.find(
         (t) => t.Code === targetTaxCode,
       );
@@ -87,6 +98,7 @@ export function PurchaseItems() {
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,
+        ...(isPurchaseRequest && { RequiredDate: lineRequiredDate }),
       });
     });
   };
@@ -97,8 +109,16 @@ export function PurchaseItems() {
   ) => {
     e.preventDefault();      
 
-    const isDeliveryOrInvoice = config.type === DocumentType.GoodsReceiptPO || config.type === DocumentType.APInvoice;
-    if (!isDeliveryOrInvoice) return;
+    const isSerialBatchDocument = [
+      DocumentType.GoodsReceiptPO,
+      DocumentType.APInvoice,
+      DocumentType.APCreditMemo,
+      DocumentType.GoodsReturn,
+      DocumentType.GoodsReturnRequest,
+      DocumentType.APReserveInvoice,
+    ].includes(config.type);
+
+    if (!isSerialBatchDocument) return;
 
     const isSerial = String(line.ManSerNum).toLowerCase() === 'y' || String(line.ManSerNum).toLowerCase() === 'tyes';
     const isBatch = String(line.ManBtchNum).toLowerCase() === 'y' || String(line.ManBtchNum).toLowerCase() === 'tyes';
@@ -132,23 +152,12 @@ export function PurchaseItems() {
     { key: "Freight2LCAmount", title: "Freight 2 (LC)", width: 180 },
     { key: "Freight3Type", title: "Freight 3 Type", width: 180 },
     { key: "Freight3LCAmount", title: "Freight 3 (LC)", width: 180 },
-    { key: "Vendor", title: "Vendor", width: 150 },
-    { key: "RequiredDate", title: "Required Date", width: 150 },
   ].filter(col => {
     if (col.key === "actions") return true;
     return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
-  const isFinancialPurchaseDoc = [
-    DocumentType.GoodsReceiptPO,
-    DocumentType.APInvoice,
-    DocumentType.APCreditMemo,
-    DocumentType.GoodsReturn,
-    DocumentType.GoodsReturnRequest,
-    DocumentType.APReserveInvoice,
-    DocumentType.APDownPaymentInvoice,
-    DocumentType.APDownPaymentRequest,
-  ].includes(config.type);
+  const isFinancialPurchaseDoc = isPostedPurchaseDocType(config.type);
 
   const docEntry = watch("DocEntry");
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
@@ -234,6 +243,7 @@ export function PurchaseItems() {
                   renderRow={(line, idx) => (
                     <PurchaseItemRow index={idx} line={line} />
                   )}
+                  rowClassName={(line) => hasInvalidPrice(line) ? "bg-blue-50 hover:bg-blue-100" : ""}
                 />
                 {contextMenu && (
                   <div

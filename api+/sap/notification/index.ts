@@ -56,3 +56,12 @@ export const getMyAlerts = async (skip = 0, top = PAGE_SIZE): Promise<AlertsPage
     nextSkip: skip + top,
   };
 };
+
+export const getMyAlertsCount = async (): Promise<number> => {
+  try {
+    const response = await apiClient.get<{ count: number }>("api/Notifications/GetMyAlertsCount");
+    return response.data?.count ?? 0;
+  } catch {
+    return 0;
+  }
+};

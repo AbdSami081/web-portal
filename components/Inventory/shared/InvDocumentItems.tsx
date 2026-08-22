@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { InvDocumentLineRow } from "./InvDocumentItemRow";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
@@ -16,15 +16,52 @@ import { useUoMStore } from "@/stores/useUoMStore";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { useInvDocConfig } from "./InvDocumentLayout";
 import { DocumentType } from "@/types/master/DocumentType";
+import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
+import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
+import { toast } from "sonner";
+import { linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 
 export function InvDocumentItems() {
   const { watch } = useFormContext();
-  const { lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment } = useInventoryDocument();
+  const {
+    lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment,
+    serialModalOpen, setSerialModalOpen, batchModalOpen, setBatchModalOpen, selectedLineForModal, setSelectedLineForModal,
+  } = useInventoryDocument();
   const config = useInvDocConfig();
   const isGoodIssue = config.type === DocumentType.GoodIssue;
   const uoms = useUoMStore((state) => state.uoms);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    line: any;
+  } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+    window.addEventListener("click", handleClickOutside);
+    return () => window.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  const handleRowContextMenu = (e: React.MouseEvent, line: any) => {
+    e.preventDefault();
+    const isSerial = String(line.ManSerNum).toLowerCase() === "y" || String(line.ManSerNum).toLowerCase() === "tyes";
+    const isBatch = String(line.ManBtchNum).toLowerCase() === "y" || String(line.ManBtchNum).toLowerCase() === "tyes";
+    if (!isSerial && !isBatch) return;
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      line,
+    });
+  };
 
   const docStatus = watch("DocStatus") || "bost_Open";
   const isClosed = docStatus === "bost_Close";
@@ -103,6 +140,8 @@ export function InvDocumentItems() {
         U_SaleType: "Retail",
         U_FurtherTax: 0,
         QtyInWhs: qtyInWhs,
+        ManSerNum: item.ManSerNum,
+        ManBtchNum: item.ManBtchNum,
       });
     });
   };
@@ -157,10 +196,44 @@ export function InvDocumentItems() {
                   columns={columns}
                   data={lines}
                   emptyMessage="No items added yet."
+                  onRowContextMenu={handleRowContextMenu}
                   renderRow={(line, idx) => (
                     <InvDocumentLineRow index={idx} line={line} isGoodIssue={isGoodIssue} />
                   )}
                 />
+
+                {contextMenu && (
+                  <div
+                    ref={menuRef}
+                    style={{
+                      top: contextMenu.y,
+                      left: contextMenu.x,
+                    }}
+                    className="fixed z-50 bg-white border border-neutral-200 rounded shadow-md p-1 min-w-[200px]"
+                  >
+                    <button
+                      type="button"
+                      className="cursor-pointer w-full text-left px-3 py-2 hover:bg-neutral-100 rounded text-sm font-semibold flex items-center gap-2 text-neutral-800"
+                      onClick={() => {
+                        const isBatch = String(contextMenu.line.ManBtchNum).toLowerCase() === "y" || String(contextMenu.line.ManBtchNum).toLowerCase() === "tyes";
+                        setSelectedLineForModal(contextMenu.line);
+                        if (isBatch) {
+                          setBatchModalOpen(true);
+                        } else {
+                          setSerialModalOpen(true);
+                        }
+                        setContextMenu(null);
+                      }}
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>
+                        {String(contextMenu.line.ManBtchNum).toLowerCase() === "y" || String(contextMenu.line.ManBtchNum).toLowerCase() === "tyes"
+                          ? "Batch Number Transactions Report"
+                          : "Serial Number Transactions Report"}
+                      </span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -181,6 +254,56 @@ export function InvDocumentItems() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
+      />
+
+      <SerialNumberSelectionDialog
+        open={serialModalOpen}
+        onClose={() => {
+          setSerialModalOpen(false);
+          setSelectedLineForModal(null);
+        }}
+        onConfirm={(selections) => {
+          const state = useInventoryDocument.getState();
+          if (selections.serials) {
+            Object.entries(selections.serials).forEach(([itemCode, serials]) => {
+              state.setLineSerials(itemCode, serials);
+            });
+            toast.success("Serial numbers allocated successfully");
+          }
+          setSerialModalOpen(false);
+          // Check if batch is still needed after serials are done
+          setTimeout(() => {
+            const updatedLines = useInventoryDocument.getState().lines;
+            const stillNeedsBatch = linesNeedBatchAllocation(updatedLines);
+            if (stillNeedsBatch) {
+              setSelectedLineForModal(null);
+              setBatchModalOpen(true);
+            }
+          }, 50);
+        }}
+        lines={lines as any}
+        initialItemCode={selectedLineForModal?.ItemCode}
+      />
+
+      <BatchNumberSelectionDialog
+        open={batchModalOpen}
+        onClose={() => {
+          setBatchModalOpen(false);
+          setSelectedLineForModal(null);
+        }}
+        onConfirm={(selections) => {
+          const state = useInventoryDocument.getState();
+          if (selections.batches) {
+            Object.entries(selections.batches).forEach(([itemCode, batches]) => {
+              state.setLineBatches(itemCode, batches);
+            });
+            toast.success("Batch numbers allocated successfully");
+          }
+          setBatchModalOpen(false);
+          setSelectedLineForModal(null);
+        }}
+        lines={lines as any}
+        initialItemCode={selectedLineForModal?.ItemCode}
       />
     </div>
   );

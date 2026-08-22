@@ -81,10 +81,14 @@ export const getInventoryTransferRequestList = async (
     };
 };
 
-export const getGoodIssueList = async () => {
-    const response = await apiClient.get(`api/Inventory/GoodIssueList`);
+export const getGoodIssueList = async (skip = 0, top = 20, search = "") => {
+    const response = await apiClient.get(`api/Inventory/GoodIssueList`, {
+        params: { skip, top, search: search || undefined },
+    });
     const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-    return data.value || [];
+    const list = data.value || [];
+    const hasMore = !!data["@odata.nextLink"] || list.length >= top;
+    return { value: list, hasMore };
 };
 
 export const patchInventoryTransferRequest = async (docEntry: number, payload: any) => {

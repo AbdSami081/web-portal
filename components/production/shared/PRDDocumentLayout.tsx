@@ -24,11 +24,12 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import HeaderActions from "@/components/Custom/HeaderAction";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
 import { patchDraftDocument } from "@/api+/sap/draft/draftService";
+import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
@@ -63,7 +64,26 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
-  const isPendingApproval = (docNav.approvalStatus === "arsPending" || !!docNav.approvalRequestCode) && !!docNav.draftEntry;
+  const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
+  const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
+  const isRejectedApproval =
+    statusStr === "arsrejected" ||
+    statusStr === "ardrejected" ||
+    statusStr === "arsnotapproved" ||
+    statusStr === "ardnotapproved" ||
+    statusStr === "rejected" ||
+    statusStr === "notapproved" ||
+    statusStr === "arscancelled" ||
+    statusStr === "arscanceled" ||
+    statusStr === "ardcancelled" ||
+    statusStr === "ardcanceled" ||
+    statusStr === "arscomplete";
+  const isPendingApproval =
+    (statusStr === "arspending" ||
+      statusStr === "ardpending" ||
+      statusStr === "pending" ||
+      (!statusStr && !!docNav.approvalRequestCode && !!docNav.draftEntry)) &&
+    !!docNav.draftEntry;
 
 
   const { user } = useAuth();
@@ -71,6 +91,9 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const [approvalModalOpen, setApprovalModalOpen] = React.useState(false);
   const [pendingFinalData, setPendingFinalData] = React.useState<T | null>(null);
   const [isCheckingApproval, setIsCheckingApproval] = React.useState(false);
+  // Set when a REJECTED draft is re-submitted: the draft is patched first, then a NEW
+  // approval request is created (historical approval stays untouched).
+  const [pendingReApproval, setPendingReApproval] = React.useState<{ draftId: number; docType: string | number } | null>(null);
 
   const [badgeState, setBadgeState] = React.useState<"draft" | "approved" | null>(() => {
     const draftEntryParam = docNav.draftEntry;
@@ -229,23 +252,90 @@ export function PRDDocumentLayout<T extends FieldValues>({
           onSubmit={async (e) => {
             e.preventDefault();
             handleSubmit(async (data) => {
-              if (isPendingApproval && docNav.draftEntry) {
+              // REJECTED / CANCELLED draft resubmission:
+              //   1) update the existing draft with the latest modifications
+              //   2) create a NEW approval request (the old finalized one stays as history)
+              if (isRejectedApproval && docNav.draftEntry) {
                 try {
                   await patchDraftDocument(Number(docNav.draftEntry), data);
-                  toast.success("Approval request modified successfully.");
-                  ResetForm();
-                  setBadgeState(null);
-                  return;
                 } catch (err: any) {
                   toast.error(err?.response?.data?.Message || "Failed to update approval draft");
                   return;
                 }
+                const currentUserIdRe = user?.sapUserId;
+                if (currentUserIdRe) {
+                  try {
+                    const docTypeStr = getApprovalDocumentType(docType);
+                    const activeTemplates = await getCurrentUserApprovalTemplates(currentUserIdRe, docTypeStr);
+                    if (activeTemplates && activeTemplates.length > 0) {
+                      setApprovalTemplates(activeTemplates);
+                      setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+                      setApprovalModalOpen(true);
+                      return;
+                    }
+                  } catch {
+                    /* fall through */
+                  }
+                }
+                toast.success("Draft updated. The approval request will be re-submitted.");
+                ResetForm();
+                setBadgeState(null);
+                return;
+              }
+
+              // PENDING approval: update the SAME draft - the linked approval stays pending
+              // and the approver sees the updated document. No duplicate approval request.
+              if (isPendingApproval && docNav.draftEntry) {
+                toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+                return;
+              }
+
+              if (isApprovedDraft && docNav.draftEntry) {
+                const storeSnapshot = useIFPRDDocument.getState().loadedDraftData;
+                const storeLines = useIFPRDDocument.getState().lines || [];
+                const approvedChanged = hasDraftChanges(storeSnapshot, storeLines, data);
+                if (!approvedChanged) {
+                  await onSubmit(data as any);
+                  ResetForm();
+                  setBadgeState(null);
+                  return;
+                }
+                try {
+                  await patchDraftDocument(Number(docNav.draftEntry), data);
+                } catch (err: any) {
+                  toast.error(err?.response?.data?.Message || "Failed to update approval draft");
+                  return;
+                }
+                const currentUserIdApproved = user?.sapUserId;
+                if (currentUserIdApproved) {
+                  try {
+                    const docTypeApproved = getApprovalDocumentType(docType);
+                    const activeTemplatesApproved = await getCurrentUserApprovalTemplates(currentUserIdApproved, docTypeApproved);
+                    if (activeTemplatesApproved && activeTemplatesApproved.length > 0) {
+                      setApprovalTemplates(activeTemplatesApproved);
+                      setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+                      setApprovalModalOpen(true);
+                      return;
+                    }
+                  } catch {
+                    /* no approval template available */
+                  }
+                }
+                toast.success("Approved draft updated. A new approval request is required.");
+                ResetForm();
+                setBadgeState(null);
+                return;
               }
 
               const currentUserId = user?.sapUserId;
               const isEditMode = Boolean(watch("AbsoluteEntry" as any) || watch("DocEntry" as any));
 
-              if (currentUserId && !isEditMode && badgeState !== "approved") {
+              // APPROVED / finalized documents may still be modified. When a modification
+              // requires approval, SAP starts a NEW approval cycle (the previous approved
+              // approval stays as history). The template check therefore runs for approved
+              // edits too - the old `!isEditMode` / `badgeState !== "approved"` guards are
+              // removed below.
+              if (currentUserId) {
                 setIsCheckingApproval(true);
                 try {
                   const docTypeStr = getApprovalDocumentType(docType);
@@ -347,15 +437,42 @@ export function PRDDocumentLayout<T extends FieldValues>({
             onClose={() => setApprovalModalOpen(false)}
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
+              // REJECTED draft resubmission -> re-open the EXISTING rejected approval
+              // request (PATCH /ApprovalRequests/{approvalRequestCode}, carried from the
+              // Messages inbox) instead of POSTing a new one. The SAP B1 Service Layer does
+              // not support creating ApprovalRequests via POST (it returns "Command Not Found").
+              if (pendingReApproval) {
+                const tpl = approvalTemplates[0];
+                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
+                const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
+                try {
+                  await submitApprovalRequest(approvalRequestId, {
+                    TemplateCode: tpl?.Code,
+                    ObjectEntry: pendingReApproval.draftId,
+                    ObjectType: pendingReApproval.docType,
+                    IsDraft: "Y",
+                    ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
+                    OriginatorID: user?.sapUserId,
+                    Remarks: remarks || "",
+                  });
+                  toast.success("Draft updated and the approval request was re-submitted.");
+                } catch (err: any) {
+                  toast.error(err?.response?.data?.Message || "Failed to resubmit the approval request.");
+                }
+                setPendingReApproval(null);
+                setPendingFinalData(null);
+                ResetForm();
+                setBadgeState(null);
+                return;
+              }
+
               if (!pendingFinalData) return;
 
-              const firstRemarks = approvalTemplates[0]
-                ? (remarksMap[approvalTemplates[0].Code] ?? "").trim()
-                : "";
               const finalData = {
                 ...(pendingFinalData as any),
-                Comments: firstRemarks || (pendingFinalData as any).Comments || (pendingFinalData as any).Remarks || "",
-                Remarks: firstRemarks || (pendingFinalData as any).Remarks || "",
+                // Approval remarks are submitted separately in SAP's approval request,
+                // NOT written onto the document's Comments/Remarks field.
+                Comments: (pendingFinalData as any).Comments || "",
               } as T;
 
               await onSubmit(finalData);

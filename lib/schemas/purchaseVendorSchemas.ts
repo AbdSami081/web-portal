@@ -26,6 +26,16 @@ export const purchaseRequestSchema = vendorDocBase.extend({
   RequesterName: z.string().optional(),
   RequesterEmail: z.string().optional(),
   SendNotification: z.string().optional(),
+  RequiredDate: z.string().optional(),
+  DocumentLines: z.array(z.any()).optional(),
+  Freight: z.number().optional(),
+  Rounding: z.number().optional(),
+  DiscountPercent: z.number().optional(),
+  TaxTotal: z.number().optional(),
+  TotalBeforeDiscount: z.number().optional(),
+  DocTotal: z.number().optional(),
+  Comments: z.string().optional(),
+  OwnerCode: z.number().optional(),
 });
 export type PurchaseRequestFormData = z.infer<typeof purchaseRequestSchema>;
 

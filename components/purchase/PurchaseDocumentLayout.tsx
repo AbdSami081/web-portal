@@ -25,6 +25,9 @@ import { toast } from "sonner";
 import { resolveDocNavParams } from "@/lib/docNavParams";
 import { patchDraftDocument } from "@/api+/sap/draft/draftService";
 import { buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
+import { hasDraftChanges } from "@/lib/approval/approvalChanges";
+import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
+import { linesHaveInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 
 import {
   Tooltip,
@@ -48,6 +51,7 @@ import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-conten
 import HeaderActions from "@/components/Custom/HeaderAction";
 
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
+import { useShallow } from "zustand/react/shallow";
 import { useUDFStore } from "@/stores/useUDFStore";
 
 import {
@@ -71,7 +75,7 @@ import { UDFLayout } from "../shared/UDFSheet";
 import { GenericModal } from "@/modals/GenericModal";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
@@ -107,13 +111,32 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = React.useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
-  const isApprovedDraft = docNav.approvalStatus === "arsApproved";
-  const isPendingApproval = (docNav.approvalStatus === "arsPending" || !!docNav.approvalRequestCode) && !!docNav.draftEntry;
+  const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
+  const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
+  const isRejectedApproval =
+    statusStr === "arsrejected" ||
+    statusStr === "ardrejected" ||
+    statusStr === "arsnotapproved" ||
+    statusStr === "ardnotapproved" ||
+    statusStr === "rejected" ||
+    statusStr === "notapproved" ||
+    statusStr === "arscancelled" ||
+    statusStr === "arscanceled" ||
+    statusStr === "ardcancelled" ||
+    statusStr === "ardcanceled" ||
+    statusStr === "arscomplete";
+  const isPendingApproval =
+    (statusStr === "arspending" ||
+      statusStr === "ardpending" ||
+      statusStr === "pending" ||
+      (!statusStr && !!docNav.approvalRequestCode && !!docNav.draftEntry)) &&
+    !!docNav.draftEntry;
 
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
+ const [pendingReApproval, setPendingReApproval] = useState<{ draftId: number; docType: string | number } | null>(null);
 
   const methods = useForm<T>({
     resolver: zodResolver(schema as any),
@@ -122,7 +145,18 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   });
 
   const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty, errors } } = methods;
-  const { reset: lineReset, lines, requester, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs } = usePurchaseDocument();
+  const { reset: lineReset, lines, requester, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs } = usePurchaseDocument(
+    useShallow(state => ({
+      reset: state.reset,
+      lines: state.lines,
+      requester: state.requester,
+      DocEntry: state.DocEntry,
+      loadFromDocument: state.loadFromDocument,
+      isCopying: state.isCopying,
+      setIsCopying: state.setIsCopying,
+      udfs: state.udfs,
+    }))
+  );
 
   const docStatus = watch("DocStatus" as any);
   const docEntry = watch("DocEntry" as any);
@@ -142,9 +176,33 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
   const [serialModalOpen, setSerialModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<T | null>(null);
+  const lastDefaultValuesRef = React.useRef<string | null>(null);
+
+  const ResetForm = () => {
+    const today = new Date().toISOString().split("T")[0];
+    reset({
+      ...defaultValues,
+      CardCode: "",
+      CardName: "",
+      Comments: "",
+      DocNum: 0,
+      DocEntry: 0,
+      DocDate: today,
+      DocDueDate: today,
+      TaxDate: today,
+    } as any);
+    lineReset();
+  };
 
   useEffect(() => {
     const state = usePurchaseDocument.getState();
+    const defaultValuesKey = JSON.stringify(defaultValues ?? {});
+
+    if (defaultValuesKey === lastDefaultValuesRef.current) {
+      return;
+    }
+
+    lastDefaultValuesRef.current = defaultValuesKey;
 
     if (isCopying) {
       reset({
@@ -165,23 +223,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     } else if (!isDirty) {
       ResetForm();
     }
-  }, [defaultValues]);
-
-  const ResetForm = () => {
-    const today = new Date().toISOString().split("T")[0];
-    reset({
-      ...defaultValues,
-      CardCode: "",
-      CardName: "",
-      Comments: "",
-      DocNum: 0,
-      DocEntry: 0,
-      DocDate: today,
-      DocDueDate: today,
-      TaxDate: today,
-    } as any);
-    lineReset();
-  };
+  }, [defaultValues, isCopying, isDirty, lineReset, reset, setIsCopying]);
 
   const fetchCopyFromData = async (type: DocumentType) => {
     if (!requester?.CardCode) return;
@@ -318,12 +360,37 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
       <FormProvider {...methods}>
         <form
           onSubmit={handleSubmit(async (data) => {
-            console.log("Submit Clicked. Data:", data);
             const state = usePurchaseDocument.getState();
             const currentUserId = user?.sapUserId;
 
-            // If this document is an existing pending approval draft, update the draft instead of creating a new approval request
-            if (isPendingApproval && docNav.draftEntry) {
+            if (linesHaveInvalidPrice(state.lines)) {
+              toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
+              return;
+            }
+
+            // Validate serial/batch allocation up front, regardless of which submit path
+            // (fresh document, rejected-draft resubmit, approved-draft resubmit) is taken
+            // below — otherwise a resubmit branch could skip this and reach SAP with an
+            // unallocated line.
+            const isSerialBatchPurchaseDoc = [
+              DocumentType.GoodsReceiptPO,
+              DocumentType.APInvoice,
+              DocumentType.APCreditMemo,
+            ].includes(docType);
+
+            if (isSerialBatchPurchaseDoc && linesNeedSerialAllocation(state.lines)) {
+              setPendingData(data as unknown as T);
+              setSerialModalOpen(true);
+              return;
+            }
+
+            if (isSerialBatchPurchaseDoc && linesNeedBatchAllocation(state.lines)) {
+              setPendingData(data as unknown as T);
+              setBatchModalOpen(true);
+              return;
+            }
+
+            if (isRejectedApproval && docNav.draftEntry) {
               try {
                 const patchPayload = buildPurchaseDocumentPatchPayload({
                   data: data as any,
@@ -339,16 +406,92 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                   ].includes(docType),
                 });
                 await patchDraftDocument(Number(docNav.draftEntry), patchPayload);
-                toast.success("Approval request modified successfully.");
-                ResetForm();
-                return;
               } catch (err: any) {
                 toast.error(err?.response?.data?.Message || "Failed to update approval draft");
                 return;
               }
+              if (currentUserId) {
+                try {
+                  const docTypeStr = getApprovalDocumentType(docType, pathname);
+                  const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+                  if (activeTemplates && activeTemplates.length > 0) {
+                    setApprovalTemplates(activeTemplates);
+                    setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+                    setApprovalModalOpen(true);
+                    return;
+                  }
+                } catch {
+                  /* fall through */
+                }
+              }
+              toast.success("Draft updated. The approval request will be re-submitted.");
+              ResetForm();
+              return;
             }
 
-            if (currentUserId && !isEditMode && !isApprovedDraft) {
+           if (isPendingApproval && docNav.draftEntry) {
+              toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+              return;
+            }
+
+            if (isApprovedDraft && docNav.draftEntry) {
+              const approvedSnapshot = state.loadedDraftData;
+              const currentHeader = {
+                ...(data as any),
+                DiscountPercent: state.discountPercent,
+                Freight: state.freight,
+                Rounding: state.rounding,
+              };
+              const approvedChanged = hasDraftChanges(approvedSnapshot, state.lines, currentHeader);
+              if (!approvedChanged) {
+                try {
+                  await onSubmit(data as unknown as T);
+                  ResetForm();
+                } catch (err: any) {
+                  toast.error(err?.response?.data?.Message || "Failed to create the document");
+                }
+                return;
+              }
+              try {
+                const patchPayload = buildPurchaseDocumentPatchPayload({
+                  data: data as any,
+                  lines: state.lines,
+                  discountPercent: state.discountPercent,
+                  freight: state.freight,
+                  rounding: state.rounding,
+                  additionalExpenses: state.additionalExpenses,
+                  includeLines: [
+                    DocumentType.PurchaseRequests,
+                    DocumentType.PurchaseQuotation,
+                    DocumentType.PurchaseOrder,
+                  ].includes(docType),
+                });
+                await patchDraftDocument(Number(docNav.draftEntry), patchPayload);
+              } catch (err: any) {
+                toast.error(err?.response?.data?.Message || "Failed to update approval draft");
+                return;
+              }
+              let approvedTemplates = approvalTemplates;
+              if (currentUserId) {
+                try {
+                  const docTypeApproved = getApprovalDocumentType(docType, pathname);
+                  approvedTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeApproved);
+                } catch {
+                  approvedTemplates = [];
+                }
+              }
+              if (approvedTemplates && approvedTemplates.length > 0) {
+                setApprovalTemplates(approvedTemplates);
+                setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+                setApprovalModalOpen(true);
+                return;
+              }
+              toast.success("Approved document updated. A new approval request is required.");
+              ResetForm();
+              return;
+            }
+
+            if (currentUserId) {
               setIsCheckingApproval(true);
               try {
                 const docTypeStr = getApprovalDocumentType(docType);
@@ -365,43 +508,6 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               } finally {
                 setIsCheckingApproval(false);
               }
-            }
-
-            const isSerialBatchPurchaseDoc = [
-              DocumentType.GoodsReceiptPO,
-              DocumentType.APInvoice,
-              DocumentType.APCreditMemo,
-            ].includes(docType);
-
-            const needsSerialManagement = isSerialBatchPurchaseDoc && 
-              state.lines.some(l => {
-                const isSerial = l.ManSerNum === 'Y' || l.ManSerNum === 'tYES';
-                if (isSerial) {
-                  return !l.SerialNumbers || l.SerialNumbers.length < l.Quantity;
-                }
-                return false;
-              });
-
-            const needsBatchManagement = isSerialBatchPurchaseDoc && 
-              state.lines.some(l => {
-                const isBatch = String(l.ManBtchNum).toLowerCase() === 'y' || String(l.ManBtchNum).toLowerCase() === 'tyes';
-                if (isBatch) {
-                  const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
-                  return totalBatch < l.Quantity;
-                }
-                return false;
-              });
-
-            if (needsSerialManagement) {
-              setPendingData(data as unknown as T);
-              setSerialModalOpen(true);
-              return;
-            }
-
-            if (needsBatchManagement) {
-              setPendingData(data as unknown as T);
-              setBatchModalOpen(true);
-              return;
             }
 
             try {
@@ -544,7 +650,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             }}
             onConfirm={async (selections) => {
               const state = usePurchaseDocument.getState();
-              
+
               if (selections.serials) {
                 Object.entries(selections.serials).forEach(([itemCode, serials]) => {
                   state.setLineSerials(itemCode, serials);
@@ -552,28 +658,14 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               }
 
               const updatedLines = usePurchaseDocument.getState().lines;
-              const stillNeedsBatch = updatedLines.some((l) => {
-                const isBatch = String(l.ManBtchNum).toLowerCase() === "y" || String(l.ManBtchNum).toLowerCase() === "tyes";
-                if (isBatch) {
-                  const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
-                  return totalBatch < l.Quantity;
-                }
-                return false;
-              });
-
               setSerialModalOpen(false);
-              if (stillNeedsBatch) {
+
+              if (linesNeedBatchAllocation(updatedLines)) {
                 setBatchModalOpen(true);
-              } else if (pendingData) {
-                const dataToSubmit = { ...pendingData, DocumentLines: updatedLines } as unknown as T;
-                setPendingData(null);
-                try {
-                  await onSubmit(dataToSubmit);
-                  ResetForm();
-                } catch (e) {
-                  console.error("Submit error after serial selection:", e);
-                }
+                return;
               }
+
+              setPendingData(null);
             }}
             lines={usePurchaseDocument.getState().lines}
           />
@@ -586,25 +678,15 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             }}
             onConfirm={async (selections) => {
               const state = usePurchaseDocument.getState();
-              
+
               if (selections.batches) {
                 Object.entries(selections.batches).forEach(([itemCode, batches]) => {
                   state.setLineBatches(itemCode, batches);
                 });
               }
 
-              const updatedLines = usePurchaseDocument.getState().lines;
               setBatchModalOpen(false);
-              if (pendingData) {
-                const dataToSubmit = { ...pendingData, DocumentLines: updatedLines } as unknown as T;
-                setPendingData(null);
-                try {
-                  await onSubmit(dataToSubmit);
-                  ResetForm();
-                } catch (e) {
-                  console.error("Submit error after batch selection:", e);
-                }
-              }
+              setPendingData(null);
             }}
             lines={usePurchaseDocument.getState().lines}
           />
@@ -614,14 +696,37 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             onClose={() => setApprovalModalOpen(false)}
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
+              if (pendingReApproval) {
+                const tpl = approvalTemplates[0];
+                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
+                const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
+                try {
+                  await submitApprovalRequest(approvalRequestId, {
+                    TemplateCode: tpl?.Code,
+                    ObjectEntry: pendingReApproval.draftId,
+                    ObjectType: pendingReApproval.docType,
+                    IsDraft: "Y",
+                    ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
+                    OriginatorID: user?.sapUserId,
+                    Remarks: remarks || "",
+                  });
+                  toast.success("Draft updated and the approval request was re-submitted.");
+                } catch (err: any) {
+                  toast.error(err?.response?.data?.Message || "Failed to resubmit the approval request.");
+                }
+                setPendingReApproval(null);
+                setPendingFinalData(null);
+                ResetForm();
+                return;
+              }
+
               if (!pendingFinalData) return;
 
-              const firstRemarks = approvalTemplates[0]
-                ? (remarksMap[approvalTemplates[0].Code] ?? "").trim()
-                : "";
               const finalData = {
                 ...(pendingFinalData as any),
-                Comments: firstRemarks || (pendingFinalData as any).Comments || "",
+                // Approval remarks are submitted separately in SAP's approval request,
+                // NOT written onto the document's Comments field.
+                Comments: (pendingFinalData as any).Comments || "",
               } as T;
 
               await onSubmit(finalData);

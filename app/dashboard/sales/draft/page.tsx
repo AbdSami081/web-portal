@@ -95,7 +95,7 @@ export default function SalesDraftPage() {
             DocumentLines: documentData.DocumentLines,
           }));
 
-          toast.success(`Draft #${draftId} loaded successfully.`);
+          // Draft loaded — form is populated, no extra toast needed here.
         } else {
           toast.error(`Draft #${draftId} not found.`);
         }

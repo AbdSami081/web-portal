@@ -30,6 +30,8 @@ type Props<T> = {
     e: React.MouseEvent,
     row: T
   ) => void;
+
+  rowClassName?: (row: T, index: number) => string;
 };
 
 export function ResizableTable<T>({
@@ -38,6 +40,7 @@ export function ResizableTable<T>({
   renderRow,
   emptyMessage = "No data found",
   onRowContextMenu,
+  rowClassName,
 }: Props<T>) {
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
     () =>
@@ -155,6 +158,7 @@ export function ResizableTable<T>({
                 onContextMenu={(e) =>
                   onRowContextMenu?.(e, row)
                 }
+                className={rowClassName?.(row, index)}
               >
                 {renderRow(row, index)}
               </TableRow>

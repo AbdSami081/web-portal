@@ -1,5 +1,6 @@
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { InventoryTransferLine } from "@/api+/sap/inventory/inventoryService";
+import { withDefaultBPLId } from "./documentPayloadHelper";
 
 interface BuildInventoryPayloadOptions {
   data: any;
@@ -66,6 +67,13 @@ function buildDocumentLines(
       }
     } else {
       attachBaseFields(baseFields, line);
+    }
+
+    if (line.SerialNumbers && line.SerialNumbers.length > 0) {
+      baseFields.SerialNumbers = line.SerialNumbers;
+    }
+    if (line.BatchNumbers && line.BatchNumbers.length > 0) {
+      baseFields.BatchNumbers = line.BatchNumbers;
     }
 
     return baseFields as InventoryTransferLine;
@@ -163,6 +171,13 @@ function buildGoodIssueLines(
       attachBaseFields(baseFields, line);
     }
 
+    if (line.SerialNumbers && line.SerialNumbers.length > 0) {
+      baseFields.SerialNumbers = line.SerialNumbers;
+    }
+    if (line.BatchNumbers && line.BatchNumbers.length > 0) {
+      baseFields.BatchNumbers = line.BatchNumbers;
+    }
+
     return baseFields as InventoryTransferLine;
   });
 }
@@ -171,11 +186,11 @@ export function buildGoodIssuePayload({
   data,
   lines,
 }: BuildGoodIssuePayloadOptions) {
-  return {
+  return withDefaultBPLId({
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
     DocumentLines: buildGoodIssueLines(lines, false),
-  };
+  });
 }
 
 export function buildGoodIssuePatchPayload({

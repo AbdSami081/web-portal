@@ -35,10 +35,17 @@ export default function PurchaseRequestPage() {
     DocDate: today,
     DocDueDate: today,
     TaxDate: today,
-    DocStatus: "bost_Open",
+    RequiredDate: today,
+    DocumentLines: [],
+    Freight: 0,
+    Rounding: 0,
+    DiscountPercent: 0,
+    TaxTotal: 0,
+    TotalBeforeDiscount: 0,
+    DocTotal: 0,
     Comments: "",
-    DocNum: 0,
-    DocEntry: 0,
+    OwnerCode: 0,
+    DocStatus: "bost_Open",
   });
 
   const handleSubmit = async (data: PurchaseRequestFormData) => {

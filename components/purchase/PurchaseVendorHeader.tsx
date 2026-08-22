@@ -105,8 +105,15 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const docEntry = watch("DocEntry");
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const docNum = watch("DocNum");
+  const docDueDate = watch("DocDueDate");
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
+
+  useEffect(() => {
+    if (isPurchaseRequest && docDueDate) {
+      setValue("RequiredDate", docDueDate);
+    }
+  }, [isPurchaseRequest, docDueDate, setValue]);
   const [searchValue, setSearchValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -260,6 +267,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
       if (documentData) {
         loadFromDocument(documentData, config.type);
+        usePurchaseDocument.getState().setLoadedDraftData(documentData);
         setValue("DocDate", (documentData.DocDate || "").split("T")[0]);
         setValue("DocDueDate", (documentData.DocDueDate || "").split("T")[0]);
         setValue("TaxDate", (documentData.TaxDate || "").split("T")[0]);

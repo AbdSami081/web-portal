@@ -15,7 +15,7 @@ import { taxcCodeGrp, freightTypes, uomOptions, calculateFreightTax, calculateLi
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
-import { DocumentType } from "@/types/master/DocumentType";
+import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 
 
 interface Props {
@@ -32,20 +32,7 @@ export function DocumentLineRow({ index, line }: Props) {
   const { watch } = useFormContext();
   const config = useSalesDocConfig();
 
-  const isFinancialDoc = [
-    DocumentType.ARInvoice,
-    DocumentType.CreditMemo,
-    DocumentType.ARCreditMemo,
-    DocumentType.Delivery,
-    DocumentType.Return,
-    DocumentType.SalesReturn,
-    DocumentType.ReturnRequest,
-    DocumentType.SalesReturnRequest,
-    DocumentType.DownPaymentInvoice,
-    DocumentType.ARDownPaymentInvoice,
-    DocumentType.DownPaymentRequest,
-    DocumentType.ARDownPaymentRequest,
-  ].includes(config.type);
+  const isFinancialDoc = isPostedSalesDocType(config.type);
 
   const docEntry = watch("DocEntry");
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);

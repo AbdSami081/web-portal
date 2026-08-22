@@ -169,7 +169,7 @@ export const patchPurchaseOrder = async (docEntry: number, payload: any): Promis
 };
 
 export const postPurchaseRequest = async (payload: any): Promise<any | null> => {
-  const res = await apiClient.post(`api/Purchase/PurchaseRequests`, payload);
+  const res = await apiClient.post(`api/Purchase/PurchaseRequests`, withDefaultBPLId(payload));
   if (!res.data) return null;
 
   const doc: BasePurchaseDocument = {
@@ -189,7 +189,7 @@ export const patchPurchaseRequest = async (docEntry: number, payload: any): Prom
 };
 
 export const postPurchaseQuotation = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Purchase/PurchaseQuotations`, data);
+  const res = await apiClient.post(`api/Purchase/PurchaseQuotations`, withDefaultBPLId(data));
   return res.data;
 };
 
@@ -199,7 +199,7 @@ export const patchPurchaseQuotation = async (docEntry: number, payload: any): Pr
 };
 
 export const postPurchaseGRPO = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Purchase/PurchaseDeliveryNotes`, data);
+  const res = await apiClient.post(`api/Purchase/PurchaseDeliveryNotes`, withDefaultBPLId(data));
   return res.data;
 };
 
@@ -209,7 +209,7 @@ export const patchGRPO = async (docEntry: number, payload: any): Promise<any | n
 };
 
 export const postPurchaseInvoice = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Purchase/PurchaseInvoices`, data);
+  const res = await apiClient.post(`api/Purchase/PurchaseInvoices`, withDefaultBPLId(data));
   return res.data;
 };
 
@@ -309,7 +309,7 @@ export const getAPDownPaymentInvoiceDocument = async (docNum: number): Promise<B
 };
 
 export const postApCreditMemo = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Purchase/PurchaseCreditNotes`, data);
+  const res = await apiClient.post(`api/Purchase/PurchaseCreditNotes`, withDefaultBPLId(data));
   return res.data;
 };
 
@@ -329,7 +329,7 @@ export const patchGoodsReturn = async (docEntry: number, payload: any): Promise<
 };
 
 export const postGoodsReturnRequest = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Purchase/GoodsReturnRequest`, data);
+  const res = await apiClient.post(`api/Purchase/GoodsReturnRequest`, withDefaultBPLId(data));
   return res.data;
 };
 
@@ -339,7 +339,7 @@ export const patchGoodsReturnRequest = async (docEntry: number, payload: any): P
 };
 
 export const postAPDownPaymentInvoice = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Purchase/PurchaseDownPayments`, data);
+  const res = await apiClient.post(`api/Purchase/PurchaseDownPayments`, withDefaultBPLId(data));
   return res.data;
 };
 
@@ -349,7 +349,7 @@ export const patchAPDownPaymentInvoice = async (docEntry: number, payload: any):
 };
 
 export const postAPDownPaymentRequest = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Purchase/PurchaseDownPayments`, data);
+  const res = await apiClient.post(`api/Purchase/PurchaseDownPayments`, withDefaultBPLId(data));
   return res.data;
 };
 
@@ -359,7 +359,7 @@ export const patchAPDownPaymentRequest = async (docEntry: number, payload: any):
 };
 
 export const postReservePurchaseInvoice = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Purchase/ReservePurchaseInvoices`, data);
+  const res = await apiClient.post(`api/Purchase/ReservePurchaseInvoices`, withDefaultBPLId(data));
   return res.data;
 };
 

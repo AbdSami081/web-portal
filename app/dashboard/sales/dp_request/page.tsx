@@ -41,6 +41,7 @@ export default function ARDownPaymentRequestPage() {
         discountPercent,
         freight,
         additionalExpenses,
+        downPaymentType: "dptRequest",
       });
 
       try {
@@ -76,6 +77,7 @@ export default function ARDownPaymentRequestPage() {
       discountPercent,
       freight,
       additionalExpenses,
+      downPaymentType: "dptRequest",
     });
 
     try {

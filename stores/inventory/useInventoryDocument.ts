@@ -24,8 +24,14 @@ interface IOPRDDocumentStore {
   isCopyingTo: boolean;
   udfs: Record<string, any>;
   loadedDraftData: any | null;
+  serialModalOpen: boolean;
+  batchModalOpen: boolean;
+  selectedLineForModal: any | null;
 
   setLoadedDraftData: (data: any) => void;
+  setSerialModalOpen: (open: boolean) => void;
+  setBatchModalOpen: (open: boolean) => void;
+  setSelectedLineForModal: (line: any | null) => void;
   setCustomer: (customer: BusinessPartner | null) => void;
   setWarehouses: (warehouses: any[]) => void;
   setDocEntry: (DocEntry: number) => void;
@@ -41,6 +47,8 @@ interface IOPRDDocumentStore {
   addLine: (line: InventoryDocumentLine) => void;
   removeLine: (index: number) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
+  setLineSerials: (itemCode: string, serials: any[]) => void;
+  setLineBatches: (itemCode: string, batches: any[]) => void;
   updateAllLinesWarehouse: (whs: string, isFrom: boolean) => void;
   attachments: {
     LineNum: number;
@@ -89,8 +97,14 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     attachments: [],
     udfs: {},
     loadedDraftData: null,
+    serialModalOpen: false,
+    batchModalOpen: false,
+    selectedLineForModal: null,
 
     setLoadedDraftData: (data) => set({ loadedDraftData: data }),
+    setSerialModalOpen: (open) => set({ serialModalOpen: open }),
+    setBatchModalOpen: (open) => set({ batchModalOpen: open }),
+    setSelectedLineForModal: (line) => set({ selectedLineForModal: line }),
     setCustomer: (customer) => set({ customer }),
     setWarehouses: (warehouses) => set({ warehouses }),
     setDocEntry: (DocEntry) => set({ DocEntry }),
@@ -119,6 +133,16 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     updateLine: (itemCode, updated) =>
       set((s) => ({
         lines: s.lines.map((l) => (l.ItemCode === itemCode ? { ...l, ...updated } : l)),
+      })),
+
+    setLineSerials: (itemCode, serials) =>
+      set((s) => ({
+        lines: s.lines.map((l) => (l.ItemCode === itemCode ? { ...l, SerialNumbers: serials } : l)),
+      })),
+
+    setLineBatches: (itemCode, batches) =>
+      set((s) => ({
+        lines: s.lines.map((l) => (l.ItemCode === itemCode ? { ...l, BatchNumbers: batches } : l)),
       })),
 
     updateAllLinesWarehouse: (whsCode, isFrom) =>
@@ -160,7 +184,6 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     loadFromDocument: (doc, type, isCopy) => {
       const rawLines = doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [];
 
-      // Get UoMs from master data store for resolution
       const uoms = useMasterDataStore.getState().uoms || [];
 
       const lines: InventoryDocumentLine[] = rawLines.map((line: any, idx: number) => {
@@ -186,6 +209,10 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
           UoMCode: uomCode,
           unitMsr,
+          ManSerNum: line.ManSerNum || (line.SerialNumbers?.length ? "Y" : ""),
+          ManBtchNum: line.ManBtchNum || (line.BatchNumbers?.length ? "Y" : ""),
+          SerialNumbers: line.SerialNumbers || [],
+          BatchNumbers: line.BatchNumbers || [],
           LineNum: line.LineNum ?? idx,
           BaseType: toNumberOrUndefined(line.BaseType) ?? (isCopy ? type : undefined),
           BaseEntry: toNumberOrUndefined(line.BaseEntry) ?? (isCopy ? doc.DocEntry : undefined),
@@ -260,6 +287,9 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         attachments: [],
         udfs: {},
         loadedDraftData: null,
+        serialModalOpen: false,
+        batchModalOpen: false,
+        selectedLineForModal: null,
       });
     },
   }))

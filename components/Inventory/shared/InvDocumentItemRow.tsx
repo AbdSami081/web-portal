@@ -39,7 +39,12 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
             (w: any) => (w.WarehouseCode || w.warehouseCode) === fromWhs
           );
           const onHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
-          updateLine(line.ItemCode, { QtyInWhs: qtyInWhs, OnHand: onHand });
+          updateLine(line.ItemCode, {
+            QtyInWhs: qtyInWhs,
+            OnHand: onHand,
+            ManSerNum: item.ManSerNum,
+            ManBtchNum: item.ManBtchNum,
+          });
         }
       });
     }

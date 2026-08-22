@@ -52,6 +52,8 @@ interface PurchaseDocumentStore {
   udfs: Record<string, any>;
   isCopying: boolean;
   lastLoadedDocType: number | null;
+  loadedDraftData: any | null;
+  setLoadedDraftData: (data: any) => void;
   setIsCopying: (val: boolean) => void;
 
   setVendor: (v: BusinessPartner) => void;
@@ -125,12 +127,14 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     lastLoadedDocType: null,
     udfs: {},
     isCopying: false,
+    loadedDraftData: null,
 
     setVendor: (v) => set({ vendor: v }),
     setRequester: (r) => set({ requester: r }),
     setRequesterName: (rn) => set({ requesterName: rn }),
     setBranch: (b) => set({ branch: b }),
     setDepartment: (d) => set({ department: d }),
+    setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setIsCopying: (val) => set({ isCopying: val }),
 
     setDocDate: (d) => set({ docDate: d }),
@@ -228,6 +232,10 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
           LineTotal: parseSafe(line.LineTotal) || (lineSubtotal - discountAmount + calculatedTax),
           WarehouseCode: line.WarehouseCode || "",
           TaxAmount: parseSafe(line.TaxTotal || line.TaxSum) || calculatedTax,
+          ManSerNum: line.ManSerNum || (line.SerialNumbers?.length ? "Y" : ""),
+          ManBtchNum: line.ManBtchNum || (line.BatchNumbers?.length ? "Y" : ""),
+          SerialNumbers: line.SerialNumbers || [],
+          BatchNumbers: line.BatchNumbers || [],
           UoMCode: line.UoMCode,
           TaxCode: line.VatGroup || line.TaxCode,
           BaseType: line.BaseType,

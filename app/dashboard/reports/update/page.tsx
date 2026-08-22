@@ -97,10 +97,9 @@ export default function ReportManagementPage() {
 
   useEffect(() => {
     async function fetchImportedReports() {
-      if (!user?.empId) return;
       try {
         setLoading(true);
-        const data = await getReports(user.empId);
+        const data = await getReports(undefined, user?.companyDB);
         
         if (Array.isArray(data)) {
           const filteredReports = data.filter(
@@ -121,7 +120,7 @@ export default function ReportManagementPage() {
     if (activeTab === "report") {
       fetchImportedReports();
     }
-  }, [user?.empId, activeTab]);
+  }, [user?.companyDB, activeTab]);
 
   useEffect(() => {
     if (!selectedObjectCode || activeTab !== "layout") return;
@@ -146,8 +145,8 @@ export default function ReportManagementPage() {
     if (activeTab === "layout" && selectedObjectCode) {
       const data = await getLayouts(selectedObjectCode);
       setLayouts(Array.isArray(data) ? data : []);
-    } else if (activeTab === "report" && user?.empId) {
-      const data = await getReports(user.empId);
+    } else if (activeTab === "report") {
+      const data = await getReports(undefined, user?.companyDB);
       if (Array.isArray(data)) {
         setReports(data.filter(item => String(item.U_DocType ?? "").toLowerCase() === "report"));
       } else {

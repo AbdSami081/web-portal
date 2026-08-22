@@ -116,10 +116,13 @@ export async function cachedGet<T>(
 
     return dedupeRequest(key, async () => {
         const response = await apiClient.get<T>(url, config);
-        responseCache.set(key, {
-            data: response.data,
-            expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS,
-        });
+        const isEmptyArray = Array.isArray(response.data) && response.data.length === 0;
+        if (!isEmptyArray) {
+            responseCache.set(key, {
+                data: response.data,
+                expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS,
+            });
+        }
         return response.data;
     });
 }

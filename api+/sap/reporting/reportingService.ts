@@ -100,8 +100,16 @@ export const uploadReport = async (formData: FormData) => {
   return response.data;
 };
 
-export const getReports = async (employeeId: string): Promise<ReportData[]> => {
-  const url = `api/ReportingAPI/GetReports?employeeId=${employeeId}`;
+export const getReports = async (employeeId?: string, companyDB?: string): Promise<ReportData[]> => {
+  const params = new URLSearchParams();
+  if (employeeId && employeeId.trim() !== "" && employeeId !== "ALL") {
+    params.append("employeeId", employeeId);
+  }
+  if (companyDB && companyDB.trim() !== "") {
+    params.append("companyDB", companyDB);
+  }
+  const queryString = params.toString();
+  const url = queryString ? `api/ReportingAPI/GetReports?${queryString}` : `api/ReportingAPI/GetReports`;
   const response = await apiClient.get(url);
   return response.data || [];
 };

@@ -25,11 +25,14 @@ import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialo
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useAuth } from "@/context/authContext";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { ApprovalTemplate } from "@/types/template.type";
 import { patchDraftDocument } from "@/api+/sap/draft/draftService";
 import { buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
+import { hasDraftChanges } from "@/lib/approval/approvalChanges";
+import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
+import { linesHaveInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -64,8 +67,26 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
-  const isApprovedDraft = docNav.approvalStatus === "arsApproved";
-  const isPendingApproval = (docNav.approvalStatus === "arsPending" || !!docNav.approvalRequestCode) && !!docNav.draftEntry;
+  const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
+  const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
+  const isRejectedApproval =
+    statusStr === "arsrejected" ||
+    statusStr === "ardrejected" ||
+    statusStr === "arsnotapproved" ||
+    statusStr === "ardnotapproved" ||
+    statusStr === "rejected" ||
+    statusStr === "notapproved" ||
+    statusStr === "arscancelled" ||
+    statusStr === "arscanceled" ||
+    statusStr === "ardcancelled" ||
+    statusStr === "ardcanceled" ||
+    statusStr === "arscomplete";
+  const isPendingApproval =
+    (statusStr === "arspending" ||
+      statusStr === "ardpending" ||
+      statusStr === "pending" ||
+      (!statusStr && !!docNav.approvalRequestCode && !!docNav.draftEntry)) &&
+    !!docNav.draftEntry;
 
 
   const [badgeState, setBadgeState] = useState<"draft" | "approved" | null>(() => {
@@ -131,6 +152,9 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
+  // Set when a REJECTED draft is being re-submitted: the draft is patched first, then a
+  // NEW approval request is created (historical approval stays untouched).
+  const [pendingReApproval, setPendingReApproval] = useState<{ draftId: number; docType: string | number } | null>(null);
 
   const copyFromOptions = (() => {
     if (docType === DocumentType.Order) return [DocumentType.Quotation];
@@ -288,8 +312,37 @@ export function SalesDocumentLayout<T extends FieldValues>({
           const state = useSalesDocument.getState();
           const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
 
-          // If this document is an existing pending approval draft, update the draft instead of creating a new approval request
-          if (isPendingApproval && docNav.draftEntry) {
+          if (linesHaveInvalidPrice(state.lines)) {
+            toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
+            return;
+          }
+
+          // Validate serial/batch allocation up front, regardless of which submit path
+          // (fresh document, rejected-draft resubmit, approved-draft resubmit) is taken
+          // below — otherwise a resubmit branch could skip this and reach SAP with an
+          // unallocated line.
+          const isSerialBatchDocument = [
+            DocumentType.Delivery,
+            DocumentType.ARInvoice,
+            DocumentType.SalesReturn,
+            DocumentType.Return,
+            DocumentType.CreditMemo,
+            DocumentType.ARCreditMemo,
+          ].includes(docType);
+
+          if (isSerialBatchDocument && linesNeedSerialAllocation(state.lines)) {
+            setPendingData(finalData);
+            setSerialModalOpen(true);
+            return;
+          }
+
+          if (isSerialBatchDocument && linesNeedBatchAllocation(state.lines)) {
+            setPendingData(finalData);
+            setBatchModalOpen(true);
+            return;
+          }
+
+          if (isRejectedApproval && docNav.draftEntry) {
             try {
               const patchPayload = buildSalesDocumentPatchPayload({
                 data: finalData as any,
@@ -299,24 +352,89 @@ export function SalesDocumentLayout<T extends FieldValues>({
                 additionalExpenses: state.additionalExpenses,
               });
               await patchDraftDocument(Number(docNav.draftEntry), patchPayload);
-              toast.success("Approval request modified successfully.");
-              ResetForm();
-              setBadgeState(null);
-              return;
             } catch (err: any) {
               toast.error(err?.response?.data?.Message || "Failed to update approval draft");
               return;
             }
+
+            const currentUserIdRe = user?.sapUserId;
+            if (currentUserIdRe) {
+              try {
+                const docTypeStr = getApprovalDocumentType(docType);
+                const activeTemplates = await getCurrentUserApprovalTemplates(currentUserIdRe, docTypeStr);
+                if (activeTemplates && activeTemplates.length > 0) {
+                  setApprovalTemplates(activeTemplates);
+                  setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+                  setApprovalModalOpen(true);
+                  return;
+                }
+              } catch {
+                /* fall through to normal submit */
+              }
+            }
+            toast.success("Draft updated. The approval request will be re-submitted.");
+            ResetForm();
+            setBadgeState(null);
+            return;
+          }
+
+          if (isPendingApproval && docNav.draftEntry) {
+            toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+            return;
+          }
+
+          if (isApprovedDraft && docNav.draftEntry) {
+            // For approved drafts: only require a NEW approval request if something
+            // material actually changed since the last approval. If nothing changed,
+            // submit directly instead of forcing the user through approval again.
+            const approvedChanged = hasDraftChanges(state.loadedDraftData, state.lines, finalData);
+            if (!approvedChanged) {
+              try {
+                await onSubmit(finalData);
+                ResetForm();
+                setBadgeState(null);
+              } catch (err: any) {
+                toast.error(err?.response?.data?.Message || "Failed to create the document");
+              }
+              return;
+            }
+
+            const currentUserIdApproved = user?.sapUserId;
+            if (currentUserIdApproved) {
+              try {
+                const docTypeApproved = getApprovalDocumentType(docType);
+                const activeTemplatesApproved = await getCurrentUserApprovalTemplates(currentUserIdApproved, docTypeApproved);
+                if (activeTemplatesApproved && activeTemplatesApproved.length > 0) {
+                  setApprovalTemplates(activeTemplatesApproved);
+                  setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+                  setPendingFinalData(finalData);
+                  setApprovalModalOpen(true);
+                  return;
+                }
+              } catch {
+                /* no approval template */
+              }
+            }
+
+            try {
+              await onSubmit(finalData);
+              ResetForm();
+              setBadgeState(null);
+            } catch (err: any) {
+              toast.error(err?.response?.data?.Message || "Failed to create the document");
+            }
+            return;
           }
 
           const currentUserId = user?.sapUserId;
-          if (currentUserId && !isApprovedDraft) {
+          if (currentUserId) {
             setIsCheckingApproval(true);
             try {
               const docTypeStr = getApprovalDocumentType(docType);
               const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
               if (activeTemplates && activeTemplates.length > 0) {
                 setApprovalTemplates(activeTemplates);
+                setPendingReApproval(null);
                 setPendingFinalData(finalData);
                 setApprovalModalOpen(true);
                 setIsCheckingApproval(false);
@@ -329,49 +447,8 @@ export function SalesDocumentLayout<T extends FieldValues>({
             }
           }
 
-          const isSerialBatchDocument = [
-            DocumentType.Delivery,
-            DocumentType.ARInvoice,
-            DocumentType.SalesReturn,
-            DocumentType.Return,
-            DocumentType.CreditMemo,
-            DocumentType.ARCreditMemo,
-          ].includes(docType);
-
-          const needsSerialManagement = isSerialBatchDocument && 
-                              state.lines.some(l => {
-                                const isSerial = l.ManSerNum === 'Y' || l.ManSerNum === 'tYES';
-                                if (isSerial) {
-                                  return !l.SerialNumbers || l.SerialNumbers.length < l.Quantity;
-                                }
-                                return false;
-                              });
-
-          const needsBatchManagement = isSerialBatchDocument && 
-                              state.lines.some(l => {
-                                const isBatch = String(l.ManBtchNum).toLowerCase() === 'y' || String(l.ManBtchNum).toLowerCase() === 'tyes';
-                                if (isBatch) {
-                                  const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
-                                  return totalBatch < l.Quantity;
-                                }
-                                return false;
-                              });
-          if (needsSerialManagement) {
-            setPendingData(finalData);
-            setSerialModalOpen(true);
-            return;
-          }
-
-          if (needsBatchManagement) {
-            setPendingData(finalData);
-            setBatchModalOpen(true);
-            return;
-          }
-
           try {
-            console.log("Proceeding with onSubmit...");
             await onSubmit(finalData);
-            console.log("onSubmit finished. Resetting form...");
             ResetForm();
           } catch (error) {
             console.error("Submit Error:", error);
@@ -522,7 +599,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
             }}
             onConfirm={async (selections) => {
               const state = useSalesDocument.getState();
-              
+
               if (selections.serials) {
                 Object.entries(selections.serials).forEach(([itemCode, serials]) => {
                   state.setLineSerials(itemCode, serials);
@@ -530,28 +607,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
               }
 
               const updatedLines = useSalesDocument.getState().lines;
-              const stillNeedsBatch = updatedLines.some((l) => {
-                const isBatch = String(l.ManBtchNum).toLowerCase() === "y" || String(l.ManBtchNum).toLowerCase() === "tyes";
-                if (isBatch) {
-                  const totalBatch = (l.BatchNumbers || []).reduce((sum, b) => sum + b.Quantity, 0);
-                  return totalBatch < l.Quantity;
-                }
-                return false;
-              });
-
               setSerialModalOpen(false);
-              if (stillNeedsBatch) {
+
+              if (linesNeedBatchAllocation(updatedLines)) {
                 setBatchModalOpen(true);
-              } else if (pendingData) {
-                const dataToSubmit = { ...pendingData, DocumentLines: updatedLines } as unknown as T;
-                setPendingData(null);
-                try {
-                  await onSubmit(dataToSubmit);
-                  ResetForm();
-                } catch (e) {
-                  console.error("Submit error after serial selection:", e);
-                }
+                return;
               }
+
+              setPendingData(null);
             }}
             lines={useSalesDocument.getState().lines}
           />
@@ -564,25 +627,15 @@ export function SalesDocumentLayout<T extends FieldValues>({
             }}
             onConfirm={async (selections) => {
               const state = useSalesDocument.getState();
-              
+
               if (selections.batches) {
                 Object.entries(selections.batches).forEach(([itemCode, batches]) => {
                   state.setLineBatches(itemCode, batches);
                 });
               }
 
-              const updatedLines = useSalesDocument.getState().lines;
               setBatchModalOpen(false);
-              if (pendingData) {
-                const dataToSubmit = { ...pendingData, DocumentLines: updatedLines } as unknown as T;
-                setPendingData(null);
-                try {
-                  await onSubmit(dataToSubmit);
-                  ResetForm();
-                } catch (e) {
-                  console.error("Submit error after batch selection:", e);
-                }
-              }
+              setPendingData(null);
             }}
             lines={useSalesDocument.getState().lines}
           />
@@ -592,16 +645,42 @@ export function SalesDocumentLayout<T extends FieldValues>({
             onClose={() => setApprovalModalOpen(false)}
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
-              // Submit the document - SAP natively creates the approval request
-              // when a matching approval template is linked to the document type.
+              // REJECTED draft resubmission -> re-open the EXISTING rejected approval
+              // request (PATCH /ApprovalRequests/{approvalRequestCode}, carried from the
+              // Messages inbox) instead of POSTing a new one. The SAP B1 Service Layer does
+              // not support creating ApprovalRequests via POST (it returns "Command Not Found").
+              if (pendingReApproval) {
+                const tpl = approvalTemplates[0];
+                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
+                const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
+                try {
+                  await submitApprovalRequest(approvalRequestId, {
+                    TemplateCode: tpl?.Code,
+                    ObjectEntry: pendingReApproval.draftId,
+                    ObjectType: pendingReApproval.docType,
+                    IsDraft: "Y",
+                    ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
+                    OriginatorID: user?.sapUserId,
+                    Remarks: remarks || "",
+                  });
+                  toast.success("Draft updated and the approval request was re-submitted.");
+                } catch (err: any) {
+                  toast.error(err?.response?.data?.Message || "Failed to resubmit the approval request.");
+                }
+                setPendingReApproval(null);
+                setPendingFinalData(null);
+                ResetForm();
+                setBadgeState(null);
+                return;
+              }
+
               if (!pendingFinalData) return;
 
-              const firstRemarks = approvalTemplates[0]
-                ? (remarksMap[approvalTemplates[0].Code] ?? "").trim()
-                : "";
               const finalData = {
                 ...(pendingFinalData as any),
-                Comments: firstRemarks || (pendingFinalData as any).Comments || "",
+                // Approval remarks are submitted separately to SAP's approval request,
+                // NOT written onto the document's Comments field.
+                Comments: (pendingFinalData as any).Comments || "",
               } as T;
 
               await onSubmit(finalData);

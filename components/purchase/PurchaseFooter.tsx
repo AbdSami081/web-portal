@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,17 +30,6 @@ export function PurchaseFooter() {
   const docEntry = watch("DocEntry");
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isFooterDisabled = isLoadedDocument && docStatus === "bost_Close";
-
-  useEffect(() => {
-    if (discountPercent > 0 && TotalBeforeDiscount > 0) {
-      const amount = (TotalBeforeDiscount * discountPercent) / 100;
-      if (Math.abs(amount - discSum) > 0.01) {
-        setDiscountSum(amount);
-      }
-    } else if (discountPercent === 0 && discSum !== 0) {
-      setDiscountSum(0);
-    }
-  }, [discountPercent, TotalBeforeDiscount]);
 
   return (
     <>

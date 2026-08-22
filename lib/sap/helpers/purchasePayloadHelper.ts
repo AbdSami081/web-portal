@@ -80,10 +80,13 @@ export function buildPurchaseDocumentPayload({
       ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
       ...(data.SendNotification && { SendNotification: data.SendNotification }),
     }),
+    ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
     DocDate: data.DocDate,
     DocDueDate: data.DocDueDate,
     TaxDate: data.TaxDate,
     Comments: data.Comments,
+    BPL_IDAssignedToInvoice: data.BPL_IDAssignedToInvoice ?? data.BPLId ?? 5,
+    BPLId: data.BPLId ?? data.BPL_IDAssignedToInvoice ?? 5,
     DiscountPercent: discountPercent || 0,
     Freight: freight || 0,
     Rounding: rounding || 0,
@@ -106,6 +109,10 @@ export function buildPurchaseDocumentPayload({
         baseFields.BaseType = -1;
         baseFields.BaseEntry = null;
         baseFields.BaseLine = null;
+      }
+
+      if (line.RequiredDate) {
+        baseFields.RequriedDate = line.RequiredDate;
       }
 
       const lineExpenses = mapLineExpenses(line);
@@ -141,12 +148,14 @@ export function buildPurchaseDocumentPatchPayload({
   additionalExpenses = [],
   includeLines = true,
 }: BuildPurchasePatchPayloadOptions) {
+  const isPurchaseRequest = !!data.Requester;
+
   return {
     Comments: data.Comments,
-    // Only send dates that actually have a value
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
+    ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
     ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
     ...(data.SendNotification && { SendNotification: data.SendNotification }),
     DiscountPercent: discountPercent || 0,
