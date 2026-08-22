@@ -128,6 +128,7 @@ export function InvDocumentLayout<T extends FieldValues>({
       DocEntry: state.DocEntry,
       DocNum: state.DocNum,
       docStatus: state.docStatus,
+      udfs: state.udfs,
     }))
   );
   const [isSaving, setIsSaving] = useState(false);
