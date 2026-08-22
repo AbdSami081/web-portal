@@ -110,7 +110,7 @@ const initializeBranchSession = async (force = false) => {
     if (!shouldDecidePopup) return;
 
     if (assigned.length === 0) {
-      toast.error("You are not assigned any branch.");
+      toast.error("You are not assigned any branch. Contact your system administrator.");
       return;
     }
 
