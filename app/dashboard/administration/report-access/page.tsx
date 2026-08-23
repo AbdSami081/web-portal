@@ -232,7 +232,7 @@ export default function ReportAccessPage() {
                 <div className="max-w-5xl mx-auto grid grid-cols-1 gap-4">
                   {filteredReports.map(report => {
                     const reportCode = String(report.U_ReportCode || report.Code || "").trim();
-                    const reportTitle = report.Name || report.U_FileName || `Report ${reportCode}`;
+                    const reportTitle = report.U_FileName;
                     const isChecked = Boolean(permissions[reportCode]);
                     return (
                       <div key={reportCode || report.Code} className="group border rounded-xl p-4 flex items-center justify-between hover:border-blue-200 hover:shadow-md hover:shadow-blue-50/50 transition-all bg-white">
