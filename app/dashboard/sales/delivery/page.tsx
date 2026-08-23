@@ -59,6 +59,7 @@ export default function DeliveryPage() {
         discountPercent,
         freight,
         additionalExpenses,
+        includeLines: false,
       });
 
       try {

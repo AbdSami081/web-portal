@@ -144,21 +144,19 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
     const payload: any = {
       Comments: data.Comments || data.Remarks,
       JournalMemo: data.JournalMemo,
-      DocumentLines: lines.map(line => {
-        const linePayload: any = {
+      // Both document types post real stock movement on Add, so SAP locks line
+      // Quantity afterward — resending it (even unchanged) fails the same way as
+      // Delivery does ("Incorrect 'Qty (Inventory UoM)' in line ..."). Omit
+      // DocumentLines entirely on update; only header remarks are safe to patch.
+      ...(!isUpdate && {
+        DocumentLines: lines.map(line => ({
           Quantity: line.PlannedQuantity,
           WarehouseCode: line.Warehouse,
-        };
-
-        if (isUpdate) {
-          linePayload.LineNum = line.LineNumber;
-        } else {
-          linePayload.ItemCode = line.OrderNumber ? undefined : (line.ItemNo || line.ItemCode);
-          linePayload.BaseType = line.OrderNumber ? 202 : undefined;
-          linePayload.BaseEntry = line.OrderNumber;
-          linePayload.BaseLine = (line.OrderNumber && line.LineNumber === -1) ? undefined : line.LineNumber;
-        }
-        return linePayload;
+          ItemCode: line.OrderNumber ? undefined : (line.ItemNo || line.ItemCode),
+          BaseType: line.OrderNumber ? 202 : undefined,
+          BaseEntry: line.OrderNumber,
+          BaseLine: (line.OrderNumber && line.LineNumber === -1) ? undefined : line.LineNumber,
+        })),
       }),
     };
 

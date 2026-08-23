@@ -130,14 +130,15 @@ export function buildInventoryTransferPayload({
 
 export function buildInventoryTransferPatchPayload({
   data,
-  lines,
-  fromWarehouse,
-  toWarehouse,
 }: Pick<BuildInventoryPayloadOptions, "data" | "lines" | "fromWarehouse" | "toWarehouse">) {
+  // Inventory Transfer posts real stock movement on Add; SAP rejects a resent (even
+  // unchanged) line Quantity on an already-added document with "Incorrect 'Qty
+  // (Inventory UoM)' in line ..." (confirmed live on Delivery, same underlying SAP
+  // rule). Omitting StockTransferLines leaves existing lines untouched — only header
+  // remarks are safe to patch once this document is posted.
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, true),
   };
 }
 
@@ -196,11 +197,11 @@ export function buildGoodIssuePayload({
 
 export function buildGoodIssuePatchPayload({
   data,
-  lines,
 }: BuildGoodIssuePayloadOptions) {
+  // Same reasoning as buildInventoryTransferPatchPayload: Good Issue posts real stock
+  // movement on Add, so line Quantity is locked post-add. Omit DocumentLines entirely.
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
-    DocumentLines: buildGoodIssueLines(lines, true),
   };
 }

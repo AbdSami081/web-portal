@@ -41,6 +41,7 @@ export default function ARCreditMemoPage() {
         discountPercent,
         freight,
         additionalExpenses,
+        includeLines: false,
       });
 
       try {

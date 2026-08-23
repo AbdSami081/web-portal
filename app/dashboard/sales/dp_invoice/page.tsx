@@ -42,6 +42,7 @@ export default function ARDownPaymentInvoicePage() {
         freight,
         additionalExpenses,
         downPaymentType: "dptInvoice",
+        includeLines: false,
       });
 
       try {

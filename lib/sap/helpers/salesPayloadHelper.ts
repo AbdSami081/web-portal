@@ -134,57 +134,64 @@ export function buildSalesDocumentPatchPayload({
   freight = 0,
   additionalExpenses = [],
   downPaymentType,
+  includeLines = true,
 }: Pick<
   BuildSalesPayloadOptions,
   "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses" | "downPaymentType"
->) {
+> & { includeLines?: boolean }) {
   return {
     Comments: data.Comments,
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
-    DiscountPercent: discountPercent || 0,
-    DocumentLines: lines.map((line, index) => {
-      const baseFields: Record<string, unknown> = {
-        ItemCode: line.ItemCode,
-        Quantity: Number(line.Quantity) || 0,
-        UnitPrice: Number(line.Price) || 0,
-        DiscountPercent: Number(line.DiscountPercent) || 0,
-        VatGroup: line.TaxCode || "",
-        WarehouseCode: line.WarehouseCode || "",
-        UoMCode: line.UoMCode || "",
-      };
+    // includeLines:false means SAP has this document's transactional data locked
+    // post-add (e.g. Delivery rejects an unchanged Quantity resend with "Incorrect
+    // 'Qty (Inventory UoM)' in line ..."). Only header remarks/dates/attachments are
+    // safe to patch for those document types. Mirrors buildPurchaseDocumentPatchPayload.
+    ...(includeLines && { DiscountPercent: discountPercent || 0 }),
+    ...(includeLines && {
+      DocumentLines: lines.map((line, index) => {
+        const baseFields: Record<string, unknown> = {
+          ItemCode: line.ItemCode,
+          Quantity: Number(line.Quantity) || 0,
+          UnitPrice: Number(line.Price) || 0,
+          DiscountPercent: Number(line.DiscountPercent) || 0,
+          VatGroup: line.TaxCode || "",
+          WarehouseCode: line.WarehouseCode || "",
+          UoMCode: line.UoMCode || "",
+        };
 
-      if (downPaymentType) {
-        baseFields.DownPaymentType = downPaymentType;
-      }
+        if (downPaymentType) {
+          baseFields.DownPaymentType = downPaymentType;
+        }
 
-      // Existing lines carry their SAP LineNum - the backend sends
-      // B1S-ReplaceCollectionsOnPatch so omitted lines get deleted.
-      // New lines must NOT carry LineNum ("-1" is rejected by SAP).
-      if (line.LineNum !== undefined && line.LineNum >= 0) {
-        baseFields.LineNum = line.LineNum;
-      }
+        // Existing lines carry their SAP LineNum - the backend sends
+        // B1S-ReplaceCollectionsOnPatch so omitted lines get deleted.
+        // New lines must NOT carry LineNum ("-1" is rejected by SAP).
+        if (line.LineNum !== undefined && line.LineNum >= 0) {
+          baseFields.LineNum = line.LineNum;
+        }
 
-      const lineExpenses = mapLineExpenses(line);
-      if (lineExpenses.length > 0) {
-        baseFields.DocumentLineAdditionalExpenses = lineExpenses;
-      }
+        const lineExpenses = mapLineExpenses(line);
+        if (lineExpenses.length > 0) {
+          baseFields.DocumentLineAdditionalExpenses = lineExpenses;
+        }
 
-      const serialNumbers = withBaseLineNumber(line.SerialNumbers, index);
-      if (serialNumbers) baseFields.SerialNumbers = serialNumbers;
-      const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
-      if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
+        const serialNumbers = withBaseLineNumber(line.SerialNumbers, index);
+        if (serialNumbers) baseFields.SerialNumbers = serialNumbers;
+        const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
+        if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
-      return baseFields;
+        return baseFields;
+      }),
     }),
-    ...(additionalExpenses.length > 0 && {
+    ...(includeLines && additionalExpenses.length > 0 && {
       DocumentAdditionalExpenses: additionalExpenses.map((e) => ({
         ExpenseCode: e.ExpenseCode,
         LineTotal: e.LineTotal,
         VatGroup: e.VatGroup || e.TaxCode || "",
       })),
     }),
-    ...(freight > 0 && { Freight: freight }),
+    ...(includeLines && freight > 0 && { Freight: freight }),
   };
 }

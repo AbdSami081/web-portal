@@ -65,6 +65,14 @@ export function InvDocumentItems() {
 
   const docStatus = watch("DocStatus") || "bost_Open";
   const isClosed = docStatus === "bost_Close";
+  // Inventory Transfer / Good Issue post real stock movement on Add, so SAP locks line
+  // Quantity afterward (see buildInventoryTransferPatchPayload / buildGoodIssuePatchPayload,
+  // which omit lines from the patch entirely) — hide the add button once a document is loaded.
+  // Inventory Transfer Request is a pre-posting document (never touches stock) and shares
+  // this component too, so it must stay fully editable — only lock the two posted types.
+  const isLineLockedDocType = config.type === DocumentType.InvTransfer || config.type === DocumentType.GoodIssue;
+  const docEntry = watch("DocEntry");
+  const isEditMode = isLineLockedDocType && Boolean(docEntry && Number(docEntry) > 0);
 
   const columns = isGoodIssue
     ? [
@@ -171,7 +179,7 @@ export function InvDocumentItems() {
         <TabsContent value="content" className="min-w-0 overflow-visible mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6">
           <div className="relative min-w-0 overflow-visible">
             <div className="absolute -top-7 left-2 z-50">
-              {!isClosed && (
+              {!isClosed && !isEditMode && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

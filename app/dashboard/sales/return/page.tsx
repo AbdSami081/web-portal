@@ -47,6 +47,7 @@ export default function ReturnPage() {
         discountPercent,
         freight,
         additionalExpenses,
+        includeLines: false,
       });
 
       try {

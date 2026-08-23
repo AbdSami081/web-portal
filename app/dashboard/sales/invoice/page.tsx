@@ -46,6 +46,7 @@ export default function InvoicePage() {
         discountPercent,
         freight,
         additionalExpenses,
+        includeLines: false,
       });
 
       try {
