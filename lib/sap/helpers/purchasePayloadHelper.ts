@@ -164,9 +164,16 @@ export function buildPurchaseDocumentPatchPayload({
     ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
     ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
     ...(data.SendNotification && { SendNotification: data.SendNotification }),
-    DiscountPercent: discountPercent || 0,
-    Freight: freight || 0,
-    Rounding: rounding || 0,
+    // includeLines:false means SAP has this document's transactional data (lines,
+    // discount, freight, rounding, additional expenses) locked post-add — e.g. Goods
+    // Return / GRPO reject an unchanged Rounding/Freight/DiscountPercent resend with
+    // "Field cannot be updated (ODBC -1029)". Only header remarks/dates/attachments
+    // are safe to patch for those document types.
+    ...(includeLines && {
+      DiscountPercent: discountPercent || 0,
+      Freight: freight || 0,
+      Rounding: rounding || 0,
+    }),
     ...(includeLines && lines.length > 0 && {
       DocumentLines: lines.map((line, index) => {
         const baseFields: Record<string, unknown> = {
@@ -196,7 +203,7 @@ export function buildPurchaseDocumentPatchPayload({
         return baseFields;
       }),
     }),
-    ...(additionalExpenses.length > 0 && {
+    ...(includeLines && additionalExpenses.length > 0 && {
       DocumentAdditionalExpenses: additionalExpenses.map((e) => ({
         ExpenseCode: e.ExpenseCode,
         LineTotal: e.LineTotal,

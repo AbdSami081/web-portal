@@ -184,6 +184,13 @@ export const SERVER_MENUS: MenuItem[] = [
                 objectCode: 234000032,
                 isReporting: true,
             },
+            {
+                id: "02256c89-56c0-40e6-bbd6-0be2d2bbd360",
+                title: "Goods Return",
+                url: "/dashboard/purchase/goodsreturn",
+                objectCode: 21,
+                isReporting: true,
+            },
         ],
     },
 
@@ -221,14 +228,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/inventory/item_master",
                 objectCode: 4,
                 isReporting: true,
-            },
-            {
-                id: "02256c89-56c0-40e6-bbd6-0be2d2bbd360",
-                title: "Goods Return",
-                url: "/dashboard/purchase/goodsreturn",
-                objectCode: 21,
-                isReporting: true,
-            },
+            }
         ],
     },
 

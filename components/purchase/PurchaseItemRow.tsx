@@ -29,7 +29,7 @@ interface Record {
 
 export function PurchaseItemRow({ index, line }: Props) {
   const { watch } = useFormContext();
-  const { updateLine, removeLine } = usePurchaseDocument();
+  const { updateLineByIndex, removeLine } = usePurchaseDocument();
   const { freightsWithCharges, freightTypes, warehouses } = useMasterDataStore();
   const { allBranches } = useBranchStore();
   const config = usePurchaseDocConfig();
@@ -60,15 +60,17 @@ export function PurchaseItemRow({ index, line }: Props) {
     setDraftLine(line);
   }, [line, index]);
 
-  // Backfill BPLid for lines that already have a warehouse but no branch yet (e.g. loaded documents)
+  // Backfill BPLid for lines that already have a warehouse but no branch yet (e.g. loaded documents).
+  // Must target this row's own index: updateLine(ItemCode) would hit the wrong row (or
+  // ping-pong forever) when two lines share the same item code.
   useEffect(() => {
     if (line.WarehouseCode && line.BPLid === undefined) {
       const branchId = resolveBranchForWarehouse(line.WarehouseCode, warehouses);
       if (branchId !== undefined) {
-        updateLine(line.ItemCode, { BPLid: branchId });
+        updateLineByIndex(index, { BPLid: branchId });
       }
     }
-  }, [line.WarehouseCode, line.BPLid, warehouses]);
+  }, [line.WarehouseCode, line.BPLid, warehouses, index]);
 
   useEffect(() => {
     calculateAndUpdate(draftLine);
@@ -118,7 +120,7 @@ export function PurchaseItemRow({ index, line }: Props) {
       LineTotal: Number((discounted + totalTax).toFixed(2)),
     };
 
-    updateLine(line.ItemCode, updatedLine);
+    updateLineByIndex(index, updatedLine);
   };
 
   const openCogsModal = (field: "CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4") => {
@@ -503,7 +505,7 @@ export function PurchaseItemRow({ index, line }: Props) {
           };
 
           setDraftLine(updated);
-          updateLine(line.ItemCode, updated);
+          updateLineByIndex(index, updated);
         }}
         itemCode={line.ItemCode}
         itemQtyInWhs={line.QtyInWhs}

@@ -63,7 +63,13 @@ export default function GoodsReturnRequestPage() {
       DocumentLines: lines.map((line) => {
         const lineData: any = { ...line };
 
-        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Delivery) {
+        if (
+          DocEntry &&
+          Number(DocEntry) > 0 &&
+          lastLoadedDocType &&
+          lastLoadedDocType !== DocumentType.Delivery &&
+          lastLoadedDocType !== DocumentType.GoodsReturnRequest
+        ) {
           lineData.BaseType = lastLoadedDocType;
           lineData.BaseEntry = DocEntry;
           lineData.BaseLine = line.LineNum;
@@ -86,7 +92,7 @@ export default function GoodsReturnRequestPage() {
 
     console.log("Final Goods Return Request Payload:", JSON.stringify(payload, null, 2));
 
-    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.GoodsReceiptPO) {
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.GoodsReturnRequest) {
       try {
         await patchGoodsReturnRequest(Number(DocEntry), payload);
         const docNum = usePurchaseDocument.getState().DocNum;

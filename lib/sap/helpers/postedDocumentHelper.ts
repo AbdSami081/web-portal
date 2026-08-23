@@ -11,10 +11,17 @@ const POSTED_SALES_DOC_TYPES = [
   DocumentType.ARDownPaymentInvoice,
 ];
 
+// GoodsReturn and GoodsReceiptPO are included here even though they aren't AR/AP-invoice
+// types: SAP rejects line changes on an already-added Purchase Return / GRPO, so
+// buildPurchaseDocumentPatchPayload is called with includeLines:false for both (see
+// goodsreturn/page.tsx and grpo/new/page.tsx) — the add-item button must stay hidden in
+// edit mode to match, otherwise it implies an action that silently gets dropped on save.
 const POSTED_PURCHASE_DOC_TYPES = [
   DocumentType.APInvoice,
   DocumentType.APCreditMemo,
   DocumentType.APDownPaymentInvoice,
+  DocumentType.GoodsReturn,
+  DocumentType.GoodsReceiptPO,
 ];
 
 export const isPostedSalesDocType = (docType: DocumentType): boolean =>

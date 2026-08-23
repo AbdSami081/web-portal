@@ -78,6 +78,7 @@ interface PurchaseDocumentStore {
   setLineBatches: (itemCode: string, batches: { BatchNumber: string; Quantity: number }[]) => void;
   addLine: (line: PurchaseDocumentLine) => void;
   updateLine: (itemCode: string, updated: Partial<PurchaseDocumentLine>) => void;
+  updateLineByIndex: (index: number, updated: Partial<PurchaseDocumentLine>) => void;
   removeLine: (itemCode: string) => void;
   clearLines: () => void;
 
@@ -169,6 +170,20 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         if (index !== -1) {
           newLines[index] = { ...newLines[index], ...updated };
         }
+        return { lines: newLines };
+      });
+      get().calculateTotals();
+    },
+    // Same-ItemCode lines (e.g. a return split across two warehouses/batches) all match
+    // the first index findIndex() picks, so updateLine("code", ...) collapses every
+    // matching row onto that one line and flip-flops it between rows on every render —
+    // a real infinite update loop for documents with duplicate item codes. Row-level
+    // effects (PurchaseItemRow) must target their own array position instead.
+    updateLineByIndex: (index: number, updated: Partial<PurchaseDocumentLine>) => {
+      set((state) => {
+        if (index < 0 || index >= state.lines.length) return state;
+        const newLines = [...state.lines];
+        newLines[index] = { ...newLines[index], ...updated };
         return { lines: newLines };
       });
       get().calculateTotals();
@@ -285,6 +300,12 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         currency: doc.DocCurrency || doc.Currency || "USD",
         DocEntry: isCopy ? 0 : parseSafe(doc.DocEntry),
         DocNum: isCopy ? 0 : parseSafe(doc.DocNum),
+        // Every page's submit handler gates PATCH-vs-POST on lastLoadedDocType === its own
+        // DocumentType — this was never actually written to the store (the `type` param was
+        // accepted but unused), so that check was always false and "Update" always created a
+        // duplicate document instead of patching the existing one. Matches useSalesDocument
+        // and useInventoryDocument, which already set this correctly.
+        lastLoadedDocType: type ?? null,
         DocTotal: parseSafe(doc.DocTotal || doc.docTotal),
         TaxTotal: parseSafe(doc.TaxTotal || doc.taxTotal),
         discSum: parseSafe(doc.DiscSum || doc.discSum),
@@ -386,6 +407,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
       TotalFreight: 0,
       additionalExpenses: [],
       attachments: [],
+      lastLoadedDocType: null,
     }),
   }))
 );
