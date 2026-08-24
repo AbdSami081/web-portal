@@ -312,7 +312,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     }
   };
 
-  const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
+  const config = React.useMemo(() => getDocumentConfig(docType, pathname), [docType, pathname]);
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
   React.useEffect(() => {

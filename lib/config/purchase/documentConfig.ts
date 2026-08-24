@@ -164,6 +164,33 @@ export const invoiceConfig: DocumentConfig = {
   }
 };
 
+// APReserveInvoice shares APInvoice's numeric SAP object code (18), so getDocumentConfig
+// can't tell them apart by type alone — it disambiguates by route path instead, matching
+// the same workaround used for PurchaseRequests/APDownPaymentRequest elsewhere.
+export const APReserveInvoiceConfig: DocumentConfig = {
+  type: DocumentType.APReserveInvoice,
+  title: "A/P Reserve Invoice",
+  headerFields: {
+    showValidUntil: false
+  },
+  itemColumns: {
+    showWarehouse: true,
+    showDiscount: true,
+    showBackorder: true,
+  },
+  isRowDisabled: (line, headerStatus) => {
+    if (headerStatus === "bost_Close" || headerStatus === "bost_Cancel") return true;
+    if (line.OrderedQty && line.OrderedQty > 0) return true;
+    return false;
+  },
+  isDisabledTable: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  },
+  hideSubmitButton: (headerStatus) => {
+    return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
+  }
+};
+
 export const APCreditMemoConfig: DocumentConfig = {
   type: DocumentType.APCreditMemo,
   title: "A/P Credit Memo",
@@ -289,13 +316,14 @@ export const GoodsReturnRequestConfig: DocumentConfig = {
   },
 };
 
-export const getDocumentConfig = (type: DocumentType): DocumentConfig => {
+export const getDocumentConfig = (type: DocumentType, pathname = ""): DocumentConfig => {
   switch (type) {
     case DocumentType.PurchaseRequests: return requestConfig;
     case DocumentType.PurchaseQuotation: return quotationConfig;
     case DocumentType.PurchaseOrder: return orderConfig;
     case DocumentType.GoodsReceiptPO: return GRPOConfig;
-    case DocumentType.APInvoice: return invoiceConfig;
+    case DocumentType.APInvoice:
+      return pathname.toLowerCase().includes("reserve-invoice") ? APReserveInvoiceConfig : invoiceConfig;
     case DocumentType.APCreditMemo: return APCreditMemoConfig;
     case DocumentType.GoodsReturn: return GoodsReturnConfig;
     case DocumentType.APDownPaymentInvoice: return APDownPaymentInvoiceConfig;

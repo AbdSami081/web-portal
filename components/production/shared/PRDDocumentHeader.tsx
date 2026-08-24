@@ -27,6 +27,7 @@ import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { List } from "lucide-react";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { useBranchStore } from "@/stores/useBranchStore";
 
 const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className, id }: any) => {
   const [localValue, setLocalValue] = useState(value ? value.toString() : "");
@@ -92,8 +93,11 @@ export function PRDDocumentHeader() {
   const [loadedStatus, setLoadedStatus] = useState<string>("");
   const LIST_PAGE_SIZE = 20;
 
-  const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus } = useIFPRDDocument();
+  const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus, setBranch } = useIFPRDDocument();
   const { loadWarehouses } = useMasterDataStore();
+  const { assignedBranches, sessionDefaultBranch } = useBranchStore();
+  const watchedBranch = watch("BPL_IDAssignedToInvoice");
+  const docEntryForBranch = watch("DocEntry") || watch("AbsoluteEntry");
   const { allowMultiBom: allowMultiBomConfig } = useAuthStore();
   const config = usePRDDocConfig();
   const docType = config.type;
@@ -128,6 +132,9 @@ export function PRDDocumentHeader() {
         setValue("DocEntry", documentData.DocEntry || 0);
         setValue("DocNum", documentData.DocNum || 0);
         setValue("Comments", documentData.Comments || "");
+        const draftBranch = documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId;
+        setValue("BPL_IDAssignedToInvoice", draftBranch);
+        setBranch(draftBranch ?? null);
         useIFPRDDocument.getState().setLoadedDraftData(documentData);
       } else {
         toast.error(`Draft document ${draftId} not found.`);
@@ -138,6 +145,13 @@ export function PRDDocumentHeader() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!docEntryForBranch && !watchedBranch && sessionDefaultBranch !== null) {
+      setValue("BPL_IDAssignedToInvoice", sessionDefaultBranch);
+      setBranch(sessionDefaultBranch);
+    }
+  }, [docEntryForBranch, watchedBranch, sessionDefaultBranch, setValue, setBranch]);
 
   useEffect(() => {
     const fetchWarehouses = async () => {
@@ -310,6 +324,9 @@ export function PRDDocumentHeader() {
       if (documentData && (documentData.DocEntry || documentData.AbsoluteEntry)) {
         resetStore();
         loadFromDocument(documentData, docType);
+        const loadedBranch = documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId ?? null;
+        setValue("BPL_IDAssignedToInvoice", loadedBranch, { shouldDirty: true });
+        setBranch(loadedBranch);
         // Map header fields to form
         if (docType === SAPDocumentType.ProductionOrder) {
           setValue("AbsoluteEntry", documentData.AbsoluteEntry, { shouldDirty: true });
@@ -351,6 +368,7 @@ export function PRDDocumentHeader() {
       } else {
         resetStore();
         setLoadedStatus("");
+        setValue("BPL_IDAssignedToInvoice", null, { shouldDirty: false });
         setValue("DocNum", 0, { shouldDirty: false });
         setValue("DocEntry", 0, { shouldDirty: false });
         setValue("AbsoluteEntry", 0, { shouldDirty: false });
@@ -783,6 +801,34 @@ export function PRDDocumentHeader() {
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Due Date</AppLabel>
             <Input type="date" {...register("DueDate")} className="h-8 flex-1" />
+          </div>
+        )}
+
+        {config.headerFields.branch && (
+          <div className="flex items-center gap-2">
+            <AppLabel className="w-28 shrink-0">Branch</AppLabel>
+            <Select
+              value={watchedBranch ? String(watchedBranch) : ""}
+              onValueChange={(val) => {
+                setValue("BPL_IDAssignedToInvoice", Number(val), { shouldDirty: true });
+                setBranch(Number(val));
+              }}
+              disabled={initialStatus === "boposClosed"}
+            >
+              <SelectTrigger className="h-8 flex-1">
+                <SelectValue placeholder="Select branch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {assignedBranches.map((b) => (
+                    <SelectItem key={b.BPLID} value={String(b.BPLID)}>
+                      {b.BPLName}
+                      {b.Disabled === "tYES" ? " (Inactive)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         )}
 

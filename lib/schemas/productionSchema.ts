@@ -40,6 +40,7 @@ export const productionSchema = z.object({
     PlannedQuantity: z.number().optional(),
     Priority: z.number().optional(),
     StartDate: z.string().optional(),
+    BPL_IDAssignedToInvoice: z.number().nullable().optional(),
     DocumentLines: z.array(productionLineSchema).optional(),
 });
 

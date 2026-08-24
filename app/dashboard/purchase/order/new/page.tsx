@@ -61,7 +61,7 @@ export default function NewPurchaseOrderPage() {
 
     const { discountPercent, freight, rounding, additionalExpenses } = usePurchaseDocument.getState();
 
-    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Order) {
+    if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.PurchaseOrder) {
       const payload = buildPurchaseDocumentPatchPayload({
         data,
         lines,
@@ -97,7 +97,7 @@ export default function NewPurchaseOrderPage() {
       lines,
       docEntry: DocEntry,
       lastLoadedDocType,
-      targetDocType: DocumentType.Order,
+      targetDocType: DocumentType.PurchaseOrder,
       discountPercent,
       freight,
       rounding,

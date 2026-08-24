@@ -10,7 +10,10 @@ export const getBOMList = async (isMultiBom: boolean = false, search: string = "
 };
 
 export const postProductionOrder = async (data: any): Promise<any> => {
-  const res = await apiClient.post(`api/Production/Production`, withDefaultBPLId(data));
+  // No withDefaultBPLId here: SAP's ProductionOrders object has no BPL_IDAssignedToInvoice
+  // property at all (confirmed live — "Property 'BPL_IDAssignedToInvoice' of 'ProductionOrder'
+  // is invalid"), unlike every other document type. Its branch is implicit from the Warehouse.
+  const res = await apiClient.post(`api/Production/Production`, data);
   return res.data;
 };
 
@@ -111,6 +114,10 @@ const mapProductionOrderLine = (line: any, data: any, includeLineNumber = false)
 
 export const saveProductionDocument = async (docType: DocumentType, data: any, lines: any[], attachments: any[]): Promise<any> => {
   if (docType === DocumentType.ProductionOrder) {
+    // SAP's ProductionOrders object has no BPL_IDAssignedToInvoice (or BPLID) property at
+    // all — confirmed live ("Property '...' of 'ProductionOrder' is invalid" either way).
+    // Its branch is implicit from the Warehouse selected, unlike Issue/Receipt for
+    // Production below (InventoryGenExits/InventoryGenEntries), which do support it.
     const payload: any = {
       ItemNo: data.ItemNo,
       Remarks: data.Remarks || data.Comments,
@@ -144,6 +151,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
     const payload: any = {
       Comments: data.Comments || data.Remarks,
       JournalMemo: data.JournalMemo,
+      BPL_IDAssignedToInvoice: data.BPL_IDAssignedToInvoice,
       // Both document types post real stock movement on Add, so SAP locks line
       // Quantity afterward — resending it (even unchanged) fails the same way as
       // Delivery does ("Incorrect 'Qty (Inventory UoM)' in line ..."). Omit

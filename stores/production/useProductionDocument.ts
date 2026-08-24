@@ -13,6 +13,7 @@ interface IFPRDDocumentStore {
   lines: PRDDocumentLine[];
   warehouses: any[];
   selectedBOM: any | null;
+  branch: number | null;
   DocNum: number;
   ProductionOrderStatus: string;
   initialStatus: string;
@@ -33,6 +34,7 @@ interface IFPRDDocumentStore {
   updateAttachment: (lineNum: number, updated: Partial<IFPRDDocumentStore["attachments"][0]>) => void;
 
   setWarehouses: (warehouses: any[]) => void;
+  setBranch: (branch: number | null) => void;
 
   setCustomer: (customer: BusinessPartner) => void;
   setDocType: (docType: DocumentType) => void;
@@ -52,6 +54,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     lines: [],
     warehouses: [],
     selectedBOM: null,
+    branch: null,
     DocNum: 0,
     ProductionOrderStatus: "boposPlanned",
     initialStatus: "boposPlanned",
@@ -61,6 +64,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
 
     setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setWarehouses: (warehouses) => set({ warehouses }),
+    setBranch: (branch) => set({ branch }),
     setCustomer: (customer) => set({ customer }),
 
     setDocType: (docType) => set({ docType }),
@@ -221,6 +225,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         DocNum: isCopy ? 0 : (doc.DocNum || doc.DocumentNumber || doc.DocNumber || 0),
         ProductionOrderStatus: doc.ProductionOrderStatus || "boposPlanned",
         initialStatus: doc.ProductionOrderStatus || "boposPlanned",
+        branch: isCopy ? null : (doc.BPL_IDAssignedToInvoice ?? doc.BPLId ?? null),
         udfs: udfValues,
       });
     },
@@ -283,6 +288,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         DocNum: 0,
         ProductionOrderStatus: "boposPlanned",
         initialStatus: "boposPlanned",
+        branch: null,
         attachments: [],
         udfs: {},
       })),

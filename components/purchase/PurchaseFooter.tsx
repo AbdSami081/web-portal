@@ -6,7 +6,7 @@ import { useFormContext } from "react-hook-form";
 import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 
 export function PurchaseFooter() {
-  const { watch } = useFormContext();
+  const { watch, register, setValue } = useFormContext();
   const {
     DocTotal,
     TaxTotal,
@@ -42,9 +42,9 @@ export function PurchaseFooter() {
           <Textarea
             id="Comments"
             className="h-24 mt-4 max-w-95"
-            {...useFormContext().register("Comments")}
+            {...register("Comments")}
             onChange={(e) => {
-              useFormContext().setValue("Comments", e.target.value);
+              setValue("Comments", e.target.value);
               setComments(e.target.value);
             }}
             placeholder="Enter remarks or comments..."

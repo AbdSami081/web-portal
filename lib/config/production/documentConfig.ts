@@ -19,6 +19,7 @@ export interface DocumentConfig {
     dueDate?: boolean;
     type?: boolean;
     status?: boolean;
+    branch?: boolean;
   };
   itemColumns: {
     type?: boolean;
@@ -51,6 +52,7 @@ export const IFPRDConfig: DocumentConfig = {
     docDate: true,
     type: false,
     status: false,
+    branch: true,
   },
   itemColumns: {
     type: true,
@@ -79,6 +81,7 @@ export const ReceiptFPRDConfig: DocumentConfig = {
     docDate: true,
     type: false,
     status: false,
+    branch: true,
   },
   itemColumns: {
     type: true,
@@ -112,6 +115,9 @@ export const PRDOrderConfig: DocumentConfig = {
     dueDate: true,
     type: true,
     status: true,
+    // Unlike Issue/Receipt for Production, SAP's ProductionOrders object has no
+    // BPL_IDAssignedToInvoice property — branch is implicit from the Warehouse chosen.
+    branch: false,
   },
   itemColumns: {
     itemCode: true,
