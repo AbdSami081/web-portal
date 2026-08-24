@@ -18,7 +18,9 @@ const vendorDocBase = z.object({
   DocEntry: z.number().optional(),
 });
 
-export const purchaseQuotationSchema = vendorDocBase;
+export const purchaseQuotationSchema = vendorDocBase.extend({
+  RequiredDate: z.string().optional(),
+});
 export type PurchaseQuotationFormData = z.infer<typeof purchaseQuotationSchema>;
 
 export const purchaseRequestSchema = vendorDocBase.extend({

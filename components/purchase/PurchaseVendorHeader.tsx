@@ -45,6 +45,10 @@ const statusMap: Record<string, string> = {
   bost_Close: "Closed",
 };
 
+// PurchaseRequests and APDownPaymentRequest share the same SAP object code
+// (1470000113), so this can't disambiguate them by number alone — the "Valid Until"
+// label for Purchase Request is applied separately below via isPurchaseRequest,
+// which already disambiguates by route path.
 const dateLabel2: Record<number, string> = {
   [PurchaseDocumentType.PurchaseQuotation]: "Valid Until",
   [PurchaseDocumentType.PurchaseOrder]: "Delivery Date",
@@ -96,7 +100,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     watch,
     setValue,
   } = useFormContext();
-  const { requester, setRequester, loadFromDocument, setDocDate, setDocDueDate, setTaxDate } = usePurchaseDocument();
+  const { requester, setRequester, loadFromDocument, setDocDate, setDocDueDate, setTaxDate, setRequiredDate } = usePurchaseDocument();
   const { user } = useAuth();
 
   const config = usePurchaseDocConfig();
@@ -111,7 +115,6 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const docEntry = watch("DocEntry");
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const docNum = watch("DocNum");
-  const docDueDate = watch("DocDueDate");
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
 
@@ -124,11 +127,11 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     }
   }, [isLoadedDocument, watchedBranch, sessionDefaultBranch, setValue]);
 
-  useEffect(() => {
-    if (isPurchaseRequest && docDueDate) {
-      setValue("RequiredDate", docDueDate);
-    }
-  }, [isPurchaseRequest, docDueDate, setValue]);
+  // Purchase Request and Purchase Quotation both get a Required Date field, independently
+  // editable from Valid Until/Due Date — kept as its own check rather than folding into
+  // isPurchaseRequest, since that flag also drives the Requester-vs-Vendor UI switch
+  // further down, which Quotation should NOT get.
+  const needsRequiredDate = isPurchaseRequest || config.type === DocumentType.PurchaseQuotation;
   const [searchValue, setSearchValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -286,6 +289,11 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         setValue("DocDate", (documentData.DocDate || "").split("T")[0]);
         setValue("DocDueDate", (documentData.DocDueDate || "").split("T")[0]);
         setValue("TaxDate", (documentData.TaxDate || "").split("T")[0]);
+        if (needsRequiredDate) {
+          const requiredDateValue = (documentData.RequriedDate || documentData.RequiredDate || "").split("T")[0];
+          setValue("RequiredDate", requiredDateValue);
+          setRequiredDate(requiredDateValue);
+        }
         setValue("Comments", documentData.Comments || "");
         setValue("DocStatus", documentData.DocumentStatus || documentData.DocStatus || "bost_Open");
         setValue("DocNum", documentData.DocNum);
@@ -315,7 +323,8 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   };
 
   const getDateLabel = (type: number) => {
-    return dateLabel2[type] || "Required Date";
+    if (isPurchaseRequest) return "Valid Until";
+    return dateLabel2[type] || "Due Date";
   };
 
   const handleSelectBP = (bp: BusinessPartner) => {
@@ -566,6 +575,16 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
               setTaxDate(e.target.value);
             }} />
           </div>
+
+          {needsRequiredDate && (
+            <div className="flex justify-end items-center w-full gap-3">
+              <AppLabel className="w-28 shrink-0 text-right">Required Date</AppLabel>
+              <Input type="date" {...register("RequiredDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
+                register("RequiredDate").onChange(e);
+                setRequiredDate(e.target.value);
+              }} />
+            </div>
+          )}
         </div>
         {!isPurchaseRequest && (
           <BusinessPartnerSelectorDialog

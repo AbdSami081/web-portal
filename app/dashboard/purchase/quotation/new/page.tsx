@@ -28,6 +28,7 @@ export default function NewPurchaseQuotationPage() {
     DocDate: today,
     DocDueDate: today,
     TaxDate: today,
+    RequiredDate: today,
     DocStatus: "bost_Open",
     Comments: "",
     DocNum: 0,

@@ -64,7 +64,8 @@ export function PurchaseItems() {
 
   const handleOnSelectItems = (items: Item[]) => {
     const isPurchaseRequest = config.type === DocumentType.PurchaseRequests;
-    const lineRequiredDate = isPurchaseRequest ? new Date().toISOString().split("T")[0] : "";
+    const needsRequiredDate = isPurchaseRequest || config.type === DocumentType.PurchaseQuotation;
+    const lineRequiredDate = needsRequiredDate ? new Date().toISOString().split("T")[0] : "";
 
     items.forEach((item) => {
       const price = getCustomerPrice(item.Prices || []);
@@ -100,7 +101,7 @@ export function PurchaseItems() {
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,
-        ...(isPurchaseRequest && { RequiredDate: lineRequiredDate }),
+        ...(needsRequiredDate && { RequiredDate: lineRequiredDate }),
       });
     });
   };
