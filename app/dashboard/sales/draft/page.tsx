@@ -73,8 +73,16 @@ export default function SalesDraftPage() {
 
           useSalesDocument.getState().setLoadedDraftData(documentData);
 
-          const inferredDocType = documentData.DocObjectCode
-            ? (Number(documentData.DocObjectCode) as DocumentType)
+          // SAP doesn't always return DocObjectCode in a cleanly numeric form - falling
+          // through to Number() unchecked let a NaN slip into targetDocType, which then
+          // flowed into the approval request as ObjectType: "NaN" and SAP rejected the
+          // whole re-approval submission. Validate exactly like the state initializer
+          // above does, instead of trusting the value blindly.
+          const parsedObjectCode = documentData.DocObjectCode !== undefined && documentData.DocObjectCode !== null
+            ? Number(documentData.DocObjectCode)
+            : NaN;
+          const inferredDocType = !isNaN(parsedObjectCode) && parsedObjectCode > 0
+            ? (parsedObjectCode as DocumentType)
             : targetDocType;
 
           setTargetDocType(inferredDocType);

@@ -18,12 +18,12 @@ import { HeaderActionPortal } from "@/components/header-portal";
 import { HeaderModalAction } from "@/components/header-modal-action";
 import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DocumentType } from "@/types/master/DocumentType";
+import { DocumentType, DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useAuth } from "@/context/authContext";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged } from "@/api+/sap/Templates/approvalTemplate";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { ApprovalTemplate } from "@/types/template.type";
 import { getSapErrorMessage } from "@/lib/errorHelper";
@@ -36,6 +36,7 @@ import {
 import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
+import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -116,6 +117,12 @@ export function InvDocumentLayout<T extends FieldValues>({
 
   const { handleSubmit, reset, setValue } = methods;
   const { reset: resetStore, DocEntry, loadFromDocument, setIsCopyingTo } = useInventoryDocument();
+
+  const resetFormAndNav = () => {
+    reset(defaultValues as any);
+    resetStore();
+    clearDocNavParams(router, pathname);
+  };
   const store = useInventoryDocument(
     useShallow(state => ({
       customer: state.customer,
@@ -265,7 +272,7 @@ export function InvDocumentLayout<T extends FieldValues>({
         lines: copiedLines,
         fromWarehouse: copiedLines[0]?.FromWhsCode || state.fromWarehouse || "",
         toWarehouse: copiedLines[0]?.WhsCode || state.toWarehouse || "",
-        comments: "",
+        comments: `Copy To Based on Inventory Transfer Request ${state.DocNum}`,
         journalMemo: "",
         DocEntry: 0,
         docDate: new Date().toISOString().split("T")[0],
@@ -351,8 +358,7 @@ export function InvDocumentLayout<T extends FieldValues>({
         if (!doc) continue;
         if (!mergedDoc) mergedDoc = { ...doc };
 
-        const validLines = (doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [])
-          .filter((line: any) => line.LineStatus !== 'bost_Close') 
+        const validLines = openLinesForCopyFrom(doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [])
           .map((line: any) => ({
             ...line,
             _parentDocEntry: doc.DocEntry
@@ -372,8 +378,13 @@ export function InvDocumentLayout<T extends FieldValues>({
 
         setValue("DocEntry" as any, 0 as any);
         setValue("DocNum" as any, 0 as any);
-        
+
         loadFromDocument({ ...mergedDoc, DocumentLines: allLines }, DocumentType.InvTransferReq, true);
+        // loadFromDocument(..., isCopy=true) blanks store.comments, and a reactive
+        // effect below syncs store.comments -> the RHF Comments field, so the remarks
+        // text must be set on the STORE after loadFromDocument, not via setValue before
+        // it (setValue would just get overwritten by that sync effect).
+        useInventoryDocument.setState({ comments: `Copy From Based on Inventory Transfer Request ${nums.join(", ")}` });
         toast.success(`Copied from ${nums.length} ITR(s)`);
       }
     } catch (err: any) {
@@ -486,8 +497,7 @@ export function InvDocumentLayout<T extends FieldValues>({
         return;
       }
       toast.success("Draft updated. The approval request will be re-submitted.");
-      reset(defaultValues as any);
-      resetStore();
+      resetFormAndNav();
       setIsSaving(false);
       return;
     }
@@ -501,12 +511,17 @@ export function InvDocumentLayout<T extends FieldValues>({
       // For approved drafts: only require a NEW approval request if something material
       // actually changed since the last approval. If nothing changed, submit directly.
       const approvedChanged = hasDraftChanges(state.loadedDraftData, state.lines, finalData);
-      if (!approvedChanged) {
+      // The local check above is UX only (a manipulated client could fake it) — confirm
+      // with the backend, which re-fetches the draft from SAP itself, before actually
+      // skipping a new approval request.
+      const confirmedUnchanged = approvedChanged
+        ? false
+        : !(await validateDraftChanged(Number(docNav.draftEntry), state.lines, finalData));
+      if (confirmedUnchanged) {
         setIsSaving(true);
         try {
           await onSubmit(finalData);
-          reset(defaultValues as any);
-          resetStore();
+          resetFormAndNav();
         } catch (err: any) {
           toast.error(getSapErrorMessage(err) || "Failed to create document from draft");
         }
@@ -517,8 +532,7 @@ export function InvDocumentLayout<T extends FieldValues>({
       setIsSaving(true);
       try {
         await onSubmit(finalData);
-        reset(defaultValues as any);
-        resetStore();
+        resetFormAndNav();
       } catch (err: any) {
         // If onSubmit fails (likely because approval is needed), open the modal
         let approvedTemplates = approvalTemplates;
@@ -567,8 +581,7 @@ export function InvDocumentLayout<T extends FieldValues>({
     setIsSaving(true);
     try {
       await onSubmit(data);
-      reset(defaultValues as any);
-      resetStore();
+      resetFormAndNav();
     } catch (err: any) {
       const message = getSapErrorMessage(err);
       toast.error(message || "Error submitting document");
@@ -734,7 +747,12 @@ export function InvDocumentLayout<T extends FieldValues>({
                   await submitApprovalRequest(approvalRequestId, {
                     TemplateCode: tpl?.Code,
                     ObjectEntry: pendingReApproval.draftId,
-                    ObjectType: pendingReApproval.docType,
+                    // ObjectEntry here is the DRAFT's own DocEntry, not the eventual
+                    // document's - SAP requires ObjectType "112" ("Documents - Drafts")
+                    // to match, not the document's specific type. Confirmed against
+                    // SAP's own Service Layer PATCH example (IsDraft:"Y" pairs with
+                    // ObjectType:"112").
+                    ObjectType: DRAFT_OBJECT_TYPES[0],
                     IsDraft: "Y",
                     ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
                     OriginatorID: user?.sapUserId,
@@ -746,8 +764,7 @@ export function InvDocumentLayout<T extends FieldValues>({
                 }
                 setPendingReApproval(null);
                 setPendingFinalData(null);
-                reset(defaultValues as any);
-                resetStore();
+                resetFormAndNav();
                 return;
               }
 
@@ -759,8 +776,7 @@ export function InvDocumentLayout<T extends FieldValues>({
 
               await onSubmit(finalData);
               setPendingFinalData(null);
-              reset(defaultValues as any);
-              resetStore();
+              resetFormAndNav();
             }}
           />
         </form>

@@ -144,6 +144,7 @@ export default function NewQuotationPage() {
         loadFromDocument(documentData, DocumentType.Quotation);
         toast.success(`Quotation #${documentData.DocNum} created successfully`);
       }
+      return documentData;
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create quotation. Please try again.");

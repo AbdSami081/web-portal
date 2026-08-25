@@ -98,6 +98,7 @@ export default function ReturnRequestPage() {
         } else {
           toast.success(`Sales Return Request #${response.DocNum} created successfully!`);
         }
+        return response;
       } else {
         throw new Error("Failed to create Sales Return Request");
       }

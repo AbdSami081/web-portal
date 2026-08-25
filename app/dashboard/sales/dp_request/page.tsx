@@ -100,6 +100,7 @@ export default function ARDownPaymentRequestPage() {
         } else {
           toast.success(`A/R Down Payment Request #${response.DocNum} created successfully!`);
         }
+        return response;
       } else {
         throw new Error("Failed to create A/R Down Payment Request");
       }

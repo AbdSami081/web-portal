@@ -121,6 +121,7 @@ export default function NewReserveInvoicePage() {
 
       if (response?.DocEntry) {
         toast.success(`A/P Reserve Invoice #${response.DocNum} created successfully!`);
+        return response;
       } else {
         throw new Error("Failed to create A/P Reserve Invoice");
       }

@@ -237,7 +237,7 @@ export function PurchaseItems() {
             )}
             <div className="relative border rounded overflow-x-auto">
               <div
-                className={`w-full overflow-x-auto pb-2 ${isTableDisabled ? "opacity-80 pointer-events-none" : ""}`}
+                className={`w-full overflow-x-auto pb-2 ${isTableDisabled ? "opacity-80" : ""}`}
               >
                 <ResizableTable
                   columns={columns}

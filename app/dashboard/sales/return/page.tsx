@@ -105,6 +105,7 @@ export default function ReturnPage() {
         } else {
           toast.success(`Sales Return #${response.DocNum} created successfully!`);
         }
+        return response;
       } else {
         throw new Error("Failed to create Sales Return");
       }

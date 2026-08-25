@@ -60,6 +60,7 @@ export function PurchaseFooter() {
                 className="h-6 text-right bg-slate-200 pr-10"
                 value={formatCurrency(TotalBeforeDiscount).replace(/[^\d.-]/g, '')}
                 disabled={true}
+                readOnly
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
@@ -102,6 +103,7 @@ export function PurchaseFooter() {
                 className="h-6 text-right bg-slate-200 pr-10"
                 value={formatCurrency(TotalFreight)}
                 disabled={true}
+                readOnly
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
@@ -132,6 +134,7 @@ export function PurchaseFooter() {
                 className="h-6 text-right bg-slate-200 pr-10"
                 value={TaxTotal.toFixed(2)}
                 disabled={true}
+                readOnly
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
@@ -144,6 +147,7 @@ export function PurchaseFooter() {
                 className="h-7 text-right bg-white font-bold pr-10 border-slate-400"
                 value={DocTotal.toFixed(2)}
                 disabled={true}
+                readOnly
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-900 font-black">{currency}</span>
             </div>

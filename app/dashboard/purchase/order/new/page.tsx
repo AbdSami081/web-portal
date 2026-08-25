@@ -120,6 +120,7 @@ export default function NewPurchaseOrderPage() {
 
       if (response?.DocEntry) {
         toast.success(`Purchase Order #${response.DocNum} created successfully!`);
+        return response;
       } else {
         throw new Error("Failed to create Purchase Order");
       }

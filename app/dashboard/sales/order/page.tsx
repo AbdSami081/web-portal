@@ -103,6 +103,7 @@ export default function OrderPage() {
         } else {
           toast.success(`Sales Order #${response.DocNum} created successfully!`);
         }
+        return response;
       } else {
         throw new Error("Failed to create Sales Order");
       }

@@ -12,10 +12,7 @@ export const getApprovalDocumentType = (docType: number | string, pathname = "")
   const numType = Number(docType);
   const currentPath = pathname.toLowerCase();
 
-  // APDownPaymentRequest and PurchaseRequests share the same SAP object type
-  // code, so a plain numeric switch can't tell them apart — disambiguate by
-  // route path first, matching the same workaround used in PurchaseVendorHeader.
-  if (currentPath.includes("apdownpaymentrequest")) return "atdtPurchaseDownPayment";
+ if (currentPath.includes("apdownpaymentrequest")) return "atdtPurchaseDownPayment";
 
   switch (numType) {
     case DocumentType.Quotation:
@@ -115,10 +112,6 @@ export const submitApprovalRequest = async (
   id: number,
   request: SubmitApprovalRequestDto
 ): Promise<any> => {
-  // Re-submitting a previously-rejected (or otherwise existing) approval request
-  // re-opens it via PATCH /ApprovalRequests/{id}. The SAP B1 Service Layer does NOT
-  // support creating an ApprovalRequests entity through POST (it answers
-  // "Command Not Found"). When id is 0, backend dynamically resolves the draft's approval request.
   const targetId = Number(id) > 0 ? Number(id) : 0;
   const res = await apiClient.patch(`api/Approval/ApprovalRequests/${targetId}`, request);
   return res.data;
@@ -129,4 +122,21 @@ export const rejectApprovalRequest = async (id: number, remarks = "Rejected"): P
     Remarks: remarks,
   });
   return res.data;
+};
+
+export const validateDraftChanged = async (
+  draftEntry: number,
+  documentLines: any[],
+  header: Record<string, any>
+): Promise<boolean> => {
+  try {
+    const res = await apiClient.post("api/Approval/ValidateDraftChanged", {
+      DraftEntry: draftEntry,
+      DocumentLines: documentLines,
+      Header: header,
+    });
+    return Boolean(res.data?.changed ?? res.data?.Changed ?? true);
+  } catch {
+    return true;
+  }
 };

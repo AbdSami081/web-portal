@@ -4,6 +4,7 @@ import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { normalizeInventoryUom, resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { resolveSerialBatchFlags } from "@/lib/sap/helpers/serialBatchHelper";
 
 interface IOPRDDocumentStore {
   customer: BusinessPartner | null;
@@ -259,6 +260,14 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         customer: doc.CardCode
           ? { CardCode: doc.CardCode, CardName: doc.CardName || "", CardType: "cCustomer", Balance: 0, Phone1: "", Email: "" }
           : null,
+      });
+
+      resolveSerialBatchFlags(lines, (patch) => {
+        set((state) => ({
+          lines: state.lines.map((line) =>
+            patch.has(line.ItemCode) ? { ...line, ...patch.get(line.ItemCode) } : line
+          ),
+        }));
       });
     },
 

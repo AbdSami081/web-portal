@@ -43,6 +43,9 @@ import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { DocumentType } from "@/types/master/DocumentType";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
+import { HeaderActionPortal } from "@/components/header-portal";
+import HeaderActions from "@/components/Custom/HeaderAction";
+import { getSapErrorMessage } from "@/lib/errorHelper";
 
 const EMPTY_FORM = {
   CardCode: "",
@@ -426,19 +429,10 @@ export default function BPMasterDataPage() {
       console.error("Status:", error?.response?.status);
       console.error("Response:", error?.response?.data);
 
-      const validationErrors = error?.response?.data?.errors;
-
-      if (validationErrors) {
-        console.error(JSON.stringify(validationErrors, null, 2));
-      }
-
-      if (validationErrors?.document) {
-        toast.error("Document data is required by the API.");
-      } else if (validationErrors?.["$.Industry"]) {
-        toast.error("Industry must be a string.");
-      } else {
-        toast.error(isUpdateMode ? "Failed to Update Business Partner." : "Failed to Save Business Partner.");
-      }
+      const message = getSapErrorMessage(error);
+      toast.error(
+        message || (isUpdateMode ? "Failed to Update Business Partner." : "Failed to Save Business Partner.")
+      );
     } finally {
       setIsSaving(false);
     }
@@ -527,6 +521,16 @@ export default function BPMasterDataPage() {
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
+      <HeaderActionPortal>
+        <HeaderActions
+          DocEntry={0}
+          objectCode={DocumentType.BusinessPartner}
+          reset={() => handleClearLock()}
+          defaultValues={EMPTY_FORM}
+          resetStore={() => {}}
+        />
+      </HeaderActionPortal>
+
       <div className="mx-auto max-w-[1500px] bg-white shadow-sm">
         <div className="flex items-center justify-between border-b bg-muted px-6 py-3">
           <h1 className="text-xl font-semibold">Business Partner Master Data</h1>

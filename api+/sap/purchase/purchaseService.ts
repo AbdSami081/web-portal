@@ -243,6 +243,16 @@ export const getPurchaseRequestsByBP = async (cardCode: string, skip = 0, top = 
   return res.data || [];
 };
 
+export const getPurchaseInvoiceByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
+  const res = await apiClient.get(`api/Purchase/GetPurchaseInvoiceByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
+  return res.data || [];
+};
+
+export const getGoodsReturnRequestByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
+  const res = await apiClient.get(`api/Purchase/GetGoodsReturnRequestByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
+  return res.data || [];
+};
+
 export const getAPCreditMemoDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
   const res = await apiClient.get(`api/Purchase/PurchaseCreditNotes?docNum=${docNum}`);
   if (!res.data) return null;

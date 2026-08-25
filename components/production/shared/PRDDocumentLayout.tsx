@@ -13,10 +13,10 @@ import { HeaderModalAction } from "@/components/header-modal-action";
 import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { DocumentType } from "@/types/master/DocumentType";
+import { DocumentType, DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { resolveDocNavParams } from "@/lib/docNavParams";
+import { resolveDocNavParams, clearDocNavParams } from "@/lib/docNavParams";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 
 
@@ -24,7 +24,8 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import HeaderActions from "@/components/Custom/HeaderAction";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged } from "@/api+/sap/Templates/approvalTemplate";
+import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
@@ -159,6 +160,11 @@ export function PRDDocumentLayout<T extends FieldValues>({
     lineReset();
   };
 
+  const finishAndReset = () => {
+    ResetForm();
+    clearDocNavParams(router, pathname);
+  };
+
   const handleCopyFrom = (selected: string) => {
     if (selected !== DocumentType.InvTransferReq.toString()) return;
 
@@ -242,13 +248,58 @@ export function PRDDocumentLayout<T extends FieldValues>({
                 try {
                   await patchDraftDocument(Number(docNav.draftEntry), data);
                   toast.success("Approval request modified successfully.");
-                  ResetForm();
+                  finishAndReset();
                   setBadgeState(null);
                   return;
                 } catch (err: any) {
                   toast.error(err?.response?.data?.Message || "Failed to update approval draft");
                   return;
                 }
+              }
+
+              if (isApprovedDraft && docNav.draftEntry) {
+                const prdState = useIFPRDDocument.getState();
+                const approvedChanged = hasDraftChanges(prdState.loadedDraftData, prdState.lines, data);
+                const confirmedUnchanged = approvedChanged
+                  ? false
+                  : !(await validateDraftChanged(Number(docNav.draftEntry), prdState.lines, data as any));
+
+                if (confirmedUnchanged) {
+                  try {
+                    await onSubmit(data as any);
+                    finishAndReset();
+                    setBadgeState(null);
+                  } catch (err: any) {
+                    toast.error(err?.response?.data?.Message || "Failed to create the document");
+                  }
+                  return;
+                }
+
+                const currentUserIdApproved = user?.sapUserId;
+                if (currentUserIdApproved) {
+                  try {
+                    const docTypeApproved = getApprovalDocumentType(docType);
+                    const activeTemplatesApproved = await getCurrentUserApprovalTemplates(currentUserIdApproved, docTypeApproved);
+                    if (activeTemplatesApproved && activeTemplatesApproved.length > 0) {
+                      setApprovalTemplates(activeTemplatesApproved);
+                      setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+                      setPendingFinalData(data as any);
+                      setApprovalModalOpen(true);
+                      return;
+                    }
+                  } catch {
+                    /* no approval template */
+                  }
+                }
+
+                try {
+                  await onSubmit(data as any);
+                  finishAndReset();
+                  setBadgeState(null);
+                } catch (err: any) {
+                  toast.error(err?.response?.data?.Message || "Failed to create the document");
+                }
+                return;
               }
 
               const currentUserId = user?.sapUserId;
@@ -274,6 +325,8 @@ export function PRDDocumentLayout<T extends FieldValues>({
               }
 
               await onSubmit(data as any);
+              finishAndReset();
+              setBadgeState(null);
             }, onSubmitError)(e);
           }}
           className="flex flex-col min-h-screen bg-background"
@@ -356,6 +409,36 @@ export function PRDDocumentLayout<T extends FieldValues>({
             onClose={() => setApprovalModalOpen(false)}
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
+              if (pendingReApproval) {
+                const tpl = approvalTemplates[0];
+                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
+                const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
+                try {
+                  await submitApprovalRequest(approvalRequestId, {
+                    TemplateCode: tpl?.Code,
+                    ObjectEntry: pendingReApproval.draftId,
+                    // ObjectEntry here is the DRAFT's own DocEntry, not the eventual
+                    // document's - SAP requires ObjectType "112" ("Documents - Drafts")
+                    // to match, not the document's specific type. Confirmed against
+                    // SAP's own Service Layer PATCH example (IsDraft:"Y" pairs with
+                    // ObjectType:"112").
+                    ObjectType: DRAFT_OBJECT_TYPES[0],
+                    IsDraft: "Y",
+                    ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
+                    OriginatorID: user?.sapUserId,
+                    Remarks: remarks || "",
+                  });
+                  toast.success("Draft updated and the approval request was re-submitted.");
+                } catch (err: any) {
+                  toast.error(err?.response?.data?.Message || "Failed to resubmit the approval request.");
+                }
+                setPendingReApproval(null);
+                setPendingFinalData(null);
+                finishAndReset();
+                setBadgeState(null);
+                return;
+              }
+
               if (!pendingFinalData) return;
 
               const firstRemarks = approvalTemplates[0]
@@ -369,7 +452,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
               await onSubmit(finalData);
               setPendingFinalData(null);
-              ResetForm();
+              finishAndReset();
               setBadgeState(null);
             }}
           />

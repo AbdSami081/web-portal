@@ -105,6 +105,7 @@ export default function DeliveryPage() {
         } else {
           toast.success(`Delivery Note #${response.DocNum} created successfully!`);
         }
+        return response;
       } else {
         throw new Error("Failed to create Delivery Note");
       }

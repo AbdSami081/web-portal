@@ -167,6 +167,16 @@ export const getSalesDeliveryByBP = async (cardCode: string, skip = 0, top = 20)
   return res.data || [];
 };
 
+export const getARInvoiceByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
+  const res = await apiClient.get(`api/Sales/GetInvoiceByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
+  return res.data || [];
+};
+
+export const getSalesReturnRequestByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
+  const res = await apiClient.get(`api/Sales/GetReturnRequestByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
+  return res.data || [];
+};
+
 export const patchQuotation = async (docEntry: number, payload: any): Promise<any | null> => {
   const res = await apiClient.patch(`api/Sales/Quotations/${docEntry}`, payload);
   return res.data;

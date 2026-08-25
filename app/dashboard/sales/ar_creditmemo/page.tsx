@@ -99,6 +99,7 @@ export default function ARCreditMemoPage() {
         } else {
           toast.success(`A/R Credit Memo #${response.DocNum} created successfully!`);
         }
+        return response;
       } else {
         throw new Error("Failed to create A/R Credit Memo");
       }

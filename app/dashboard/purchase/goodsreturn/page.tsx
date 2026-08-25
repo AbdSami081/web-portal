@@ -119,6 +119,7 @@ export default function GoodReturnPage() {
    
       if (response?.DocEntry) {
         toast.success(`Goods Return #${response.DocNum} created successfully!`);
+        return response;
       } else {
         throw new Error("Failed to create Goods Return");
       }

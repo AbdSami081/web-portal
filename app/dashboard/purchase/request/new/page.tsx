@@ -139,6 +139,7 @@ export default function PurchaseRequestPage() {
       if (!documentData?.DocEntry) throw new Error("Failed to create request");
       loadFromDocument(documentData, DocumentType.PurchaseRequests);
       toast.success(`Request #${documentData.DocNum} created successfully`);
+      return documentData;
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create quotation. Please try again.");

@@ -113,7 +113,7 @@ export function AttachmentsTab({
     };
 
     return (
-        <div className={`space-y-4 pt-4 ${isTableDisabled ? "opacity-80 pointer-events-none" : ""}`}>
+        <div className={`space-y-4 pt-4 ${isTableDisabled ? "opacity-80" : ""}`}>
             <div className="relative border rounded-xl overflow-hidden bg-white shadow-sm border-zinc-100">
                 <div className="overflow-x-auto min-h-[300px]">
                     <Table className="text-[11px] min-w-[1000px]">
@@ -162,6 +162,7 @@ export function AttachmentsTab({
                                                     value={att.FreeText}
                                                     onChange={(e) => updateAttachment(att.LineNum, { FreeText: e.target.value })}
                                                     placeholder="Add comments..."
+                                                    disabled={isTableDisabled}
                                                 />
                                             </TableCell>
                                             <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
@@ -169,6 +170,7 @@ export function AttachmentsTab({
                                                     checked={att.CopyToTarget}
                                                     onCheckedChange={(checked) => updateAttachment(att.LineNum, { CopyToTarget: !!checked })}
                                                     className="mx-auto"
+                                                    disabled={isTableDisabled}
                                                 />
                                             </TableCell>
                                             <TableCell className="p-1 text-right" onClick={(e) => e.stopPropagation()}>
@@ -178,6 +180,7 @@ export function AttachmentsTab({
                                                     size="icon"
                                                     className="h-7 w-7 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all opacity-0 group-hover:opacity-100"
                                                     onClick={() => removeAttachment(att.LineNum)}
+                                                    disabled={isTableDisabled}
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </Button>
@@ -198,10 +201,12 @@ export function AttachmentsTab({
                         className="hidden"
                         id="attachment-browse"
                         onChange={handleFileChange}
+                        disabled={isTableDisabled}
                     />
                     <Button
                         variant="outline"
                         className="bg-white border-zinc-200 hover:bg-zinc-50 transition-all text-xs font-bold gap-2 rounded-xl h-10 px-5 shadow-sm"
+                        disabled={isTableDisabled}
                         asChild
                     >
                         <label htmlFor="attachment-browse" className="cursor-pointer">
@@ -227,7 +232,7 @@ export function AttachmentsTab({
                     type="button"
                     variant="outline"
                     className="bg-white border-zinc-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-all text-xs font-bold gap-2 rounded-xl h-10 px-5 shadow-sm"
-                    disabled={attachments.length === 0}
+                    disabled={attachments.length === 0 || isTableDisabled}
                     onClick={() => {
                         if (selectedLineNum !== null) {
                             removeAttachment(selectedLineNum);

@@ -22,13 +22,14 @@ import { FilePlus2, Loader2, Keyboard } from "lucide-react";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { resolveDocNavParams } from "@/lib/docNavParams";
+import { resolveDocNavParams, clearDocNavParams } from "@/lib/docNavParams";
 import { patchDraftDocument } from "@/api+/sap/draft/draftService";
 import { buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { linesHaveInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
+import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
 
 import {
   Tooltip,
@@ -60,7 +61,7 @@ import {
   getDocumentConfig,
 } from "@/lib/config/purchase/documentConfig";
 
-import { DocumentType } from "@/types/master/DocumentType";
+import { DocumentType, DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 
 import {
   getPurchaseDeliveryByBP,
@@ -70,16 +71,28 @@ import {
   getPurchaseQuotationByBP,
   getPurchaseQuotationDocument,
   getPurchaseRequestsByBP,
+  getPurchaseInvoiceByBP,
+  getAPInvoiceDocument,
+  getGoodsReturnRequestByBP,
+  getGoodsReturnRequestDocument,
+  getPurchaseRequestDocument,
 } from "@/api+/sap/purchase/purchaseService";
 
 import { UDFLayout } from "../shared/UDFSheet";
 import { GenericModal } from "@/modals/GenericModal";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged } from "@/api+/sap/Templates/approvalTemplate";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
+
+const COPY_TO_RESERVE_INVOICE_VALUE = "reserve-invoice";
+// DocumentType.APDownPaymentRequest (1470000113) is numerically identical to
+// DocumentType.PurchaseRequests - same reason as above, needs its own sentinel wherever
+// it appears as a copy-to TARGET value (as a copy-FROM/page-identity check it's fine,
+// since isApDownPaymentRequestPage disambiguates by route instead).
+const COPY_TO_AP_DOWNPAYMENT_REQUEST_VALUE = "apdownpaymentrequest";
 
 const PurchaseDocContext = createContext<DocumentConfig | null>(null);
 
@@ -92,7 +105,12 @@ export const usePurchaseDocConfig = () => {
 interface PurchaseDocumentLayoutProps<T extends FieldValues> {
   schema: z.ZodType<T>;
   defaultValues: T;
-  onSubmit: (data: T) => Promise<void>;
+  // Return value is optional and only used for one thing: when a fresh submission gets
+  // auto-drafted by SAP for approval, the page's onSubmit should resolve with the SAP
+  // response ({ DocEntry, IsDraft, ... }) so the approval-request Remarks the user just
+  // typed in the modal can be patched onto the request SAP just auto-created (SAP creates
+  // it natively - POST isn't supported - so it always starts with blank Remarks otherwise).
+  onSubmit: (data: T) => Promise<void | { DocEntry?: number; IsDraft?: boolean | string; [key: string]: any }>;
   children?: React.ReactNode;
   actions?: React.ReactNode;
   docType: DocumentType;
@@ -145,7 +163,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, watch, formState: { isSubmitting, isDirty, errors } } = methods;
+  const { handleSubmit, reset, watch, setValue, formState: { isSubmitting, isDirty, errors } } = methods;
   const { reset: lineReset, lines, requester, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs } = usePurchaseDocument(
     useShallow(state => ({
       reset: state.reset,
@@ -195,6 +213,11 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     lineReset();
   };
 
+  const finishAndReset = () => {
+    ResetForm();
+    clearDocNavParams(router, pathname);
+  };
+
   useEffect(() => {
     const state = usePurchaseDocument.getState();
     const defaultValuesKey = JSON.stringify(defaultValues ?? {});
@@ -242,6 +265,12 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
       else if (type === DocumentType.GoodsReceiptPO) {
         data = await getPurchaseDeliveryByBP(requester.CardCode);
       }
+      else if (type === DocumentType.APInvoice) {
+        data = await getPurchaseInvoiceByBP(requester.CardCode);
+      }
+      else if (type === DocumentType.GoodsReturnRequest) {
+        data = await getGoodsReturnRequestByBP(requester.CardCode);
+      }
       setCopyFromData(data || []);
       setCopyFromOpen(true);
     } catch (err) {
@@ -258,7 +287,15 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     return "";
   };
 
+  // DocumentType.APDownPaymentRequest shares its numeric value with PurchaseRequests
+  // (both 1470000113 - SAP gives them the same underlying object code), so the route is
+  // the only way to tell the two pages apart. Same collision class as
+  // isReserveInvoicePage above, for a different pair.
+  const isApDownPaymentRequestPage = pathname?.toLowerCase().includes("apdownpaymentrequest") ?? false;
+
   const copyToOptions = (() => {
+    if (isApDownPaymentRequestPage) return [DocumentType.APDownPaymentInvoice];
+
     switch (docType) {
       case DocumentType.PurchaseRequests:
         return [
@@ -272,12 +309,22 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
           DocumentType.PurchaseOrder,
           DocumentType.GoodsReceiptPO,
           DocumentType.APInvoice,
+          DocumentType.APDownPaymentInvoice,
         ];
 
       case DocumentType.PurchaseOrder:
-        return [DocumentType.GoodsReceiptPO, DocumentType.APInvoice];
+        return [DocumentType.GoodsReceiptPO, DocumentType.APInvoice, DocumentType.APDownPaymentInvoice];
 
       case DocumentType.GoodsReceiptPO:
+        return [DocumentType.APInvoice, DocumentType.APCreditMemo, DocumentType.GoodsReturn];
+
+      case DocumentType.APInvoice:
+        return [DocumentType.APCreditMemo];
+
+      case DocumentType.GoodsReturnRequest:
+        return [DocumentType.GoodsReturn];
+
+      case DocumentType.APDownPaymentInvoice:
         return [DocumentType.APInvoice];
 
       default:
@@ -294,6 +341,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
       return;
     }
     setIsLoadingCopyTo(true);
+
+    const sourceDocNum = usePurchaseDocument.getState().DocNum;
+    usePurchaseDocument.setState({ comments: `Copy To Based on ${config.title} ${sourceDocNum}` });
+
     if (copyType === DocumentType.PurchaseRequests.toString()) {
       setIsCopying(true);
       router.push("/dashboard/purchase/request/new");
@@ -307,6 +358,21 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     } else if (copyType === DocumentType.APInvoice.toString()) {
       setIsCopying(true);
       router.push("/dashboard/purchase/invoice/new");
+    } else if (copyType === COPY_TO_RESERVE_INVOICE_VALUE) {
+      setIsCopying(true);
+      router.push("/dashboard/purchase/reserve-invoice/new");
+    } else if (copyType === DocumentType.APCreditMemo.toString()) {
+      setIsCopying(true);
+      router.push("/dashboard/purchase/apcreditmemo");
+    } else if (copyType === DocumentType.GoodsReturn.toString()) {
+      setIsCopying(true);
+      router.push("/dashboard/purchase/goodsreturn");
+    } else if (copyType === DocumentType.APDownPaymentInvoice.toString()) {
+      setIsCopying(true);
+      router.push("/dashboard/purchase/apdownpaymentinvoice");
+    } else if (copyType === COPY_TO_AP_DOWNPAYMENT_REQUEST_VALUE) {
+      setIsCopying(true);
+      router.push("/dashboard/purchase/apdownpaymentrequest");
     } else {
       toast.info("Copy to this document type is not implemented yet.");
     }
@@ -336,11 +402,30 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
         doc = await getPurchaseOrderDocument(docNum);
       } else if (copyFromType === DocumentType.GoodsReceiptPO) {
         doc = await getPurchaseDeliveryDocument(docNum);
+      } else if (copyFromType === DocumentType.APInvoice) {
+        doc = await getAPInvoiceDocument(docNum);
+      } else if (copyFromType === DocumentType.GoodsReturnRequest) {
+        doc = await getGoodsReturnRequestDocument(docNum);
+      } else if (copyFromType === DocumentType.PurchaseRequests) {
+        doc = await getPurchaseRequestDocument(docNum);
       }
 
       if (doc && copyFromType) {
-        loadFromDocument(doc, copyFromType);
-        toast.success(`Copied from ${copyFromType === DocumentType.PurchaseQuotation ? 'Purchase Quotation' : copyFromType === DocumentType.PurchaseOrder ? 'Purchase Order' : 'Goods Receipt'} #${docNum}`);
+        const openLines = openLinesForCopyFrom(doc.DocumentLines);
+        if ((doc.DocumentLines || []).length > 0 && openLines.length === 0) {
+          toast.warning("This document has no remaining open quantity to copy.");
+          return;
+        }
+        const sourceLabel =
+          copyFromType === DocumentType.PurchaseQuotation ? 'Purchase Quotation' :
+          copyFromType === DocumentType.PurchaseOrder ? 'Purchase Order' :
+          copyFromType === DocumentType.GoodsReceiptPO ? 'Goods Receipt PO' :
+          copyFromType === DocumentType.APInvoice ? 'A/P Invoice' :
+          copyFromType === DocumentType.GoodsReturnRequest ? 'Goods Return Request' :
+          copyFromType === DocumentType.PurchaseRequests ? 'Purchase Request' : 'Document';
+        loadFromDocument({ ...doc, DocumentLines: openLines }, copyFromType);
+        setValue("Comments" as any, `Copy From Based on ${sourceLabel} ${docNum}` as any, { shouldDirty: true });
+        toast.success(`Copied from ${sourceLabel} #${docNum}`);
       }
     } catch (err) {
       toast.error("Failed to load document");
@@ -349,10 +434,29 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     }
   };
 
+  const isReserveInvoicePage = pathname?.toLowerCase().includes("reserve-invoice") ?? false;
+
   const copyFromOptions = (() => {
-    if (docType === DocumentType.PurchaseOrder) return [DocumentType.PurchaseQuotation];
-    if (docType === DocumentType.GoodsReceiptPO) return [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation];
-    if (docType === DocumentType.APInvoice) return [DocumentType.GoodsReceiptPO, DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation];
+    if (isApDownPaymentRequestPage) return [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation];
+    if (docType === DocumentType.APDownPaymentInvoice) return [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation];
+    // A Purchase Request is the earliest stage in the chain, so every later stage can be
+    // sourced from one directly, not just from the immediately preceding stage.
+    if (docType === DocumentType.PurchaseQuotation) return [DocumentType.PurchaseRequests];
+    if (docType === DocumentType.PurchaseOrder) return [DocumentType.PurchaseQuotation, DocumentType.PurchaseRequests];
+    if (docType === DocumentType.GoodsReceiptPO) return [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation, DocumentType.PurchaseRequests];
+    if (docType === DocumentType.APInvoice) {
+      return isReserveInvoicePage
+        ? [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation]
+        : [DocumentType.GoodsReceiptPO, DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation, DocumentType.PurchaseRequests];
+    }
+    // A/P Credit Memo is normally created as a reversal against an already-posted
+    // Invoice, or against a GRPO when goods are being returned without an invoice yet.
+    if (docType === DocumentType.APCreditMemo) return [DocumentType.APInvoice, DocumentType.GoodsReceiptPO];
+    // Goods Return is normally created from a Goods Return Request (the approval step)
+    // or directly from the original GRPO.
+    if (docType === DocumentType.GoodsReturn) return [DocumentType.GoodsReturnRequest, DocumentType.GoodsReceiptPO];
+    // Goods Return Request is itself normally raised against a GRPO.
+    if (docType === DocumentType.GoodsReturnRequest) return [DocumentType.GoodsReceiptPO];
     return [];
   })();
 
@@ -436,7 +540,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 }
               }
               toast.success("Draft updated. The approval request will be re-submitted.");
-              ResetForm();
+              finishAndReset();
               return;
             }
 
@@ -454,10 +558,13 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 Rounding: state.rounding,
               };
               const approvedChanged = hasDraftChanges(approvedSnapshot, state.lines, currentHeader);
-              if (!approvedChanged) {
+              const confirmedUnchanged = approvedChanged
+                ? false
+                : !(await validateDraftChanged(Number(docNav.draftEntry), state.lines, currentHeader));
+              if (confirmedUnchanged) {
                 try {
                   await onSubmit(data as unknown as T);
-                  ResetForm();
+                  finishAndReset();
                 } catch (err: any) {
                   toast.error(err?.response?.data?.Message || "Failed to create the document");
                 }
@@ -498,7 +605,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 return;
               }
               toast.success("Approved document updated. A new approval request is required.");
-              ResetForm();
+              finishAndReset();
               return;
             }
 
@@ -523,7 +630,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
             try {
               await onSubmit(data as unknown as T);
-              ResetForm();
+              finishAndReset();
             } catch (error) {
               console.error("Submit Error:", error);
             }
@@ -580,7 +687,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                         <SelectItem key={type} value={type.toString()}>
                           {type === DocumentType.PurchaseQuotation ? "Purchase Quotation" :
                             type === DocumentType.PurchaseOrder ? "Purchase Order" :
-                              type === DocumentType.GoodsReceiptPO ? "Goods Receipt" : ""}
+                              type === DocumentType.GoodsReceiptPO ? "Goods Receipt PO" :
+                                type === DocumentType.APInvoice ? "A/P Invoice" :
+                                  type === DocumentType.GoodsReturnRequest ? "Goods Return Request" :
+                                    type === DocumentType.PurchaseRequests ? "Purchase Request" : ""}
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -613,12 +723,37 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                       )}
                       {copyToOptions.includes(DocumentType.GoodsReceiptPO) && (
                         <SelectItem value={DocumentType.GoodsReceiptPO.toString()}>
-                          Goods Receipt
+                          Goods Receipt PO
                         </SelectItem>
                       )}
                       {copyToOptions.includes(DocumentType.APInvoice) && (
                         <SelectItem value={DocumentType.APInvoice.toString()}>
                           AP Invoice
+                        </SelectItem>
+                      )}
+                      {(docType === DocumentType.PurchaseOrder || docType === DocumentType.PurchaseQuotation) && (
+                        <SelectItem value={COPY_TO_RESERVE_INVOICE_VALUE}>
+                          AP Reserve Invoice
+                        </SelectItem>
+                      )}
+                      {copyToOptions.includes(DocumentType.APCreditMemo) && (
+                        <SelectItem value={DocumentType.APCreditMemo.toString()}>
+                          A/P Credit Memo
+                        </SelectItem>
+                      )}
+                      {copyToOptions.includes(DocumentType.GoodsReturn) && (
+                        <SelectItem value={DocumentType.GoodsReturn.toString()}>
+                          Goods Return
+                        </SelectItem>
+                      )}
+                      {copyToOptions.includes(DocumentType.APDownPaymentInvoice) && (
+                        <SelectItem value={DocumentType.APDownPaymentInvoice.toString()}>
+                          A/P Down Payment Invoice
+                        </SelectItem>
+                      )}
+                      {(docType === DocumentType.PurchaseOrder || docType === DocumentType.PurchaseQuotation) && (
+                        <SelectItem value={COPY_TO_AP_DOWNPAYMENT_REQUEST_VALUE}>
+                          A/P Down Payment Request
                         </SelectItem>
                       )}
                     </SelectGroup>
@@ -637,7 +772,13 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
           )}
           
           <GenericModal
-            title={`Select ${copyFromType === DocumentType.PurchaseQuotation ? 'Purchase Quotation' : copyFromType === DocumentType.PurchaseOrder ? 'Purchase Order' : 'Goods Receipt'}`}
+            title={`Select ${
+              copyFromType === DocumentType.PurchaseQuotation ? 'Purchase Quotation' :
+              copyFromType === DocumentType.PurchaseOrder ? 'Purchase Order' :
+              copyFromType === DocumentType.GoodsReceiptPO ? 'Goods Receipt PO' :
+              copyFromType === DocumentType.APInvoice ? 'A/P Invoice' :
+              copyFromType === DocumentType.GoodsReturnRequest ? 'Goods Return Request' : 'Document'
+            }`}
             open={copyFromOpen}
             onClose={() => setCopyFromOpen(false)}
             onSelect={handleCopyFromSelect}
@@ -715,7 +856,12 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                   await submitApprovalRequest(approvalRequestId, {
                     TemplateCode: tpl?.Code,
                     ObjectEntry: pendingReApproval.draftId,
-                    ObjectType: pendingReApproval.docType,
+                    // ObjectEntry here is the DRAFT's own DocEntry, not the eventual
+                    // document's - SAP requires ObjectType "112" ("Documents - Drafts")
+                    // to match, not the document's specific type. Confirmed against
+                    // SAP's own Service Layer PATCH example (IsDraft:"Y" pairs with
+                    // ObjectType:"112").
+                    ObjectType: DRAFT_OBJECT_TYPES[0],
                     IsDraft: "Y",
                     ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
                     OriginatorID: user?.sapUserId,
@@ -727,7 +873,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 }
                 setPendingReApproval(null);
                 setPendingFinalData(null);
-                ResetForm();
+                finishAndReset();
                 return;
               }
 
@@ -740,9 +886,39 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 Comments: (pendingFinalData as any).Comments || "",
               } as T;
 
-              await onSubmit(finalData);
+              const result = await onSubmit(finalData);
               setPendingFinalData(null);
-              ResetForm();
+
+              // SAP auto-drafts the document and auto-creates the approval request when
+              // an approval procedure applies (POST ApprovalRequests isn't supported) -
+              // that request starts with no Remarks until we PATCH it with what the user
+              // just typed in this modal.
+              if (result && (result as any).IsDraft && (result as any).DocEntry) {
+                const tpl = approvalTemplates[0];
+                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
+                if (remarks) {
+                  try {
+                    await submitApprovalRequest(0, {
+                      TemplateCode: tpl?.Code,
+                      ObjectEntry: Number((result as any).DocEntry),
+                      // Same as pendingReApproval above: ObjectEntry is the DRAFT's own
+                      // entry, so ObjectType must be "112" ("Documents - Drafts"), not
+                      // the document's specific type.
+                      ObjectType: DRAFT_OBJECT_TYPES[0],
+                      IsDraft: "Y",
+                      OriginatorID: user?.sapUserId,
+                      Remarks: remarks,
+                    });
+                  } catch (err: any) {
+                    toast.warning(
+                      err?.response?.data?.Message ||
+                        "Document was created, but the approval remarks could not be attached."
+                    );
+                  }
+                }
+              }
+
+              finishAndReset();
             }}
           />
         </form>

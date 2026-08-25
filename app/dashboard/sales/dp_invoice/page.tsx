@@ -101,6 +101,7 @@ export default function ARDownPaymentInvoicePage() {
         } else {
           toast.success(`A/R Down Payment Invoice #${response.DocNum} created successfully!`);
         }
+        return response;
       } else {
         throw new Error("Failed to create A/R Down Payment Invoice");
       }

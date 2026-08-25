@@ -122,6 +122,7 @@ export default function NewAPInvoicePage() {
 
       if (response?.DocEntry) {
         toast.success(`AP Invoice #${response.DocNum} created successfully!`);
+        return response;
       } else {
         throw new Error("Failed to create AP Invoice");
       }

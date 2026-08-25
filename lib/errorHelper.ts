@@ -28,6 +28,9 @@ export const getSapErrorMessage = (error: any): string => {
     if (lower.includes("invalid vat group") || lower.includes("vatgroup") || lower.includes("vat group")) {
         return "Invalid Tax Code / VAT Group selected. Please verify and select a valid Tax Code for all line items.";
     }
+    if (lower.includes("cardcode") && (lower.includes("exist") || lower.includes("duplicate") || lower.includes("unique"))) {
+        return "This Card Code already exists. Please choose a different Card Code.";
+    }
 
     return rawMessage;
 };

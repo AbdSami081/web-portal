@@ -126,6 +126,7 @@ export default function NewPurchaseQuotationPage() {
       if (!documentData?.DocEntry) throw new Error("Failed to create quotation");
       loadFromDocument(documentData, DocumentType.PurchaseQuotation);
       toast.success(`Quotation #${documentData.DocNum} created successfully`);
+      return documentData;
     } catch (error: any) {
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to create quotation. Please try again.");

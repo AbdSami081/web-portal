@@ -131,6 +131,7 @@ export default function APDownPaymentRequestPage() {
         toast.success(
           `APDownPaymentRequest #${response.DocNum} created successfully!`,
         );
+        return response;
       } else {
         throw new Error("Failed to create AP Down Payment Request");
       }

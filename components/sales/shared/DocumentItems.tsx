@@ -424,7 +424,7 @@ export function DocumentItems() {
               <div
                 className={`w-full overflow-x-auto pb-2 ${
                   isTableDisabled
-                    ? "opacity-80 pointer-events-none"
+                    ? "opacity-80"
                     : ""
                 }`}
               >

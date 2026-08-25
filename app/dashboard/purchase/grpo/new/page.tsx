@@ -122,6 +122,7 @@ export default function NewGoodsReceiptPOPage() {
    
       if (response?.DocEntry) {
         toast.success(`GRPO #${response.DocNum} created successfully!`);
+        return response;
       } else {
         throw new Error("Failed to create GRPO");
       }

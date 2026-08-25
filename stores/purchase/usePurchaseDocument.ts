@@ -1,8 +1,11 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { PurchaseDocumentLine, PurchaseDocumentType } from "@/types/purchase/purchaseDocuments.type";
-import { BusinessPartner } from "@/types/purchase/businessPartner.type"; 
+import { BusinessPartner } from "@/types/purchase/businessPartner.type";
 import { DocumentType } from "@/types/master/DocumentType";
+import { calculateFreightTax } from "@/utils/taxCalculations";
+import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
+import { resolveSerialBatchFlags } from "@/lib/sap/helpers/serialBatchHelper";
 
 interface PurchaseDocumentStore {
   docType: PurchaseDocumentType;
@@ -329,6 +332,13 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
       });
 
       get().calculateTotals();
+      resolveSerialBatchFlags(mappedLines, (patch) => {
+        set((state) => ({
+          lines: state.lines.map((line) =>
+            patch.has(line.ItemCode) ? { ...line, ...patch.get(line.ItemCode) } : line
+          ),
+        }));
+      });
     },
     addAttachment: (file) => {
       set((state) => ({
@@ -359,32 +369,72 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     },
 
     calculateTotals: () => {
-      const { lines, discountPercent, freight } = get();
-      
-      let sumBeforeDiscount = 0;
-      let totalTax = 0;
-      let totalFreight = parseSafe(freight);
+      const { lines, discountPercent, freight, rounding, additionalExpenses } = get();
+      const { freightsWithCharges } = useMasterDataStore.getState();
 
-      lines.forEach((line) => {
-        const qty = parseSafe(line.Quantity);
-        const price = parseSafe(line.Price);
-        const lineTotal = qty * price;
-        const taxRate = 0;
-        const taxAmt = lineTotal * (taxRate / 100);
-        
-        sumBeforeDiscount += lineTotal;
-        totalTax += taxAmt;
+      let overallTotalBeforeDiscount = 0;
+      let overallLineFreightAmount = 0;
+
+      const processedLines = lines.map((line) => {
+        const quantity = parseSafe(line.Quantity);
+        const unitPrice = parseSafe(line.Price);
+        const lineDiscountPercent = parseSafe(line.DiscountPercent);
+        const itemTaxRate = parseSafe(line.TaxRate);
+
+        const lineSubtotal = quantity * unitPrice;
+        const lineDiscountAmount = (lineSubtotal * lineDiscountPercent) / 100;
+        const lineAmountAfterDiscount = lineSubtotal - lineDiscountAmount;
+
+        // SAP applies the document-level (header/footer) Discount % on top of each
+        // line's own discount BEFORE computing tax - tax is calculated on the fully
+        // discounted taxable base, not on the pre-header-discount line amount.
+        const headerDiscountShareOfLine = (lineAmountAfterDiscount * parseSafe(discountPercent)) / 100;
+        const lineTaxableAmount = lineAmountAfterDiscount - headerDiscountShareOfLine;
+        const itemTaxAmount = lineTaxableAmount * (itemTaxRate / 100);
+
+        const f1 = calculateFreightTax(parseSafe(line.Freight1LCAmount), line.Freight1TaxGroup || "", freightsWithCharges);
+        const f2 = calculateFreightTax(parseSafe(line.Freight2LCAmount), line.Freight2TaxGroup || "", freightsWithCharges);
+        const f3 = calculateFreightTax(parseSafe(line.Freight3LCAmount), line.Freight3TaxGroup || "", freightsWithCharges);
+
+        const lineFreightSubtotal = parseSafe(line.Freight1LCAmount) + parseSafe(line.Freight2LCAmount) + parseSafe(line.Freight3LCAmount);
+        const lineFreightTaxTotal = f1.taxAmount + f2.taxAmount + f3.taxAmount;
+
+        overallTotalBeforeDiscount += lineAmountAfterDiscount;
+        overallLineFreightAmount += lineFreightSubtotal;
+
+        return {
+          ...line,
+          Quantity: quantity,
+          Price: unitPrice,
+          TaxAmount: Number((itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
+          LineTotal: Number((lineAmountAfterDiscount + lineFreightSubtotal + itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
+        };
       });
 
-      const discSum = sumBeforeDiscount * (parseSafe(discountPercent) / 100);
-      const finalDocTotal = (sumBeforeDiscount - discSum) + totalTax + totalFreight;
+      const totalAdditionalExpenses = (additionalExpenses || []).reduce(
+        (sum, e) => sum + parseSafe(e.LineTotal),
+        0
+      );
+
+      const totalTaxAmount = processedLines.reduce((sum, line) => sum + (line.TaxAmount || 0), 0);
+      const totalFreightAmount = parseSafe(freight) + overallLineFreightAmount;
+      const calculatedDiscSum = (overallTotalBeforeDiscount * parseSafe(discountPercent)) / 100;
+
+      const finalDocTotal =
+        overallTotalBeforeDiscount +
+        totalTaxAmount +
+        totalFreightAmount +
+        parseSafe(rounding) +
+        totalAdditionalExpenses -
+        calculatedDiscSum;
 
       set({
-        TotalBeforeDiscount: sumBeforeDiscount,
-        discSum,
-        TaxTotal: totalTax,
-        DocTotal: finalDocTotal,
-        TotalFreight: totalFreight,
+        lines: processedLines,
+        TotalBeforeDiscount: parseSafe(overallTotalBeforeDiscount),
+        TaxTotal: parseSafe(totalTaxAmount),
+        TotalFreight: totalFreightAmount,
+        discSum: calculatedDiscSum,
+        DocTotal: parseSafe(finalDocTotal),
       });
     },
 

@@ -7,6 +7,7 @@ import { useMasterDataStore } from "./useMasterDataStore";
 import { DocumentType } from "@/types/master/DocumentType";
 import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useUoMStore } from "@/stores/useUoMStore";
+import { resolveSerialBatchFlags } from "@/lib/sap/helpers/serialBatchHelper";
 
 interface SalesDocumentStore {
   docType: DocumentType;
@@ -250,7 +251,14 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         const lineDiscountAmount = (lineSubtotal * lineDiscountPercent) / 100;
         const lineAmountAfterDiscount = lineSubtotal - lineDiscountAmount;
 
-        const itemTaxAmount = lineAmountAfterDiscount * (itemTaxRate / 100);
+        // SAP applies the document-level (header/footer) Discount % on top of each
+        // line's own discount BEFORE computing tax - tax is calculated on the fully
+        // discounted taxable base, not on the pre-header-discount line amount. Skipping
+        // this step is what caused tax (and therefore DocTotal) to come out higher than
+        // SAP's own calculation whenever a footer discount was used.
+        const headerDiscountShareOfLine = (lineAmountAfterDiscount * discountPercent) / 100;
+        const lineTaxableAmount = lineAmountAfterDiscount - headerDiscountShareOfLine;
+        const itemTaxAmount = lineTaxableAmount * (itemTaxRate / 100);
 
         const f1 = calculateFreightTax(parseSafe(line.Freight1LCAmount), line.Freight1TaxGroup || "", freightsWithCharges);
         const f2 = calculateFreightTax(parseSafe(line.Freight2LCAmount), line.Freight2TaxGroup || "", freightsWithCharges);
@@ -447,6 +455,13 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       });
 
       get().calculateTotals();
+      resolveSerialBatchFlags(mappedLines, (patch) => {
+        set((state) => ({
+          lines: state.lines.map((line) =>
+            patch.has(line.ItemCode) ? { ...line, ...patch.get(line.ItemCode) } : line
+          ),
+        }));
+      });
     },
     setAdditionalExpenses: (exp) => set({ additionalExpenses: exp }),
 

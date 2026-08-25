@@ -8,16 +8,16 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/sales/documentConfig";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { resolveDocNavParams } from "@/lib/docNavParams";
+import { resolveDocNavParams, clearDocNavParams } from "@/lib/docNavParams";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
-import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotationDocument, getSalesOrderDocument, getSalesDeliveryDocument } from "@/api+/sap/sales/salesService";
+import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotationDocument, getSalesOrderDocument, getSalesDeliveryDocument, getARInvoiceByBP, getSalesReturnRequestByBP, getARInvoiceDocument, getSalesReturnRequestDocument } from "@/api+/sap/sales/salesService";
 import { FilePlus2, Loader2, Keyboard, Circle } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { HeaderModalAction } from "@/components/header-modal-action";
 import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DocumentType } from "@/types/master/DocumentType";
+import { DocumentType, DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { DocumentHeader } from "./DocumentHeader";
 import { UDFLayout } from "@/components/shared/UDFSheet";
@@ -25,7 +25,7 @@ import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialo
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useAuth } from "@/context/authContext";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged } from "@/api+/sap/Templates/approvalTemplate";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { ApprovalTemplate } from "@/types/template.type";
 import { patchDraftDocument } from "@/api+/sap/draft/draftService";
@@ -34,6 +34,7 @@ import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { linesHaveInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
+import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -47,7 +48,12 @@ export const useSalesDocConfig = () => {
 interface SalesDocumentLayoutProps<T extends FieldValues> {
   schema: z.ZodType<T>;
   defaultValues: T;
-  onSubmit: (data: T) => Promise<void>;
+  // Return value is optional and only used for one thing: when a fresh submission gets
+  // auto-drafted by SAP for approval, the page's onSubmit should resolve with the SAP
+  // response ({ DocEntry, IsDraft, ... }) so the approval-request Remarks the user just
+  // typed in the modal can be patched onto the request SAP just auto-created (SAP creates
+  // it natively - POST isn't supported - so it always starts with blank Remarks otherwise).
+  onSubmit: (data: T) => Promise<void | { DocEntry?: number; IsDraft?: boolean | string; [key: string]: any }>;
   children?: React.ReactNode;
   actions?: React.ReactNode;
   docType: DocumentType;
@@ -167,6 +173,13 @@ export function SalesDocumentLayout<T extends FieldValues>({
     if (docType === DocumentType.DownPaymentRequest || docType === DocumentType.DownPaymentInvoice) {
       return [DocumentType.Order, DocumentType.Quotation];
     }
+    // A/R Credit Memo is normally created as a reversal against an already-posted
+    // Invoice, or against a Delivery when goods are being returned without an invoice
+    // yet existing.
+    if (docType === DocumentType.CreditMemo) return [DocumentType.ARInvoice, DocumentType.Delivery];
+    // Sales Return is normally created from a Return Request (the approval step for a
+    // return) or directly from the original Delivery.
+    if (docType === DocumentType.SalesReturn) return [DocumentType.ReturnRequest, DocumentType.Delivery];
     return [];
   })();
 
@@ -181,6 +194,10 @@ export function SalesDocumentLayout<T extends FieldValues>({
         data = await getSalesOrderByBP(customer.CardCode);
       } else if (type === DocumentType.Delivery) {
         data = await getSalesDeliveryByBP(customer.CardCode);
+      } else if (type === DocumentType.ARInvoice) {
+        data = await getARInvoiceByBP(customer.CardCode);
+      } else if (type === DocumentType.ReturnRequest) {
+        data = await getSalesReturnRequestByBP(customer.CardCode);
       }
       setCopyFromData(data || []);
       setCopyFromOpen(true);
@@ -201,11 +218,27 @@ export function SalesDocumentLayout<T extends FieldValues>({
         doc = await getSalesOrderDocument(docNum);
       } else if (copyFromType === DocumentType.Delivery) {
         doc = await getSalesDeliveryDocument(docNum);
+      } else if (copyFromType === DocumentType.ARInvoice) {
+        doc = await getARInvoiceDocument(docNum);
+      } else if (copyFromType === DocumentType.ReturnRequest) {
+        doc = await getSalesReturnRequestDocument(docNum);
       }
 
       if (doc && copyFromType) {
-        loadFromDocument(doc, copyFromType);
-        toast.success(`Copied from ${copyFromType === DocumentType.Quotation ? 'Quotation' : copyFromType === DocumentType.Order ? 'Order' : 'Delivery'} #${docNum}`);
+        const openLines = openLinesForCopyFrom(doc.DocumentLines);
+        if ((doc.DocumentLines || []).length > 0 && openLines.length === 0) {
+          toast.warning("This document has no remaining open quantity to copy.");
+          return;
+        }
+        const sourceLabel =
+          copyFromType === DocumentType.Quotation ? 'Sales Quotation' :
+          copyFromType === DocumentType.Order ? 'Sales Order' :
+          copyFromType === DocumentType.Delivery ? 'Delivery' :
+          copyFromType === DocumentType.ARInvoice ? 'A/R Invoice' :
+          copyFromType === DocumentType.ReturnRequest ? 'Sales Return Request' : 'Document';
+        loadFromDocument({ ...doc, DocumentLines: openLines }, copyFromType);
+        setValue("Comments" as any, `Copy From Based on ${sourceLabel} ${docNum}` as any, { shouldDirty: true });
+        toast.success(`Copied from ${sourceLabel} #${docNum}`);
       }
     } catch (err) {
       toast.error("Failed to load document");
@@ -254,6 +287,11 @@ export function SalesDocumentLayout<T extends FieldValues>({
     lineReset();
   };
 
+  const finishAndReset = () => {
+    ResetForm();
+    clearDocNavParams(router, pathname);
+  };
+
   const handleNewDocumentClick = () => {
     ResetForm();
     setBadgeState(null);
@@ -274,13 +312,30 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
   const copyToOptions = (() => {
     if (docType === DocumentType.Quotation)
-      return [DocumentType.Order, DocumentType.Delivery, DocumentType.ARInvoice];
+      return [DocumentType.Order, DocumentType.Delivery, DocumentType.ARInvoice, DocumentType.DownPaymentRequest, DocumentType.DownPaymentInvoice];
 
     if (docType === DocumentType.Order)
-      return [DocumentType.Delivery, DocumentType.ARInvoice];
+      return [DocumentType.Delivery, DocumentType.ARInvoice, DocumentType.DownPaymentRequest, DocumentType.DownPaymentInvoice];
 
     if (docType === DocumentType.Delivery)
+      return [DocumentType.ARInvoice, DocumentType.SalesReturn];
+
+    if (docType === DocumentType.ARInvoice)
+      return [DocumentType.CreditMemo];
+
+    if (docType === DocumentType.DownPaymentRequest)
+      return [DocumentType.DownPaymentInvoice];
+
+    if (docType === DocumentType.DownPaymentInvoice)
       return [DocumentType.ARInvoice];
+
+    if (docType === DocumentType.ReturnRequest)
+      return [DocumentType.SalesReturn];
+
+    // A returned item can be re-delivered to the customer (exchange) or credited back
+    // to their account - both are valid next steps off a Sales Return.
+    if (docType === DocumentType.SalesReturn)
+      return [DocumentType.Delivery, DocumentType.CreditMemo];
 
     return [];
   })();
@@ -296,6 +351,9 @@ export function SalesDocumentLayout<T extends FieldValues>({
     
     setIsLoadingCopyTo(true);
 
+    const sourceDocNum = useSalesDocument.getState().DocNum;
+    useSalesDocument.setState({ comments: `Copy To Based on ${config.title} ${sourceDocNum}` });
+
     if (copyType === DocumentType.Order.toString()) {
       setIsCopying(true);
       router.push("/dashboard/sales/order");
@@ -305,6 +363,18 @@ export function SalesDocumentLayout<T extends FieldValues>({
     } else if (copyType === DocumentType.ARInvoice.toString()) {
       setIsCopying(true);
       router.push("/dashboard/sales/invoice");
+    } else if (copyType === DocumentType.DownPaymentRequest.toString()) {
+      setIsCopying(true);
+      router.push("/dashboard/sales/dp_request");
+    } else if (copyType === DocumentType.DownPaymentInvoice.toString()) {
+      setIsCopying(true);
+      router.push("/dashboard/sales/dp_invoice");
+    } else if (copyType === DocumentType.CreditMemo.toString()) {
+      setIsCopying(true);
+      router.push("/dashboard/sales/ar_creditmemo");
+    } else if (copyType === DocumentType.SalesReturn.toString()) {
+      setIsCopying(true);
+      router.push("/dashboard/sales/return");
     } else {
       toast.info("Copy to this document type is not implemented yet.");
     }
@@ -334,10 +404,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
             return;
           }
 
-          // Validate serial/batch allocation up front, regardless of which submit path
-          // (fresh document, rejected-draft resubmit, approved-draft resubmit) is taken
-          // below — otherwise a resubmit branch could skip this and reach SAP with an
-          // unallocated line.
           const isSerialBatchDocument = [
             DocumentType.Delivery,
             DocumentType.ARInvoice,
@@ -390,7 +456,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
               }
             }
             toast.success("Draft updated. The approval request will be re-submitted.");
-            ResetForm();
+            finishAndReset();
             setBadgeState(null);
             return;
           }
@@ -401,14 +467,14 @@ export function SalesDocumentLayout<T extends FieldValues>({
           }
 
           if (isApprovedDraft && docNav.draftEntry) {
-            // For approved drafts: only require a NEW approval request if something
-            // material actually changed since the last approval. If nothing changed,
-            // submit directly instead of forcing the user through approval again.
             const approvedChanged = hasDraftChanges(state.loadedDraftData, state.lines, finalData);
-            if (!approvedChanged) {
+            const confirmedUnchanged = approvedChanged
+              ? false
+              : !(await validateDraftChanged(Number(docNav.draftEntry), state.lines, finalData));
+            if (confirmedUnchanged) {
               try {
                 await onSubmit(finalData);
-                ResetForm();
+                finishAndReset();
                 setBadgeState(null);
               } catch (err: any) {
                 toast.error(err?.response?.data?.Message || "Failed to create the document");
@@ -435,7 +501,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
             try {
               await onSubmit(finalData);
-              ResetForm();
+              finishAndReset();
               setBadgeState(null);
             } catch (err: any) {
               toast.error(err?.response?.data?.Message || "Failed to create the document");
@@ -466,7 +532,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
           try {
             await onSubmit(finalData);
-            ResetForm();
+            finishAndReset();
           } catch (error) {
             console.error("Submit Error:", error);
           }
@@ -535,7 +601,9 @@ export function SalesDocumentLayout<T extends FieldValues>({
                         <SelectItem key={type} value={type.toString()}>
                           {type === DocumentType.Quotation ? "Sales Quotation" :
                             type === DocumentType.Order ? "Sales Order" :
-                              type === DocumentType.Delivery ? "Delivery" : ""}
+                              type === DocumentType.Delivery ? "Delivery" :
+                                type === DocumentType.ARInvoice ? "A/R Invoice" :
+                                  type === DocumentType.ReturnRequest ? "Sales Return Request" : ""}
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -576,11 +644,31 @@ export function SalesDocumentLayout<T extends FieldValues>({
                           AR Invoice
                         </SelectItem>
                       )}
+                      {copyToOptions.includes(DocumentType.DownPaymentRequest) && (
+                        <SelectItem value={DocumentType.DownPaymentRequest.toString()}>
+                          A/R Down Payment Request
+                        </SelectItem>
+                      )}
+                      {copyToOptions.includes(DocumentType.DownPaymentInvoice) && (
+                        <SelectItem value={DocumentType.DownPaymentInvoice.toString()}>
+                          A/R Down Payment Invoice
+                        </SelectItem>
+                      )}
+                      {copyToOptions.includes(DocumentType.CreditMemo) && (
+                        <SelectItem value={DocumentType.CreditMemo.toString()}>
+                          A/R Credit Memo
+                        </SelectItem>
+                      )}
+                      {copyToOptions.includes(DocumentType.SalesReturn) && (
+                        <SelectItem value={DocumentType.SalesReturn.toString()}>
+                          Sales Return
+                        </SelectItem>
+                      )}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
 
-                <Button 
+                <Button
                   type="submit" 
                   disabled={isSubmitting || isLoadingDocument || (isEditMode && normalizedStatus === "Close")}
                   className="min-w-[100px]"
@@ -662,11 +750,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
             onClose={() => setApprovalModalOpen(false)}
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
-              // REJECTED draft resubmission -> re-open the EXISTING rejected approval
-              // request (PATCH /ApprovalRequests/{approvalRequestCode}, carried from the
-              // Messages inbox) instead of POSTing a new one. The SAP B1 Service Layer does
-              // not support creating ApprovalRequests via POST (it returns "Command Not Found").
-              if (pendingReApproval) {
+             if (pendingReApproval) {
                 const tpl = approvalTemplates[0];
                 const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
                 const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
@@ -674,7 +758,12 @@ export function SalesDocumentLayout<T extends FieldValues>({
                   await submitApprovalRequest(approvalRequestId, {
                     TemplateCode: tpl?.Code,
                     ObjectEntry: pendingReApproval.draftId,
-                    ObjectType: pendingReApproval.docType,
+                    // ObjectEntry here is the DRAFT's own DocEntry, not the eventual
+                    // document's - SAP requires ObjectType "112" ("Documents - Drafts")
+                    // to match, not the document's specific type (e.g. "23" for
+                    // Quotation). Confirmed against SAP's own Service Layer PATCH
+                    // example (IsDraft:"Y" pairs with ObjectType:"112").
+                    ObjectType: DRAFT_OBJECT_TYPES[0],
                     IsDraft: "Y",
                     ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
                     OriginatorID: user?.sapUserId,
@@ -686,7 +775,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
                 }
                 setPendingReApproval(null);
                 setPendingFinalData(null);
-                ResetForm();
+                finishAndReset();
                 setBadgeState(null);
                 return;
               }
@@ -695,14 +784,42 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
               const finalData = {
                 ...(pendingFinalData as any),
-                // Approval remarks are submitted separately to SAP's approval request,
-                // NOT written onto the document's Comments field.
                 Comments: (pendingFinalData as any).Comments || "",
               } as T;
 
-              await onSubmit(finalData);
+              const result = await onSubmit(finalData);
               setPendingFinalData(null);
-              ResetForm();
+
+              // SAP auto-drafts the document and auto-creates the approval request when
+              // an approval procedure applies (POST ApprovalRequests isn't supported) -
+              // that request starts with no Remarks until we PATCH it with what the user
+              // just typed in this modal.
+              if (result && (result as any).IsDraft && (result as any).DocEntry) {
+                const tpl = approvalTemplates[0];
+                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
+                if (remarks) {
+                  try {
+                    await submitApprovalRequest(0, {
+                      TemplateCode: tpl?.Code,
+                      ObjectEntry: Number((result as any).DocEntry),
+                      // Same as pendingReApproval above: ObjectEntry is the DRAFT's own
+                      // entry, so ObjectType must be "112" ("Documents - Drafts"), not
+                      // the document's specific type.
+                      ObjectType: DRAFT_OBJECT_TYPES[0],
+                      IsDraft: "Y",
+                      OriginatorID: user?.sapUserId,
+                      Remarks: remarks,
+                    });
+                  } catch (err: any) {
+                    toast.warning(
+                      err?.response?.data?.Message ||
+                        "Document was created, but the approval remarks could not be attached."
+                    );
+                  }
+                }
+              }
+
+              finishAndReset();
               setBadgeState(null);
             }}
           />

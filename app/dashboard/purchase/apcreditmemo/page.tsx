@@ -120,6 +120,7 @@ export default function APCreditMemoPage() {
    
       if (response?.DocEntry) {
         toast.success(`AP Credit Memo #${response.DocNum} created successfully!`);
+        return response;
       } else {
         throw new Error("Failed  to create Ap Credit Memo");
       }

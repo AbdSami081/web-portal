@@ -104,6 +104,7 @@ export default function InvoicePage() {
         } else {
           toast.success(`A/R Invoice #${response.DocNum} created successfully!`);
         }
+        return response;
       } else {
         throw new Error("Failed to create AR Invoice");
       }
