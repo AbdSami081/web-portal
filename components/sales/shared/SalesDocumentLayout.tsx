@@ -159,26 +159,16 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
-  // Set when a REJECTED draft is being re-submitted: the draft is patched first, then a
-  // NEW approval request is created (historical approval stays untouched).
   const [pendingReApproval, setPendingReApproval] = useState<{ draftId: number; docType: string | number } | null>(null);
 
   const copyFromOptions = (() => {
     if (docType === DocumentType.Order) return [DocumentType.Quotation];
     if (docType === DocumentType.Delivery) return [DocumentType.Order, DocumentType.Quotation];
     if (docType === DocumentType.ARInvoice) return [DocumentType.Delivery, DocumentType.Order, DocumentType.Quotation];
-    // AR Down Payments must be created from an existing Quotation/Order in this SAP
-    // company (a standalone BaseType:-1 line is rejected with "ODPI.Posted") — same
-    // requirement as a real Down Payment created from SAP's own client.
     if (docType === DocumentType.DownPaymentRequest || docType === DocumentType.DownPaymentInvoice) {
       return [DocumentType.Order, DocumentType.Quotation];
     }
-    // A/R Credit Memo is normally created as a reversal against an already-posted
-    // Invoice, or against a Delivery when goods are being returned without an invoice
-    // yet existing.
     if (docType === DocumentType.CreditMemo) return [DocumentType.ARInvoice, DocumentType.Delivery];
-    // Sales Return is normally created from a Return Request (the approval step for a
-    // return) or directly from the original Delivery.
     if (docType === DocumentType.SalesReturn) return [DocumentType.ReturnRequest, DocumentType.Delivery];
     return [];
   })();
@@ -801,10 +791,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
               const result = await onSubmit(finalData);
               setPendingFinalData(null);
 
-              // SAP auto-drafts the document and auto-creates the approval request when
-              // an approval procedure applies (POST ApprovalRequests isn't supported) -
-              // that request starts with no Remarks until we PATCH it with what the user
-              // just typed in this modal.
               if (result && (result as any).IsDraft && (result as any).DocEntry) {
                 const tpl = approvalTemplates[0];
                 const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
