@@ -52,15 +52,9 @@ export function PurchaseItems() {
   const [serialModalOpen, setSerialModalOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
 
-  const isPurchaseInvoice = config.type === DocumentType.APInvoice;
-
   useEffect(() => {
-    if (isPurchaseInvoice) {
-      loadMasterData("S", "I");
-    } else {
-      loadMasterData("P", "P");
-    }
-  }, [loadMasterData, isPurchaseInvoice]);
+    loadMasterData("S", "I");
+  }, [loadMasterData]);
 
   const handleOnSelectItems = (items: Item[]) => {
     const isPurchaseRequest = config.type === DocumentType.PurchaseRequests;
@@ -70,7 +64,7 @@ export function PurchaseItems() {
     items.forEach((item) => {
       const price = getCustomerPrice(item.Prices || []);
 
-      const targetTaxCode = item.VatGourpPu;
+      const targetTaxCode = item.VatGroupPu || item.VatGourpPu || "";
       const selectedTax = freightsWithCharges.find(
         (t) => t.Code === targetTaxCode,
       );

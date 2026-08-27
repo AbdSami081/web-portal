@@ -338,7 +338,7 @@ export function PurchaseItemRow({ index, line }: Props) {
               const updated = {
                 ...draftLine,
                 Freight1Type: val,
-                Freight1TaxGroup: selectedType?.VatGroupO || "",
+                Freight1TaxGroup: selectedType?.VatGroupI || selectedType?.VatGroupO || "",
               };
               setDraftLine(updated);
               calculateAndUpdate(updated);
@@ -391,7 +391,7 @@ export function PurchaseItemRow({ index, line }: Props) {
               const updated = {
                 ...draftLine,
                 Freight2Type: val,
-                Freight2TaxGroup: selectedType?.VatGroupO || "",
+                Freight2TaxGroup: selectedType?.VatGroupI || selectedType?.VatGroupO || "",
               };
               setDraftLine(updated);
               calculateAndUpdate(updated);
@@ -445,7 +445,7 @@ export function PurchaseItemRow({ index, line }: Props) {
               const updated = {
                 ...draftLine,
                 Freight3Type: val,
-                Freight3TaxGroup: selectedType?.VatGroupO || "",
+                Freight3TaxGroup: selectedType?.VatGroupI || selectedType?.VatGroupO || "",
               };
               setDraftLine(updated);
               calculateAndUpdate(updated);

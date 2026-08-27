@@ -18,6 +18,7 @@ interface MasterDataStore {
   uoms: UoM[];
   freightTypes: any[];
   freightsWithCharges: any[];
+  loadedFreightCategory: string | null;
   itemSearch: string;
   itemLoading: boolean;
   masterDataLoaded: boolean;
@@ -44,6 +45,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   uoms: [],
   freightTypes: [],
   freightsWithCharges: [],
+  loadedFreightCategory: null,
   itemSearch: "",
   itemLoading: false,
   masterDataLoaded: false,
@@ -51,12 +53,21 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   currentItemPage: 1,
 
   async loadExternalMasterData(category = "") {
+    const isFreightTypesLoaded = get().freightTypes.length > 0;
+    const isCategoryLoaded = get().loadedFreightCategory === category && get().freightsWithCharges.length > 0;
+
+    if (isFreightTypesLoaded && isCategoryLoaded) {
+      return;
+    }
+
     const results = await Promise.allSettled([
-      getFreightTypes(),
+      isFreightTypesLoaded ? Promise.resolve(get().freightTypes) : getFreightTypes(),
       fetchFreightWithCharges(category),
     ]);
 
-    const updates: Partial<MasterDataStore> = {};
+    const updates: Partial<MasterDataStore> = {
+      loadedFreightCategory: category,
+    };
     if (results[0].status === "fulfilled") updates.freightTypes = results[0].value;
     if (results[1].status === "fulfilled") updates.freightsWithCharges = results[1].value;
 
@@ -92,7 +103,10 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
   },
 
   async loadDocumentEssentials(freightCategory = "O") {
-    if (get().masterDataLoaded) return;
+    const isWarehousesLoaded = get().warehousesLoaded;
+    const isCategoryLoaded = get().loadedFreightCategory === freightCategory && get().freightsWithCharges.length > 0;
+
+    if (isWarehousesLoaded && isCategoryLoaded) return;
 
     set({ itemLoading: true });
     try {
@@ -111,8 +125,9 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
     }
   },
 
-  async loadMasterData(_cardType = "", freightCategory = "") {
-    await get().loadDocumentEssentials(freightCategory || "O");
+  async loadMasterData(cardType = "", freightCategory = "") {
+    const category = freightCategory || (cardType === "S" ? "I" : "O");
+    await get().loadDocumentEssentials(category);
   },
 
   async loadItemPage(page) {
@@ -156,6 +171,7 @@ export const useMasterDataStore = create<MasterDataStore>((set, get) => ({
       uoms: [],
       freightTypes: [],
       freightsWithCharges: [],
+      loadedFreightCategory: null,
       itemSearch: "",
       itemLoading: false,
       masterDataLoaded: false,

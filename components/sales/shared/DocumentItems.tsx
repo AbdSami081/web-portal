@@ -110,13 +110,7 @@ export function DocumentItems() {
           item.Prices || []
         );
 
-      const isItem =
-        item.Category === "I" ||
-        item.ItemType === "itItems";
-
-      const targetTaxCode = isItem
-        ? item.VatGourpPu
-        : item.VatGourpSa;
+      const targetTaxCode = item.VatGourpSa || item.VatGroupSa || "";
 
       const selectedTax =
         freightsWithCharges.find(
