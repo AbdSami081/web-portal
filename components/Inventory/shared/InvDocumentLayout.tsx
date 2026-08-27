@@ -261,7 +261,14 @@ export function InvDocumentLayout<T extends FieldValues>({
     if (selected === DocumentType.InvTransfer.toString()) {
       const state = useInventoryDocument.getState();
 
-      const copiedLines = state.lines.map((line, idx) => ({
+      const openLines = openLinesForCopyFrom(state.lines as any[]);
+      if (state.lines.length > 0 && openLines.length === 0) {
+        setIsLoadingCopyTo(false);
+        toast.warning("This document has no remaining open quantity to copy.");
+        return;
+      }
+
+      const copiedLines = openLines.map((line: any, idx: number) => ({
         ...line,
         BaseType: docType,
         BaseEntry: DocEntry,

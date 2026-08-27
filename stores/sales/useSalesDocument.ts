@@ -386,6 +386,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           Comments: line.Comments,
           LineStatus: line.LineStatus,
           IsClosed: line.IsClosed || (line.LineStatus === "bost_Close" ? "tYES" : "tNO"),
+          RemainingOpenQuantity: line.RemainingOpenQuantity,
 
           Freight1Type: line.DocumentLineAdditionalExpenses?.[0]?.ExpenseCode?.toString() || "",
           Freight1LCAmount: parseSafe(line.DocumentLineAdditionalExpenses?.[0]?.LineTotal),

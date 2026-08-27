@@ -344,11 +344,20 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     }
     setIsLoadingCopyTo(true);
 
-    const sourceDocNum = usePurchaseDocument.getState().DocNum;
-    const existingComments = (usePurchaseDocument.getState().comments || "").trim();
+    const state = usePurchaseDocument.getState();
+    const sourceDocNum = state.DocNum;
+    const existingComments = (state.comments || "").trim();
     const copyToText = `Copy To Based on ${config.title} ${sourceDocNum}`;
     const updatedComments = existingComments ? `${existingComments}\n${copyToText}` : copyToText;
-    usePurchaseDocument.setState({ comments: updatedComments });
+
+    const openLines = openLinesForCopyFrom(state.lines as any[]);
+    if (state.lines.length > 0 && openLines.length === 0) {
+      setIsLoadingCopyTo(false);
+      toast.warning("This document has no remaining open quantity to copy.");
+      return;
+    }
+
+    usePurchaseDocument.setState({ comments: updatedComments, lines: openLines as any });
 
     if (copyType === DocumentType.PurchaseRequests.toString()) {
       setIsCopying(true);
