@@ -100,7 +100,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     watch,
     setValue,
   } = useFormContext();
-  const { requester, setRequester, loadFromDocument, setDocDate, setDocDueDate, setTaxDate, setRequiredDate } = usePurchaseDocument();
+  const { requester, setRequester, loadFromDocument, setDocDate, setDocDueDate, setTaxDate, setRequiredDate, setComments } = usePurchaseDocument();
   const { user } = useAuth();
 
   const config = usePurchaseDocConfig();
@@ -295,6 +295,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
           setRequiredDate(requiredDateValue);
         }
         setValue("Comments", documentData.Comments || "");
+        setComments(documentData.Comments || "");
         setValue("DocStatus", documentData.DocumentStatus || documentData.DocStatus || "bost_Open");
         setValue("DocNum", documentData.DocNum);
         setValue("DocEntry", documentData.DocEntry);

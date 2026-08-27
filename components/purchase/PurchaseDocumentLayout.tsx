@@ -76,6 +76,8 @@ import {
   getGoodsReturnRequestByBP,
   getGoodsReturnRequestDocument,
   getPurchaseRequestDocument,
+  getGoodsReturnDocument,
+  getAPCreditMemoDocument,
 } from "@/api+/sap/purchase/purchaseService";
 
 import { UDFLayout } from "../shared/UDFSheet";
@@ -343,7 +345,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     setIsLoadingCopyTo(true);
 
     const sourceDocNum = usePurchaseDocument.getState().DocNum;
-    usePurchaseDocument.setState({ comments: `Copy To Based on ${config.title} ${sourceDocNum}` });
+    const existingComments = (usePurchaseDocument.getState().comments || "").trim();
+    const copyToText = `Copy To Based on ${config.title} ${sourceDocNum}`;
+    const updatedComments = existingComments ? `${existingComments}\n${copyToText}` : copyToText;
+    usePurchaseDocument.setState({ comments: updatedComments });
 
     if (copyType === DocumentType.PurchaseRequests.toString()) {
       setIsCopying(true);
@@ -408,6 +413,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
         doc = await getGoodsReturnRequestDocument(docNum);
       } else if (copyFromType === DocumentType.PurchaseRequests) {
         doc = await getPurchaseRequestDocument(docNum);
+      } else if (copyFromType === DocumentType.GoodsReturn) {
+        doc = await getGoodsReturnDocument(docNum);
+      } else if (copyFromType === DocumentType.APCreditMemo) {
+        doc = await getAPCreditMemoDocument(docNum);
       }
 
       if (doc && copyFromType) {
@@ -422,9 +431,15 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
           copyFromType === DocumentType.GoodsReceiptPO ? 'Goods Receipt PO' :
           copyFromType === DocumentType.APInvoice ? 'A/P Invoice' :
           copyFromType === DocumentType.GoodsReturnRequest ? 'Goods Return Request' :
-          copyFromType === DocumentType.PurchaseRequests ? 'Purchase Request' : 'Document';
+          copyFromType === DocumentType.PurchaseRequests ? 'Purchase Request' :
+          copyFromType === DocumentType.GoodsReturn ? 'Goods Return' :
+          copyFromType === DocumentType.APCreditMemo ? 'A/P Credit Memo' : 'Document';
         loadFromDocument({ ...doc, DocumentLines: openLines }, copyFromType);
-        setValue("Comments" as any, `Copy From Based on ${sourceLabel} ${docNum}` as any, { shouldDirty: true });
+        const existingComments = ((doc.Comments !== undefined && doc.Comments !== null) ? doc.Comments : (doc.comments || "")).trim();
+        const copyFromText = `Copy From Based on ${sourceLabel} ${docNum}`;
+        const updatedComments = existingComments ? `${existingComments}\n${copyFromText}` : copyFromText;
+        usePurchaseDocument.getState().setComments(updatedComments);
+        setValue("Comments" as any, updatedComments as any, { shouldDirty: true });
         toast.success(`Copied from ${sourceLabel} #${docNum}`);
       }
     } catch (err) {

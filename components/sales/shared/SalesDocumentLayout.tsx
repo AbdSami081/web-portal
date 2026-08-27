@@ -237,7 +237,11 @@ export function SalesDocumentLayout<T extends FieldValues>({
           copyFromType === DocumentType.ARInvoice ? 'A/R Invoice' :
           copyFromType === DocumentType.ReturnRequest ? 'Sales Return Request' : 'Document';
         loadFromDocument({ ...doc, DocumentLines: openLines }, copyFromType);
-        setValue("Comments" as any, `Copy From Based on ${sourceLabel} ${docNum}` as any, { shouldDirty: true });
+        const existingComments = ((doc.Comments !== undefined && doc.Comments !== null) ? doc.Comments : (doc.comments || "")).trim();
+        const copyFromText = `Copy From Based on ${sourceLabel} ${docNum}`;
+        const updatedComments = existingComments ? `${existingComments}\n${copyFromText}` : copyFromText;
+        useSalesDocument.getState().setComments(updatedComments);
+        setValue("Comments" as any, updatedComments as any, { shouldDirty: true });
         toast.success(`Copied from ${sourceLabel} #${docNum}`);
       }
     } catch (err) {
@@ -352,7 +356,10 @@ export function SalesDocumentLayout<T extends FieldValues>({
     setIsLoadingCopyTo(true);
 
     const sourceDocNum = useSalesDocument.getState().DocNum;
-    useSalesDocument.setState({ comments: `Copy To Based on ${config.title} ${sourceDocNum}` });
+    const existingComments = (useSalesDocument.getState().comments || "").trim();
+    const copyToText = `Copy To Based on ${config.title} ${sourceDocNum}`;
+    const updatedComments = existingComments ? `${existingComments}\n${copyToText}` : copyToText;
+    useSalesDocument.setState({ comments: updatedComments });
 
     if (copyType === DocumentType.Order.toString()) {
       setIsCopying(true);

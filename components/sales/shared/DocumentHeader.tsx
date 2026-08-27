@@ -39,7 +39,7 @@ export function DocumentHeader() {
   const [modalOpen, setModalOpen] = useState(false);
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { customer, setCustomer, loadFromDocument, clearLines, reset, setDocDate, setDocDueDate, setTaxDate, setCurrency } = useSalesDocument();
+  const { customer, setCustomer, loadFromDocument, clearLines, reset, setDocDate, setDocDueDate, setTaxDate, setCurrency, setComments } = useSalesDocument();
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const docEntry = watch("DocEntry");
   const config = useSalesDocConfig();
@@ -316,6 +316,7 @@ export function DocumentHeader() {
       setValue("DocEntry", documentData.DocEntry);
       setValue("DocNum", documentData.DocNum);
       setValue("Comments", documentData.Comments);
+      setComments(documentData.Comments || "");
       setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
 
       if (opts?.isDraft) {

@@ -268,11 +268,15 @@ export function InvDocumentLayout<T extends FieldValues>({
         BaseLine: line.LineNum ?? idx,
       }));
 
+      const existingComments = (state.comments || "").trim();
+      const copyToText = `Copy To Based on Inventory Transfer Request ${state.DocNum}`;
+      const updatedComments = existingComments ? `${existingComments}\n${copyToText}` : copyToText;
+
       useInventoryDocument.setState({
         lines: copiedLines,
         fromWarehouse: copiedLines[0]?.FromWhsCode || state.fromWarehouse || "",
         toWarehouse: copiedLines[0]?.WhsCode || state.toWarehouse || "",
-        comments: `Copy To Based on Inventory Transfer Request ${state.DocNum}`,
+        comments: updatedComments,
         journalMemo: "",
         DocEntry: 0,
         docDate: new Date().toISOString().split("T")[0],
@@ -380,11 +384,11 @@ export function InvDocumentLayout<T extends FieldValues>({
         setValue("DocNum" as any, 0 as any);
 
         loadFromDocument({ ...mergedDoc, DocumentLines: allLines }, DocumentType.InvTransferReq, true);
-        // loadFromDocument(..., isCopy=true) blanks store.comments, and a reactive
-        // effect below syncs store.comments -> the RHF Comments field, so the remarks
-        // text must be set on the STORE after loadFromDocument, not via setValue before
-        // it (setValue would just get overwritten by that sync effect).
-        useInventoryDocument.setState({ comments: `Copy From Based on Inventory Transfer Request ${nums.join(", ")}` });
+        const existingComments = ((mergedDoc?.Comments !== undefined && mergedDoc?.Comments !== null) ? mergedDoc.Comments : (mergedDoc?.comments || "")).trim();
+        const copyFromText = `Copy From Based on Inventory Transfer Request ${nums.join(", ")}`;
+        const updatedComments = existingComments ? `${existingComments}\n${copyFromText}` : copyFromText;
+        useInventoryDocument.setState({ comments: updatedComments });
+        setValue("Comments" as any, updatedComments as any, { shouldDirty: true });
         toast.success(`Copied from ${nums.length} ITR(s)`);
       }
     } catch (err: any) {
