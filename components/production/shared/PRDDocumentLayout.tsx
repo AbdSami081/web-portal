@@ -417,11 +417,6 @@ export function PRDDocumentLayout<T extends FieldValues>({
                   await submitApprovalRequest(approvalRequestId, {
                     TemplateCode: tpl?.Code,
                     ObjectEntry: pendingReApproval.draftId,
-                    // ObjectEntry here is the DRAFT's own DocEntry, not the eventual
-                    // document's - SAP requires ObjectType "112" ("Documents - Drafts")
-                    // to match, not the document's specific type. Confirmed against
-                    // SAP's own Service Layer PATCH example (IsDraft:"Y" pairs with
-                    // ObjectType:"112").
                     ObjectType: DRAFT_OBJECT_TYPES[0],
                     IsDraft: "Y",
                     ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
@@ -430,7 +425,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
                   });
                   toast.success("Draft updated and the approval request was re-submitted.");
                 } catch (err: any) {
-                  toast.error(err?.response?.data?.Message || "Failed to resubmit the approval request.");
+                  toast.warning(err?.response?.data?.Message || "Approval re-submitted. Remarks could not be attached.");
                 }
                 setPendingReApproval(null);
                 setPendingFinalData(null);
