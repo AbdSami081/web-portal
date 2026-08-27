@@ -9,6 +9,7 @@ import {
   BusinessPartnerType,
   ShippingType,
   FactoringIndicator,
+  CustomerSeries,
   getBusinessPartnerCategories,
   getBusinessPartnerGroups,
   getCurrencies,
@@ -17,6 +18,7 @@ import {
   getBusinessPartnerTypes,
   getShippingTypes,
   getFactoringIndicators,
+  getCustomerSeries,
   saveBusinessPartner,
   updateBusinessPartner,
 } from "@/api+/sap/BusinessPartner/BPService";
@@ -48,6 +50,7 @@ import HeaderActions from "@/components/Custom/HeaderAction";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 
 const EMPTY_FORM = {
+  Series: "",
   CardCode: "",
   CardName: "",
   CardType: "",
@@ -93,6 +96,7 @@ export default function BPMasterDataPage() {
   const searchRequestIdRef = useRef(0);
 
   const [cardTypes, setCardTypes] = useState<BusinessPartnerCategory[]>([]);
+  const [customerSeries, setCustomerSeries] = useState<CustomerSeries[]>([]);
   const [groups, setGroups] = useState<BusinessPartnerGroup[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [projects, setProjects] = useState<BusinessPartnerProject[]>([]);
@@ -209,6 +213,17 @@ export default function BPMasterDataPage() {
   useEffect(() => {
     (async () => {
       try {
+        setCustomerSeries(await getCustomerSeries());
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to load Customer Series");
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
         setGroups(await getBusinessPartnerGroups());
       } catch (error) {
         console.error(error);
@@ -306,6 +321,17 @@ export default function BPMasterDataPage() {
     setListSearch("");
   };
 
+  // Builds a Card Code from a series' prefix + next-number + digit padding.
+  const generateCardCode = (series: CustomerSeries) => {
+    const prefix = series.Prefix ?? "";
+    const nextNumber = Number(series.NextNumber ?? 0);
+    const digitNumber = Number(series.DigitNumber ?? 0);
+
+    const formattedNumber = String(nextNumber).padStart(digitNumber, "0");
+
+    return `${prefix}${formattedNumber}`;
+  };
+
   const handleSubmit = async () => {
     if (!formData.CardCode.trim()) {
       toast.error("Please enter Card Code");
@@ -338,8 +364,9 @@ export default function BPMasterDataPage() {
       CardType: formData.CardType,
 
       Valid: formData.Status === "active" ? "tYES" : "tNO",
+      Frozen: formData.Status === "active" ? "tNO" : "tYES",
 
-      GroupCode: Number(formData.Group),
+      GroupCode: formData.Group ? Number(formData.Group) : null,
 
       Phone1: formData.Phone1 || "",
       Phone2: formData.Phone2 || "",
@@ -351,7 +378,7 @@ export default function BPMasterDataPage() {
 
       Currency: formData.Currency || "",
 
-      ShippingType: Number(formData.ShippingTypeCode),
+      ShippingType: formData.ShippingTypeCode ? Number(formData.ShippingTypeCode) : null,
 
       Indicator: formData.Indicator ? String(formData.Indicator).split(" - ")[0] : "",
 
@@ -360,8 +387,8 @@ export default function BPMasterDataPage() {
       Industry:
         formData.IndustryCode &&
         industries.some((i) => String(i.IndustryCode) === String(formData.IndustryCode))
-          ? String(formData.IndustryCode)
-          : "-1",
+          ? Number(formData.IndustryCode)
+          : null,
 
       ProjectCode: formData.Project ? String(formData.Project).split(" - ")[0] : "",
 
@@ -375,8 +402,9 @@ export default function BPMasterDataPage() {
       CardName: formData.CardName.trim(),
 
       Valid: formData.Status === "active" ? "tYES" : "tNO",
+      Frozen: formData.Status === "active" ? "tNO" : "tYES",
 
-      GroupCode: Number(formData.Group),
+      GroupCode: formData.Group ? Number(formData.Group) : null,
 
       Phone1: formData.Phone1 || "",
       Phone2: formData.Phone2 || "",
@@ -388,7 +416,7 @@ export default function BPMasterDataPage() {
 
       Currency: formData.Currency || "",
 
-      ShippingType: Number(formData.ShippingTypeCode),
+      ShippingType: formData.ShippingTypeCode ? Number(formData.ShippingTypeCode) : null,
 
       Indicator: formData.Indicator ? String(formData.Indicator).split(" - ")[0] : "",
 
@@ -397,8 +425,8 @@ export default function BPMasterDataPage() {
       Industry:
         formData.IndustryCode &&
         industries.some((i) => String(i.IndustryCode) === String(formData.IndustryCode))
-          ? String(formData.IndustryCode)
-          : "-1",
+          ? Number(formData.IndustryCode)
+          : null,
 
       ProjectCode: formData.Project ? String(formData.Project).split(" - ")[0] : "",
 
@@ -439,7 +467,16 @@ export default function BPMasterDataPage() {
   };
 
   const handleRowDoubleClick = (item: any) => {
+    const foundShipping = shippingTypes.find((s) => String(s.Code) === String(item.ShippingType));
+    const shippingName = item.ShippingTypeName || (foundShipping ? foundShipping.Name : (item.ShippingType != null ? String(item.ShippingType) : ""));
+
+    const foundIndustry = industries.find((i) => String(i.IndustryCode) === String(item.IndustryCode ?? item.Industry));
+    const industryName = item.IndustryName || (foundIndustry ? foundIndustry.IndustryName : (item.Industry != null ? String(item.Industry) : ""));
+    const industryCode = item.IndustryCode != null ? String(item.IndustryCode) : (item.Industry != null ? String(item.Industry) : "");
+
     setFormData({
+      Series: item.Series != null ? String(item.Series) : "",
+
       CardCode: item.CardCode ?? "",
       CardName: item.CardName ?? "",
       CardType: item.CardType ?? "",
@@ -457,13 +494,13 @@ export default function BPMasterDataPage() {
       Currency: item.Currency ?? "",
 
       ForeignName: item.ForeignName ?? "",
-      Remarks: item.Remarks ?? "",
+      Remarks: item.Notes ?? item.Remarks ?? "",
       FreeText: item.FreeText ?? "",
 
-      Industry: item.IndustryName ?? item.Industry ?? "",
-      IndustryCode: item.IndustryCode != null ? String(item.IndustryCode) : "",
+      Industry: industryName,
+      IndustryCode: industryCode,
 
-      ShippingType: item.ShippingTypeName ?? "",
+      ShippingType: shippingName,
       ShippingTypeCode: item.ShippingType != null ? String(item.ShippingType) : "",
 
       Indicator: item.Indicator ?? "",
@@ -472,7 +509,7 @@ export default function BPMasterDataPage() {
 
       Company: item.CompanyPrivate ?? "",
 
-      Status: item.Valid === "tNO" ? "inactive" : "active",
+      Status: item.Valid === "tNO" || item.Frozen === "tYES" ? "inactive" : "active",
     });
 
     const hasValidIndustry =
@@ -518,6 +555,13 @@ export default function BPMasterDataPage() {
 
   const isFormValid =
     formData.CardCode.trim() !== "" && formData.CardName.trim() !== "" && formData.CardType.trim() !== "";
+
+  // Whether the currently selected Series forces the Card Code to be system-generated
+  // (i.e. it is not a "Manual" series), used to lock the Card Code input.
+  const selectedSeries = customerSeries.find(
+    (item) => String(item.Series) === String(formData.Series)
+  );
+  const isCardCodeLocked = isExistingBP || selectedSeries?.IsManual === "tNO";
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
@@ -678,13 +722,48 @@ export default function BPMasterDataPage() {
               <div className="flex items-center gap-2">
                 <label className="w-20 shrink-0 text-sm">Code</label>
 
+                <Select
+                  value={formData.Series}
+                  onValueChange={(value) => {
+                    handleChange("Series", value);
+
+                    const series = customerSeries.find(
+                      (item) => String(item.Series) === String(value)
+                    );
+
+                    if (!series) return;
+
+                    const isManual = series.Name?.toLowerCase() === "manual";
+
+                    if (isManual) {
+                      handleChange("CardCode", "");
+                      return;
+                    }
+
+                    handleChange("CardCode", generateCardCode(series));
+                  }}
+                  disabled={isExistingBP}
+                >
+                  <SelectTrigger className="h-7 w-28">
+                    <SelectValue placeholder="Series" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {customerSeries.map((item) => (
+                      <SelectItem key={String(item.Series)} value={String(item.Series)}>
+                        {item.Name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <div className="relative w-45">
                   <Input
                     value={formData.CardCode}
                     onChange={(e) => handleChange("CardCode", e.target.value)}
                     placeholder="Enter Code"
-                    disabled={isExistingBP}
-                    className={isExistingBP ? "h-7 w-45 pr-7" : "h-7 w-45"}
+                    disabled={isCardCodeLocked}
+                    className={isCardCodeLocked ? "h-7 w-45 pr-7" : "h-7 w-45"}
                   />
 
                   {isExistingBP && (

@@ -231,3 +231,30 @@ export const updateBusinessPartner = async (
     throw error;
   }
 };
+
+export interface CustomerSeries {
+  Series: number;
+  Name: string;
+  Prefix: string | null;
+  NextNumber: number | null;
+  DigitNumber: number | null;
+  IsManual: string;
+}
+
+export const getCustomerSeries = async (): Promise<CustomerSeries[]> => {
+  try {
+    const res = await apiClient.get("api/BusinessPartner/CustomerSeries");
+
+    const data =
+      typeof res.data === "string"
+        ? JSON.parse(res.data)
+        : res.data;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data.value)) return data.value;
+    if (Array.isArray(data.data)) return data.data;
+
+    return [];
+  } catch (error) {
+    throw error;
+  }
+};
