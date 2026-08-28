@@ -333,7 +333,6 @@ export function RelationshipMapModal({
 
                   const dx = endX - startX;
 
-                  // Clean straight arrow if vertically aligned, smooth bezier curve if vertically offset
                   const pathD =
                     Math.abs(startY - endY) < 3
                       ? `M ${startX} ${startY} L ${endX} ${endY}`
@@ -412,11 +411,8 @@ export function RelationshipMapModal({
                       {node.DocTypeName}
                     </div>
 
-                    {/* Body */}
                     <div className="relative flex-1 p-2 flex flex-col justify-between bg-white">
-                      {/* Top Row: Lock Icon (Left) & DocNum / Date (Right) */}
                       <div className="flex items-start justify-between">
-                        {/* Golden Lock Icon */}
                         <div className="mt-0.5">
                           {isClosed ? (
                             <div
@@ -472,7 +468,6 @@ export function RelationshipMapModal({
           )}
         </div>
 
-        {/* SAP-Style Bottom Bar */}
         <div className="px-4 py-2 border-t border-slate-200 bg-[#F1F5F9] flex items-center justify-between text-xs text-slate-600">
           <div className="flex items-center gap-3">
             <span className="font-semibold text-slate-700">View:</span>
