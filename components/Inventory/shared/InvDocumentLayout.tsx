@@ -37,6 +37,8 @@ import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
 import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
+import { RelationshipMapView } from "@/components/shared/RelationshipMapView";
+import { useRelationshipMapStore } from "@/stores/useRelationshipMapStore";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -103,6 +105,7 @@ export function InvDocumentLayout<T extends FieldValues>({
     if (docEntryParam) return "approved";
     return null;
   });
+  const relMapStore = useRelationshipMapStore();
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
   useEffect(() => {
@@ -657,10 +660,20 @@ export function InvDocumentLayout<T extends FieldValues>({
           </div>
 
           <div className="flex-1 flex flex-col gap-4 p-6 overflow-y-auto overflow-x-hidden w-full min-w-0">
-            {children}
+            {relMapStore.isOpen ? (
+              <RelationshipMapView
+                docType={relMapStore.docType || (config.type as number)}
+                docEntry={relMapStore.docEntry || Number(DocEntry)}
+                docNum={relMapStore.docNum || (methods.watch as any)("DocNum")}
+                onClose={relMapStore.closeMap}
+              />
+            ) : (
+              children
+            )}
           </div>
 
-          <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
+          {!relMapStore.isOpen && (
+            <div className="border-t px-6 py-4 flex justify-end gap-4 bg-white shadow-md">
 
             {canCopyFrom && (!DocEntry || DocEntry === 0) && (
               <Select
@@ -720,6 +733,7 @@ export function InvDocumentLayout<T extends FieldValues>({
               {getSubmitButtonText()}
             </Button>
           </div>
+          )}
 
           <GenericModal
             title="Select Inventory Transfer Request"

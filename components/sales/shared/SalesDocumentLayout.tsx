@@ -35,6 +35,8 @@ import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/h
 import { linesHaveInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
 import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
+import { RelationshipMapView } from "@/components/shared/RelationshipMapView";
+import { useRelationshipMapStore } from "@/stores/useRelationshipMapStore";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -95,7 +97,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
       (!statusStr && !!docNav.approvalRequestCode && !!docNav.draftEntry)) &&
     !!docNav.draftEntry;
 
-
   const [badgeState, setBadgeState] = useState<"draft" | "approved" | null>(() => {
     const draftEntryParam = docNav.draftEntry;
     const docEntryParam = docNav.docEntry;
@@ -104,6 +105,8 @@ export function SalesDocumentLayout<T extends FieldValues>({
     if (docEntryParam) return "approved";
     return null;
   });
+
+  const relMapStore = useRelationshipMapStore();
 
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
@@ -326,8 +329,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
     if (docType === DocumentType.ReturnRequest)
       return [DocumentType.SalesReturn];
 
-    // A returned item can be re-delivered to the customer (exchange) or credited back
-    // to their account - both are valid next steps off a Sales Return.
     if (docType === DocumentType.SalesReturn)
       return [DocumentType.Delivery, DocumentType.CreditMemo];
 
@@ -576,10 +577,19 @@ export function SalesDocumentLayout<T extends FieldValues>({
           </div>
 
           <div className="flex flex-col min-h-0 overflow-hidden px-6 py-4 flex-1">
-             {children}
+            {relMapStore.isOpen ? (
+              <RelationshipMapView
+                docType={relMapStore.docType || docType}
+                docEntry={relMapStore.docEntry || DocEntry}
+                docNum={relMapStore.docNum || (watch as any)("DocNum")}
+                onClose={relMapStore.closeMap}
+              />
+            ) : (
+              children
+            )}
           </div>
 
-          {!shouldHideSubmit && (
+          {!shouldHideSubmit && !relMapStore.isOpen && (
             <div className="border-t px-6 py-4 flex justify-end bg-white shadow-md gap-4 shrink-0">
               <div className="flex items-center gap-3">
                 <Select

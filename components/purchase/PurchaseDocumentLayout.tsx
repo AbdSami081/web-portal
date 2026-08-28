@@ -61,6 +61,8 @@ import {
   getDocumentConfig,
 } from "@/lib/config/purchase/documentConfig";
 
+import { RelationshipMapView } from "@/components/shared/RelationshipMapView";
+import { useRelationshipMapStore } from "@/stores/useRelationshipMapStore";
 import { DocumentType, DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 
 import {
@@ -157,7 +159,8 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
- const [pendingReApproval, setPendingReApproval] = useState<{ draftId: number; docType: string | number } | null>(null);
+  const [pendingReApproval, setPendingReApproval] = useState<{ draftId: number; docType: string | number } | null>(null);
+  const relMapStore = useRelationshipMapStore();
 
   const methods = useForm<T>({
     resolver: zodResolver(schema as any),
@@ -680,10 +683,19 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
           </div>
 
           <div className="flex flex-col min-h-0 overflow-hidden px-6 py-4 flex-1">
-            {children}
+            {relMapStore.isOpen ? (
+              <RelationshipMapView
+                docType={relMapStore.docType || (config.type as number)}
+                docEntry={relMapStore.docEntry || Number(DocEntry)}
+                docNum={relMapStore.docNum || (watch as any)("DocNum")}
+                onClose={relMapStore.closeMap}
+              />
+            ) : (
+              children
+            )}
           </div>
 
-          {!shouldHideSubmit && (
+          {!shouldHideSubmit && !relMapStore.isOpen && (
             <div className="border-t px-6 py-4 flex justify-end bg-white shadow-md gap-4 shrink-0">
               <div className="flex items-center gap-3">
                 <Select

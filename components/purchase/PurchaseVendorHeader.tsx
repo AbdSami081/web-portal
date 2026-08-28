@@ -104,9 +104,6 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const { user } = useAuth();
 
   const config = usePurchaseDocConfig();
-  // APDownPaymentRequest and PurchaseRequests share the same SAP object code, so a
-  // plain numeric check can't tell them apart — disambiguate by route path instead,
-  // matching the same workaround used in getResourceName below.
   const isPurchaseRequest =
     (config.type as number) === DocumentType.PurchaseRequests &&
     !pathname.toLowerCase().includes("apdownpaymentrequest");
@@ -127,10 +124,6 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     }
   }, [isLoadedDocument, watchedBranch, sessionDefaultBranch, setValue]);
 
-  // Purchase Request and Purchase Quotation both get a Required Date field, independently
-  // editable from Valid Until/Due Date — kept as its own check rather than folding into
-  // isPurchaseRequest, since that flag also drives the Requester-vs-Vendor UI switch
-  // further down, which Quotation should NOT get.
   const needsRequiredDate = isPurchaseRequest || config.type === DocumentType.PurchaseQuotation;
   const [searchValue, setSearchValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);

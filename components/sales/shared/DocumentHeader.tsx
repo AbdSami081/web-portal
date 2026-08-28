@@ -52,7 +52,6 @@ export function DocumentHeader() {
   const [listSearch, setListSearch] = useState("");
   const PAGE_SIZE = 20;
 
-  // Use a real boolean so falsy short-circuits never render stray "0" in the DOM.
   const isLoadedDocument = !!docEntry && Number(docEntry) > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
   const [closeModalOpen, setCloseModalOpen] = useState(false);
@@ -94,7 +93,6 @@ export function DocumentHeader() {
     }
   };
 
-  // Status can only be changed when an OPEN document is loaded (edit mode).
   const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
@@ -106,12 +104,10 @@ export function DocumentHeader() {
     const docEntryParam = docNav.docEntry ?? searchParams.get("docEntry") ?? "";
     const draftEntryParam = docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
 
-    // Only auto-fetch if we have a regular docEntry, or a proper draftEntry with draft=1 flag
     if (!docEntryParam && !(draftParam && draftEntryParam)) return;
 
     setSearchValue(docEntryParam);
     fetchDocument(docEntryParam, { isDraft: draftParam }, Number(draftEntryParam));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

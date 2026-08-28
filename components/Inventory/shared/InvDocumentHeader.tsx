@@ -99,10 +99,6 @@ export function InvDocumentHeader() {
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
   const watchedBranch = watch("BPL_IDAssignedToInvoice");
 
-  // Branch auto-suggests from the destination (To) warehouse when one is selected
-  // (Transfer/Transfer Request); Good Issue has no header warehouse, so it falls back
-  // to the session default instead. Either way it's a normal dropdown the user can
-  // still override, same as the Sales/Purchase headers.
   useEffect(() => {
     const branchWhs = toWarehouse || fromWarehouse;
     const derivedBranch = globalWarehouses.find((w: any) => w.WhsCode === branchWhs)?.BPLid;
@@ -159,9 +155,6 @@ export function InvDocumentHeader() {
   useEffect(() => {
     if (initialLoadRef.current) return;
     initialLoadRef.current = true;
-
-    // Guard: if we are in a Copy-To flow, InvDocumentLayout already populated the
-    // form — do not auto-fetch any old document.
     const currentState = useInventoryDocument.getState();
     if (currentState.isCopyingTo) return;
 
