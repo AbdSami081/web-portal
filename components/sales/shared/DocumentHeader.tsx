@@ -21,6 +21,7 @@ import { useSearchParams } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -302,6 +303,24 @@ export function DocumentHeader() {
       fetchUdfDefinitions(config.type, true);
       loadFromDocument(documentData, config.type);
 
+      // Pull batch/serial allocations from SAP (Service Layer GET omits them) so
+      // re-opening a saved document shows the previously-selected batches/serials.
+      if (!opts?.isDraft && Number(documentData.DocEntry) > 0) {
+        void hydrateLineAllocations(
+          config.type,
+          Number(documentData.DocEntry),
+          useSalesDocument.getState().lines,
+          (patch) => {
+            useSalesDocument.setState((s) => ({
+              lines: s.lines.map((line, idx) => {
+                const key = (line as any).LineNum ?? idx;
+                return patch.has(key) ? { ...line, ...patch.get(key) } : line;
+              }),
+            }));
+          }
+        );
+      }
+
       setValue("DocDate", documentData.DocDate?.split("T")[0]);
       setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
       setValue("CardCode", documentData.CardCode);
@@ -495,7 +514,7 @@ export function DocumentHeader() {
                 }}
                 disabled={!canChangeStatus || !getFieldSettings(config.type, "headerFieds", "DocStatus").enable}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48" data-fms-field="DocStatus">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
 

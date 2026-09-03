@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Kbd } from "@/components/ui/kbd";
-import { Search, Sheet, Keyboard } from "lucide-react";
+import { Search, Sheet, Keyboard, SearchCode, Code2 } from "lucide-react";
 
 export const KeyboardShortcutsContent: React.FC = () => {
   const shortcuts = [
@@ -12,6 +12,20 @@ export const KeyboardShortcutsContent: React.FC = () => {
       description: "Open the created documents list for quick review and search.",
       icon: Search,
       color: "from-blue-500/10 to-indigo-500/10 text-blue-600 border-blue-100",
+    },
+    {
+      keys: ["Shift", "F2"],
+      action: "Execute FMS",
+      description: "Execute Formatted Search query on the currently active field.",
+      icon: Code2,
+      color: "from-blue-500/10 to-indigo-500/10 text-blue-600 border-blue-100",
+    },
+    {
+      keys: ["Alt", "Shift", "F2"],
+      action: "FMS Setup (Admin)",
+      description: "Open User-Defined Values / Formatted Search configuration modal.",
+      icon: SearchCode,
+      color: "from-purple-500/10 to-indigo-500/10 text-purple-600 border-purple-100",
     },
     {
       keys: ["Ctrl", "Shift", "U"],

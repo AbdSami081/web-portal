@@ -4,9 +4,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { useFormContext } from "react-hook-form";
 import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
+import { useFmsContext } from "@/hooks/useFMS";
+import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
 
 export function PurchaseFooter() {
   const { watch, register, setValue } = useFormContext();
+  const { triggerFMS } = useFmsContext();
   const {
     DocTotal,
     TaxTotal,
@@ -38,7 +41,10 @@ export function PurchaseFooter() {
 
       <div className="grid grid-cols-2 gap-20">
         <div>
-          <AppLabel htmlFor="Comments">Remarks</AppLabel>
+          <div className="flex items-center gap-1">
+            <AppLabel htmlFor="Comments">Remarks</AppLabel>
+            <FmsFieldButton field="Comments" />
+          </div>
           <Textarea
             id="Comments"
             className="h-24 mt-4 max-w-95"
@@ -47,6 +53,7 @@ export function PurchaseFooter() {
               setValue("Comments", e.target.value);
               setComments(e.target.value);
             }}
+            onKeyDown={fmsKeyDown("Comments", triggerFMS)}
             placeholder="Enter remarks or comments..."
             disabled={docStatus === "bost_Close"}
           />

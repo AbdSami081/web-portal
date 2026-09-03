@@ -24,6 +24,7 @@ interface Props {
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
+import { LineUDFCells } from "@/components/shared/LineUDFCells";
 
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
@@ -252,6 +253,22 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
           </Select>
         </td>
       )}
+
+      <LineUDFCells
+        docType={config.type}
+        line={draftLine}
+        disabled={initialStatus === "boposClosed"}
+        fmsContext={Object.fromEntries(
+          Object.entries(draftLine)
+            .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
+            .map(([k, v]) => [k, String(v)])
+        )}
+        onPatch={(patch) => {
+          const updated = { ...draftLine, ...patch };
+          setDraftLine(updated as any);
+          updateLine(index, updated);
+        }}
+      />
 
       <GenericModal
         title="Select Warehouse"

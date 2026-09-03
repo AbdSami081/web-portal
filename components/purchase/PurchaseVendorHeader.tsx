@@ -39,6 +39,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/authContext";
 import { getAdminSettings } from "@/api+/sap/administration/administrationService";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -278,6 +279,25 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
       if (documentData) {
         loadFromDocument(documentData, config.type);
+
+        // SAP Service Layer GET omits line SerialNumbers/BatchNumbers — pull the
+        // allocations from SAP so re-opening a saved document shows them.
+        if (Number(documentData.DocEntry) > 0) {
+          void hydrateLineAllocations(
+            config.type,
+            Number(documentData.DocEntry),
+            usePurchaseDocument.getState().lines,
+            (patch) => {
+              usePurchaseDocument.setState((s) => ({
+                lines: s.lines.map((line, idx) => {
+                  const key = (line as any).LineNum ?? idx;
+                  return patch.has(key) ? { ...line, ...patch.get(key) } : line;
+                }),
+              }));
+            }
+          );
+        }
+
         usePurchaseDocument.getState().setLoadedDraftData(documentData);
         setValue("DocDate", (documentData.DocDate || "").split("T")[0]);
         setValue("DocDueDate", (documentData.DocDueDate || "").split("T")[0]);

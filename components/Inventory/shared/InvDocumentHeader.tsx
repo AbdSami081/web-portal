@@ -26,6 +26,7 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -362,6 +363,21 @@ export function InvDocumentHeader() {
     if (isCopy) {
       setValue("DocEntry", 0);
       setValue("DocNum", 0);
+    } else if (Number(documentData.DocEntry) > 0) {
+      // SL GET omits line SerialNumbers/BatchNumbers — pull allocations from SAP.
+      void hydrateLineAllocations(
+        config.type,
+        Number(documentData.DocEntry),
+        useInventoryDocument.getState().lines,
+        (patch) => {
+          useInventoryDocument.setState((s) => ({
+            lines: s.lines.map((line, idx) => {
+              const key = (line as any).LineNum ?? idx;
+              return patch.has(key) ? { ...line, ...patch.get(key) } : line;
+            }),
+          }));
+        }
+      );
     }
     toast.success(`Document loaded successfully.`);
   }

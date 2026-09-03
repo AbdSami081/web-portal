@@ -8,6 +8,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { resolveSerialBatchFlags } from "@/lib/sap/helpers/serialBatchHelper";
+import { pickLineUdfs } from "@/lib/sap/helpers/lineUdfHelper";
 
 interface SalesDocumentStore {
   docType: DocumentType;
@@ -363,6 +364,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         const calculatedTax = (lineSubtotal - discountAmount) * (taxRate / 100);
 
         return {
+          ...pickLineUdfs(line),
           LineNum: line.LineNum !== undefined ? line.LineNum : index,
           ItemCode: line.ItemCode,
           ItemName: line.ItemDescription || line.ItemName || "",

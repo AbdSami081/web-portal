@@ -57,9 +57,23 @@ export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines, i
         }
       }
       setSelectedItemIndex(initialIndex);
-      
+
+      // Pre-fill from allocations already on the line (re-opened / hydrated document).
+      const initialSelected: Record<string, { InternalSerialNumber: string }[]> = {};
+      managedLines.forEach((l) => {
+        const existing = (l.SerialNumbers as any[]) || [];
+        if (existing.length > 0) {
+          initialSelected[l.ItemCode] = existing.map((s: any) => ({
+            InternalSerialNumber: String(
+              s?.InternalSerialNumber ?? s?.SystemSerialNumber ?? s?.DistNumber ?? s ?? ""
+            ),
+          }));
+        }
+      });
+      setSelectedSerialsByItem(initialSelected);
+
       const serialItems = managedLines.map(l => l.ItemCode);
-      
+
       fetchData(serialItems);
     }
   }, [open, lines, initialItemCode]);

@@ -18,6 +18,7 @@ import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { LineUDFCells, LineCellFms } from "@/components/shared/LineUDFCells";
 
 
 interface Props {
@@ -56,6 +57,12 @@ export function DocumentLineRow({ index, line }: Props) {
   const { updateLine, removeLine, lines } = useSalesDocument();
   const { freightsWithCharges, freightTypes, warehouses } = useMasterDataStore();
   const { allBranches } = useBranchStore();
+
+  // Apply an FMS result (or any patch) to this line.
+  const patchLine = (patch: { [key: string]: any }) => {
+    setDraftLine((prev) => ({ ...prev, ...patch }));
+    updateLine(line.ItemCode, patch as any);
+  };
 
   const [draftLine, setDraftLine] = useState(line);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
@@ -221,23 +228,28 @@ export function DocumentLineRow({ index, line }: Props) {
 
       {isFieldVisible("Quantity") && (
         <td className="py-2 px-2">
-          <Input
-            className="h-6 w-full text-right"
-            type="number"
-            step="any"
-            value={draftLine.Quantity}
-            onChange={(e) => {
-              const val = Number(e.target.value);
-              setDraftLine({ ...draftLine, Quantity: val });
-            }}
-            disabled={!isCellEditable("Quantity")}
-          />
+          <div className="flex items-center gap-1">
+            <Input
+              name={`DocumentLines.${index}.Quantity`}
+              className="h-6 w-full text-right"
+              type="number"
+              step="any"
+              value={draftLine.Quantity}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setDraftLine({ ...draftLine, Quantity: val });
+              }}
+              disabled={!isCellEditable("Quantity")}
+            />
+            <LineCellFms field="Quantity" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("Quantity")} />
+          </div>
         </td>
       )}
 
       {isFieldVisible("OnHand") && (
         <td className="py-2 px-2">
           <Input
+            name={`DocumentLines.${index}.OnHand`}
             className="h-6 w-full text-right bg-neutral-100"
             type="number"
             step="any"
@@ -250,61 +262,72 @@ export function DocumentLineRow({ index, line }: Props) {
 
       {isFieldVisible("Price") && (
         <td className="py-2 px-2">
-          <Input
-            className="h-6 w-full text-right"
-            type="number"
-            step="any"
-            disabled={!isCellEditable("Price")}
-            min={0}
-            value={draftLine.Price}
-            onChange={(e) => {
-              const val = Number(e.target.value);
-              setDraftLine({ ...draftLine, Price: val });
-            }}
-          />
+          <div className="flex items-center gap-1">
+            <Input
+              name={`DocumentLines.${index}.Price`}
+              className="h-6 w-full text-right"
+              type="number"
+              step="any"
+              disabled={!isCellEditable("Price")}
+              min={0}
+              value={draftLine.Price}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setDraftLine({ ...draftLine, Price: val });
+              }}
+            />
+            <LineCellFms field="Price" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("Price")} />
+          </div>
         </td>
       )}
 
       {isFieldVisible("DiscountPercent") && (
         <td className="py-2 px-2">
-          <Input
-            className="h-6 w-full text-right"
-            type="number"
-            step="any"
-            min={0}
-            max={100}
-            disabled={!isCellEditable("DiscountPercent")}
-            value={draftLine.DiscountPercent || 0}
-            onChange={(e) => {
-              const val = Number(e.target.value);
-              setDraftLine({ ...draftLine, DiscountPercent: val > 100 ? 100 : val });
-            }}
-          />
+          <div className="flex items-center gap-1">
+            <Input
+              name={`DocumentLines.${index}.DiscountPercent`}
+              className="h-6 w-full text-right"
+              type="number"
+              step="any"
+              min={0}
+              max={100}
+              disabled={!isCellEditable("DiscountPercent")}
+              value={draftLine.DiscountPercent || 0}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setDraftLine({ ...draftLine, DiscountPercent: val > 100 ? 100 : val });
+              }}
+            />
+            <LineCellFms field="DiscountPercent" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("DiscountPercent")} />
+          </div>
         </td>
       )}
 
       {isFieldVisible("TaxCode") && (
         <td className="py-2 px-2">
-          <Select
-            value={draftLine.TaxCode || ""}
-            disabled={!isCellEditable("TaxCode")}
-            onValueChange={(val) => setDraftLine({ ...draftLine, TaxCode: val })}
-          >
-            <SelectTrigger className="h-6 w-full border rounded px-2 text-xs">
-              <SelectValue placeholder="Select Tax" />
-            </SelectTrigger>
-            <SelectContent>
-              {freightsWithCharges?.map((grp: any) => {
-                const code = grp.Code || grp.code;
-                const name = grp.Name || grp.name;
-                return (
-                  <SelectItem key={code} value={code} className="text-xs">
-                    {code} - {name || code}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-1">
+            <Select
+              value={draftLine.TaxCode || ""}
+              disabled={!isCellEditable("TaxCode")}
+              onValueChange={(val) => setDraftLine({ ...draftLine, TaxCode: val })}
+            >
+              <SelectTrigger className="h-6 w-full border rounded px-2 text-xs">
+                <SelectValue placeholder="Select Tax" />
+              </SelectTrigger>
+              <SelectContent>
+                {freightsWithCharges?.map((grp: any) => {
+                  const code = grp.Code || grp.code;
+                  const name = grp.Name || grp.name;
+                  return (
+                    <SelectItem key={code} value={code} className="text-xs">
+                      {code} - {name || code}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <LineCellFms field="TaxCode" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("TaxCode")} />
+          </div>
         </td>
       )}
 
@@ -343,6 +366,7 @@ export function DocumentLineRow({ index, line }: Props) {
             >
               <Search className="h-4 w-4" />
             </Button>
+            <LineCellFms field="WarehouseCode" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("WarehouseCode")} />
           </div>
         </td>
       )}
@@ -360,12 +384,15 @@ export function DocumentLineRow({ index, line }: Props) {
 
       {isFieldVisible("UoMCode") && (
         <td className="py-2 px-2">
-          <Input
-            className="h-6 w-full text-center bg-neutral-100"
-            value={draftLine.UoMCode || ""}
-            disabled
-            readOnly
-          />
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full text-center bg-neutral-100"
+              value={draftLine.UoMCode || ""}
+              disabled
+              readOnly
+            />
+            <LineCellFms field="UoMCode" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("UoMCode")} />
+          </div>
         </td>
       )}
 
@@ -536,6 +563,22 @@ export function DocumentLineRow({ index, line }: Props) {
           />
         </td>
       )}
+
+      <LineUDFCells
+        docType={config.type}
+        line={draftLine}
+        disabled={isLineDisabled}
+        fmsContext={Object.fromEntries(
+          Object.entries(draftLine)
+            .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
+            .map(([k, v]) => [k, String(v)])
+        )}
+        onPatch={(patch) => {
+          const updated = { ...draftLine, ...patch };
+          setDraftLine(updated);
+          updateLine(line.ItemCode, updated);
+        }}
+      />
 
       <WarehouseSelectorDialog
         open={whDialogOpen}

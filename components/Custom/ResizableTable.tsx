@@ -126,6 +126,7 @@ export function ResizableTable<T>({
             {columns.map((col) => (
               <TableHead
                 key={col.key}
+                data-fms-field={col.key}
                 className={`relative whitespace-nowrap border-r border-neutral-700 px-4 py-2 text-gray-300 ${
                   col.className || ""
                 }`}

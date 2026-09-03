@@ -15,6 +15,7 @@ import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { useInvDocConfig } from "./InvDocumentLayout";
+import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { DocumentType } from "@/types/master/DocumentType";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
@@ -98,6 +99,9 @@ export function InvDocumentItems() {
         { key: "UoMCode",   title: "UoM Code",     width: 140 },
         { key: "UoMName",   title: "UoM Name",     width: 140 },
       ];
+
+  const lineUdfs = useLineUDFs(config.type);
+  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs)];
 
   const handleOnSelectItems = (items: Item[]) => {
     const firstWhs = warehouses.length > 0 ? warehouses[0].WhsCode : "";
@@ -205,7 +209,7 @@ export function InvDocumentItems() {
             <div className="relative border rounded overflow-hidden max-w-full min-w-0">
               <div className="overflow-x-auto pb-2 max-w-full min-w-0">
                 <ResizableTable
-                  columns={columns}
+                  columns={columnsWithUdf}
                   data={lines}
                   emptyMessage="No items added yet."
                   onRowContextMenu={handleRowContextMenu}

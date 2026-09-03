@@ -1,5 +1,5 @@
 "use client"
-import React, { createContext, useContext, useEffect, useMemo, useRef } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FieldValues, FormProvider, useForm, DefaultValues, SubmitErrorHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,6 +30,10 @@ import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
 import { patchDraftDocument } from "@/api+/sap/draft/draftService";
+import { useFMS, FmsProvider } from "@/hooks/useFMS";
+import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
+import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
+import FMSSelectionModal from "@/modals/FMSSelectionModal";
 
 const PRDDocContext = createContext<DocumentConfig | null>(null);
 
@@ -126,6 +130,26 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
     previousDocType.current = docType;
   }, [docType, setDocType, lineReset, reset, defaultValues, skipAutoReset]);
+
+  const [fmsSelectionOpen, setFmsSelectionOpen] = useState(false);
+  const [fmsSelectionData, setFmsSelectionData] = useState<{
+    rows: Record<string, unknown>[];
+    columns: string[];
+    targetField: string;
+    onSelect: (val: string) => void;
+  }>({ rows: [], columns: [], targetField: "", onSelect: () => {} });
+
+  const fms = useFMS({
+    docType,
+    control: methods.control,
+    setValue: methods.setValue,
+    getValues: methods.getValues,
+    getLines: () => useIFPRDDocument.getState().lines as any,
+    onMultipleResults: (rows, columns, targetField, onSelect) => {
+      setFmsSelectionData({ rows, columns, targetField, onSelect });
+      setFmsSelectionOpen(true);
+    },
+  });
 
   useEffect(() => {
     const currentValues = methods.getValues();
@@ -238,7 +262,10 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
   return (
     <PRDDocContext.Provider value={config}>
+     <FmsProvider value={fms}>
       <FormProvider {...methods}>
+        <FmsKeyboardBridge />
+        <FieldNameInspector />
 
         <form
           onSubmit={async (e) => {
@@ -451,9 +478,19 @@ export function PRDDocumentLayout<T extends FieldValues>({
               setBadgeState(null);
             }}
           />
+
+          <FMSSelectionModal
+            open={fmsSelectionOpen}
+            onClose={() => setFmsSelectionOpen(false)}
+            rows={fmsSelectionData.rows}
+            columns={fmsSelectionData.columns}
+            targetField={fmsSelectionData.targetField}
+            onSelect={fmsSelectionData.onSelect}
+          />
         </form>
 
       </FormProvider>
+     </FmsProvider>
     </PRDDocContext.Provider>
   );
 }

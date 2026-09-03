@@ -11,10 +11,13 @@ import { AppLabel } from "@/components/Custom/AppLabel";
 import { GenericModal } from "@/modals/GenericModal";
 import { getReleasedProductionOrders, getDisassembleProductionOrders } from "@/api+/sap/production/productionService";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useFmsContext } from "@/hooks/useFMS";
+import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
 
 
 export default function PRDDocumentFooter() {
   const { watch, register, setValue } = useFormContext();
+  const { triggerFMS } = useFmsContext();
   const config = usePRDDocConfig();
   const [showItemSelector, setShowItemSelector] = useState(false);
 
@@ -170,10 +173,14 @@ export default function PRDDocumentFooter() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-4">
           <div className="flex flex-col gap-2">
-            <AppLabel htmlFor="comments">Remarks</AppLabel>
+            <div className="flex items-center gap-1">
+              <AppLabel htmlFor="comments">Remarks</AppLabel>
+              <FmsFieldButton field="Comments" />
+            </div>
             <Textarea
               id="comments"
               {...register("Comments")}
+              onKeyDown={fmsKeyDown("Comments", triggerFMS)}
               rows={4}
               placeholder="Enter additional information or notes here..."
               className="resize-none border-zinc-200 focus:border-zinc-400 focus:ring-zinc-100 transition-all text-sm leading-relaxed"

@@ -8,6 +8,8 @@ import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { useFormContext } from "react-hook-form";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useFmsContext } from "@/hooks/useFMS";
+import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
 
 export default function DocumentFooter() {
   const { watch, register, setValue } = useFormContext();
@@ -43,6 +45,7 @@ export default function DocumentFooter() {
 
 
   const commentsField = register("Comments");
+  const { triggerFMS } = useFmsContext();
 
   return (
     <>
@@ -51,7 +54,10 @@ export default function DocumentFooter() {
 
       <div className="grid grid-cols-2 gap-20">
         <div>
-          <AppLabel htmlFor="Comments">Remarks</AppLabel>
+          <div className="flex items-center gap-1">
+            <AppLabel htmlFor="Comments">Remarks</AppLabel>
+            <FmsFieldButton field="Comments" />
+          </div>
           <Textarea
             id="Comments"
             className="h-24 mt-4 max-w-95"
@@ -60,6 +66,7 @@ export default function DocumentFooter() {
               setValue("Comments", e.target.value, { shouldDirty: true });
               setComments(e.target.value);
             }}
+            onKeyDown={fmsKeyDown("Comments", triggerFMS)}
             placeholder="Enter remarks or comments..."
             disabled={docStatus === "bost_Close"}
           />
@@ -71,6 +78,7 @@ export default function DocumentFooter() {
               <AppLabel>Total Before Discount</AppLabel>
               <div className="relative">
                  <Input
+                  data-fms-field="TotalBeforeDiscount"
                   className="h-6 text-right bg-slate-200 pr-10"
                   value={formatCurrency(TotalBeforeDiscount).replace(/[^\d.-]/g, '')}
                   disabled={true}
@@ -87,6 +95,7 @@ export default function DocumentFooter() {
               <div className="flex gap-2 items-center">
                 <div className="relative flex-[1.5]">
                   <Input
+                    data-fms-field="DiscountPercent"
                     type="number"
                     step="any"
                     className="h-6 text-right pr-6"
@@ -98,6 +107,7 @@ export default function DocumentFooter() {
                 </div>
                 <div className="relative flex-[2.5]">
                   <Input
+                    data-fms-field="DiscountSum"
                     type="number"
                     step="any"
                     className="h-6 text-right pr-10"
@@ -119,6 +129,7 @@ export default function DocumentFooter() {
               </div>
               <div className="relative">
                 <Input
+                  data-fms-field="TotalFreight"
                   className="h-6 text-right bg-slate-200 pr-10"
                   value={TotalFreight.toFixed(2)}
                   disabled={true}
@@ -138,6 +149,7 @@ export default function DocumentFooter() {
               </div>
               <div className="relative">
                 <Input
+                  data-fms-field="Rounding"
                   type="number"
                   step="any"
                   className="h-6 text-right pr-10"
@@ -145,7 +157,7 @@ export default function DocumentFooter() {
                   onChange={(e) => setRounding(Number(e.target.value))}
                   disabled={
                     isFooterDisabled || !isFieldEnabled("RoundingValue")
-                  } 
+                  }
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
               </div>
@@ -158,6 +170,7 @@ export default function DocumentFooter() {
               <AppLabel>Tax</AppLabel>
               <div className="relative">
                 <Input
+                  data-fms-field="TaxTotal"
                   className="h-6 text-right bg-slate-200 pr-10"
                   value={TaxTotal.toFixed(2)}
                   disabled={true}
@@ -174,6 +187,7 @@ export default function DocumentFooter() {
               <AppLabel className="font-bold text-sm">Total</AppLabel>
               <div className="relative">
                 <Input
+                  data-fms-field="DocTotal"
                   className="h-7 text-right bg-white font-bold pr-10 border-slate-400"
                   value={DocTotal.toFixed(2)}
                   disabled={isFooterDisabled || !isFieldEnabled("DocTotal")}

@@ -6,6 +6,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { fetchItemsByCodes } from "@/lib/sap/helpers/itemCacheHelper";
+import { pickLineUdfs } from "@/lib/sap/helpers/lineUdfHelper";
 
 interface IFPRDDocumentStore {
   docType: DocumentType;
@@ -142,6 +143,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         const linesData = doc.ProductionOrderLines || doc.DocumentLines || [];
         mappedLines = linesData.map((line: any) => {
           return {
+            ...pickLineUdfs(line),
             ItemNo: line.ItemNo || line.ItemCode,
             ItemName: line.ItemName || line.ItemDescription,
             PlannedQuantity: line.PlannedQuantity || line.Quantity,

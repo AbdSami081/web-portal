@@ -39,6 +39,10 @@ import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValid
 import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
 import { RelationshipMapView } from "@/components/shared/RelationshipMapView";
 import { useRelationshipMapStore } from "@/stores/useRelationshipMapStore";
+import { useFMS, FmsProvider } from "@/hooks/useFMS";
+import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
+import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
+import FMSSelectionModal from "@/modals/FMSSelectionModal";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
 
@@ -147,9 +151,27 @@ export function InvDocumentLayout<T extends FieldValues>({
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
-  // Set when a REJECTED draft is re-submitted: the draft is patched first, then a NEW
-  // approval request is created (historical approval stays untouched).
   const [pendingReApproval, setPendingReApproval] = useState<{ draftId: number; docType: string | number } | null>(null);
+
+  const [fmsSelectionOpen, setFmsSelectionOpen] = useState(false);
+  const [fmsSelectionData, setFmsSelectionData] = useState<{
+    rows: Record<string, unknown>[];
+    columns: string[];
+    targetField: string;
+    onSelect: (val: string) => void;
+  }>({ rows: [], columns: [], targetField: "", onSelect: () => {} });
+
+  const fms = useFMS({
+    docType,
+    control: methods.control,
+    setValue: methods.setValue,
+    getValues: methods.getValues,
+    getLines: () => useInventoryDocument.getState().lines as any,
+    onMultipleResults: (rows, columns, targetField, onSelect) => {
+      setFmsSelectionData({ rows, columns, targetField, onSelect });
+      setFmsSelectionOpen(true);
+    },
+  });
 
   const previousDocTypeRef = React.useRef<DocumentType | null>(null);
   const lastDefaultValuesKeyRef = React.useRef<string | null>(null);
@@ -627,7 +649,10 @@ export function InvDocumentLayout<T extends FieldValues>({
 
   return (
     <InvDocContext.Provider value={config}>
+     <FmsProvider value={fms}>
       <FormProvider {...methods}>
+        <FmsKeyboardBridge />
+        <FieldNameInspector />
         <form onSubmit={handleSubmit(onSubmitValid, onSubmitInvalid)} className="flex flex-col min-h-screen bg-background overflow-x-hidden">
 
           <HeaderActionPortal>
@@ -799,8 +824,18 @@ export function InvDocumentLayout<T extends FieldValues>({
               resetFormAndNav();
             }}
           />
+
+          <FMSSelectionModal
+            open={fmsSelectionOpen}
+            onClose={() => setFmsSelectionOpen(false)}
+            rows={fmsSelectionData.rows}
+            columns={fmsSelectionData.columns}
+            targetField={fmsSelectionData.targetField}
+            onSelect={fmsSelectionData.onSelect}
+          />
         </form>
       </FormProvider>
+     </FmsProvider>
     </InvDocContext.Provider>
   );
 }

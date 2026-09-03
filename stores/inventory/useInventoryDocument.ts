@@ -5,6 +5,7 @@ import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { normalizeInventoryUom, resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { resolveSerialBatchFlags } from "@/lib/sap/helpers/serialBatchHelper";
+import { pickLineUdfs } from "@/lib/sap/helpers/lineUdfHelper";
 
 interface IOPRDDocumentStore {
   customer: BusinessPartner | null;
@@ -202,6 +203,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         ) || uomCode;
 
         return {
+          ...pickLineUdfs(line),
           ItemCode: line.ItemCode,
           Dscription: line.ItemDescription || line.Dscription || line.ItemName || "",
           FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || doc.FromWarehouse || "",

@@ -6,6 +6,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { calculateFreightTax } from "@/utils/taxCalculations";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { resolveSerialBatchFlags } from "@/lib/sap/helpers/serialBatchHelper";
+import { pickLineUdfs } from "@/lib/sap/helpers/lineUdfHelper";
 
 interface PurchaseDocumentStore {
   docType: PurchaseDocumentType;
@@ -240,6 +241,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         const calculatedTax = (lineSubtotal - discountAmount) * (taxRate / 100);
 
         return {
+          ...pickLineUdfs(line),
           LineNum: line.LineNum !== undefined ? line.LineNum : index,
           ItemCode: line.ItemCode,
           ItemName: line.ItemDescription || line.ItemName || "",

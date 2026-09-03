@@ -1,5 +1,5 @@
 import { FieldValues, useFormContext, Controller } from "react-hook-form";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   Sheet,
@@ -27,6 +27,8 @@ import {
 
 import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
+import { useFmsContext } from "@/hooks/useFMS";
+import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
 
 interface DocumentUDFList<T extends FieldValues> {
   docType: DocumentType;
@@ -46,13 +48,36 @@ interface UDF {
   }[];
 }
 
+// Several pages render <UDFLayout> AND sit inside a document layout that renders
+// its own — so two instances can mount. This module-level owner lets only the
+// first-mounted instance stay live (own the Ctrl+Shift+U shortcut and the Sheet);
+// the rest render nothing. Prevents the panel opening twice.
+const udfLayoutOwner = { current: null as symbol | null };
+
 export function UDFLayout<T extends FieldValues>({
   docType,
   values,
 }: DocumentUDFList<T>) {
   const [open, setOpen] = useState(false);
   const { control, setValue, register } = useFormContext<T>();
-  
+  const { triggerFMS } = useFmsContext();
+
+  const instanceId = useRef<symbol | null>(null);
+  if (!instanceId.current) instanceId.current = Symbol("udf-layout");
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    if (udfLayoutOwner.current === null) {
+      udfLayoutOwner.current = instanceId.current!;
+      setIsOwner(true);
+    }
+    return () => {
+      if (udfLayoutOwner.current === instanceId.current) {
+        udfLayoutOwner.current = null;
+      }
+    };
+  }, []);
+
   const definitions = useUDFStore(state => state.definitions[docType]);
   const isLoading = useUDFStore(state => state.isLoading[docType]);
 
@@ -65,11 +90,13 @@ export function UDFLayout<T extends FieldValues>({
   }, [values, setValue]);
 
   useEffect(() => {
+    if (!isOwner) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "u") {
         e.preventDefault();
         e.stopPropagation();
-        setOpen(true);
+        setOpen((prev) => !prev);
       }
     };
 
@@ -77,7 +104,16 @@ export function UDFLayout<T extends FieldValues>({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [isOwner]);
+
+  if (!isOwner) return null;
+
+  const FieldLabel = ({ htmlFor, text }: { htmlFor: string; text: string }) => (
+    <div className="flex items-center gap-1">
+      <Label htmlFor={htmlFor}>{text}</Label>
+      <FmsFieldButton field={htmlFor} />
+    </div>
+  );
 
   const renderField = (udf: UDF) => {
     const fieldName = `U_${udf.Name}`;
@@ -101,6 +137,7 @@ export function UDFLayout<T extends FieldValues>({
           <Label htmlFor={fieldName} className="text-sm font-medium leading-none cursor-pointer">
             {udf.Description}
           </Label>
+          <FmsFieldButton field={fieldName} />
         </div>
       );
     }
@@ -108,7 +145,7 @@ export function UDFLayout<T extends FieldValues>({
     if (udf.ValidValuesMD && udf.ValidValuesMD.length > 0) {
       return (
         <div className="grid gap-2">
-          <Label htmlFor={fieldName}>{udf.Description}</Label>
+          <FieldLabel htmlFor={fieldName} text={udf.Description} />
           <Controller
             control={control}
             name={fieldName as any}
@@ -134,10 +171,11 @@ export function UDFLayout<T extends FieldValues>({
     if (udf.Type === "db_Memo") {
       return (
         <div className="grid gap-2">
-          <Label htmlFor={fieldName}>{udf.Description}</Label>
+          <FieldLabel htmlFor={fieldName} text={udf.Description} />
           <Textarea
             id={fieldName}
             {...register(fieldName as any)}
+            onKeyDown={fmsKeyDown(fieldName, triggerFMS)}
             placeholder={`Enter ${udf.Description}`}
             className="min-h-[100px]"
           />
@@ -149,11 +187,12 @@ export function UDFLayout<T extends FieldValues>({
 
     return (
       <div className="grid gap-2">
-        <Label htmlFor={fieldName}>{udf.Description}</Label>
+        <FieldLabel htmlFor={fieldName} text={udf.Description} />
         <Input
           id={fieldName}
           type={isNumeric ? "number" : "text"}
           {...register(fieldName as any)}
+          onKeyDown={fmsKeyDown(fieldName, triggerFMS)}
           placeholder={`Enter ${udf.Description}`}
         />
       </div>

@@ -20,6 +20,7 @@ import { ResizableTable } from "../Custom/ResizableTable";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
+import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 
 export function PurchaseItems() {
@@ -155,6 +156,9 @@ export function PurchaseItems() {
     return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
+  const lineUdfs = useLineUDFs(config.type);
+  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs)];
+
   const isFinancialPurchaseDoc = isPostedPurchaseDocType(config.type);
 
   const docEntry = watch("DocEntry");
@@ -234,7 +238,7 @@ export function PurchaseItems() {
                 className={`w-full overflow-x-auto pb-2 ${isTableDisabled ? "opacity-80" : ""}`}
               >
                 <ResizableTable
-                  columns={columns}
+                  columns={columnsWithUdf}
                   data={lines}
                   emptyMessage="No items added yet."
                   onRowContextMenu={handleRowContextMenu}

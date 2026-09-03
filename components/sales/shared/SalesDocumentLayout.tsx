@@ -37,6 +37,10 @@ import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValid
 import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
 import { RelationshipMapView } from "@/components/shared/RelationshipMapView";
 import { useRelationshipMapStore } from "@/stores/useRelationshipMapStore";
+import { useFMS, FmsProvider } from "@/hooks/useFMS";
+import FMSSelectionModal from "@/modals/FMSSelectionModal";
+import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
+import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -50,11 +54,6 @@ export const useSalesDocConfig = () => {
 interface SalesDocumentLayoutProps<T extends FieldValues> {
   schema: z.ZodType<T>;
   defaultValues: T;
-  // Return value is optional and only used for one thing: when a fresh submission gets
-  // auto-drafted by SAP for approval, the page's onSubmit should resolve with the SAP
-  // response ({ DocEntry, IsDraft, ... }) so the approval-request Remarks the user just
-  // typed in the modal can be patched onto the request SAP just auto-created (SAP creates
-  // it natively - POST isn't supported - so it always starts with blank Remarks otherwise).
   onSubmit: (data: T) => Promise<void | { DocEntry?: number; IsDraft?: boolean | string; [key: string]: any }>;
   children?: React.ReactNode;
   actions?: React.ReactNode;
@@ -163,6 +162,26 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
   const [pendingReApproval, setPendingReApproval] = useState<{ draftId: number; docType: string | number } | null>(null);
+
+  const [fmsSelectionOpen, setFmsSelectionOpen] = useState(false);
+  const [fmsSelectionData, setFmsSelectionData] = useState<{
+    rows: Record<string, unknown>[];
+    columns: string[];
+    targetField: string;
+    onSelect: (val: string) => void;
+  }>({ rows: [], columns: [], targetField: "", onSelect: () => {} });
+
+  const fms = useFMS({
+    docType,
+    control: methods.control,
+    setValue: methods.setValue,
+    getValues: methods.getValues,
+    getLines: () => useSalesDocument.getState().lines as any,
+    onMultipleResults: (rows, columns, targetField, onSelect) => {
+      setFmsSelectionData({ rows, columns, targetField, onSelect });
+      setFmsSelectionOpen(true);
+    },
+  });
 
   const copyFromOptions = (() => {
     if (docType === DocumentType.Order) return [DocumentType.Quotation];
@@ -389,7 +408,10 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
   return (
     <SalesDocContext.Provider value={config}>
+     <FmsProvider value={fms}>
       <FormProvider {...methods}>
+        <FmsKeyboardBridge />
+        <FieldNameInspector />
         <form
           onSubmit={handleSubmit(async (data) => {
 
@@ -830,8 +852,18 @@ export function SalesDocumentLayout<T extends FieldValues>({
               setBadgeState(null);
             }}
           />
+
+          <FMSSelectionModal
+            open={fmsSelectionOpen}
+            onClose={() => setFmsSelectionOpen(false)}
+            rows={fmsSelectionData.rows}
+            columns={fmsSelectionData.columns}
+            targetField={fmsSelectionData.targetField}
+            onSelect={fmsSelectionData.onSelect}
+          />
         </form>
       </FormProvider>
+     </FmsProvider>
     </SalesDocContext.Provider>
   );
 }

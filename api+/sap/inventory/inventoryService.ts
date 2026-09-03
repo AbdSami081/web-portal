@@ -122,6 +122,45 @@ export const getBatchesByItemCodes = async (itemCodes: string[]) => {
     return response.data;
 };
 
+export interface DocumentBatchAllocation {
+    LineNum: number;
+    ItemCode: string;
+    BatchNumber: string;
+    Quantity: number;
+}
+export interface DocumentSerialAllocation {
+    LineNum: number;
+    ItemCode: string;
+    SerialNumber: string;
+    InternalSerialNumber?: string;
+    SystemNumber?: number;
+}
+
+/**
+ * Batch & serial numbers already allocated to a saved document's lines
+ * (read straight from IBT1 / SRI1). Used to pre-fill the selection modals when
+ * an existing document is re-opened — the Service Layer GET does not reliably
+ * return line-level SerialNumbers/BatchNumbers.
+ */
+export const getDocumentSerialBatchAllocations = async (
+    docType: number,
+    docEntry: number
+): Promise<{ batches: DocumentBatchAllocation[]; serials: DocumentSerialAllocation[] }> => {
+    if (!docType || !docEntry) return { batches: [], serials: [] };
+    try {
+        const res = await apiClient.get(
+            `api/Inventory/DocumentSerialBatch?docType=${docType}&docEntry=${docEntry}`
+        );
+        const d = res.data || {};
+        return {
+            batches: Array.isArray(d.batches ?? d.Batches) ? (d.batches ?? d.Batches) : [],
+            serials: Array.isArray(d.serials ?? d.Serials) ? (d.serials ?? d.Serials) : [],
+        };
+    } catch {
+        return { batches: [], serials: [] };
+    }
+};
+
 export const getItemMasterDataDocument = async (
   itemCode: string
 ): Promise<any[] | null> => {

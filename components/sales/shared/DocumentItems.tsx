@@ -32,6 +32,7 @@ import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
+import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 
 export function DocumentItems() {
   const { watch } = useFormContext();
@@ -321,6 +322,10 @@ export function DocumentItems() {
     return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
+  // Append line-table UDF columns (e.g. RDR1 UDFs) so they render as extra line columns.
+  const lineUdfs = useLineUDFs(config.type);
+  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs)];
+
   const isFinancialDoc = isPostedSalesDocType(config.type);
 
   const docEntry = watch("DocEntry");
@@ -423,7 +428,7 @@ export function DocumentItems() {
                 }`}
               >
                 <ResizableTable
-                  columns={columns}
+                  columns={columnsWithUdf}
                   data={lines}
                   emptyMessage="No items added yet."
                   onRowContextMenu={(

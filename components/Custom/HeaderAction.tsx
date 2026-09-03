@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { FilePlus2, Keyboard, Loader2, Printer, GitFork } from "lucide-react";
+import { FilePlus2, Keyboard, Loader2, Printer, GitFork, SearchCode, TextCursorInput } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -18,6 +18,7 @@ import { KeyboardShortcutsContent } from "../keyboard-shortcuts-content";
 import { useAuth } from "@/context/authContext";
 import { clearDocNavParams } from "@/lib/docNavParams";
 import LayoutPreviewModal from "@/modals/LayoutPreviewModal";
+import FMSSetupModal from "@/modals/FMSSetupModal";
 import { useRelationshipMapStore } from "@/stores/useRelationshipMapStore";
 import { getMenuUrlsByObjectCode } from "@/lib/menu-lookup";
 
@@ -42,12 +43,25 @@ const HeaderActions: React.FC<Props> = ({
   const router = useRouter();
   const pathname = usePathname();
   const [layoutModalOpen, setLayoutModalOpen] = useState(false);
+  const [fmsModalOpen, setFmsModalOpen] = useState(false);
   const { isOpen: isRelMapOpen, openMap, closeMap } = useRelationshipMapStore();
 
   const activeSchema = schemaName || user?.companyDB || "";
   const isProduction =
     objectCode === 202 ||
     pathname?.toLowerCase().includes("/production");
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.shiftKey && e.key === "F2") {
+        e.preventDefault();
+        e.stopPropagation();
+        setFmsModalOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleNewDocument = () => {
     clearDocNavParams();
@@ -145,6 +159,38 @@ const HeaderActions: React.FC<Props> = ({
             </Tooltip>
           )}
 
+          {/* FMS / User-Defined Values Setup */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setFmsModalOpen(true)}
+                className="h-8 w-8 border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all"
+              >
+                <SearchCode className="w-4 h-4 text-slate-600 hover:text-blue-600" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">FMS Setup (Alt+Shift+F2)</TooltipContent>
+          </Tooltip>
+
+          {/* Field name inspector toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => window.dispatchEvent(new CustomEvent("fms:toggle-inspector"))}
+                className="h-8 w-8 border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all"
+              >
+                <TextCursorInput className="w-4 h-4 text-slate-600 hover:text-blue-600" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Inspect field names (Alt+Shift+I)</TooltipContent>
+          </Tooltip>
+
         </div>
       </TooltipProvider>
 
@@ -165,6 +211,13 @@ const HeaderActions: React.FC<Props> = ({
         objectCode={objectCode}
         docEntry={DocEntry}
         schemaName={activeSchema}
+      />
+
+      {/* FMS Setup Modal */}
+      <FMSSetupModal
+        open={fmsModalOpen}
+        onClose={() => setFmsModalOpen(false)}
+        docType={objectCode}
       />
     </>
   );

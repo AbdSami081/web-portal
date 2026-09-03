@@ -14,6 +14,8 @@ import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { LineUDFCells } from "@/components/shared/LineUDFCells";
+import { useInvDocConfig } from "./InvDocumentLayout";
 
 interface Props {
   index: number;
@@ -26,6 +28,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   const { updateLine, removeLine } = useInventoryDocument();
   const { warehouses } = useMasterDataStore();
   const { allBranches } = useBranchStore();
+  const invConfig = useInvDocConfig();
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
@@ -239,6 +242,22 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           readOnly
         />
       </td>
+
+      <LineUDFCells
+        docType={invConfig.type}
+        line={draftLine}
+        disabled={isClosed}
+        fmsContext={Object.fromEntries(
+          Object.entries(draftLine)
+            .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
+            .map(([k, v]) => [k, String(v)])
+        )}
+        onPatch={(patch) => {
+          const updated = { ...draftLine, ...patch };
+          setDraftLine(updated as InventoryDocumentLine);
+          updateLine(line.ItemCode, updated);
+        }}
+      />
 
       <WarehouseSelectorDialog
         open={isWhsModalOpen}

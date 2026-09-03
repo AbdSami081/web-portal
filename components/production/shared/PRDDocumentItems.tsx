@@ -15,6 +15,7 @@ import { ResizableTable } from "@/components/Custom/ResizableTable";
 import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
+import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 
 export function PRDDocumentItems() {
   const { watch } = useFormContext();
@@ -135,6 +136,9 @@ export function PRDDocumentItems() {
     width: number;
   }[];
 
+  const lineUdfs = useLineUDFs(config.type);
+  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs)];
+
   return (
     <div className="grid w-full relative pt-2 overflow-visible">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-1 overflow-x-auto">
@@ -194,7 +198,7 @@ export function PRDDocumentItems() {
             <div className={`relative border rounded ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? '' : 'overflow-x-auto'}`}>
               <div className={`w-full pb-2 ${[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? '' : 'overflow-x-auto'}`}>
                 <ResizableTable
-                  columns={columns}
+                  columns={columnsWithUdf}
                   data={lines}
                   emptyMessage="No items added yet."
                   renderRow={(line, idx) => (

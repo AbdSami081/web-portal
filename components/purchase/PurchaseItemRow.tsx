@@ -16,6 +16,7 @@ import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { LineUDFCells } from "@/components/shared/LineUDFCells";
 
 interface Props {
   index: number;
@@ -487,6 +488,21 @@ export function PurchaseItemRow({ index, line }: Props) {
           />
         </td>
       )}
+
+      <LineUDFCells
+        docType={config.type}
+        line={draftLine}
+        disabled={isLineDisabled}
+        fmsContext={Object.fromEntries(
+          Object.entries(draftLine)
+            .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
+            .map(([k, v]) => [k, String(v)])
+        )}
+        onPatch={(patch) => {
+          setDraftLine((prev) => ({ ...prev, ...patch }));
+          updateLineByIndex(index, patch);
+        }}
+      />
 
       <WarehouseSelectorDialog
         open={whDialogOpen}
