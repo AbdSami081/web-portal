@@ -61,6 +61,8 @@ export interface LineUDFDef {
   ValidValuesMD?: { Value: string; Description: string }[];
 }
 
+const EMPTY_LINE_UDFS: LineUDFDef[] = [];
+
 /** Load + return the LINE-table UDF definitions for a document type. */
 export function useLineUDFs(docType: number): LineUDFDef[] {
   const lineDefs = useUDFStore((s) => s.lineDefinitions[docType]);
@@ -70,7 +72,7 @@ export function useLineUDFs(docType: number): LineUDFDef[] {
     fetchLineDefinitions(docType);
   }, [docType, fetchLineDefinitions]);
 
-  return lineDefs ?? [];
+  return lineDefs ?? EMPTY_LINE_UDFS;
 }
 
 /** Column descriptors (key/title/width) for the line UDFs, to append to a table's column list. */

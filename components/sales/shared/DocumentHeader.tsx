@@ -22,6 +22,7 @@ import { useDocNavParams } from "@/lib/docNavParams";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
+import { findDraftByNumber } from "@/api+/sap/draft/draftService";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -235,8 +236,10 @@ export function DocumentHeader() {
   draftEntry?: number
 ) => {
   let documentData;
+  let resolvedAsDraft = Boolean(opts?.isDraft);
 
   clearLines();
+  useSalesDocument.getState().setLoadedDraftData(null);
   setIsLoading(true);
 
   try {
@@ -291,6 +294,14 @@ export function DocumentHeader() {
           toast.error("Document type is not supported.");
           return;
       }
+
+      if (!documentData?.DocEntry) {
+        const draftMatch = await findDraftByNumber(docNumInt, config.type);
+        if (draftMatch?.DocEntry) {
+          documentData = draftMatch;
+          resolvedAsDraft = true;
+        }
+      }
     }
 
     if (!documentData?.DocEntry) {
@@ -305,7 +316,7 @@ export function DocumentHeader() {
 
       // Pull batch/serial allocations from SAP (Service Layer GET omits them) so
       // re-opening a saved document shows the previously-selected batches/serials.
-      if (!opts?.isDraft && Number(documentData.DocEntry) > 0) {
+      if (!resolvedAsDraft && Number(documentData.DocEntry) > 0) {
         void hydrateLineAllocations(
           config.type,
           Number(documentData.DocEntry),
@@ -333,8 +344,9 @@ export function DocumentHeader() {
       setValue("Comments", documentData.Comments);
       setComments(documentData.Comments || "");
       setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
+      setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
 
-      if (opts?.isDraft) {
+      if (resolvedAsDraft) {
         useSalesDocument.getState().setLoadedDraftData(documentData);
       }
     }

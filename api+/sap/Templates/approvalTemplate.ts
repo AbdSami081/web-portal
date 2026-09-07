@@ -117,6 +117,23 @@ export const submitApprovalRequest = async (
   return res.data;
 };
 
+export type ReApprovalOutcome = "reopened" | "soft-fail" | "unknown";
+
+export const interpretReApprovalResponse = (resp: any): ReApprovalOutcome => {
+  if (!resp || typeof resp !== "object") return "unknown";
+  const reOpened = resp.ReOpened ?? resp.reOpened;
+  if (reOpened === true) return "reopened";
+  const code = Number(resp.ApprovalRequestCode ?? resp.approvalRequestCode ?? NaN);
+  if (reOpened === false || resp.RemarksAttached === false || code === 0) return "soft-fail";
+  return "unknown";
+};
+
+export const reopenApprovalRequest = async (id: number): Promise<any> => {
+  const res = await apiClient.patch(`api/Approval/ApprovalRequests/${Number(id)}/reopen`);
+  return res.data;
+};
+
+
 export const rejectApprovalRequest = async (id: number, remarks = "Rejected"): Promise<any> => {
   const res = await apiClient.patch(`api/Approval/ApprovalRequests/${id}/reject`, {
     Remarks: remarks,

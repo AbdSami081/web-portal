@@ -23,7 +23,12 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useAuth } from "@/context/authContext";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { APPROVED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
+import { runReopenApproval } from "@/lib/approval/reopenApproval";
+import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
+import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { ApprovalTemplate } from "@/types/template.type";
 import { getSapErrorMessage } from "@/lib/errorHelper";
@@ -45,6 +50,41 @@ import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
 import FMSSelectionModal from "@/modals/FMSSelectionModal";
 
 const InvDocContext = createContext<DocumentConfig | null>(null);
+
+function buildInvDraftPayload(
+  docType: DocumentType,
+  data: any,
+  state: { lines: any[]; fromWarehouse?: string; toWarehouse?: string }
+): Record<string, any> {
+  switch (docType) {
+    case DocumentType.InvTransferReq:
+      return buildInventoryTransferRequestPatchPayload({
+        data,
+        lines: state.lines,
+        fromWarehouse: state.fromWarehouse,
+        toWarehouse: state.toWarehouse,
+      });
+    case DocumentType.InvTransfer:
+      return buildInventoryTransferPatchPayload({
+        data,
+        lines: state.lines,
+        fromWarehouse: state.fromWarehouse,
+        toWarehouse: state.toWarehouse,
+      });
+    case DocumentType.GoodIssue:
+      return buildGoodIssuePatchPayload({ data, lines: state.lines });
+    default:
+      return {
+        Comments: data?.Comments || "",
+        JournalMemo: data?.JournalMemo || "",
+        DocumentLines: state.lines.map((line: any) => ({
+          ItemCode: line.ItemCode,
+          Quantity: Number(line.Quantity) || 0,
+          WarehouseCode: line.WhsCode || "",
+        })),
+      };
+  }
+}
 
 export const useInvDocConfig = () => {
   const context = useContext(InvDocContext);
@@ -72,11 +112,12 @@ export function InvDocumentLayout<T extends FieldValues>({
   skipAutoReset = false,
 }: InvDocumentLayoutProps<T>) {
 
-  const config = getDocumentConfig(docType);
+  const config = useMemo(() => getDocumentConfig(docType), [docType]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const headerBadges = useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
 
   const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
   const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
@@ -123,7 +164,14 @@ export function InvDocumentLayout<T extends FieldValues>({
   });
 
   const { handleSubmit, reset, setValue } = methods;
-  const { reset: resetStore, DocEntry, loadFromDocument, setIsCopyingTo } = useInventoryDocument();
+  const { reset: resetStore, DocEntry, loadFromDocument, setIsCopyingTo } = useInventoryDocument(
+    useShallow(state => ({
+      reset: state.reset,
+      DocEntry: state.DocEntry,
+      loadFromDocument: state.loadFromDocument,
+      setIsCopyingTo: state.setIsCopyingTo,
+    }))
+  );
 
   const resetFormAndNav = () => {
     reset(defaultValues as any);
@@ -143,10 +191,26 @@ export function InvDocumentLayout<T extends FieldValues>({
       DocNum: state.DocNum,
       docStatus: state.docStatus,
       udfs: state.udfs,
+      loadedDraftData: state.loadedDraftData,
     }))
   );
+
+  const authStatus = methods.watch("AuthorizationStatus" as any);
+  const authWithout = isAuthorizationWithout(authStatus);
+  const authBadge = mapAuthorizationStatus(authStatus);
+  const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
+  const approvalApplies = useUserHasApprovalTemplate(docType);
+  const isPostedLoaded = Number(store.DocEntry) > 0 && !store.loadedDraftData && !docNav.draftEntry;
+  const draftBadgeVisible =
+    !authWithout && !isPostedLoaded &&
+    (approvalApplies || hasNavApproval || !!store.loadedDraftData || badgeState === "draft" || headerBadges.showDraft);
+  const statusBadge = authWithout
+    ? null
+    : (authBadge ?? headerBadges.status ?? (badgeState === "approved" && !draftBadgeVisible ? "approved" : null));
+
   const [isSaving, setIsSaving] = useState(false);
   const { user } = useAuth();
+  const { canUpdateApprovedDocument, canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
@@ -238,17 +302,23 @@ export function InvDocumentLayout<T extends FieldValues>({
 
 
   useEffect(() => {
-   setValue("CardCode" as any, (store.customer?.CardCode || "") as any);
-    setValue("CardName" as any, (store.customer?.CardName || "") as any);
-    setValue("FromWarehouse" as any, (store.fromWarehouse || "") as any);
-    setValue("ToWarehouse" as any, (store.toWarehouse || "") as any);
-    setValue("Comments" as any, (store.comments || "") as any);
-    setValue("JournalMemo" as any, (store.journalMemo || "") as any);
-    setValue("TaxDate" as any, (store.docDate || "") as any);
-    setValue("DocumentLines" as any, (store.lines || []) as any);
-    setValue("DocEntry" as any, (store.DocEntry || 0) as any);
-    setValue("DocNum" as any, (store.DocNum || 0) as any);
-    setValue("DocStatus" as any, (store.docStatus || "") as any);
+    const current = methods.getValues() as Record<string, any>;
+    const sync = (name: string, val: any) => {
+      if (current[name] !== val) setValue(name as any, val as any);
+    };
+    sync("CardCode", store.customer?.CardCode || "");
+    sync("CardName", store.customer?.CardName || "");
+    sync("FromWarehouse", store.fromWarehouse || "");
+    sync("ToWarehouse", store.toWarehouse || "");
+    sync("Comments", store.comments || "");
+    sync("JournalMemo", store.journalMemo || "");
+    sync("TaxDate", store.docDate || "");
+    sync("DocEntry", store.DocEntry || 0);
+    sync("DocNum", store.DocNum || 0);
+    sync("DocStatus", store.docStatus || "");
+    if (current.DocumentLines !== store.lines) {
+      setValue("DocumentLines" as any, (store.lines || []) as any);
+    }
   }, [
     store.customer,
     store.fromWarehouse,
@@ -260,7 +330,8 @@ export function InvDocumentLayout<T extends FieldValues>({
     store.DocEntry,
     store.DocNum,
     store.docStatus,
-    setValue
+    setValue,
+    methods,
   ]);
 
   const [selectedCopyFrom, setSelectedCopyFrom] = useState<string>("");
@@ -434,12 +505,16 @@ export function InvDocumentLayout<T extends FieldValues>({
   const canCopyFrom = docType === DocumentType.InvTransfer;
   const isEditMode = Boolean(DocEntry && DocEntry > 0);
   const isClosed = (store.docStatus || "").toLowerCase() === "bost_close" || (store.docStatus || "").toLowerCase() === "close";
+  const isApprovalDraftContext =
+    isApprovedDraft || isRejectedApproval || isPendingApproval || !!docNav.draftEntry;
 
   const getSubmitButtonText = () => {
     if (isSaving) {
+      if (isApprovalDraftContext) return "Creating...";
       if (isEditMode) return "Updating...";
       return "Submitting...";
     }
+    if (isApprovalDraftContext) return "Create";
     if (isEditMode) return "Update";
     return "Submit";
   };
@@ -459,36 +534,7 @@ export function InvDocumentLayout<T extends FieldValues>({
       return;
     }
 
-    const buildDraftPatchPayload = () => {
-      switch (docType) {
-        case DocumentType.InvTransferReq:
-          return buildInventoryTransferRequestPatchPayload({
-            data: finalData,
-            lines: state.lines,
-            fromWarehouse: state.fromWarehouse,
-            toWarehouse: state.toWarehouse,
-          });
-        case DocumentType.InvTransfer:
-          return buildInventoryTransferPatchPayload({
-            data: finalData,
-            lines: state.lines,
-            fromWarehouse: state.fromWarehouse,
-            toWarehouse: state.toWarehouse,
-          });
-        case DocumentType.GoodIssue:
-          return buildGoodIssuePatchPayload({ data: finalData, lines: state.lines });
-        default:
-          return {
-            Comments: (finalData as any).Comments || "",
-            JournalMemo: (finalData as any).JournalMemo || "",
-            DocumentLines: state.lines.map((line) => ({
-              ItemCode: line.ItemCode,
-              Quantity: Number(line.Quantity) || 0,
-              WarehouseCode: line.WhsCode || "",
-            })),
-          };
-      }
-    };
+    const buildDraftPatchPayload = () => buildInvDraftPayload(docType, finalData, state);
 
     // Validate serial/batch allocation up front, regardless of which submit path
     // (fresh document, rejected-draft resubmit, approved-draft resubmit) is taken below —
@@ -539,17 +585,26 @@ export function InvDocumentLayout<T extends FieldValues>({
     }
 
     if (isPendingApproval && docNav.draftEntry) {
-      toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+      const pendingRole = docNav.approvalRole === "approver" ? "approver" : "originator";
+      const canEditPending = pendingRole === "approver" ? canAuthorizerUpdateDraft : canOriginatorUpdateDraft;
+      if (!canEditPending) {
+        toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+        return;
+      }
+      setIsSaving(true);
+      try {
+        await patchDraftDocument(Number(docNav.draftEntry), buildDraftPatchPayload());
+        toast.success("Draft updated. It remains pending approval.");
+        resetFormAndNav();
+      } catch (err: any) {
+        toast.error(getSapErrorMessage(err) || "Failed to update the pending draft");
+      }
+      setIsSaving(false);
       return;
     }
 
     if (isApprovedDraft && docNav.draftEntry) {
-      // For approved drafts: only require a NEW approval request if something material
-      // actually changed since the last approval. If nothing changed, submit directly.
       const approvedChanged = hasDraftChanges(state.loadedDraftData, state.lines, finalData);
-      // The local check above is UX only (a manipulated client could fake it) — confirm
-      // with the backend, which re-fetches the draft from SAP itself, before actually
-      // skipping a new approval request.
       const confirmedUnchanged = approvedChanged
         ? false
         : !(await validateDraftChanged(Number(docNav.draftEntry), state.lines, finalData));
@@ -565,32 +620,34 @@ export function InvDocumentLayout<T extends FieldValues>({
         return;
       }
 
+      if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
+        toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
+        return;
+      }
+
       setIsSaving(true);
       try {
-        await onSubmit(finalData);
-        resetFormAndNav();
-      } catch (err: any) {
-        // If onSubmit fails (likely because approval is needed), open the modal
-        let approvedTemplates = approvalTemplates;
-        if (currentUserId) {
-          try {
-            const docTypeApproved = getApprovalDocumentType(docType);
-            approvedTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeApproved);
-          } catch {
-            approvedTemplates = [];
-          }
-        }
-        if (approvedTemplates && approvedTemplates.length > 0) {
-          setApprovalTemplates(approvedTemplates);
-          setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-          setPendingFinalData(finalData);
-          setIsSaving(false);
-          setApprovalModalOpen(true);
-          return;
-        }
-        toast.error(getSapErrorMessage(err) || "Failed to create document from draft");
+        await patchDraftDocument(Number(docNav.draftEntry), buildDraftPatchPayload());
+      } catch (patchErr) {
+        toast.error(getSapErrorMessage(patchErr) || "Failed to save changes to the approval draft");
+        setIsSaving(false);
+        return;
       }
+
+
       setIsSaving(false);
+
+      try {
+        const reTemplates = await getCurrentUserApprovalTemplates(
+          currentUserId || 0,
+          getApprovalDocumentType(docType)
+        );
+        if (reTemplates && reTemplates.length > 0) setApprovalTemplates(reTemplates);
+      } catch {}
+
+      setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+      setPendingFinalData(null);
+      setApprovalModalOpen(true);
       return;
     }
 
@@ -669,14 +726,24 @@ export function InvDocumentLayout<T extends FieldValues>({
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold flex items-center gap-2">
                 {config.title}
-                {badgeState === "draft" && (
+                {draftBadgeVisible && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200/60 rounded px-1.5 py-0.5">
                     Draft
                   </span>
                 )}
-                {badgeState === "approved" && (
+                {statusBadge === "pending" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-sky-600 bg-sky-50 border border-sky-200/60 rounded px-1.5 py-0.5">
+                    Pending
+                  </span>
+                )}
+                {statusBadge === "approved" && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 border border-emerald-200/60 rounded px-1.5 py-0.5">
                     Approved
+                  </span>
+                )}
+                {statusBadge === "rejected" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200/60 rounded px-1.5 py-0.5">
+                    Rejected
                   </span>
                 )}
               </h1>
@@ -790,25 +857,10 @@ export function InvDocumentLayout<T extends FieldValues>({
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
               if (pendingReApproval) {
-                const tpl = approvalTemplates[0];
-                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
-                const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
-                try {
-                  await submitApprovalRequest(approvalRequestId, {
-                    TemplateCode: tpl?.Code,
-                    ObjectEntry: pendingReApproval.draftId,
-                    ObjectType: DRAFT_OBJECT_TYPES[0],
-                    IsDraft: "Y",
-                    ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
-                    OriginatorID: user?.sapUserId,
-                    Remarks: remarks || "",
-                  });
-                  toast.success("Draft updated and the approval request was re-submitted.");
-                } catch (err: any) {
-                  toast.warning(getSapErrorMessage(err) || "Approval re-submitted. Remarks could not be attached.");
-                }
+                await runReopenApproval(Number(docNav.approvalRequestCode) || 0);
                 setPendingReApproval(null);
                 setPendingFinalData(null);
+                setApprovalModalOpen(false);
                 resetFormAndNav();
                 return;
               }

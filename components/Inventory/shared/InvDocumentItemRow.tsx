@@ -16,6 +16,7 @@ import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { useInvDocConfig } from "./InvDocumentLayout";
+import { usePositiveField } from "@/lib/validation/usePositiveField";
 
 interface Props {
   index: number;
@@ -25,11 +26,13 @@ interface Props {
 
 export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) {
   const { watch } = useFormContext();
-  const { updateLine, removeLine } = useInventoryDocument();
-  const { warehouses } = useMasterDataStore();
-  const { allBranches } = useBranchStore();
+  const updateLine = useInventoryDocument((s) => s.updateLine);
+  const removeLine = useInventoryDocument((s) => s.removeLine);
+  const warehouses = useMasterDataStore((s) => s.warehouses);
+  const allBranches = useBranchStore((s) => s.allBranches);
   const invConfig = useInvDocConfig();
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
+  const qtyGuard = usePositiveField("Quantity", line.Quantity);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
 
@@ -38,6 +41,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
 
   // Fetch QtyInWhs from Item API if not present on the line (e.g. when loading existing documents)
   useEffect(() => {
+    if (!line.ItemCode) return;
     if (!line.QtyInWhs || line.QtyInWhs.length === 0) {
       fetchItemByCode(line.ItemCode).then((item) => {
         if (item?.QtyInWhs) {
@@ -59,7 +63,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   }, [line.ItemCode]);
 
   useEffect(() => {
-    setDraftLine(line);
+    setDraftLine((prev) => (prev === line ? prev : line));
   }, [line, index]);
 
   const saveRow = (updatedLine = draftLine) => {
@@ -91,7 +95,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
 
   // Backfill BPLid from the primary (To/single) warehouse for lines that already have one but no branch yet
   useEffect(() => {
-    if (line.WhsCode && line.BPLid === undefined) {
+    if (line.ItemCode && line.WhsCode && line.BPLid === undefined) {
       const branchId = resolveBranchForWarehouse(line.WhsCode, warehouses);
       if (branchId !== undefined) {
         updateLine(line.ItemCode, { BPLid: branchId });
@@ -200,13 +204,17 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           onChange={(e) => {
             let numericVal = Number(e.target.value);
             if (!isNaN(numericVal)) {
+              qtyGuard.track(numericVal);
               const updatedLine = { ...draftLine, Quantity: numericVal };
               setDraftLine(updatedLine);
               updateLine(line.ItemCode, updatedLine);
             }
           }}
-          onBlur={() => {
-            saveRow();
+          onBlur={(e) => {
+            const { ok, value } = qtyGuard.resolve(e.target.value);
+            const finalLine = ok ? draftLine : { ...draftLine, Quantity: value };
+            if (!ok) setDraftLine(finalLine);
+            saveRow(finalLine);
           }}
         />
       </td>

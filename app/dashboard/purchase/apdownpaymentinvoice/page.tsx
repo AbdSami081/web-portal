@@ -38,6 +38,7 @@ export default function APDownPaymentInvoicePage() {
       lastLoadedDocType,
       reset: resetStore,
       attachments,
+      discountPercent,
     } = usePurchaseDocument.getState();
 
     const newAttachments = attachments.filter((att) => att.File);
@@ -72,10 +73,13 @@ export default function APDownPaymentInvoicePage() {
       ...uploadedAttachments,
     ];
 
+    const { discountPercent: _dp, ...headerData } = data as Record<string, any>;
     const payload = {
-      ...data,
+      ...headerData,
+      DownPaymentType: "dptInvoice",
+      DownPaymentPercentage: Number(discountPercent) || 0,
       DocumentLines: lines.map((line) => {
-        const lineData: any = { ...line, DownPaymentType: "dptInvoice" };
+        const lineData: any = { ...line };
 
         if (
           DocEntry &&

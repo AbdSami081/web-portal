@@ -1,7 +1,7 @@
 
 "use client"
 export const Company = {
-  name: "Supernova Solutions",
+  name: "Supernova",
   shortName: "SNS",
 };
 

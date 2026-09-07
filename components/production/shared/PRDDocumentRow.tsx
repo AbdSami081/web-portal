@@ -25,6 +25,7 @@ interface Props {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
+import { usePositiveField } from "@/lib/validation/usePositiveField";
 
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
@@ -33,6 +34,8 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const [draftLine, setDraftLine] = useState<PRDDocumentLine>(line);
   const config = usePRDDocConfig();
   const headerPlannedQty = watch("PlannedQuantity");
+  const baseQtyGuard = usePositiveField("Base quantity", line.BaseQuantity);
+  const plannedQtyGuard = usePositiveField("Planned quantity", line.PlannedQuantity);
 
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
 
@@ -104,6 +107,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               let numericVal = Number(e.target.value);
               if (isNaN(numericVal)) return;
 
+              baseQtyGuard.track(numericVal);
               const parentQty = (draftLine as any).BOMHeaderQty || 1;
               const newBaseRatio = numericVal / parentQty;
 
@@ -117,8 +121,22 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               setDraftLine(updatedLine);
               updateLine(index, updatedLine);
             }}
-            onBlur={() => {
-              saveRow();
+            onBlur={(e) => {
+              const { ok, value } = baseQtyGuard.resolve(e.target.value);
+              if (!ok) {
+                const parentQty = (draftLine as any).BOMHeaderQty || 1;
+                const newBaseRatio = value / parentQty;
+                const updatedLine = {
+                  ...draftLine,
+                  BaseQuantity: value,
+                  BaseRatio: newBaseRatio,
+                  PlannedQuantity: newBaseRatio * headerPlannedQty,
+                };
+                setDraftLine(updatedLine);
+                updateLine(index, updatedLine);
+              } else {
+                saveRow();
+              }
             }}
             disabled={initialStatus === "boposClosed"}
             className="h-7 w-full font-medium text-gray-700 text-center"
@@ -146,12 +164,20 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
                 let numericVal = Number(e.target.value);
                 if (isNaN(numericVal)) return;
 
+                plannedQtyGuard.track(numericVal);
                 const updated = { ...draftLine, PlannedQuantity: numericVal };
                 setDraftLine(updated);
                 updateLine(index, updated);
               }}
-              onBlur={() => {
-                saveRow();
+              onBlur={(e) => {
+                const { ok, value } = plannedQtyGuard.resolve(e.target.value);
+                if (!ok) {
+                  const updated = { ...draftLine, PlannedQuantity: value };
+                  setDraftLine(updated);
+                  updateLine(index, updated);
+                } else {
+                  saveRow();
+                }
               }}
               disabled={initialStatus === "boposClosed"}
             />

@@ -24,7 +24,12 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import HeaderActions from "@/components/Custom/HeaderAction";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { APPROVED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
+import { runReopenApproval } from "@/lib/approval/reopenApproval";
+import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
+import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
@@ -68,6 +73,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const headerBadges = useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
   const isApprovedDraft = docNav.approvalStatus === "arsApproved";
   const isRejectedApproval =
     docNav.approvalStatus === "arsRejected" ||
@@ -80,6 +86,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
 
   const { user } = useAuth();
+  const { canUpdateApprovedDocument, canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const [approvalTemplates, setApprovalTemplates] = React.useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = React.useState(false);
   const [pendingFinalData, setPendingFinalData] = React.useState<T | null>(null);
@@ -109,8 +116,22 @@ export function PRDDocumentLayout<T extends FieldValues>({
   });
 
   const { watch, reset, handleSubmit, formState: { isSubmitting, isDirty } } = methods;
-  const { lines, attachments, reset: lineReset, initialStatus, udfs, setDocType } = useIFPRDDocument();
+  const { lines, attachments, reset: lineReset, initialStatus, udfs, setDocType, loadedDraftData } = useIFPRDDocument();
   const previousDocType = useRef<DocumentType | null>(null);
+
+  const authStatus = watch("AuthorizationStatus" as any);
+  const authWithout = isAuthorizationWithout(authStatus);
+  const authBadge = mapAuthorizationStatus(authStatus);
+  const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
+  const approvalApplies = useUserHasApprovalTemplate(docType);
+  const loadedEntry = Number(watch("DocEntry" as any)) || Number(watch("AbsoluteEntry" as any)) || 0;
+  const isPostedLoaded = loadedEntry > 0 && !loadedDraftData && !docNav.draftEntry;
+  const draftBadgeVisible =
+    !authWithout && !isPostedLoaded &&
+    (approvalApplies || hasNavApproval || !!loadedDraftData || badgeState === "draft" || headerBadges.showDraft);
+  const statusBadge = authWithout
+    ? null
+    : (authBadge ?? headerBadges.status ?? (badgeState === "approved" && !draftBadgeVisible ? "approved" : null));
 
   useEffect(() => {
     const storeDocType =
@@ -272,14 +293,20 @@ export function PRDDocumentLayout<T extends FieldValues>({
             e.preventDefault();
             handleSubmit(async (data) => {
               if (isPendingApproval && docNav.draftEntry) {
+                const pendingRole = docNav.approvalRole === "approver" ? "approver" : "originator";
+                const canEditPending = pendingRole === "approver" ? canAuthorizerUpdateDraft : canOriginatorUpdateDraft;
+                if (!canEditPending) {
+                  toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+                  return;
+                }
                 try {
                   await patchDraftDocument(Number(docNav.draftEntry), data);
-                  toast.success("Approval request modified successfully.");
+                  toast.success("Draft updated. It remains pending approval.");
                   finishAndReset();
                   setBadgeState(null);
                   return;
                 } catch (err: any) {
-                  toast.error(err?.response?.data?.Message || "Failed to update approval draft");
+                  toast.error(err?.response?.data?.Message || "Failed to update the pending draft");
                   return;
                 }
               }
@@ -302,30 +329,30 @@ export function PRDDocumentLayout<T extends FieldValues>({
                   return;
                 }
 
-                const currentUserIdApproved = user?.sapUserId;
-                if (currentUserIdApproved) {
-                  try {
-                    const docTypeApproved = getApprovalDocumentType(docType);
-                    const activeTemplatesApproved = await getCurrentUserApprovalTemplates(currentUserIdApproved, docTypeApproved);
-                    if (activeTemplatesApproved && activeTemplatesApproved.length > 0) {
-                      setApprovalTemplates(activeTemplatesApproved);
-                      setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-                      setPendingFinalData(data as any);
-                      setApprovalModalOpen(true);
-                      return;
-                    }
-                  } catch {
-                    /* no approval template */
-                  }
+                if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
+                  toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
+                  return;
                 }
 
                 try {
-                  await onSubmit(data as any);
-                  finishAndReset();
-                  setBadgeState(null);
+                  await patchDraftDocument(Number(docNav.draftEntry), data);
                 } catch (err: any) {
-                  toast.error(err?.response?.data?.Message || "Failed to create the document");
+                  toast.error(err?.response?.data?.Message || "Failed to save changes to the approval draft");
+                  return;
                 }
+
+
+                try {
+                  const reTemplates = await getCurrentUserApprovalTemplates(
+                    user?.sapUserId || 0,
+                    getApprovalDocumentType(docType)
+                  );
+                  if (reTemplates && reTemplates.length > 0) setApprovalTemplates(reTemplates);
+                } catch {}
+
+                setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+                setPendingFinalData(null);
+                setApprovalModalOpen(true);
                 return;
               }
 
@@ -374,14 +401,24 @@ export function PRDDocumentLayout<T extends FieldValues>({
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold flex items-center gap-2">
                 {config.title}
-                {badgeState === "draft" && (
+                {draftBadgeVisible && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200/60 rounded px-1.5 py-0.5">
                     Draft
                   </span>
                 )}
-                {badgeState === "approved" && (
+                {statusBadge === "pending" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-sky-600 bg-sky-50 border border-sky-200/60 rounded px-1.5 py-0.5">
+                    Pending
+                  </span>
+                )}
+                {statusBadge === "approved" && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 border border-emerald-200/60 rounded px-1.5 py-0.5">
                     Approved
+                  </span>
+                )}
+                {statusBadge === "rejected" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200/60 rounded px-1.5 py-0.5">
+                    Rejected
                   </span>
                 )}
               </h1>
@@ -424,7 +461,11 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
               {initialStatus !== "boposClosed" && (
                 <Button type="submit" disabled={isSubmitting || (docType === DocumentType.IssueForProduction && lines.length === 0)}>
-                  {isSubmitting ? "Saving..." : ((watch("AbsoluteEntry" as any) || watch("DocEntry" as any)) ? "Update" : "Submit")}
+                  {isSubmitting
+                    ? "Saving..."
+                    : (isApprovedDraft || isRejectedApproval || isPendingApproval || !!docNav.draftEntry)
+                      ? "Create"
+                      : ((watch("AbsoluteEntry" as any) || watch("DocEntry" as any)) ? "Update" : "Submit")}
                 </Button>
               )}
             </div>
@@ -436,26 +477,12 @@ export function PRDDocumentLayout<T extends FieldValues>({
             onClose={() => setApprovalModalOpen(false)}
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
+
               if (pendingReApproval) {
-                const tpl = approvalTemplates[0];
-                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
-                const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
-                try {
-                  await submitApprovalRequest(approvalRequestId, {
-                    TemplateCode: tpl?.Code,
-                    ObjectEntry: pendingReApproval.draftId,
-                    ObjectType: DRAFT_OBJECT_TYPES[0],
-                    IsDraft: "Y",
-                    ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
-                    OriginatorID: user?.sapUserId,
-                    Remarks: remarks || "",
-                  });
-                  toast.success("Draft updated and the approval request was re-submitted.");
-                } catch (err: any) {
-                  toast.warning(err?.response?.data?.Message || "Approval re-submitted. Remarks could not be attached.");
-                }
+                await runReopenApproval(Number(docNav.approvalRequestCode) || 0);
                 setPendingReApproval(null);
                 setPendingFinalData(null);
+                setApprovalModalOpen(false);
                 finishAndReset();
                 setBadgeState(null);
                 return;

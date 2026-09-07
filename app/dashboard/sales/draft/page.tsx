@@ -50,9 +50,8 @@ export default function SalesDraftPage() {
   const { loadFromDocument } = useSalesDocument();
 
   useEffect(() => {
-    const draftId = Number(draftEntryStr);
+    const draftId = Number((draftEntryStr ?? "").toString().trim().split(/\s+/)[0]);
     if (!draftId || isNaN(draftId)) {
-      toast.error("No valid draft entry provided.");
       setIsLoading(false);
       return;
     }
@@ -72,12 +71,6 @@ export default function SalesDraftPage() {
           };
 
           useSalesDocument.getState().setLoadedDraftData(documentData);
-
-          // SAP doesn't always return DocObjectCode in a cleanly numeric form - falling
-          // through to Number() unchecked let a NaN slip into targetDocType, which then
-          // flowed into the approval request as ObjectType: "NaN" and SAP rejected the
-          // whole re-approval submission. Validate exactly like the state initializer
-          // above does, instead of trusting the value blindly.
           const parsedObjectCode = documentData.DocObjectCode !== undefined && documentData.DocObjectCode !== null
             ? Number(documentData.DocObjectCode)
             : NaN;
@@ -118,9 +111,9 @@ export default function SalesDraftPage() {
   }, [draftEntryStr]);
 
   const handleCreateDocument = async (data: QuotationFormData) => {
-    const draftId = Number(draftEntryStr);
+    const draftId = Number((draftEntryStr ?? "").toString().trim().split(/\s+/)[0]);
     if (!draftId || isNaN(draftId)) {
-      toast.error("Invalid draft entry.");
+      toast.error("This draft can no longer be opened here. Please start the document from its module.");
       return;
     }
 

@@ -66,7 +66,7 @@ export function InvDocumentHeader() {
     journalMemo,
     setJournalMemo,
   } = useInventoryDocument();
-  const { loadWarehouses } = useMasterDataStore();
+  const loadWarehouses = useMasterDataStore((s) => s.loadWarehouses);
   const [warehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
 
   const docNum = watch("DocNum");
@@ -102,12 +102,15 @@ export function InvDocumentHeader() {
 
   useEffect(() => {
     const branchWhs = toWarehouse || fromWarehouse;
-    const derivedBranch = globalWarehouses.find((w: any) => w.WhsCode === branchWhs)?.BPLid;
-    if (derivedBranch !== undefined) {
+    const derivedBranch = globalWarehouses.find(
+      (w: any) => w.WhsCode === branchWhs || w.WarehouseCode === branchWhs
+    )?.BPLid;
+    const branchUnset = watchedBranch === undefined || watchedBranch === null;
+    if (derivedBranch !== undefined && derivedBranch !== null) {
       if (derivedBranch !== watchedBranch) {
         setValue("BPL_IDAssignedToInvoice", derivedBranch);
       }
-    } else if (!isLoadedDocument && !watchedBranch && sessionDefaultBranch !== null) {
+    } else if (!isLoadedDocument && branchUnset && sessionDefaultBranch !== null && sessionDefaultBranch !== undefined) {
       setValue("BPL_IDAssignedToInvoice", sessionDefaultBranch);
     }
   }, [toWarehouse, fromWarehouse, globalWarehouses, watchedBranch, isLoadedDocument, sessionDefaultBranch, setValue]);
@@ -198,13 +201,15 @@ export function InvDocumentHeader() {
   const toWhs = watch("ToWarehouse");
 
   useEffect(() => {
-    if (warehouses.length > 0) {
-      if (!fromWarehouse) {
-        setFromWarehouse(warehouses[0].WhsCode);
-      }
-      if (!toWarehouse) {
-        setToWarehouse(warehouses[0].WhsCode);
-      }
+    const first = warehouses.length > 0
+      ? (warehouses[0].WhsCode || (warehouses[0] as any).WarehouseCode)
+      : "";
+    if (!first) return;
+    if (!fromWarehouse) {
+      setFromWarehouse(first);
+    }
+    if (!toWarehouse) {
+      setToWarehouse(first);
     }
   }, [warehouses, fromWarehouse, toWarehouse, setFromWarehouse, setToWarehouse]);
 
@@ -315,6 +320,7 @@ export function InvDocumentHeader() {
     }
 
     setDocNumSearch(docNumInt.toString());
+    useInventoryDocument.getState().setLoadedDraftData(null);
     setIsLoading(true);
 
     try {
@@ -357,12 +363,14 @@ export function InvDocumentHeader() {
     setJournalMemo(documentData.JournalMemo || "");
     setValue("DocStatus", documentData.DocumentStatus);
     setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
+    setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
 
     const isCopy = type !== config.type;
     loadFromDocument(documentData, type, isCopy);
     if (isCopy) {
       setValue("DocEntry", 0);
       setValue("DocNum", 0);
+      setValue("AuthorizationStatus", "");
     } else if (Number(documentData.DocEntry) > 0) {
       // SL GET omits line SerialNumbers/BatchNumbers — pull allocations from SAP.
       void hydrateLineAllocations(

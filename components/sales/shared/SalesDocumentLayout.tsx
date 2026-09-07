@@ -25,7 +25,12 @@ import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialo
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useAuth } from "@/context/authContext";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { APPROVED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
+import { runReopenApproval } from "@/lib/approval/reopenApproval";
+import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
+import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { ApprovalTemplate } from "@/types/template.type";
 import { patchDraftDocument } from "@/api+/sap/draft/draftService";
@@ -75,6 +80,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const headerBadges = useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
   const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
   const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
   const isRejectedApproval =
@@ -113,6 +119,10 @@ export function SalesDocumentLayout<T extends FieldValues>({
     fetchUdfDefinitions(docType);
   }, [docType, fetchUdfDefinitions]);
 
+  React.useEffect(() => {
+    useSalesDocument.getState().setIsDownPayment(!!config.isDownPayment);
+  }, [config.isDownPayment]);
+
   const methods = useForm<T>({
     resolver: zodResolver(schema as any),
     defaultValues: defaultValues as DefaultValues<T>,
@@ -120,7 +130,20 @@ export function SalesDocumentLayout<T extends FieldValues>({
   });
 
   const { handleSubmit, reset, watch, setValue, formState: { isSubmitting, isDirty, errors } } = methods;
-  const { reset: lineReset, customer, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, lines } = useSalesDocument();
+  const { reset: lineReset, customer, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, lines, loadedDraftData } = useSalesDocument();
+
+  const authStatus = watch("AuthorizationStatus" as any);
+  const authWithout = isAuthorizationWithout(authStatus);
+  const authBadge = mapAuthorizationStatus(authStatus);
+  const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
+  const approvalApplies = useUserHasApprovalTemplate(docType);
+  const isPostedLoaded = Number(DocEntry) > 0 && !loadedDraftData && !docNav.draftEntry;
+  const draftBadgeVisible =
+    !authWithout && !isPostedLoaded &&
+    (approvalApplies || hasNavApproval || !!loadedDraftData || badgeState === "draft" || headerBadges.showDraft);
+  const statusBadge = authWithout
+    ? null
+    : (authBadge ?? headerBadges.status ?? (badgeState === "approved" && !draftBadgeVisible ? "approved" : null));
 
   
   useEffect(() => {
@@ -154,6 +177,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
   const { user } = useAuth();
+  const { canUpdateApprovedDocument, canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const [serialModalOpen, setSerialModalOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<T | null>(null);
@@ -313,16 +337,20 @@ export function SalesDocumentLayout<T extends FieldValues>({
     setBadgeState(null);
   };
 
+  const isApprovalDraftContext =
+    isApprovedDraft || isRejectedApproval || isPendingApproval || !!docNav.draftEntry;
+
   const getSubmitButtonText = () => {
     if (isCheckingApproval) return <Circle />;
     if (isSubmitting) return "Saving...";
     if (isLoadingDocument) return "Loading...";
-    
+
+    if (isApprovalDraftContext) return "Create";
+
     const normalizedStatus = docStatus?.toString().replace("bost_", "");
-    
     if (isEditMode && normalizedStatus === "Open") return "Update";
     if (isEditMode) return "Update";
-    
+
     return "Submit";
   };
 
@@ -491,7 +519,27 @@ export function SalesDocumentLayout<T extends FieldValues>({
           }
 
           if (isPendingApproval && docNav.draftEntry) {
-            toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+            const pendingRole = docNav.approvalRole === "approver" ? "approver" : "originator";
+            const canEditPending = pendingRole === "approver" ? canAuthorizerUpdateDraft : canOriginatorUpdateDraft;
+            if (!canEditPending) {
+              toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+              return;
+            }
+            try {
+              const pendingPatchPayload = buildSalesDocumentPatchPayload({
+                data: finalData as any,
+                lines: state.lines,
+                discountPercent: state.discountPercent,
+                freight: state.freight,
+                additionalExpenses: state.additionalExpenses,
+              });
+              await patchDraftDocument(Number(docNav.draftEntry), pendingPatchPayload);
+              toast.success("Draft updated. It remains pending approval.");
+              finishAndReset();
+              setBadgeState(null);
+            } catch (err: any) {
+              toast.error(err?.response?.data?.Message || "Failed to update the pending draft");
+            }
             return;
           }
 
@@ -511,30 +559,37 @@ export function SalesDocumentLayout<T extends FieldValues>({
               return;
             }
 
-            const currentUserIdApproved = user?.sapUserId;
-            if (currentUserIdApproved) {
-              try {
-                const docTypeApproved = getApprovalDocumentType(docType);
-                const activeTemplatesApproved = await getCurrentUserApprovalTemplates(currentUserIdApproved, docTypeApproved);
-                if (activeTemplatesApproved && activeTemplatesApproved.length > 0) {
-                  setApprovalTemplates(activeTemplatesApproved);
-                  setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-                  setPendingFinalData(finalData);
-                  setApprovalModalOpen(true);
-                  return;
-                }
-              } catch {
-                /* no approval template */
-              }
+            if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
+              toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
+              return;
             }
 
             try {
-              await onSubmit(finalData);
-              finishAndReset();
-              setBadgeState(null);
+              const approvedPatchPayload = buildSalesDocumentPatchPayload({
+                data: finalData as any,
+                lines: state.lines,
+                discountPercent: state.discountPercent,
+                freight: state.freight,
+                additionalExpenses: state.additionalExpenses,
+              });
+              await patchDraftDocument(Number(docNav.draftEntry), approvedPatchPayload);
             } catch (err: any) {
-              toast.error(err?.response?.data?.Message || "Failed to create the document");
+              toast.error(err?.response?.data?.Message || "Failed to save changes to the approval draft");
+              return;
             }
+
+
+            try {
+              const reTemplates = await getCurrentUserApprovalTemplates(
+                user?.sapUserId || 0,
+                getApprovalDocumentType(docType)
+              );
+              if (reTemplates && reTemplates.length > 0) setApprovalTemplates(reTemplates);
+            } catch {}
+
+            setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+            setPendingFinalData(null);
+            setApprovalModalOpen(true);
             return;
           }
 
@@ -583,14 +638,24 @@ export function SalesDocumentLayout<T extends FieldValues>({
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold flex items-center gap-2">
                 {config.title}
-                {badgeState === "draft" && (
+                {draftBadgeVisible && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200/60 rounded px-1.5 py-0.5">
                     Draft
                   </span>
                 )}
-                {badgeState === "approved" && (
+                {statusBadge === "pending" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-sky-600 bg-sky-50 border border-sky-200/60 rounded px-1.5 py-0.5">
+                    Pending
+                  </span>
+                )}
+                {statusBadge === "approved" && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 border border-emerald-200/60 rounded px-1.5 py-0.5">
                     Approved
+                  </span>
+                )}
+                {statusBadge === "rejected" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200/60 rounded px-1.5 py-0.5">
+                    Rejected
                   </span>
                 )}
               </h1>
@@ -789,25 +854,10 @@ export function SalesDocumentLayout<T extends FieldValues>({
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
              if (pendingReApproval) {
-                const tpl = approvalTemplates[0];
-                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
-                const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
-                try {
-                  await submitApprovalRequest(approvalRequestId, {
-                    TemplateCode: tpl?.Code,
-                    ObjectEntry: pendingReApproval.draftId,
-                    ObjectType: DRAFT_OBJECT_TYPES[0],
-                    IsDraft: "Y",
-                    ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
-                    OriginatorID: user?.sapUserId,
-                    Remarks: remarks || "",
-                  });
-                  toast.success("Draft updated and the approval request was re-submitted.");
-                } catch (err: any) {
-                  toast.warning(err?.response?.data?.Message || "Approval re-submitted. Remarks could not be attached.");
-                }
+                await runReopenApproval(Number(docNav.approvalRequestCode) || 0);
                 setPendingReApproval(null);
                 setPendingFinalData(null);
+                setApprovalModalOpen(false);
                 finishAndReset();
                 setBadgeState(null);
                 return;

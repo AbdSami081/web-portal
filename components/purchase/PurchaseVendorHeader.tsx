@@ -313,6 +313,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         setValue("DocNum", documentData.DocNum);
         setValue("DocEntry", documentData.DocEntry);
         setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
+        setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
 
         if (isPurchaseRequest) {
           setValue("Requester", documentData.Requester || user?.userName || "");

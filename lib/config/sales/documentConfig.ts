@@ -5,7 +5,8 @@ import {  SalesDocumentLine } from "@/types/sales/salesDocuments.type";
 export interface DocumentConfig {
   type: DocumentType;
   title: string;
-  
+  isDownPayment?: boolean;
+
   headerFields: {
     showValidUntil: boolean;
   };
@@ -194,6 +195,7 @@ export const creditMemoConfig: DocumentConfig = {
 export const downPaymentRequestConfig: DocumentConfig = {
   type: DocumentType.DownPaymentRequest,
   title: "A/R Down Payment Request",
+  isDownPayment: true,
   headerFields: {
     showValidUntil: false
   },
@@ -217,6 +219,7 @@ export const downPaymentRequestConfig: DocumentConfig = {
 export const downPaymentInvoiceConfig: DocumentConfig = {
   type: DocumentType.DownPaymentInvoice,
   title: "A/R Down Payment Invoice",
+  isDownPayment: true,
   headerFields: {
     showValidUntil: false
   },

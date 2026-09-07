@@ -43,7 +43,7 @@ export default function ARDownPaymentRequestPage() {
         additionalExpenses,
         downPaymentType: "dptRequest",
       });
-
+      
       try {
         await patchARDownPayment(Number(DocEntry), patchPayload);
         if (attachments.length > 0) {
@@ -79,7 +79,7 @@ export default function ARDownPaymentRequestPage() {
       additionalExpenses,
       downPaymentType: "dptRequest",
     });
-
+console.log(payload);
     try {
       const response = await postARDownPayment(payload);
       if (response?.DocEntry || response?.IsDraft) {

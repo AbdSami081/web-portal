@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
@@ -101,7 +101,10 @@ export function InvDocumentItems() {
       ];
 
   const lineUdfs = useLineUDFs(config.type);
-  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs)];
+  const columnsWithUdf = useMemo(
+    () => [...columns, ...lineUdfColumns(lineUdfs)],
+    [isGoodIssue, lineUdfs]
+  );
 
   const handleOnSelectItems = (items: Item[]) => {
     const firstWhs = warehouses.length > 0 ? warehouses[0].WhsCode : "";

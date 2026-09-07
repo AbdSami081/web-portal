@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { buildDocumentUrl, getMenuInfoByObjectCode } from "@/lib/menu-lookup";
 import { stageDocNavParams } from "@/lib/docNavParams";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 interface ApprovalRemarksEntry {
   Stage?: string | null;
@@ -79,6 +80,7 @@ export default function MessagesOverviewPage() {
   const [isApproving, setIsApproving] = useState(false);
   const [approveDecision, setApproveDecision] = useState<"approve" | "reject">("approve");
   const router = useRouter();
+  const { canUpdateApprovedDocument } = useApprovalSettings();
 
   const sortedMessages = useMemo(() => {
     return [...messages].sort((a, b) => {
@@ -317,9 +319,16 @@ export default function MessagesOverviewPage() {
     sourceDraftNumber?: number | null;
     approvalRequestCode?: number ; 
   }) => {
-    const key = (link.isDraft ? link.draftEntry : link.objectEntry)?.toString().trim().split(/\s+/)[0];
+    const cleanKey = (v?: string | number | null) =>
+      v === undefined || v === null ? undefined : v.toString().trim().split(/\s+/)[0] || undefined;
 
-    if (!key) {
+    const draftKey = cleanKey(link.draftEntry);
+    const objectKey = cleanKey(link.objectEntry);
+    const sourceKey = link.sourceDraftNumber ? String(link.sourceDraftNumber) : undefined;
+
+    const key = link.isDraft ? draftKey : objectKey;
+
+    if (!key || Number.isNaN(Number(key)) || Number(key) <= 0) {
       toast.error("Invalid SAP document key");
       return;
     }
@@ -332,27 +341,29 @@ export default function MessagesOverviewPage() {
 
     const url = buildDocumentUrl(menuInfo.url, {
       objectType: link.objectType,
-      objectEntry: link.isDraft
-        ? undefined
-        : (link.sourceDraftNumber ? String(link.sourceDraftNumber) : link.objectEntry),
-      draftEntry: link.draftEntry,
+      objectEntry: link.isDraft ? undefined : (sourceKey ?? objectKey),
+      draftEntry: draftKey,
       isDraft: link.isDraft,
       approvalRequestCode: link.approvalRequestCode,
       approvalStatus: selectedMessage?.ApprovalStatus
     });
 
-    // Keep the document params out of the browser URL - they are carried internally
-    // via sessionStorage and re-joined on the target page (also survives a refresh).
+    const status = (selectedMessage?.ApprovalStatus || "").toLowerCase();
+    const isApprovedStatus = status.includes("approved");
+    const isPendingStatus = status.includes("pending");
+    const approvalRole = isPendingStatus ? "approver" : "originator";
+    const approvalReadOnly = isApprovedStatus && !canUpdateApprovedDocument ? "1" : undefined;
+
     const cleanPath = url.split("?")[0];
     stageDocNavParams(cleanPath, {
-      draftEntry: link.draftEntry,
-      docEntry: link.isDraft
-        ? undefined
-        : (link.sourceDraftNumber ? String(link.sourceDraftNumber) : link.objectEntry),
-      docType: link.isDraft ? String(link.objectType) : undefined,
+      draftEntry: link.isDraft ? draftKey : undefined,
+      docEntry: link.isDraft ? undefined : (sourceKey ?? objectKey),
+      docType: String(link.objectType),
       draft: link.isDraft ? "1" : undefined,
       approvalRequestCode: link.approvalRequestCode ? String(link.approvalRequestCode) : undefined,
       approvalStatus: selectedMessage?.ApprovalStatus,
+      approvalRole,
+      approvalReadOnly,
     });
 
     router.push(cleanPath);

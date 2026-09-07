@@ -60,9 +60,8 @@ export default function InventoryDraftPage() {
   const { loadFromDocument } = useInventoryDocument();
 
   useEffect(() => {
-    const draftId = Number(draftEntryStr);
+    const draftId = Number((draftEntryStr ?? "").toString().trim().split(/\s+/)[0]);
     if (!draftId || isNaN(draftId)) {
-      toast.error("No valid draft entry provided.");
       setIsLoading(false);
       return;
     }

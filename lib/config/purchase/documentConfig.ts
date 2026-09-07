@@ -4,7 +4,8 @@ import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
 export interface DocumentConfig {
   type: DocumentType;
   title: string;
-  
+  isDownPayment?: boolean;
+
   headerFields: {
     showValidUntil: boolean;
   };
@@ -244,6 +245,7 @@ export const GoodsReturnConfig: DocumentConfig = {
 export const APDownPaymentInvoiceConfig: DocumentConfig = {
   type: DocumentType.APDownPaymentInvoice,
   title: "A/P Down Payment Invoice",
+  isDownPayment: true,
   headerFields: {
     showValidUntil: false,
   },
@@ -269,6 +271,7 @@ export const APDownPaymentInvoiceConfig: DocumentConfig = {
 export const APDownPaymentRequestConfig: DocumentConfig = {
   type: DocumentType.APDownPaymentRequest,
   title: "A/P Down Payment Request",
+  isDownPayment: true,
   headerFields: {
     showValidUntil: false,
   },
@@ -317,6 +320,8 @@ export const GoodsReturnRequestConfig: DocumentConfig = {
 };
 
 export const getDocumentConfig = (type: DocumentType, pathname = ""): DocumentConfig => {
+  if (pathname.toLowerCase().includes("apdownpaymentrequest")) return APDownPaymentRequestConfig;
+
   switch (type) {
     case DocumentType.PurchaseRequests: return requestConfig;
     case DocumentType.PurchaseQuotation: return quotationConfig;

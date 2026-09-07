@@ -132,6 +132,7 @@ export function PRDDocumentHeader() {
         setValue("DocEntry", documentData.DocEntry || 0);
         setValue("DocNum", documentData.DocNum || 0);
         setValue("Comments", documentData.Comments || "");
+        setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
         const draftBranch = documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId;
         setValue("BPL_IDAssignedToInvoice", draftBranch);
         setBranch(draftBranch ?? null);
@@ -311,6 +312,7 @@ export function PRDDocumentHeader() {
       return;
     }
 
+    useIFPRDDocument.getState().setLoadedDraftData(null);
     setIsLoading(true);
     try {
       if (docType === SAPDocumentType.IssueForProduction) {
@@ -324,6 +326,7 @@ export function PRDDocumentHeader() {
       if (documentData && (documentData.DocEntry || documentData.AbsoluteEntry)) {
         resetStore();
         loadFromDocument(documentData, docType);
+        setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
         const loadedBranch = documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId ?? null;
         setValue("BPL_IDAssignedToInvoice", loadedBranch, { shouldDirty: true });
         setBranch(loadedBranch);

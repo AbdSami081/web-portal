@@ -26,6 +26,7 @@ interface PurchaseDocumentStore {
   freight: number;
   rounding: number;
   discountPercent: number;
+  isDownPayment: boolean;
   currency: string;
   
   DocEntry: number;
@@ -75,6 +76,7 @@ interface PurchaseDocumentStore {
   setFreight: (f: number) => void;
   setRounding: (r: number) => void;
   setDiscountPercent: (p: number) => void;
+  setIsDownPayment: (v: boolean) => void;
   setDiscountSum: (s: number) => void;
   setCurrency: (c: string) => void;
   setDocTotal: (dt: number) => void;
@@ -118,6 +120,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     freight: 0,
     rounding: 0,
     discountPercent: 0,
+    isDownPayment: false,
     currency: "PKR",
     DocEntry: 0,
     DocNum: 0,
@@ -151,6 +154,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     setFreight: (f) => { set({ freight: f }); get().calculateTotals(); },
     setRounding: (r) => { set({ rounding: r }); get().calculateTotals(); },
     setDiscountPercent: (p) => { set({ discountPercent: p }); get().calculateTotals(); },
+    setIsDownPayment: (v) => { set({ isDownPayment: !!v }); get().calculateTotals(); },
     setDiscountSum: (s) => { set({ discSum: s }); get().calculateTotals(); },
     setCurrency: (c) => set({ currency: c }),
     setDocTotal: (dt) => set({ DocTotal: dt }),
@@ -304,7 +308,9 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         comments: (doc.Comments !== undefined && doc.Comments !== null) ? doc.Comments : (doc.comments !== undefined && doc.comments !== null ? doc.comments : ""),
         freight: parseSafe(doc.Freight || doc.freight),
         rounding: parseSafe(doc.Rounding || doc.rounding),
-        discountPercent: parseSafe(doc.DiscountPercent || doc.discountPercent),
+        discountPercent: parseSafe(doc.DownPaymentPercentage) > 0
+          ? parseSafe(doc.DownPaymentPercentage)
+          : parseSafe(doc.DiscountPercent || doc.discountPercent),
         currency: doc.DocCurrency || doc.Currency || "USD",
         DocEntry: isCopy ? 0 : parseSafe(doc.DocEntry),
         DocNum: isCopy ? 0 : parseSafe(doc.DocNum),
@@ -374,8 +380,9 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     },
 
     calculateTotals: () => {
-      const { lines, discountPercent, freight, rounding, additionalExpenses } = get();
+      const { lines, discountPercent, freight, rounding, additionalExpenses, isDownPayment } = get();
       const { freightsWithCharges } = useMasterDataStore.getState();
+      const headerDiscountPercent = isDownPayment ? 0 : parseSafe(discountPercent);
 
       let overallTotalBeforeDiscount = 0;
       let overallLineFreightAmount = 0;
@@ -393,7 +400,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         // SAP applies the document-level (header/footer) Discount % on top of each
         // line's own discount BEFORE computing tax - tax is calculated on the fully
         // discounted taxable base, not on the pre-header-discount line amount.
-        const headerDiscountShareOfLine = (lineAmountAfterDiscount * parseSafe(discountPercent)) / 100;
+        const headerDiscountShareOfLine = (lineAmountAfterDiscount * headerDiscountPercent) / 100;
         const lineTaxableAmount = lineAmountAfterDiscount - headerDiscountShareOfLine;
         const itemTaxAmount = lineTaxableAmount * (itemTaxRate / 100);
 
@@ -431,7 +438,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         totalFreightAmount +
         parseSafe(rounding) +
         totalAdditionalExpenses -
-        calculatedDiscSum;
+        (isDownPayment ? 0 : calculatedDiscSum);
 
       set({
         lines: processedLines,
@@ -453,6 +460,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
       freight: 0,
       rounding: 0,
       discountPercent: 0,
+      isDownPayment: false,
       DocEntry: 0,
       DocNum: 0,
       TotalBeforeDiscount: 0,
@@ -463,6 +471,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
       additionalExpenses: [],
       attachments: [],
       lastLoadedDocType: null,
+      loadedDraftData: null,
     }),
   }))
 );

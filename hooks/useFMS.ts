@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useCallback,
   createContext,
@@ -55,10 +56,20 @@ export function useFMS({
       .catch(() => {});
   }, [docType, setConfigs]);
 
-  const docConfigs: FmsConfigDto[] = configs[docType] ?? [];
+  const cbRef = useRef({ getLines, getValues, setValue, onMultipleResults });
+  cbRef.current = { getLines, getValues, setValue, onMultipleResults };
 
-  const autoConfigs = docConfigs.filter((c) => c.triggerType === "Auto" && c.triggerField);
-  const triggerFieldNames = [...new Set(autoConfigs.map((c) => c.triggerField!))];
+  const docConfigs = useMemo<FmsConfigDto[]>(() => configs[docType] ?? [], [configs, docType]);
+
+  const autoConfigs = useMemo(
+    () => docConfigs.filter((c) => c.triggerType === "Auto" && c.triggerField),
+    [docConfigs]
+  );
+
+  const triggerFieldNames = useMemo(
+    () => [...new Set(autoConfigs.map((c) => c.triggerField!))],
+    [autoConfigs]
+  );
 
   const watchedValues = useWatch({ control, name: triggerFieldNames as any });
 
@@ -104,17 +115,19 @@ export function useFMS({
       const config = docConfigs.find((c) => c.targetField === targetField);
       if (!config) return;
 
+      const { getLines: gl, getValues: gv, setValue: sv, onMultipleResults: omr } = cbRef.current;
+
       // Base = first line (so header/UDF rules can still read :LineTotal, :Quantity…),
       // then header form values, then the explicit row context from a line trigger.
-      const firstLine = getLines?.()[0];
+      const firstLine = gl?.()[0];
       const formContext = {
         ...(firstLine ? flattenFormContext(firstLine) : {}),
-        ...flattenFormContext(getValues()),
+        ...flattenFormContext(gv()),
         ...(extraContext ?? {}),
       };
 
       const setter =
-        apply ?? ((v: string) => setValue(targetField, v, { shouldDirty: true }));
+        apply ?? ((v: string) => sv(targetField, v, { shouldDirty: true }));
 
       try {
         const result: FmsExecuteResult = await executeFmsQuery({
@@ -127,16 +140,14 @@ export function useFMS({
 
         if (result.value !== undefined && result.value !== null) {
           setter(result.value);
-        } else if (result.rows && result.rows.length > 0 && onMultipleResults) {
-          onMultipleResults(result.rows, result.columns ?? [], targetField, (selected) =>
-            setter(selected)
-          );
+        } else if (result.rows && result.rows.length > 0 && omr) {
+          omr(result.rows, result.columns ?? [], targetField, (selected) => setter(selected));
         }
       } catch {
         // silent
       }
     },
-    [docConfigs, getValues, getLines, setValue, onMultipleResults]
+    [docConfigs]
   );
 
   const triggerFMS = useCallback(
@@ -144,12 +155,15 @@ export function useFMS({
     [runFmsForTarget]
   );
 
-  return {
-    fmsConfigs: docConfigs,
-    hasFMS: (fieldName: string) => docConfigs.some((c) => c.targetField === fieldName),
-    triggerFMS,
-    runFmsForTarget,
-  };
+  return useMemo(
+    () => ({
+      fmsConfigs: docConfigs,
+      hasFMS: (fieldName: string) => docConfigs.some((c) => c.targetField === fieldName),
+      triggerFMS,
+      runFmsForTarget,
+    }),
+    [docConfigs, triggerFMS, runFmsForTarget]
+  );
 }
 
 // ─── Context: expose hasFMS / triggerFMS to nested field components ────────────

@@ -19,6 +19,7 @@ import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells, LineCellFms } from "@/components/shared/LineUDFCells";
+import { usePositiveField } from "@/lib/validation/usePositiveField";
 
 
 interface Props {
@@ -65,6 +66,8 @@ export function DocumentLineRow({ index, line }: Props) {
   };
 
   const [draftLine, setDraftLine] = useState(line);
+  const qtyGuard = usePositiveField("Quantity", line.Quantity);
+  const priceGuard = usePositiveField("Price", line.Price);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
   const [cogsModalOpen, setCogsModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
@@ -237,7 +240,12 @@ export function DocumentLineRow({ index, line }: Props) {
               value={draftLine.Quantity}
               onChange={(e) => {
                 const val = Number(e.target.value);
+                qtyGuard.track(val);
                 setDraftLine({ ...draftLine, Quantity: val });
+              }}
+              onBlur={(e) => {
+                const { ok, value } = qtyGuard.resolve(e.target.value);
+                if (!ok) setDraftLine((prev) => ({ ...prev, Quantity: value }));
               }}
               disabled={!isCellEditable("Quantity")}
             />
@@ -273,7 +281,12 @@ export function DocumentLineRow({ index, line }: Props) {
               value={draftLine.Price}
               onChange={(e) => {
                 const val = Number(e.target.value);
+                priceGuard.track(val);
                 setDraftLine({ ...draftLine, Price: val });
+              }}
+              onBlur={(e) => {
+                const { ok, value } = priceGuard.resolve(e.target.value);
+                if (!ok) setDraftLine((prev) => ({ ...prev, Price: value }));
               }}
             />
             <LineCellFms field="Price" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("Price")} />

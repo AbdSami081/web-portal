@@ -56,6 +56,7 @@ export const useUDFStore = create<UDFStore>()(
       } catch (error) {
         console.error(`Failed to fetch UDF definitions for docType ${docType}:`, error);
         set((state) => ({
+          definitions: { ...state.definitions, [docType]: state.definitions[docType] ?? [] },
           isLoading: { ...state.isLoading, [docType]: false }
         }));
       }
@@ -80,7 +81,10 @@ export const useUDFStore = create<UDFStore>()(
         }));
       } catch (error) {
         console.error(`Failed to fetch LINE UDF definitions for docType ${docType}:`, error);
-        set((state) => ({ lineLoading: { ...state.lineLoading, [docType]: false } }));
+        set((state) => ({
+          lineDefinitions: { ...state.lineDefinitions, [docType]: state.lineDefinitions[docType] ?? [] },
+          lineLoading: { ...state.lineLoading, [docType]: false }
+        }));
       }
     },
   }))

@@ -293,6 +293,7 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         branch: null,
         attachments: [],
         udfs: {},
+        loadedDraftData: null,
       })),
     recalculateFromHeader: (headerPlannedQty: number) => {
       set((state) => ({

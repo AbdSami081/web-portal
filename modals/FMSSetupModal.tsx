@@ -567,12 +567,6 @@ const FMSSetupModal: React.FC<Props> = ({
                       (H header · L line · F footer · UDF)
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400">
-                    The form field / UDF that receives the result. Any name works — pick from the
-                    list or type a custom one. On a document: <b>Alt+Shift+I</b> (or the toolbar
-                    “Inspect fields” button) shows field names on hover; <b>Shift+F2</b> in a
-                    focused field runs its rule.
-                  </p>
                 </div>
 
                 <div className="space-y-1.5">

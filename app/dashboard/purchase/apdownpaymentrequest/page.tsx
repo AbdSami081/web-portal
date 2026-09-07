@@ -38,6 +38,7 @@ export default function APDownPaymentRequestPage() {
       lastLoadedDocType,
       reset: resetStore,
       attachments,
+      discountPercent,
     } = usePurchaseDocument.getState();
 
     const newAttachments = attachments.filter((att) => att.File);
@@ -72,10 +73,13 @@ export default function APDownPaymentRequestPage() {
       ...uploadedAttachments,
     ];
 
+    const { discountPercent: _dp, ...headerData } = data as Record<string, any>;
     const payload = {
-      ...data,
+      ...headerData,
+      DownPaymentType: "dptRequest",
+      DownPaymentPercentage: Number(discountPercent) || 0,
       DocumentLines: lines.map((line) => {
-        const lineData: any = { ...line, DownPaymentType: "dptRequest" };
+        const lineData: any = { ...line };
         if (
           DocEntry &&
           Number(DocEntry) > 0 &&
@@ -101,11 +105,6 @@ export default function APDownPaymentRequestPage() {
         CopyToTarget: att.CopyToTarget ? "tYES" : "tNO",
       })),
     };
-
-    console.log(
-      "Final AP Down Payment Request Payload:",
-      JSON.stringify(payload, null, 2),
-    );
 
     if (
       DocEntry &&

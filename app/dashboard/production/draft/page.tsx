@@ -54,11 +54,10 @@ export default function ProductionDraftPage() {
   const loadedDraftIdRef = React.useRef<number | null>(null);
 
   useEffect(() => {
-    const draftId = Number(draftEntryStr);
+    const draftId = Number((draftEntryStr ?? "").toString().trim().split(/\s+/)[0]);
     if (loadedDraftIdRef.current === draftId) return;
     loadedDraftIdRef.current = draftId;
     if (!draftId || isNaN(draftId)) {
-      toast.error("No valid draft entry provided.");
       setIsLoading(false);
       return;
     }
@@ -75,11 +74,6 @@ export default function ProductionDraftPage() {
           };
 
           useIFPRDDocument.getState().setLoadedDraftData(documentData);
-
-          // SAP doesn't always return DocObjectCode in a cleanly numeric form - falling
-          // through to Number() unchecked let a NaN slip into targetDocType, which then
-          // flowed into the approval request as ObjectType: "NaN" and SAP rejected the
-          // whole re-approval submission.
           const parsedObjectCode = documentData.DocObjectCode !== undefined && documentData.DocObjectCode !== null
             ? Number(documentData.DocObjectCode)
             : NaN;

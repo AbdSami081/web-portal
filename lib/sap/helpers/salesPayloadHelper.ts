@@ -11,15 +11,9 @@ interface BuildSalesPayloadOptions {
   discountPercent?: number;
   freight?: number;
   additionalExpenses?: Array<{ ExpenseCode: number; LineTotal: number; VatGroup?: string; TaxCode?: string }>;
-  // Set only for A/R Down Payment Request ("dptRequest") / Invoice ("dptInvoice") — the
-  // DownPayments Service Layer entity is shared by both, so this line-level field is what
-  // tells SAP which one each record actually is.
   downPaymentType?: string;
 }
 
-// SAP Service Layer requires each Serial/BatchNumbers entry to carry BaseLineNumber —
-// the 0-based index of the DocumentLine it belongs to — or the allocation can be
-// silently dropped on save.
 function withBaseLineNumber<T extends object>(entries: T[] | undefined, lineIndex: number): T[] | undefined {
   if (!entries || entries.length === 0) return undefined;
   return entries.map((entry) => ({ ...entry, BaseLineNumber: lineIndex }));
@@ -77,7 +71,9 @@ export function buildSalesDocumentPayload({
     DocDueDate: data.DocDueDate,
     TaxDate: data.TaxDate,
     Comments: data.Comments,
-    DiscountPercent: discountPercent || 0,
+    ...(downPaymentType
+      ? { DownPaymentType: downPaymentType, DownPaymentPercentage: discountPercent || 0 }
+      : { DiscountPercent: discountPercent || 0 }),
     DocumentLines: lines.map((line, index) => {
       const baseFields: Record<string, unknown> = {
         ItemCode: line.ItemCode,
@@ -88,10 +84,6 @@ export function buildSalesDocumentPayload({
         WarehouseCode: line.WarehouseCode || "",
         UoMCode: line.UoMCode || "",
       };
-
-      if (downPaymentType) {
-        baseFields.DownPaymentType = downPaymentType;
-      }
 
       if (hasCopyFrom) {
         baseFields.BaseType = lastLoadedDocType;
@@ -144,11 +136,11 @@ export function buildSalesDocumentPatchPayload({
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
-    // includeLines:false means SAP has this document's transactional data locked
-    // post-add (e.g. Delivery rejects an unchanged Quantity resend with "Incorrect
-    // 'Qty (Inventory UoM)' in line ..."). Only header remarks/dates/attachments are
-    // safe to patch for those document types. Mirrors buildPurchaseDocumentPatchPayload.
-    ...(includeLines && { DiscountPercent: discountPercent || 0 }),
+     ...(downPaymentType
+      ? { DownPaymentType: downPaymentType, DownPaymentPercentage: discountPercent || 0 }
+      : includeLines
+        ? { DiscountPercent: discountPercent || 0 }
+        : {}),
     ...(includeLines && {
       DocumentLines: lines.map((line, index) => {
         const baseFields: Record<string, unknown> = {
@@ -161,13 +153,6 @@ export function buildSalesDocumentPatchPayload({
           UoMCode: line.UoMCode || "",
         };
 
-        if (downPaymentType) {
-          baseFields.DownPaymentType = downPaymentType;
-        }
-
-        // Existing lines carry their SAP LineNum - the backend sends
-        // B1S-ReplaceCollectionsOnPatch so omitted lines get deleted.
-        // New lines must NOT carry LineNum ("-1" is rejected by SAP).
         if (line.LineNum !== undefined && line.LineNum >= 0) {
           baseFields.LineNum = line.LineNum;
         }

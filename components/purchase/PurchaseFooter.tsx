@@ -6,10 +6,12 @@ import { useFormContext } from "react-hook-form";
 import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 import { useFmsContext } from "@/hooks/useFMS";
 import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
+import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
 
 export function PurchaseFooter() {
   const { watch, register, setValue } = useFormContext();
   const { triggerFMS } = useFmsContext();
+  const config = usePurchaseDocConfig();
   const {
     DocTotal,
     TaxTotal,
@@ -74,10 +76,11 @@ export function PurchaseFooter() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 items-center">
-            <AppLabel>Discount</AppLabel>
+            <AppLabel>{config.isDownPayment ? "DPM" : "Discount"}</AppLabel>
             <div className="flex gap-2 items-center">
               <div className="relative flex-[1.5]">
                 <Input
+                  data-fms-field={config.isDownPayment ? "DownPaymentPercentage" : "DiscountPercent"}
                   type="number"
                   step="any"
                   className="h-6 text-right pr-6"
@@ -89,12 +92,18 @@ export function PurchaseFooter() {
               </div>
               <div className="relative flex-[2.5]">
                 <Input
+                  data-fms-field={config.isDownPayment ? "DownPaymentAmount" : "DiscountSum"}
                   type="number"
                   step="any"
                   className="h-6 text-right pr-10"
-                  value={discSum.toFixed(2)}
+                  value={
+                    config.isDownPayment
+                      ? ((Number(TotalBeforeDiscount) * Number(discountPercent)) / 100).toFixed(2)
+                      : discSum.toFixed(2)
+                  }
                   onChange={(e) => setDiscountSum(Number(e.target.value))}
-                  disabled={isFooterDisabled}
+                  readOnly={config.isDownPayment}
+                  disabled={isFooterDisabled || config.isDownPayment}
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
               </div>

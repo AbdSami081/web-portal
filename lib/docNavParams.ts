@@ -13,6 +13,8 @@ export interface DocNavParams {
   draft?: string;
   approvalStatus?: string;
   approvalRequestCode?: string;
+  approvalRole?: string;
+  approvalReadOnly?: string;
 }
 
 const KEYS: (keyof DocNavParams)[] = [
@@ -22,6 +24,8 @@ const KEYS: (keyof DocNavParams)[] = [
   "draft",
   "approvalStatus",
   "approvalRequestCode",
+  "approvalRole",
+  "approvalReadOnly",
 ];
 
 interface StoredNav {

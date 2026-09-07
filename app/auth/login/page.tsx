@@ -99,7 +99,7 @@ export default function LoginPage() {
                 <ShieldCheck className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-2xl font-black tracking-tighter leading-none">SuperNova Solutions</span>
+                <span className="text-2xl font-black tracking-tighter leading-none">SuperNova</span>
               </div>
             </div>
           </div>
@@ -146,7 +146,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="mb-4 lg:text-left space-y-1">
             <div className="flex justify-center mb-2">
-              <Image src={logoImage} alt="Supernova" width={220} height={80} className="h-20 w-auto object-contain" />
+              <Image src={logoImage} alt="Supernova" width={220} height={80} className="h-8 w-auto object-contain" />
             </div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Sign In</h2>
             <p className="text-slate-500 text-sm font-medium">Access your web portal</p>

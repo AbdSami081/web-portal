@@ -21,6 +21,7 @@ interface SalesDocumentStore {
   freight: number;
   rounding: number;
   discountPercent: number;
+  isDownPayment: boolean;
   currency: DocCurrency;
   DocEntry: number;
   DocNum: number;
@@ -61,6 +62,7 @@ interface SalesDocumentStore {
   setFreight: (f: number) => void;
   setRounding: (r: number) => void;
   setDiscountPercent: (p: number) => void;
+  setIsDownPayment: (v: boolean) => void;
   setDiscountSum: (s: number) => void;
   setCurrency: (c: DocCurrency) => void;
 
@@ -112,6 +114,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     freight: 0,
     rounding: 0,
     discountPercent: 0,
+    isDownPayment: false,
     currency: "USD",
 
     TotalBeforeDiscount: 0,
@@ -156,6 +159,10 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       const { TotalBeforeDiscount } = get();
       const percent = TotalBeforeDiscount > 0 ? (amt / TotalBeforeDiscount) * 100 : 0;
       set({ discSum: amt, discountPercent: percent });
+      get().calculateTotals();
+    },
+    setIsDownPayment: (v) => {
+      set({ isDownPayment: !!v });
       get().calculateTotals();
     },
     setCurrency: (c) => set({ currency: c }),
@@ -235,8 +242,9 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     },
 
     calculateTotals: () => {
-      const { lines, freight, rounding, additionalExpenses, discountPercent } = get();
+      const { lines, freight, rounding, additionalExpenses, discountPercent, isDownPayment } = get();
       const { freightsWithCharges } = useMasterDataStore.getState();
+      const headerDiscountPercent = isDownPayment ? 0 : discountPercent;
 
       let overallTotalBeforeDiscount = 0;
       let overallLineFreightAmount = 0;
@@ -257,7 +265,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         // discounted taxable base, not on the pre-header-discount line amount. Skipping
         // this step is what caused tax (and therefore DocTotal) to come out higher than
         // SAP's own calculation whenever a footer discount was used.
-        const headerDiscountShareOfLine = (lineAmountAfterDiscount * discountPercent) / 100;
+        const headerDiscountShareOfLine = (lineAmountAfterDiscount * headerDiscountPercent) / 100;
         const lineTaxableAmount = lineAmountAfterDiscount - headerDiscountShareOfLine;
         const itemTaxAmount = lineTaxableAmount * (itemTaxRate / 100);
 
@@ -295,7 +303,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         totalFreightAmount +
         parseSafe(rounding) +
         totalAdditionalExpenses -
-        calculatedDiscSum;
+        (isDownPayment ? 0 : calculatedDiscSum);
 
       set({
         lines: processedLines,
@@ -318,6 +326,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         freight: 0,
         rounding: 0,
         discountPercent: 0,
+        isDownPayment: false,
         TotalBeforeDiscount: 0,
         TaxTotal: 0,
         discSum: 0,
@@ -332,6 +341,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         attachments: [],
         udfs: {},
         isCopying: false,
+        loadedDraftData: null,
       }),
 
     clearLines: () => {
@@ -429,7 +439,9 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         comments: (doc.Comments !== undefined && doc.Comments !== null) ? doc.Comments : (doc.comments !== undefined && doc.comments !== null ? doc.comments : ""),
         freight: parseSafe(doc.Freight || doc.freight),
         rounding: parseSafe(doc.Rounding || doc.rounding),
-        discountPercent: parseSafe(doc.DiscountPercent || doc.discountPercent),
+        discountPercent: parseSafe(doc.DownPaymentPercentage) > 0
+          ? parseSafe(doc.DownPaymentPercentage)
+          : parseSafe(doc.DiscountPercent || doc.discountPercent),
         currency: doc.DocCurrency || doc.Currency || "USD",
         DocEntry: isCopy ? 0 : parseSafe(doc.DocEntry),
         DocNum: isCopy ? 0 : parseSafe(doc.DocNum),

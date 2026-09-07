@@ -90,7 +90,12 @@ import { UDFLayout } from "../shared/UDFSheet";
 import { GenericModal } from "@/modals/GenericModal";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged } from "@/api+/sap/Templates/approvalTemplate";
+import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { APPROVED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
+import { runReopenApproval } from "@/lib/approval/reopenApproval";
+import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
+import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
@@ -126,9 +131,11 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   title,
 }: PurchaseDocumentLayoutProps<T>) {
   const { user } = useAuth();
+  const { canUpdateApprovedDocument, canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = React.useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const headerBadges = React.useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
   const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
   const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
   const isRejectedApproval =
@@ -176,6 +183,17 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
       udfs: state.udfs,
     }))
   );
+
+  const authStatus = watch("AuthorizationStatus" as any);
+  const authWithout = isAuthorizationWithout(authStatus);
+  const authBadge = mapAuthorizationStatus(authStatus);
+  const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
+  const approvalApplies = useUserHasApprovalTemplate(docType);
+  const isPostedLoaded = Number(DocEntry) > 0 && !docNav.draftEntry;
+  const draftBadgeVisible =
+    !authWithout && !isPostedLoaded &&
+    (approvalApplies || hasNavApproval || headerBadges.showDraft);
+  const statusBadge = authWithout ? null : (authBadge ?? headerBadges.status);
 
   const docStatus = watch("DocStatus" as any);
   const docEntry = watch("DocEntry" as any);
@@ -300,17 +318,17 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     }
   };
 
+  const isApprovalDraftContext =
+    isApprovedDraft || isRejectedApproval || isPendingApproval || !!docNav.draftEntry;
+
   const getSubmitButtonText = () => {
     if (isSubmitting) return "Saving...";
+    if (isApprovalDraftContext) return "Create";
     if (docEntry === "0" || !isEditMode) return "Submit";
     if (isEditMode && docStatus === "bost_Open") return "Update";
     return "";
   };
 
-  // DocumentType.APDownPaymentRequest shares its numeric value with PurchaseRequests
-  // (both 1470000113 - SAP gives them the same underlying object code), so the route is
-  // the only way to tell the two pages apart. Same collision class as
-  // isReserveInvoicePage above, for a different pair.
   const isApDownPaymentRequestPage = pathname?.toLowerCase().includes("apdownpaymentrequest") ?? false;
 
   const copyToOptions = (() => {
@@ -416,6 +434,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   React.useEffect(() => {
     fetchUdfDefinitions(docType);
   }, [docType, fetchUdfDefinitions]);
+
+  React.useEffect(() => {
+    usePurchaseDocument.getState().setIsDownPayment(!!config.isDownPayment);
+  }, [config.isDownPayment]);
 
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
@@ -590,7 +612,32 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             }
 
            if (isPendingApproval && docNav.draftEntry) {
-              toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+              const pendingRole = docNav.approvalRole === "approver" ? "approver" : "originator";
+              const canEditPending = pendingRole === "approver" ? canAuthorizerUpdateDraft : canOriginatorUpdateDraft;
+              if (!canEditPending) {
+                toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+                return;
+              }
+              try {
+                const pendingPatchPayload = buildPurchaseDocumentPatchPayload({
+                  data: data as any,
+                  lines: state.lines,
+                  discountPercent: state.discountPercent,
+                  freight: state.freight,
+                  rounding: state.rounding,
+                  additionalExpenses: state.additionalExpenses,
+                  includeLines: [
+                    DocumentType.PurchaseRequests,
+                    DocumentType.PurchaseQuotation,
+                    DocumentType.PurchaseOrder,
+                  ].includes(docType),
+                });
+                await patchDraftDocument(Number(docNav.draftEntry), pendingPatchPayload);
+                toast.success("Draft updated. It remains pending approval.");
+                finishAndReset();
+              } catch (err: any) {
+                toast.error(err?.response?.data?.Message || "Failed to update the pending draft");
+              }
               return;
             }
 
@@ -615,6 +662,12 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 }
                 return;
               }
+
+              if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
+                toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
+                return;
+              }
+
               try {
                 const patchPayload = buildPurchaseDocumentPatchPayload({
                   data: data as any,
@@ -634,23 +687,19 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 toast.error(err?.response?.data?.Message || "Failed to update approval draft");
                 return;
               }
-              let approvedTemplates = approvalTemplates;
-              if (currentUserId) {
-                try {
-                  const docTypeApproved = getApprovalDocumentType(docType, pathname);
-                  approvedTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeApproved);
-                } catch {
-                  approvedTemplates = [];
-                }
-              }
-              if (approvedTemplates && approvedTemplates.length > 0) {
-                setApprovalTemplates(approvedTemplates);
-                setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-                setApprovalModalOpen(true);
-                return;
-              }
-              toast.success("Approved document updated. A new approval request is required.");
-              finishAndReset();
+
+
+              try {
+                const reTemplates = await getCurrentUserApprovalTemplates(
+                  user?.sapUserId || 0,
+                  getApprovalDocumentType(docType)
+                );
+                if (reTemplates && reTemplates.length > 0) setApprovalTemplates(reTemplates);
+              } catch {}
+
+              setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
+              setPendingFinalData(null);
+              setApprovalModalOpen(true);
               return;
             }
 
@@ -694,7 +743,29 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
           <div className="flex justify-between items-center px-6 py-3 border-b bg-muted shrink-0">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold">{title || config.title}</h1>
+              <h1 className="text-xl font-semibold flex items-center gap-2">
+                {title || config.title}
+                {draftBadgeVisible && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200/60 rounded px-1.5 py-0.5">
+                    Draft
+                  </span>
+                )}
+                {statusBadge === "pending" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-sky-600 bg-sky-50 border border-sky-200/60 rounded px-1.5 py-0.5">
+                    Pending
+                  </span>
+                )}
+                {statusBadge === "approved" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-50 border border-emerald-200/60 rounded px-1.5 py-0.5">
+                    Approved
+                  </span>
+                )}
+                {statusBadge === "rejected" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200/60 rounded px-1.5 py-0.5">
+                    Rejected
+                  </span>
+                )}
+              </h1>
             </div>
 
             {actions && <div>{actions}</div>}
@@ -903,25 +974,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
               if (pendingReApproval) {
-                const tpl = approvalTemplates[0];
-                const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
-                const approvalRequestId = Number(docNav.approvalRequestCode) || 0;
-                try {
-                  await submitApprovalRequest(approvalRequestId, {
-                    TemplateCode: tpl?.Code,
-                    ObjectEntry: pendingReApproval.draftId,
-                    ObjectType: DRAFT_OBJECT_TYPES[0],
-                    IsDraft: "Y",
-                    ApproverUserID: tpl?.ApprovalTemplateUsers?.[0]?.UserID,
-                    OriginatorID: user?.sapUserId,
-                    Remarks: remarks || "",
-                  });
-                  toast.success("Draft updated and the approval request was re-submitted.");
-                } catch (err: any) {
-                  toast.warning(err?.response?.data?.Message || "Approval re-submitted. Remarks could not be attached.");
-                }
+                await runReopenApproval(Number(docNav.approvalRequestCode) || 0);
                 setPendingReApproval(null);
                 setPendingFinalData(null);
+                setApprovalModalOpen(false);
                 finishAndReset();
                 return;
               }

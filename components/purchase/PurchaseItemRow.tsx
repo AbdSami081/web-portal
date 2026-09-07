@@ -17,6 +17,7 @@ import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper"
 import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
+import { usePositiveField } from "@/lib/validation/usePositiveField";
 
 interface Props {
   index: number;
@@ -52,6 +53,8 @@ export function PurchaseItemRow({ index, line }: Props) {
   };
 
   const [draftLine, setDraftLine] = useState(line);
+  const qtyGuard = usePositiveField("Quantity", line.Quantity);
+  const priceGuard = usePositiveField("Price", line.Price);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
   const [cogsModalOpen, setCogsModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
@@ -176,9 +179,15 @@ export function PurchaseItemRow({ index, line }: Props) {
             type="number"
             step="any"
             value={draftLine.Quantity}
-            onChange={(e) =>
-              setDraftLine({ ...draftLine, Quantity: Number(e.target.value) })
-            }
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              qtyGuard.track(val);
+              setDraftLine({ ...draftLine, Quantity: val });
+            }}
+            onBlur={(e) => {
+              const { ok, value } = qtyGuard.resolve(e.target.value);
+              if (!ok) setDraftLine((prev) => ({ ...prev, Quantity: value }));
+            }}
             disabled={!isFieldEnabled("Quantity")}
           />
         </td>
@@ -202,9 +211,15 @@ export function PurchaseItemRow({ index, line }: Props) {
             className="h-6 w-full text-right"
             type="number"
             value={draftLine.Price}
-            onChange={(e) =>
-              setDraftLine({ ...draftLine, Price: Number(e.target.value) })
-            }
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              priceGuard.track(val);
+              setDraftLine({ ...draftLine, Price: val });
+            }}
+            onBlur={(e) => {
+              const { ok, value } = priceGuard.resolve(e.target.value);
+              if (!ok) setDraftLine((prev) => ({ ...prev, Price: value }));
+            }}
             disabled={!isFieldEnabled("Price")}
           />
         </td>
