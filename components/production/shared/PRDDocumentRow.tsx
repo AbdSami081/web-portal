@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePRDDocConfig } from "./PRDDocumentLayout";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
+import { GLAccountCell } from "@/components/shared/GLAccountCell";
 
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
@@ -277,6 +278,20 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               <SelectItem value="im_Backflush">Backflush</SelectItem>
             </SelectContent>
           </Select>
+        </td>
+      )}
+
+      {config.itemColumns.glAccount && (
+        <td className="py-2 px-4">
+          <GLAccountCell
+            value={draftLine.AccountCode || ""}
+            disabled={initialStatus === "boposClosed"}
+            onChange={(val) => {
+              const updated = { ...draftLine, AccountCode: val };
+              setDraftLine(updated);
+              updateLine(index, updated);
+            }}
+          />
         </td>
       )}
 

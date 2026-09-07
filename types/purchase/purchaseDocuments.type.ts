@@ -72,6 +72,7 @@ export interface PurchaseDocumentLine {
   BPLid?: number;
   RequiredDate?: string;
   UoMCode?: string;
+  AccountCode?: string;
   TaxCode?: string;
   TaxType?: string;
   TaxRate?: number;

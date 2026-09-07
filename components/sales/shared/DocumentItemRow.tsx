@@ -20,6 +20,7 @@ import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/
 import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells, LineCellFms } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
+import { GLAccountCell } from "@/components/shared/GLAccountCell";
 
 
 interface Props {
@@ -294,6 +295,16 @@ export function DocumentLineRow({ index, line }: Props) {
         </td>
       )}
 
+      {config.showGLAccount && (
+        <td className="py-2 px-2">
+          <GLAccountCell
+            value={draftLine.AccountCode || ""}
+            disabled={isLineDisabled}
+            onChange={(val) => patchLine({ AccountCode: val })}
+          />
+        </td>
+      )}
+
       {isFieldVisible("DiscountPercent") && (
         <td className="py-2 px-2">
           <div className="flex items-center gap-1">
@@ -307,8 +318,8 @@ export function DocumentLineRow({ index, line }: Props) {
               disabled={!isCellEditable("DiscountPercent")}
               value={draftLine.DiscountPercent || 0}
               onChange={(e) => {
-                const val = Number(e.target.value);
-                setDraftLine({ ...draftLine, DiscountPercent: val > 100 ? 100 : val });
+                const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                setDraftLine({ ...draftLine, DiscountPercent: val });
               }}
             />
             <LineCellFms field="DiscountPercent" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("DiscountPercent")} />

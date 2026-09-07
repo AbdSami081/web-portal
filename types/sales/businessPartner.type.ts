@@ -19,4 +19,5 @@ export type BusinessPartner = {
   Balance?: number; // Optional
   Currency?: string;
   PriceListNum?: number;
+  DpmClear?: string;
 };

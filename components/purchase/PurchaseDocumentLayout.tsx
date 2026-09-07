@@ -540,6 +540,11 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               return;
             }
 
+            if (config.showGLAccount && state.lines.some((l) => !String(l.AccountCode || "").trim())) {
+              toast.info("G/L account missing. Please set a G/L account on every line before saving.");
+              return;
+            }
+
             if (isBranchMissing((data as any).BPL_IDAssignedToInvoice)) {
               toast.error("Please select a branch before submitting.");
               return;

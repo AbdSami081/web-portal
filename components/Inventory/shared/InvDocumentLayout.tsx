@@ -524,6 +524,11 @@ export function InvDocumentLayout<T extends FieldValues>({
     const currentUserId = user?.sapUserId;
     const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
 
+    if (config.showGLAccount && state.lines.some((l) => !String(l.AccountCode || "").trim())) {
+      toast.info("G/L account missing. Please set a G/L account on every line before saving.");
+      return;
+    }
+
     if (isBranchMissing((finalData as any).BPL_IDAssignedToInvoice)) {
       toast.error("Please select a branch before submitting.");
       return;

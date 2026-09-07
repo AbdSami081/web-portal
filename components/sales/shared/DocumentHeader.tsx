@@ -219,9 +219,17 @@ export function DocumentHeader() {
   const handleSelectBP = (bp: BusinessPartner) => {
     setCustomer(bp);
     setValue("listNum", bp.PriceListNum);
-    
+
     if (bp.Currency) {
       setCurrency(bp.Currency as any);
+    }
+
+    if (config.showGLAccount) {
+      const glAccount = (bp.DpmClear || "").trim();
+      if (glAccount) {
+        const state = useSalesDocument.getState();
+        state.lines.forEach((l) => state.updateLine(l.ItemCode, { AccountCode: glAccount }));
+      }
     }
 
     setModalOpen(false);

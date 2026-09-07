@@ -21,6 +21,16 @@ function buildObjectMenuMap(
   return map;
 }
 
+const OBJECT_CODE_ALIASES: Record<number, number> = {
+  540000006: 54,
+};
+
+export function normalizeObjectCode(objectType: string | number): number {
+  const code = Number(objectType);
+  if (Number.isNaN(code)) return code;
+  return OBJECT_CODE_ALIASES[code] ?? code;
+}
+
 const OBJECT_MENU_MAP = buildObjectMenuMap(SERVER_MENUS);
 
 function buildObjectMenuUrlsMap(
@@ -47,19 +57,19 @@ function buildObjectMenuUrlsMap(
 const OBJECT_MENU_URLS_MAP = buildObjectMenuUrlsMap(SERVER_MENUS);
 
 export function getMenuInfoByObjectCode(objectType: string | number): ObjectMenuInfo | undefined {
-  const code = Number(objectType);
+  const code = normalizeObjectCode(objectType);
   if (Number.isNaN(code)) return undefined;
   return OBJECT_MENU_MAP.get(code);
 }
 
 export function getMenuUrlsByObjectCode(objectType: string | number): string[] {
-  const code = Number(objectType);
+  const code = normalizeObjectCode(objectType);
   if (Number.isNaN(code)) return [];
   return (OBJECT_MENU_URLS_MAP.get(code) || []).map((m) => m.url);
 }
 
 export function getDraftModuleUrl(objectType: string | number): string | null {
-  const code = Number(objectType);
+  const code = normalizeObjectCode(objectType);
   if ([13, 14, 15, 16, 17, 23, 203, 204, 234000031].includes(code)) return "/dashboard/sales/draft";
   if ([18, 19, 20, 21, 22, 54, 1470000113, 234000032, 540000006].includes(code)) return "/dashboard/purchase/draft";
   if ([67, 1250000001].includes(code)) return "/dashboard/inventory/draft";

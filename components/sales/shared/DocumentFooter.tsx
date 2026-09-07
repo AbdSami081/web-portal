@@ -98,9 +98,11 @@ export default function DocumentFooter() {
                     data-fms-field={config.isDownPayment ? "DownPaymentPercentage" : "DiscountPercent"}
                     type="number"
                     step="any"
+                    min={0}
+                    max={100}
                     className="h-6 text-right pr-6"
                     value={discountPercent}
-                    onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                    onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
                     disabled={isFooterDisabled || !isFieldEnabled("DiscountPercent")}
                   />
                   <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">%</span>

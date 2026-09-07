@@ -145,7 +145,22 @@ export function SalesDocumentLayout<T extends FieldValues>({
     ? null
     : (authBadge ?? headerBadges.status ?? (badgeState === "approved" && !draftBadgeVisible ? "approved" : null));
 
-  
+  useEffect(() => {
+    console.log("[SQ draft/badge]", {
+      docType,
+      DocEntry,
+      draftEntry: docNav.draftEntry,
+      loadedDraft: !!loadedDraftData,
+      authStatus,
+      approvalApplies,
+      hasNavApproval,
+      isPostedLoaded,
+      badgeState,
+      draftBadgeVisible,
+      statusBadge,
+    });
+  }, [docType, DocEntry, docNav.draftEntry, loadedDraftData, authStatus, approvalApplies, hasNavApproval, isPostedLoaded, badgeState, draftBadgeVisible, statusBadge]);
+
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
       const errorFields = Object.keys(errors).join(", ");
@@ -446,8 +461,24 @@ export function SalesDocumentLayout<T extends FieldValues>({
           const state = useSalesDocument.getState();
           const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
 
+          console.log("[SQ submit] start", {
+            docType,
+            draftEntry: docNav.draftEntry,
+            approvalRequestCode: docNav.approvalRequestCode,
+            isApprovedDraft,
+            isRejectedApproval,
+            isPendingApproval,
+            approvalApplies,
+            authStatus,
+          });
+
           if (linesHaveInvalidPrice(state.lines)) {
             toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
+            return;
+          }
+
+          if (config.showGLAccount && state.lines.some((l) => !String(l.AccountCode || "").trim())) {
+            toast.info("G/L account missing. Please set a G/L account on every line before saving.");
             return;
           }
 
@@ -548,6 +579,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
             const confirmedUnchanged = approvedChanged
               ? false
               : !(await validateDraftChanged(Number(docNav.draftEntry), state.lines, finalData));
+            console.log("[SQ submit] approved-draft branch", { approvedChanged, confirmedUnchanged });
             if (confirmedUnchanged) {
               try {
                 await onSubmit(finalData);
@@ -587,6 +619,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
               if (reTemplates && reTemplates.length > 0) setApprovalTemplates(reTemplates);
             } catch {}
 
+            console.log("[SQ submit] approved-draft changed -> opening re-approval modal", { draftEntry: docNav.draftEntry });
             setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
             setPendingFinalData(null);
             setApprovalModalOpen(true);
@@ -599,6 +632,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
             try {
               const docTypeStr = getApprovalDocumentType(docType);
               const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+              console.log("[SQ submit] new-doc approval check", { docTypeStr, templatesFound: activeTemplates?.length ?? 0 });
               if (activeTemplates && activeTemplates.length > 0) {
                 setApprovalTemplates(activeTemplates);
                 setPendingReApproval(null);
@@ -853,7 +887,15 @@ export function SalesDocumentLayout<T extends FieldValues>({
             onClose={() => setApprovalModalOpen(false)}
             templates={approvalTemplates}
             onConfirm={async (remarksMap) => {
+             console.log("[SQ approval] modal confirm", {
+               pendingReApproval,
+               approvalRequestCode: docNav.approvalRequestCode,
+               hasPendingFinalData: !!pendingFinalData,
+               templates: approvalTemplates.map((t) => ({ Code: t.Code, Name: t.Name })),
+               remarksMap,
+             });
              if (pendingReApproval) {
+                console.log("[SQ approval] re-opening existing approval request", Number(docNav.approvalRequestCode) || 0);
                 await runReopenApproval(Number(docNav.approvalRequestCode) || 0);
                 setPendingReApproval(null);
                 setPendingFinalData(null);
@@ -881,9 +923,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
                     await submitApprovalRequest(0, {
                       TemplateCode: tpl?.Code,
                       ObjectEntry: Number((result as any).DocEntry),
-                      // Same as pendingReApproval above: ObjectEntry is the DRAFT's own
-                      // entry, so ObjectType must be "112" ("Documents - Drafts"), not
-                      // the document's specific type.
                       ObjectType: DRAFT_OBJECT_TYPES[0],
                       IsDraft: "Y",
                       OriginatorID: user?.sapUserId,

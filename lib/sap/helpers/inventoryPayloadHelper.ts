@@ -63,6 +63,10 @@ function buildDocumentLines(
       baseFields.UoMCode = line.UoMCode;
     }
 
+    if (line.AccountCode && String(line.AccountCode).trim() !== "") {
+      baseFields.AccountCode = line.AccountCode;
+    }
+
     if (isPatch) {
       // Existing lines carry their SAP LineNum - the backend sends
       // B1S-ReplaceCollectionsOnPatch so omitted lines get deleted.
@@ -165,6 +169,10 @@ function buildGoodIssueLines(
 
     if (line.UoMCode && String(line.UoMCode).trim() !== "") {
       baseFields.UoMCode = line.UoMCode;
+    }
+
+    if (line.AccountCode && String(line.AccountCode).trim() !== "") {
+      baseFields.AccountCode = line.AccountCode;
     }
 
     if (isPatch) {

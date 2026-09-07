@@ -211,6 +211,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           Quantity: Number(line.Quantity) || 0,
           ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
           UoMCode: uomCode,
+          AccountCode: line.AccountCode || "",
           unitMsr,
           ManSerNum: line.ManSerNum || (line.SerialNumbers?.length ? "Y" : ""),
           ManBtchNum: line.ManBtchNum || (line.BatchNumbers?.length ? "Y" : ""),

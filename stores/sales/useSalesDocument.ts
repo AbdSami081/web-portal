@@ -148,7 +148,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       get().calculateTotals();
     },
     setDiscountPercent: (p) => {
-      const percent = parseSafe(p);
+      const percent = Math.min(100, Math.max(0, parseSafe(p)));
       const { TotalBeforeDiscount } = get();
       const amount = (TotalBeforeDiscount * percent) / 100;
       set({ discountPercent: percent, discSum: amount });
@@ -391,6 +391,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           TaxAmount: parseSafe(line.TaxTotal || line.TaxSum) || calculatedTax,
           UoMCode: resolveUoMFromCandidates(uoms, line.UoMCode, line.UoMGroupEntry, line.UnitsOfMeasurment) || line.UoMCode || "",
           MeasureUnit: line.MeasureUnit || "",
+          AccountCode: line.AccountCode || "",
           TaxCode: line.VatGroup || line.TaxCode,
           BaseType: line.BaseType,
           BaseEntry: line.BaseEntry,

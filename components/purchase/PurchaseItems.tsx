@@ -62,6 +62,10 @@ export function PurchaseItems() {
     const needsRequiredDate = isPurchaseRequest || config.type === DocumentType.PurchaseQuotation;
     const lineRequiredDate = needsRequiredDate ? new Date().toISOString().split("T")[0] : "";
 
+    const glAccount = config.showGLAccount
+      ? (usePurchaseDocument.getState().requester?.DpmClear || "").trim()
+      : "";
+
     items.forEach((item) => {
       const price = getCustomerPrice(item.Prices || []);
 
@@ -96,6 +100,7 @@ export function PurchaseItems() {
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,
+        ...(glAccount && { AccountCode: glAccount }),
         ...(needsRequiredDate && { RequiredDate: lineRequiredDate }),
       });
     });
@@ -138,6 +143,7 @@ export function PurchaseItems() {
     { key: "Quantity", title: "Qty", width: 100 },
     { key: "OnHand", title: "Qty In Whs", width: 100 },
     { key: "Price", title: "Price", width: 120 },
+    { key: "AccountCode", title: "G/L Account", width: 200 },
     { key: "DiscountPercent", title: "Disc %", width: 120 },
     { key: "TaxCode", title: "Tax Code", width: 140 },
     { key: "TaxAmount", title: "Tax Amount (LC)", width: 180 },
@@ -153,6 +159,7 @@ export function PurchaseItems() {
     { key: "Freight3LCAmount", title: "Freight 3 (LC)", width: 180 },
   ].filter(col => {
     if (col.key === "actions") return true;
+    if (col.key === "AccountCode") return !!config.showGLAccount;
     return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 

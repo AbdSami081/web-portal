@@ -153,7 +153,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     
     setFreight: (f) => { set({ freight: f }); get().calculateTotals(); },
     setRounding: (r) => { set({ rounding: r }); get().calculateTotals(); },
-    setDiscountPercent: (p) => { set({ discountPercent: p }); get().calculateTotals(); },
+    setDiscountPercent: (p) => { set({ discountPercent: Math.min(100, Math.max(0, Number(p) || 0)) }); get().calculateTotals(); },
     setIsDownPayment: (v) => { set({ isDownPayment: !!v }); get().calculateTotals(); },
     setDiscountSum: (s) => { set({ discSum: s }); get().calculateTotals(); },
     setCurrency: (c) => set({ currency: c }),
@@ -261,6 +261,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
           SerialNumbers: line.SerialNumbers || [],
           BatchNumbers: line.BatchNumbers || [],
           UoMCode: line.UoMCode,
+          AccountCode: line.AccountCode || "",
           TaxCode: line.VatGroup || line.TaxCode,
           BaseType: line.BaseType,
           BaseEntry: line.BaseEntry,

@@ -86,6 +86,7 @@ export function InvDocumentItems() {
         { key: "OnHand",    title: "Qty In Whs",  width: 120 },
         { key: "UoMCode",   title: "UoM Code",    width: 140 },
         { key: "UoMName",   title: "UoM Name",    width: 140 },
+        ...(config.showGLAccount ? [{ key: "AccountCode", title: "G/L Account", width: 200 }] : []),
       ]
     : [
         { key: "actions",   title: "Actions",      width: 80  },
@@ -98,12 +99,13 @@ export function InvDocumentItems() {
         { key: "OnHand",    title: "Qty In Whs",   width: 120 },
         { key: "UoMCode",   title: "UoM Code",     width: 140 },
         { key: "UoMName",   title: "UoM Name",     width: 140 },
+        ...(config.showGLAccount ? [{ key: "AccountCode", title: "G/L Account", width: 200 }] : []),
       ];
 
   const lineUdfs = useLineUDFs(config.type);
   const columnsWithUdf = useMemo(
     () => [...columns, ...lineUdfColumns(lineUdfs)],
-    [isGoodIssue, lineUdfs]
+    [isGoodIssue, lineUdfs, config.showGLAccount]
   );
 
   const handleOnSelectItems = (items: Item[]) => {

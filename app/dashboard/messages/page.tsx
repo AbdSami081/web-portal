@@ -25,7 +25,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
-import { buildDocumentUrl, getMenuInfoByObjectCode } from "@/lib/menu-lookup";
+import { buildDocumentUrl, getMenuInfoByObjectCode, normalizeObjectCode } from "@/lib/menu-lookup";
 import { stageDocNavParams } from "@/lib/docNavParams";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
@@ -296,7 +296,10 @@ export default function MessagesOverviewPage() {
 
     const objectEntry = selectedMessage.ObjectEntry?.toString().trim();
     const draftEntry = selectedMessage.DraftEntry?.toString().trim();
-    const objectType = selectedMessage.ObjectType;
+    const objectType =
+      selectedMessage.ObjectType != null && `${selectedMessage.ObjectType}` !== ""
+        ? String(normalizeObjectCode(selectedMessage.ObjectType))
+        : selectedMessage.ObjectType;
     const sourceDraftNumber = selectedMessage.SourceDraftNumber;
     const approvalRequestCode = selectedMessage.ApprovalRequestCode;
 
