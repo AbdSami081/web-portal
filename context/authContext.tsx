@@ -19,7 +19,24 @@ interface User {
   allowedModules?: string[];
   isSuperAdmin: boolean;
   companyDB: string;
+  companyName: string;
 }
+
+const resolveCompanyName = (companyDB: string): string => {
+  const db = (companyDB || "").trim();
+  try {
+    const list = JSON.parse(process.env.NEXT_PUBLIC_SAP_DATABASES || "[]") as Array<{
+      CompanyName?: string;
+      CompanyDB?: string;
+    }>;
+    const match =
+      list.find((d) => (d.CompanyDB || "").toLowerCase() === db.toLowerCase()) ||
+      (list.length === 1 ? list[0] : undefined);
+    return match?.CompanyName || db;
+  } catch {
+    return db;
+  }
+};
 
 interface AuthContextType {
   user: User | null;
@@ -84,6 +101,7 @@ const buildUser = (
     allowedModules: uniqueAllowed,
     isSuperAdmin: overrides?.isSuperAdmin ?? isSuperAdmin,
     companyDB: companyDB || "SBODemoAU",
+    companyName: resolveCompanyName(companyDB || "SBODemoAU"),
   };
 };
 

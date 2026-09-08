@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { useAuth } from "@/context/authContext";
+import { Database } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -72,8 +74,9 @@ import {
   ChartTooltip,
   ChartTooltipContent
 } from "@/components/ui/chart";
-
-// --- DUMMY DATA ---
+import logo from "@/public/assets/logo.png";
+import icon from "@/public/assets/icon.ico";
+import Image from "next/image";
 
 const salesData = [
   { month: "Jan", sales: 4500, revenue: 2400 },
@@ -145,13 +148,59 @@ const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, descripti
 };
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const companyName = user?.companyName || user?.companyDB || "SAP Company";
+  const companyDB = user?.companyDB || "";
+
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8 bg-zinc-50/50">
+    <div className="flex w-full flex-col gap-6 p-6 lg:p-8 bg-zinc-50/50">
+
+      <header className="flex w-full flex-col gap-4 border-b border-zinc-200/70 pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+        <Image
+          src={logo}
+          alt="Company Logo"
+          className="h-10 w-auto max-w-[180px] shrink-0 object-contain"
+        />
+
+
+          <div className="hidden h-10 w-px bg-zinc-200 sm:block" />
+
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="truncate text-2xl font-bold leading-tight tracking-tight text-zinc-900">
+              {companyName}
+            </span>
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+              <Database className="h-3 w-3" />
+              {companyDB || "—"}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3 sm:border-l sm:border-zinc-200 sm:pl-6">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+            <Image
+              src={icon}
+              alt="SuperNova Logo"
+              className="h-6 w-6 object-contain"
+            />
+          </div>
+
+          <div className="leading-tight">
+            <p className="text-[11px] text-zinc-400">Powered by</p>
+            <p className="text-sm font-semibold text-zinc-800">SuperNova</p>
+          </div>
+        </div>
+      </header>
+
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Business Overview</h1>
           <p className="text-muted-foreground">Monitor your business performance and key metrics in real-time.</p>
         </div>
+
+
         {/* <div className="flex items-center gap-2">
           <Button variant="outline" className="h-9 shadow-sm border-zinc-200 hover:bg-zinc-100">Download Report</Button>
           <Button className="h-9 shadow-sm bg-zinc-900 text-white hover:bg-zinc-800">Create New</Button>
