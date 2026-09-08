@@ -167,18 +167,22 @@ const FMSSetupModal: React.FC<Props> = ({
       resetForm();
       if (defaultTargetField) setTargetField(defaultTargetField);
     }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]); 
 
-  // Merge explicitly-passed fields with the API list (@WP_FIELDS_CFG + real UDFs),
-  // de-duplicated by field name.
   const fieldOptions: FmsFieldOption[] = React.useMemo(() => {
     const seen = new Set<string>();
     const out: FmsFieldOption[] = [];
-    for (const f of [...availableFields, ...fetchedFields]) {
+    for (const raw of [...availableFields, ...fetchedFields]) {
+      const f = raw as FmsFieldOption;
       const key = f.name?.trim().toLowerCase();
       if (!key || seen.has(key)) continue;
+      const isUdf =
+        (f.source ?? "").toLowerCase() === "udf" ||
+        (f.fieldType ?? "").trim().toUpperCase() === "UDF" ||
+        (f.name ?? "").trim().toUpperCase().startsWith("U_");
+      if (isUdf) continue;
       seen.add(key);
-      out.push(f as FmsFieldOption);
+      out.push(f);
     }
     return out;
   }, [availableFields, fetchedFields]);
