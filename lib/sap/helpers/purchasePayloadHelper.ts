@@ -107,7 +107,6 @@ export function buildPurchaseDocumentPayload({
         VatGroup: line.TaxCode || "",
         WarehouseCode: line.WarehouseCode || "",
         UoMCode: line.UoMCode || "",
-        ...(line.AccountCode ? { AccountCode: line.AccountCode } : {}),
       };
 
       if (hasCopyFrom) {
@@ -185,7 +184,6 @@ export function buildPurchaseDocumentPatchPayload({
           VatGroup: line.TaxCode || "",
           WarehouseCode: line.WarehouseCode || "",
           UoMCode: line.UoMCode || "",
-          ...(line.AccountCode ? { AccountCode: line.AccountCode } : {}),
         };
 
         if (line.LineNum !== undefined && line.LineNum >= 0) {

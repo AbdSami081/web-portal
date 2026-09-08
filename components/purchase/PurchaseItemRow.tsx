@@ -18,7 +18,6 @@ import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/
 import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
-import { GLAccountCell } from "@/components/shared/GLAccountCell";
 
 interface Props {
   index: number;
@@ -60,7 +59,6 @@ export function PurchaseItemRow({ index, line }: Props) {
   const [cogsModalOpen, setCogsModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
   const [cogsData, setCogsData] = useState<Record[]>([]);
-  const showGlAccount = !!config.showGLAccount;
 
   useEffect(() => {
     setDraftLine(line);
@@ -223,19 +221,6 @@ export function PurchaseItemRow({ index, line }: Props) {
               if (!ok) setDraftLine((prev) => ({ ...prev, Price: value }));
             }}
             disabled={!isFieldEnabled("Price")}
-          />
-        </td>
-      )}
-
-      {showGlAccount && (
-        <td className="w-[200px]">
-          <GLAccountCell
-            value={draftLine.AccountCode || ""}
-            disabled={isLineDisabled}
-            onChange={(val) => {
-              setDraftLine({ ...draftLine, AccountCode: val });
-              updateLineByIndex(index, { AccountCode: val });
-            }}
           />
         </td>
       )}

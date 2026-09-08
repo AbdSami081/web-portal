@@ -17,7 +17,6 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { useInvDocConfig } from "./InvDocumentLayout";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
-import { GLAccountCell } from "@/components/shared/GLAccountCell";
 
 interface Props {
   index: number;
@@ -79,7 +78,6 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
     line.OnHand,
     line.UoMCode,
     line.MeasureUnit,
-    line.AccountCode,
   ]);
 
   const saveRow = (updatedLine = draftLine) => {
@@ -267,20 +265,6 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           readOnly
         />
       </td>
-
-      {invConfig.showGLAccount && (
-        <td className="py-2 px-4">
-          <GLAccountCell
-            value={draftLine.AccountCode || ""}
-            disabled={isClosed}
-            onChange={(val) => {
-              const updated = { ...draftLine, AccountCode: val };
-              setDraftLine(updated);
-              updateLine(line.ItemCode, updated);
-            }}
-          />
-        </td>
-      )}
 
       <LineUDFCells
         docType={invConfig.type}

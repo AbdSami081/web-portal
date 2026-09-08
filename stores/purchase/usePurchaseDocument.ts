@@ -261,7 +261,6 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
           SerialNumbers: line.SerialNumbers || [],
           BatchNumbers: line.BatchNumbers || [],
           UoMCode: line.UoMCode,
-          AccountCode: line.AccountCode || "",
           TaxCode: line.VatGroup || line.TaxCode,
           BaseType: line.BaseType,
           BaseEntry: line.BaseEntry,

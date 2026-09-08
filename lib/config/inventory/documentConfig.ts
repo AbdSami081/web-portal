@@ -3,13 +3,11 @@ import { DocumentType } from "@/types/master/DocumentType";
 export interface DocumentConfig {
   type: DocumentType;
   title: string;
-  showGLAccount?: boolean;
 }
 
 export const InvTransferConfig: DocumentConfig = {
   type: DocumentType.InvTransfer,
   title: "Inventory Transfer",
-  showGLAccount: true,
 };
 
 export const InvTransferReqConfig: DocumentConfig = {
@@ -20,7 +18,6 @@ export const InvTransferReqConfig: DocumentConfig = {
 export const GoodIssueConfig: DocumentConfig = {
   type: DocumentType.GoodIssue,
   title: "Good Issue",
-  showGLAccount: true,
 };
 
 export const getDocumentConfig = (type: DocumentType): DocumentConfig => {

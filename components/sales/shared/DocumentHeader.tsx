@@ -225,14 +225,6 @@ export function DocumentHeader() {
       setCurrency(bp.Currency as any);
     }
 
-    if (config.showGLAccount) {
-      const glAccount = (bp.DpmClear || "").trim();
-      if (glAccount) {
-        const state = useSalesDocument.getState();
-        state.lines.forEach((l) => state.updateLine(l.ItemCode, { AccountCode: glAccount }));
-      }
-    }
-
     setModalOpen(false);
   };
 

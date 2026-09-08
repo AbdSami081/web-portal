@@ -164,7 +164,6 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
           BaseType: line.OrderNumber ? 202 : undefined,
           BaseEntry: line.OrderNumber,
           BaseLine: (line.OrderNumber && line.LineNumber === -1) ? undefined : line.LineNumber,
-          ...(line.AccountCode ? { AccountCode: line.AccountCode } : {}),
         })),
       }),
     };

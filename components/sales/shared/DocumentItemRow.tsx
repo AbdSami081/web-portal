@@ -20,7 +20,6 @@ import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/
 import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells, LineCellFms } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
-import { GLAccountCell } from "@/components/shared/GLAccountCell";
 
 
 interface Props {
@@ -292,16 +291,6 @@ export function DocumentLineRow({ index, line }: Props) {
             />
             <LineCellFms field="Price" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("Price")} />
           </div>
-        </td>
-      )}
-
-      {config.showGLAccount && (
-        <td className="py-2 px-2">
-          <GLAccountCell
-            value={draftLine.AccountCode || ""}
-            disabled={isLineDisabled}
-            onChange={(val) => patchLine({ AccountCode: val })}
-          />
         </td>
       )}
 

@@ -5,7 +5,6 @@ export interface DocumentConfig {
   type: DocumentType;
   title: string;
   isDownPayment?: boolean;
-  showGLAccount?: boolean;
 
   headerFields: {
     showValidUntil: boolean;
@@ -319,19 +318,6 @@ export const GoodsReturnRequestConfig: DocumentConfig = {
     return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
   },
 };
-
-[
-  GRPOConfig,
-  invoiceConfig,
-  APReserveInvoiceConfig,
-  APCreditMemoConfig,
-  GoodsReturnConfig,
-  APDownPaymentInvoiceConfig,
-  APDownPaymentRequestConfig,
-  GoodsReturnRequestConfig,
-].forEach((c) => {
-  c.showGLAccount = true;
-});
 
 export const getDocumentConfig = (type: DocumentType, pathname = ""): DocumentConfig => {
   if (pathname.toLowerCase().includes("apdownpaymentrequest")) return APDownPaymentRequestConfig;

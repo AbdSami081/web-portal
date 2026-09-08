@@ -130,11 +130,6 @@ export function PRDDocumentItems() {
       title: "Issue Method",
       width: 170,
     },
-    config.itemColumns.glAccount && {
-      key: "AccountCode",
-      title: "G/L Account",
-      width: 200,
-    },
   ].filter(Boolean) as {
     key: string;
     title: string;

@@ -37,7 +37,6 @@ export interface DocumentConfig {
     actions?: boolean;
     orderNumber?: boolean;
     openQty?: boolean;
-    glAccount?: boolean;
   };
   footerActions?: {
     showProductionOrderButton?: boolean;
@@ -67,7 +66,6 @@ export const IFPRDConfig: DocumentConfig = {
     warehouse: true,
     actions: true,
     orderNumber: true,
-    glAccount: true,
   },
   footerActions: {
     showProductionOrderButton: true,
@@ -96,7 +94,6 @@ export const ReceiptFPRDConfig: DocumentConfig = {
     actions: true,
     orderNumber: true,
     openQty: true,
-    glAccount: true,
   },
   footerActions: {
     showProductionOrderButton: true,

@@ -293,14 +293,6 @@ export function PRDDocumentLayout<T extends FieldValues>({
           onSubmit={async (e) => {
             e.preventDefault();
             handleSubmit(async (data) => {
-              if (
-                config.itemColumns.glAccount &&
-                useIFPRDDocument.getState().lines.some((l) => !String(l.AccountCode || "").trim())
-              ) {
-                toast.info("G/L account missing. Please set a G/L account on every line before saving.");
-                return;
-              }
-
               if (isPendingApproval && docNav.draftEntry) {
                 const pendingRole = docNav.approvalRole === "approver" ? "approver" : "originator";
                 const canEditPending = pendingRole === "approver" ? canAuthorizerUpdateDraft : canOriginatorUpdateDraft;

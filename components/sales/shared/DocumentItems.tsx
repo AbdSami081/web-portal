@@ -105,9 +105,6 @@ export function DocumentItems() {
   const handleOnSelectItems = (
     items: Item[]
   ) => {
-    const glAccount = config.showGLAccount
-      ? (useSalesDocument.getState().customer?.DpmClear || "").trim()
-      : "";
     items.forEach((item) => {
       const price =
         getCustomerPrice(
@@ -151,7 +148,6 @@ export function DocumentItems() {
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,
-        ...(glAccount && { AccountCode: glAccount }),
       });
     });
   };
@@ -239,12 +235,6 @@ export function DocumentItems() {
     },
 
     {
-      key: "AccountCode",
-      title: "G/L Account",
-      width: 200,
-    },
-
-    {
       key: "DiscountPercent",
       title: "Disc %",
       width: 120,
@@ -329,7 +319,6 @@ export function DocumentItems() {
     },
   ].filter(col => {
     if (col.key === "actions") return true;
-    if (col.key === "AccountCode") return !!config.showGLAccount;
     return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 

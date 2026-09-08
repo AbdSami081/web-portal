@@ -477,12 +477,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
             toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
             return;
           }
-
-          if (config.showGLAccount && state.lines.some((l) => !String(l.AccountCode || "").trim())) {
-            toast.info("G/L account missing. Please set a G/L account on every line before saving.");
-            return;
-          }
-
           if (isBranchMissing((data as any).BPL_IDAssignedToInvoice)) {
             toast.error("Please select a branch before submitting.");
             return;

@@ -160,7 +160,6 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
             OnHand: line.OnHand,
             UoMCode: resolveUoMFromCandidates(uoms, line.UoMCode, line.UoMGroupEntry, line.UoM),
             MeasureUnit: line.MeasureUnit || "",
-            AccountCode: line.AccountCode || "",
             ProductionOrderIssueType: line.ProductionOrderIssueType,
             OrderNumber: line.BaseEntry || (isSourceProductionOrder ? (doc.AbsoluteEntry || doc.DocEntry) : undefined),
             LineNumber: (currentDocType === type && !isCopy) ? line.LineNum : (line.BaseLine ?? line.LineNum),

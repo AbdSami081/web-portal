@@ -391,7 +391,6 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           TaxAmount: parseSafe(line.TaxTotal || line.TaxSum) || calculatedTax,
           UoMCode: resolveUoMFromCandidates(uoms, line.UoMCode, line.UoMGroupEntry, line.UnitsOfMeasurment) || line.UoMCode || "",
           MeasureUnit: line.MeasureUnit || "",
-          AccountCode: line.AccountCode || "",
           TaxCode: line.VatGroup || line.TaxCode,
           BaseType: line.BaseType,
           BaseEntry: line.BaseEntry,

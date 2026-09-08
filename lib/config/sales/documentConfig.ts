@@ -6,7 +6,6 @@ export interface DocumentConfig {
   type: DocumentType;
   title: string;
   isDownPayment?: boolean;
-  showGLAccount?: boolean;
 
   headerFields: {
     showValidUntil: boolean;
@@ -240,17 +239,6 @@ export const downPaymentInvoiceConfig: DocumentConfig = {
     return headerStatus === "bost_Close" || headerStatus === "bost_Cancel";
   }
 };
-
-[
-  invoiceConfig,
-  returnConfig,
-  returnRequestConfig,
-  creditMemoConfig,
-  downPaymentRequestConfig,
-  downPaymentInvoiceConfig,
-].forEach((c) => {
-  c.showGLAccount = true;
-});
 
 export const getDocumentConfig = (type: DocumentType): DocumentConfig => {
   switch (type) {

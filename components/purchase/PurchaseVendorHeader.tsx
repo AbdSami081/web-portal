@@ -364,14 +364,6 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     setValue("CardName", bp.CardName);
     setValue("listNum", bp.PriceListNum);
     setModalOpen(false);
-
-    if (config.showGLAccount) {
-      const glAccount = (bp.DpmClear || "").trim();
-      if (glAccount) {
-        const state = usePurchaseDocument.getState();
-        state.lines.forEach((_, idx) => state.updateLineByIndex(idx, { AccountCode: glAccount }));
-      }
-    }
   };
 
   const handleManualSearch = () => {
