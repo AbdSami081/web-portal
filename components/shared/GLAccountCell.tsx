@@ -5,7 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { GenericModal } from "@/modals/GenericModal";
-import { getChartOfAccounts, ChartOfAccount } from "@/api+/sap/accounting/chartOfAccounts";
+import {
+  ChartOfAccount,
+  loadChartOfAccounts,
+  loadMoreChartOfAccounts,
+  searchChartOfAccounts,
+} from "@/api+/sap/accounting/chartOfAccounts";
 
 interface Props {
   value?: string;
@@ -18,7 +23,9 @@ export function GLAccountCell({ value, disabled, onChange }: Props) {
   const lastValue = useRef(value || "");
   const [modalOpen, setModalOpen] = useState(false);
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
   if ((value || "") !== lastValue.current) {
     lastValue.current = value || "";
@@ -27,11 +34,28 @@ export function GLAccountCell({ value, disabled, onChange }: Props) {
 
   const openModal = async () => {
     setModalOpen(true);
-    if (accounts.length === 0) {
-      setLoading(true);
-      setAccounts(await getChartOfAccounts());
-      setLoading(false);
-    }
+    setLoading(true);
+    const page = await loadChartOfAccounts();
+    setAccounts(page.items);
+    setHasMore(page.hasMore);
+    setLoading(false);
+  };
+
+  const handleLoadMore = async () => {
+    setLoading(true);
+    const page = search ? await searchChartOfAccounts(search) : await loadMoreChartOfAccounts();
+    setAccounts(page.items);
+    setHasMore(page.hasMore);
+    setLoading(false);
+  };
+
+  const handleSearch = async (term: string) => {
+    setSearch(term);
+    setLoading(true);
+    const page = term.trim() ? await searchChartOfAccounts(term) : await loadChartOfAccounts();
+    setAccounts(page.items);
+    setHasMore(page.hasMore);
+    setLoading(false);
   };
 
   const commit = (val: string) => {
@@ -70,6 +94,10 @@ export function GLAccountCell({ value, disabled, onChange }: Props) {
         }}
         data={accounts}
         isLoading={loading}
+        hasMore={hasMore}
+        onLoadMore={handleLoadMore}
+        onSearch={handleSearch}
+        searchValue={search}
         columns={[
           { key: "Code", label: "Account Code" },
           { key: "Name", label: "Account Name" },

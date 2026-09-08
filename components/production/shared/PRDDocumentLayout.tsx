@@ -129,7 +129,8 @@ export function PRDDocumentLayout<T extends FieldValues>({
   const draftBadgeVisible =
     !authWithout && !isPostedLoaded &&
     (approvalApplies || hasNavApproval || !!loadedDraftData || badgeState === "draft" || headerBadges.showDraft);
-  const statusBadge = authWithout
+  const documentLoaded = loadedEntry > 0 || !!loadedDraftData;
+  const statusBadge = authWithout || !documentLoaded
     ? null
     : (authBadge ?? headerBadges.status ?? (badgeState === "approved" && !draftBadgeVisible ? "approved" : null));
 
@@ -331,10 +332,15 @@ export function PRDDocumentLayout<T extends FieldValues>({
                     await onSubmit(data as any);
                     finishAndReset();
                     setBadgeState(null);
+                    return;
                   } catch (err: any) {
-                    toast.error(err?.response?.data?.Message || "Failed to create the document");
+                    const msg = err?.response?.data?.Message || err?.message || "";
+                    if (!/updated after it was approved|already updated after|updated after approval|re-?approv/i.test(msg)) {
+                      toast.error(msg || "Failed to create the document");
+                      return;
+                    }
+                    toast.info("This draft changed after approval — sending it back for re-approval.");
                   }
-                  return;
                 }
 
                 if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
@@ -427,6 +433,11 @@ export function PRDDocumentLayout<T extends FieldValues>({
                 {statusBadge === "rejected" && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200/60 rounded px-1.5 py-0.5">
                     Rejected
+                  </span>
+                )}
+                {statusBadge === "generated" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-violet-600 bg-violet-50 border border-violet-200/60 rounded px-1.5 py-0.5">
+                    Generated
                   </span>
                 )}
               </h1>

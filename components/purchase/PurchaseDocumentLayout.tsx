@@ -171,7 +171,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   });
 
   const { handleSubmit, reset, watch, setValue, formState: { isSubmitting, isDirty, errors } } = methods;
-  const { reset: lineReset, lines, requester, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs } = usePurchaseDocument(
+  const { reset: lineReset, lines, requester, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, loadedDraftData } = usePurchaseDocument(
     useShallow(state => ({
       reset: state.reset,
       lines: state.lines,
@@ -181,6 +181,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
       isCopying: state.isCopying,
       setIsCopying: state.setIsCopying,
       udfs: state.udfs,
+      loadedDraftData: state.loadedDraftData,
     }))
   );
 
@@ -189,11 +190,12 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const authBadge = mapAuthorizationStatus(authStatus);
   const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
   const approvalApplies = useUserHasApprovalTemplate(docType);
+  const documentLoaded = Number(DocEntry) > 0 || !!loadedDraftData;
   const isPostedLoaded = Number(DocEntry) > 0 && !docNav.draftEntry;
   const draftBadgeVisible =
     !authWithout && !isPostedLoaded &&
-    (approvalApplies || hasNavApproval || headerBadges.showDraft);
-  const statusBadge = authWithout ? null : (authBadge ?? headerBadges.status);
+    (approvalApplies || hasNavApproval || headerBadges.showDraft || !!loadedDraftData);
+  const statusBadge = authWithout || !documentLoaded ? null : (authBadge ?? headerBadges.status);
 
   const docStatus = watch("DocStatus" as any);
   const docEntry = watch("DocEntry" as any);
@@ -662,10 +664,15 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 try {
                   await onSubmit(data as unknown as T);
                   finishAndReset();
+                  return;
                 } catch (err: any) {
-                  toast.error(err?.response?.data?.Message || "Failed to create the document");
+                  const msg = err?.response?.data?.Message || err?.message || "";
+                  if (!/updated after it was approved|already updated after|updated after approval|re-?approv/i.test(msg)) {
+                    toast.error(msg || "Failed to create the document");
+                    return;
+                  }
+                  toast.info("This draft changed after approval — sending it back for re-approval.");
                 }
-                return;
               }
 
               if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
@@ -768,6 +775,11 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 {statusBadge === "rejected" && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200/60 rounded px-1.5 py-0.5">
                     Rejected
+                  </span>
+                )}
+                {statusBadge === "generated" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-violet-600 bg-violet-50 border border-violet-200/60 rounded px-1.5 py-0.5">
+                    Generated
                   </span>
                 )}
               </h1>

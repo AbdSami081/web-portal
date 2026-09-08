@@ -294,8 +294,10 @@ export default function MessagesOverviewPage() {
   const documentLink = useMemo(() => {
     if (!selectedMessage) return null;
 
-    const objectEntry = selectedMessage.ObjectEntry?.toString().trim();
-    const draftEntry = selectedMessage.DraftEntry?.toString().trim();
+    const rawObjectEntry = selectedMessage.ObjectEntry?.toString().trim();
+    const objectEntry = rawObjectEntry && rawObjectEntry !== "0" ? rawObjectEntry : undefined;
+    const rawDraftEntry = selectedMessage.DraftEntry?.toString().trim();
+    const draftEntry = rawDraftEntry && rawDraftEntry !== "0" ? rawDraftEntry : undefined;
     const objectType =
       selectedMessage.ObjectType != null && `${selectedMessage.ObjectType}` !== ""
         ? String(normalizeObjectCode(selectedMessage.ObjectType))

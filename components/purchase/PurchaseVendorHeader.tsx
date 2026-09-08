@@ -36,10 +36,12 @@ import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { usePathname } from "next/navigation";
+import { useDocNavParams } from "@/lib/docNavParams";
 import { useAuth } from "@/context/authContext";
 import { getAdminSettings } from "@/api+/sap/administration/administrationService";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
+import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -96,6 +98,7 @@ const getResourceName = (type: number, pathname = "") => {
 
 export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const pathname = usePathname();
+  const docNav = useDocNavParams();
   const {
     register,
     watch,
@@ -228,6 +231,19 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     }
   }, [requester, setValue, isPurchaseRequest]);
 
+  const navAutoLoadRef = useRef(false);
+  useEffect(() => {
+    if (navAutoLoadRef.current) return;
+    if (pathname.toLowerCase().includes("/purchase/draft")) return;
+    const isDraftNav = docNav.draft === "1" || !!docNav.draftEntry;
+    const docEntryParam = (docNav.docEntry ?? "").toString().trim();
+    if (isDraftNav || !docEntryParam || docEntryParam === "0") return;
+    navAutoLoadRef.current = true;
+    setSearchValue(docEntryParam);
+    fetchDocument(docEntryParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docNav.docEntry, docNav.draftEntry, docNav.draft]);
+
   const fetchDocument = async (docNum: string) => {
     let documentData;
     const docNumInt = parseInt(docNum);
@@ -313,7 +329,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         setValue("DocNum", documentData.DocNum);
         setValue("DocEntry", documentData.DocEntry);
         setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
-        setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
+        setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
 
         if (isPurchaseRequest) {
           setValue("Requester", documentData.Requester || user?.userName || "");

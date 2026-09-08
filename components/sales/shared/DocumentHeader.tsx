@@ -22,6 +22,7 @@ import { useDocNavParams } from "@/lib/docNavParams";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
+import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 import { findDraftByNumber } from "@/api+/sap/draft/draftService";
 
 const statusMap: Record<string, string> = {
@@ -352,7 +353,7 @@ export function DocumentHeader() {
       setValue("Comments", documentData.Comments);
       setComments(documentData.Comments || "");
       setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
-      setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
+      setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
 
       if (resolvedAsDraft) {
         useSalesDocument.getState().setLoadedDraftData(documentData);

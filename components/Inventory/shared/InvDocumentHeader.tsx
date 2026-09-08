@@ -27,6 +27,7 @@ import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
+import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -363,7 +364,7 @@ export function InvDocumentHeader() {
     setJournalMemo(documentData.JournalMemo || "");
     setValue("DocStatus", documentData.DocumentStatus);
     setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
-    setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
+    setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
 
     const isCopy = type !== config.type;
     loadFromDocument(documentData, type, isCopy);

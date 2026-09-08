@@ -7,6 +7,7 @@ import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
+import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
@@ -132,7 +133,7 @@ export function PRDDocumentHeader() {
         setValue("DocEntry", documentData.DocEntry || 0);
         setValue("DocNum", documentData.DocNum || 0);
         setValue("Comments", documentData.Comments || "");
-        setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
+        setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
         const draftBranch = documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId;
         setValue("BPL_IDAssignedToInvoice", draftBranch);
         setBranch(draftBranch ?? null);
@@ -326,7 +327,7 @@ export function PRDDocumentHeader() {
       if (documentData && (documentData.DocEntry || documentData.AbsoluteEntry)) {
         resetStore();
         loadFromDocument(documentData, docType);
-        setValue("AuthorizationStatus", (documentData as any).AuthorizationStatus ?? (documentData as any).DocumentApprovalStatus ?? "");
+        setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
         const loadedBranch = documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId ?? null;
         setValue("BPL_IDAssignedToInvoice", loadedBranch, { shouldDirty: true });
         setBranch(loadedBranch);
