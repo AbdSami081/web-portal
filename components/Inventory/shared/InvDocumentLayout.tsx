@@ -239,101 +239,62 @@ export function InvDocumentLayout<T extends FieldValues>({
   });
 
   const previousDocTypeRef = React.useRef<DocumentType | null>(null);
-  const lastDefaultValuesKeyRef = React.useRef<string | null>(null);
-
-  useEffect(() => {
-    const state = useInventoryDocument.getState();
-    const didDocTypeChange = previousDocTypeRef.current !== null && previousDocTypeRef.current !== docType;
-    const defaultValuesKey = JSON.stringify(defaultValues ?? {});
-    const shouldResetForNewDefaults = defaultValuesKey !== lastDefaultValuesKeyRef.current;
-
-    if (!state.isCopyingTo && didDocTypeChange && !skipAutoReset && shouldResetForNewDefaults) {
-      resetStore();
-      reset(defaultValues as any);
-      lastDefaultValuesKeyRef.current = defaultValuesKey;
-    }
-
-    previousDocTypeRef.current = docType;
-  }, [docType, resetStore, reset, defaultValues, skipAutoReset]); 
 
   const isInitialMount = React.useRef(true);
 
   useEffect(() => {
-    if (!isInitialMount.current) return;
-    isInitialMount.current = false;
-
     const state = useInventoryDocument.getState();
-    const defaultValuesKey = JSON.stringify(defaultValues ?? {});
-
-    if (defaultValuesKey === lastDefaultValuesKeyRef.current) {
-      return;
-    }
-    lastDefaultValuesKeyRef.current = defaultValuesKey;
 
     if (state.isCopyingTo) {
-      // Coming from a Copy To — clear stale sessionStorage so the header doesn't
-      // accidentally re-fetch the source document (e.g. docEntry=44).
+      isInitialMount.current = false;
+      previousDocTypeRef.current = docType;
       clearDocNavParams();
 
-      // Sync copied data into the form
-      setValue("CardCode" as any, state.customer?.CardCode as any);
-      setValue("CardName" as any, state.customer?.CardName as any);
-      setValue("FromWarehouse" as any, state.fromWarehouse as any);
-      setValue("ToWarehouse" as any, state.toWarehouse as any);
-      setValue("Comments" as any, state.comments as any);
-      setValue("JournalMemo" as any, state.journalMemo as any);
-      setValue("TaxDate" as any, state.docDate as any);
-      setValue("DocumentLines" as any, state.lines as any);
+      reset({
+        ...defaultValues,
+        CardCode: state.customer?.CardCode || "",
+        CardName: state.customer?.CardName || "",
+        FromWarehouse: state.fromWarehouse || "",
+        ToWarehouse: state.toWarehouse || "",
+        Comments: state.comments || "",
+        JournalMemo: state.journalMemo || "",
+        TaxDate: state.docDate || new Date().toISOString().split("T")[0],
+        DocDate: state.docDate || new Date().toISOString().split("T")[0],
+        DocDueDate: state.docDate || new Date().toISOString().split("T")[0],
+        DocumentLines: state.lines || [],
+        DocNum: 0,
+        DocEntry: 0,
+        ...state.udfs,
+      } as any);
 
-      setIsCopyingTo(false);
-    } else if (!skipAutoReset) {
-      // Fresh / new document — wipe stale sessionStorage so the header
-      // does not auto-search the last opened doc (e.g. docEntry=44).
-      const hasUrlParams =
-        searchParams.get("docEntry") ||
-        searchParams.get("draftEntry") ||
-        searchParams.get("draft");
-      if (!hasUrlParams) {
-        clearDocNavParams();
+      useInventoryDocument.setState({ isCopyingTo: false });
+      return;
+    }
+
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      if (!skipAutoReset) {
+        const hasUrlParams =
+          searchParams.get("docEntry") ||
+          searchParams.get("draftEntry") ||
+          searchParams.get("draft");
+        if (!hasUrlParams) {
+          clearDocNavParams();
+          resetStore();
+          reset(defaultValues as any);
+        }
       }
-      resetStore();
-      reset(defaultValues as any);
+    } else {
+      const didDocTypeChange = previousDocTypeRef.current !== null && previousDocTypeRef.current !== docType;
+      if (didDocTypeChange && !skipAutoReset) {
+        resetStore();
+        reset(defaultValues as any);
+      }
     }
-  }, [resetStore, setIsCopyingTo, setValue, reset, defaultValues, skipAutoReset, searchParams]);
 
+    previousDocTypeRef.current = docType;
+  }, [docType, resetStore, reset, defaultValues, skipAutoReset, searchParams]);
 
-  useEffect(() => {
-    const current = methods.getValues() as Record<string, any>;
-    const sync = (name: string, val: any) => {
-      if (current[name] !== val) setValue(name as any, val as any);
-    };
-    sync("CardCode", store.customer?.CardCode || "");
-    sync("CardName", store.customer?.CardName || "");
-    sync("FromWarehouse", store.fromWarehouse || "");
-    sync("ToWarehouse", store.toWarehouse || "");
-    sync("Comments", store.comments || "");
-    sync("JournalMemo", store.journalMemo || "");
-    sync("TaxDate", store.docDate || "");
-    sync("DocEntry", store.DocEntry || 0);
-    sync("DocNum", store.DocNum || 0);
-    sync("DocStatus", store.docStatus || "");
-    if (current.DocumentLines !== store.lines) {
-      setValue("DocumentLines" as any, (store.lines || []) as any);
-    }
-  }, [
-    store.customer,
-    store.fromWarehouse,
-    store.toWarehouse,
-    store.comments,
-    store.journalMemo,
-    store.docDate,
-    store.lines,
-    store.DocEntry,
-    store.DocNum,
-    store.docStatus,
-    setValue,
-    methods,
-  ]);
 
   const [selectedCopyFrom, setSelectedCopyFrom] = useState<string>("");
   const [selectedCopyTo] = useState<string>("");
@@ -353,14 +314,12 @@ export function InvDocumentLayout<T extends FieldValues>({
       toast.error("Please search or select a document first!");
       return;
     }
-    setIsLoadingCopyTo(true);
 
     if (selected === DocumentType.InvTransfer.toString()) {
       const state = useInventoryDocument.getState();
 
       const openLines = openLinesForCopyFrom(state.lines as any[]);
       if (state.lines.length > 0 && openLines.length === 0) {
-        setIsLoadingCopyTo(false);
         toast.warning("This document has no remaining open quantity to copy.");
         return;
       }
@@ -383,6 +342,7 @@ export function InvDocumentLayout<T extends FieldValues>({
         comments: updatedComments,
         journalMemo: "",
         DocEntry: 0,
+        DocNum: 0,
         docDate: new Date().toISOString().split("T")[0],
         customer: state.customer,
         isCopyingTo: true,
@@ -488,6 +448,12 @@ export function InvDocumentLayout<T extends FieldValues>({
         setValue("DocNum" as any, 0 as any);
 
         loadFromDocument({ ...mergedDoc, DocumentLines: allLines }, DocumentType.InvTransferReq, true);
+        setValue("FromWarehouse" as any, fromWhs as any);
+        setValue("ToWarehouse" as any, toWhs as any);
+        if (mergedDoc.CardCode) {
+          setValue("CardCode" as any, mergedDoc.CardCode as any);
+          setValue("CardName" as any, (mergedDoc.CardName || "") as any);
+        }
         const existingComments = ((mergedDoc?.Comments !== undefined && mergedDoc?.Comments !== null) ? mergedDoc.Comments : (mergedDoc?.comments || "")).trim();
         const copyFromText = `Copy From Based on Inventory Transfer Request ${nums.join(", ")}`;
         const updatedComments = existingComments ? `${existingComments}\n${copyFromText}` : copyFromText;

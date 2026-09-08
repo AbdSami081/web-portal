@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
@@ -15,16 +14,13 @@ export default function InvDocumentFooter() {
   } = useInventoryDocument();
 
   const { triggerFMS } = useFmsContext();
-  const { watch } = useFormContext();
+  const { watch, setValue } = useFormContext();
 
-  // FMS writes to the RHF "Comments" field; mirror it into the store-bound textarea.
-  const fmsComments = watch("Comments");
-  useEffect(() => {
-    if (typeof fmsComments === "string" && fmsComments !== comments) {
-      setComments(fmsComments);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fmsComments]);
+  const formComments = watch("Comments");
+  const formJournalMemo = watch("JournalMemo");
+
+  const currentComments = typeof formComments === "string" ? formComments : (comments || "");
+  const currentJournalMemo = typeof formJournalMemo === "string" ? formJournalMemo : (journalMemo || "");
 
   return (
     <>
@@ -33,8 +29,11 @@ export default function InvDocumentFooter() {
           <AppLabel htmlFor="journalComments">Journal Remarks</AppLabel>
           <Textarea
             id="journalComments"
-            value={journalMemo}
-            onChange={(e) => setJournalMemo(e.target.value)}
+            value={currentJournalMemo}
+            onChange={(e) => {
+              setJournalMemo(e.target.value);
+              setValue("JournalMemo", e.target.value, { shouldDirty: true });
+            }}
             className="h-24 mt-2 w-full"
             placeholder="Enter journal remarks..."
           />
@@ -47,8 +46,11 @@ export default function InvDocumentFooter() {
           </div>
           <Textarea
             id="remarks"
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
+            value={currentComments}
+            onChange={(e) => {
+              setComments(e.target.value);
+              setValue("Comments", e.target.value, { shouldDirty: true });
+            }}
             onKeyDown={fmsKeyDown("Comments", triggerFMS)}
             className="h-24 mt-2 w-full"
             placeholder="Enter remarks or comments..."

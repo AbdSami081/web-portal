@@ -53,17 +53,6 @@ type FormData = z.infer<typeof schema>;
 
 export default function InvTransferPage() {
   const router = useRouter();
-  const {
-    lines,
-    reset: resetStore,
-    fromWarehouse,
-    toWarehouse,
-    comments,
-    journalMemo,
-    customer,
-    DocEntry,
-    attachments,
-  } = useInventoryDocument();
 
   const defaultValues: FormData = useMemo(() => ({
     CardCode: "",
@@ -84,67 +73,75 @@ export default function InvTransferPage() {
     ToWarehouse: "",
   }), []);
 
+  const handleSubmit = async (data: FormData) => {
+    const {
+      lines,
+      reset: resetStore,
+      fromWarehouse,
+      toWarehouse,
+      DocEntry,
+      attachments,
+    } = useInventoryDocument.getState();
 
- const handleSubmit = async (data: FormData) => {
-  try {
-    let result;
+    try {
+      let result;
 
-    if (DocEntry && DocEntry > 0) {
-      // Update: send lines with LineNum for existing, without for new
-      const payload = buildInventoryTransferPatchPayload({
-        data,
-        lines,
-        fromWarehouse,
-        toWarehouse,
-      });
-      result = await patchInventoryTransfer(DocEntry, payload);
-      toast.success(`Inventory Transfer updated!`);
-    }
-    else {
-      // Create new document
-      const payload = buildInventoryTransferPayload({
-        data,
-        lines,
-        fromWarehouse,
-        toWarehouse,
-      });
-
-      result = await postInventoryTransfer(payload);
-
-      if (result?.IsDraft) {
-        toast.success("Inventory Transfer submitted for approval.");
-      } else if (result?.DocEntry) {
-        toast.success(`Inventory Transfer created! #${result.DocNum}`);
+      if (DocEntry && DocEntry > 0) {
+        // Update: send lines with LineNum for existing, without for new
+        const payload = buildInventoryTransferPatchPayload({
+          data,
+          lines,
+          fromWarehouse,
+          toWarehouse,
+        });
+        result = await patchInventoryTransfer(DocEntry, payload);
+        toast.success(`Inventory Transfer updated!`);
       }
-    }
+      else {
+        // Create new document
+        const payload = buildInventoryTransferPayload({
+          data,
+          lines,
+          fromWarehouse,
+          toWarehouse,
+        });
 
-    if (result || (DocEntry && DocEntry > 0)) {
-      const savedDocEntry = Number(DocEntry || result?.DocEntry || 0);
+        result = await postInventoryTransfer(payload);
 
-      if (savedDocEntry > 0 && attachments.length > 0) {
-        const attachmentResult = await uploadAndPatchAttachments(
-          attachments,
-          "InventoryTransfer",
-          savedDocEntry,
-          patchInventoryTransfer
-        );
-
-        if (attachmentResult.uploadedCount > 0) {
-          toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+        if (result?.IsDraft) {
+          toast.success("Inventory Transfer submitted for approval.");
+        } else if (result?.DocEntry) {
+          toast.success(`Inventory Transfer created! #${result.DocNum}`);
         }
       }
 
-      resetStore();
-      router.push("/dashboard/inventory/transfer");
-    } else {
-      throw new Error("Failed to process transfer");
-    }
+      if (result || (DocEntry && DocEntry > 0)) {
+        const savedDocEntry = Number(DocEntry || result?.DocEntry || 0);
 
-  } catch (error: any) {
-    toast.error(error.message || "Failed to create transfer");
-    throw error;
-  }
-};
+        if (savedDocEntry > 0 && attachments.length > 0) {
+          const attachmentResult = await uploadAndPatchAttachments(
+            attachments,
+            "InventoryTransfer",
+            savedDocEntry,
+            patchInventoryTransfer
+          );
+
+          if (attachmentResult.uploadedCount > 0) {
+            toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+          }
+        }
+
+        resetStore();
+        router.push("/dashboard/inventory/transfer");
+      } else {
+        throw new Error("Failed to process transfer");
+      }
+
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create transfer");
+      throw error;
+    }
+  };
 
   return (
     <InvDocumentLayout schema={schema} defaultValues={defaultValues} onSubmit={handleSubmit} docType={DocumentType.InvTransfer}>

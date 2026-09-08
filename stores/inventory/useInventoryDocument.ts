@@ -185,8 +185,8 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
 
     loadFromDocument: (doc, type, isCopy) => {
       const rawLines = doc.DocumentLines || doc.StockTransferLines || doc.InventoryTransferLines || [];
-
       const uoms = useMasterDataStore.getState().uoms || [];
+      const warehouses = useMasterDataStore.getState().warehouses || [];
 
       const lines: InventoryDocumentLine[] = rawLines.map((line: any, idx: number) => {
         const uomCode = resolveUoMFromCandidates(
@@ -202,12 +202,17 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           uomCode
         ) || uomCode;
 
+        const toWhs = line.WarehouseCode || line.WhsCode || doc.ToWarehouse || "";
+        const fromWhs = line.FromWarehouseCode || line.FromWhsCode || doc.FromWarehouse || "";
+        const branchId = warehouses.find((w: any) => (w.WarehouseCode || w.WhsCode) === toWhs)?.BPLid;
+
         return {
           ...pickLineUdfs(line),
           ItemCode: line.ItemCode,
           Dscription: line.ItemDescription || line.Dscription || line.ItemName || "",
-          FromWhsCode: line.FromWarehouseCode || line.FromWhsCode || doc.FromWarehouse || "",
-          WhsCode: line.WarehouseCode || line.WhsCode || doc.ToWarehouse || "",
+          FromWhsCode: fromWhs,
+          WhsCode: toWhs,
+          BPLid: line.BPLid ?? branchId,
           Quantity: Number(line.Quantity) || 0,
           ItemCost: Number(line.UnitPrice || line.ItemCost || 0),
           UoMCode: uomCode,
@@ -279,7 +284,6 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
 
     reset: () => {
       if (get().isCopyingTo) {
-        set({ isCopyingTo: false });
         return;
       }
       set({

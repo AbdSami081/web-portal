@@ -3,11 +3,11 @@ import { Branch } from "@/api+/sap/branch";
 
 export const resolveBranchForWarehouse = (
   warehouseCode?: string | null,
-  warehouses?: Warehouse[]
+  warehouses?: Warehouse[] | any[]
 ): number | undefined => {
   if (!warehouseCode || !warehouses?.length) return undefined;
-  const match = warehouses.find((w) => w.WarehouseCode === warehouseCode);
-  return match?.BPLid;
+  const match = warehouses.find((w: any) => (w.WarehouseCode || w.WhsCode) === warehouseCode);
+  return match?.BPLid ?? match?.BPLID;
 };
 
 export const resolveBranchName = (

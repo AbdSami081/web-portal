@@ -52,8 +52,6 @@ export function InvDocumentHeader() {
     customer,
     setCustomer,
     loadFromDocument,
-    warehouses: globalWarehouses,
-    setWarehouses,
     DocEntry,
     updateAllLinesWarehouse,
     fromWarehouse,
@@ -68,7 +66,9 @@ export function InvDocumentHeader() {
     setJournalMemo,
   } = useInventoryDocument();
   const loadWarehouses = useMasterDataStore((s) => s.loadWarehouses);
-  const [warehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
+  const rawWarehouses = useMasterDataStore((s) => s.rawWarehouses);
+  const [localWarehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
+  const warehouses: Warehouse[] = rawWarehouses.length > 0 ? rawWarehouses : localWarehouses;
 
   const docNum = watch("DocNum");
   const [docNumSearch, setDocNumSearch] = useState("");
@@ -103,8 +103,8 @@ export function InvDocumentHeader() {
 
   useEffect(() => {
     const branchWhs = toWarehouse || fromWarehouse;
-    const derivedBranch = globalWarehouses.find(
-      (w: any) => w.WhsCode === branchWhs || w.WarehouseCode === branchWhs
+    const derivedBranch = warehouses.find(
+      (w: any) => (w.WhsCode || w.WarehouseCode) === branchWhs
     )?.BPLid;
     const branchUnset = watchedBranch === undefined || watchedBranch === null;
     if (derivedBranch !== undefined && derivedBranch !== null) {
@@ -114,7 +114,7 @@ export function InvDocumentHeader() {
     } else if (!isLoadedDocument && branchUnset && sessionDefaultBranch !== null && sessionDefaultBranch !== undefined) {
       setValue("BPL_IDAssignedToInvoice", sessionDefaultBranch);
     }
-  }, [toWarehouse, fromWarehouse, globalWarehouses, watchedBranch, isLoadedDocument, sessionDefaultBranch, setValue]);
+  }, [toWarehouse, fromWarehouse, warehouses, watchedBranch, isLoadedDocument, sessionDefaultBranch, setValue]);
 
   const closeDocumentByType = (type: number, entry: number) => {
     switch (type) {
@@ -149,13 +149,12 @@ export function InvDocumentHeader() {
       try {
         const res = await loadWarehouses();
         setLocalWarehouses(res);
-        setWarehouses(res);
       } catch (error) {
         console.error("Failed to fetch warehouses", error);
       }
     };
     fetchWarehouses();
-  }, [loadWarehouses, setWarehouses]);
+  }, [loadWarehouses]);
 
   useEffect(() => {
     if (initialLoadRef.current) return;
@@ -202,6 +201,8 @@ export function InvDocumentHeader() {
   const toWhs = watch("ToWarehouse");
 
   useEffect(() => {
+    const currentState = useInventoryDocument.getState();
+    if (currentState.isCopyingTo) return;
     const first = warehouses.length > 0
       ? (warehouses[0].WhsCode || (warehouses[0] as any).WarehouseCode)
       : "";
@@ -309,6 +310,8 @@ export function InvDocumentHeader() {
 
   const handleSelectBP = (bp: BusinessPartner) => {
     setCustomer(bp);
+    setValue("CardCode", bp.CardCode, { shouldDirty: true });
+    setValue("CardName", bp.CardName, { shouldDirty: true });
     setModalOpen(false);
   };
 
@@ -356,6 +359,15 @@ export function InvDocumentHeader() {
     setValue("DocEntry", documentData.DocEntry || 0);
     setValue("DocNum", documentData.DocNum || 0);
     const dateStr = documentData.TaxDate ? documentData.TaxDate.split("T")[0] : "";
+    setValue("DocDate", dateStr);
+    setValue("TaxDate", dateStr);
+    setValue("DocDueDate", dateStr);
+    setValue("CardCode", documentData.CardCode || "");
+    setValue("CardName", documentData.CardName || "");
+    setValue("FromWarehouse", documentData.FromWarehouse || "");
+    setValue("ToWarehouse", documentData.ToWarehouse || "");
+    setValue("Comments", documentData.Comments || "");
+    setValue("JournalMemo", documentData.JournalMemo || "");
     setDocDate(dateStr);
     setCustomer(documentData.CardCode ? { CardCode: documentData.CardCode, CardName: documentData.CardName || "" } : null);
     setComments(documentData.Comments || "");
@@ -594,7 +606,11 @@ export function InvDocumentHeader() {
           <Input
             type="date"
             value={docDate}
-            onChange={(e) => setDocDate(e.target.value)}
+            onChange={(e) => {
+              setDocDate(e.target.value);
+              setValue("DocDate", e.target.value);
+              setValue("TaxDate", e.target.value);
+            }}
             className="h-8 w-56"
             disabled={DocEntry > 0}
           />

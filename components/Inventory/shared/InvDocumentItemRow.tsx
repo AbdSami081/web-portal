@@ -1,5 +1,5 @@
 "use client";
-import { KeyboardEvent, useEffect, useState } from "react";
+import { KeyboardEvent, useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Trash } from "lucide-react";
@@ -36,6 +36,8 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
+  const fetchedItemRef = useRef<string | null>(null);
+  const bplBackfilledRef = useRef(false);
 
   const docStatus = watch("DocStatus") || "bost_Open";
   const isClosed = docStatus === "bost_Close";
@@ -43,29 +45,42 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   // Fetch QtyInWhs from Item API if not present on the line (e.g. when loading existing documents)
   useEffect(() => {
     if (!line.ItemCode) return;
-    if (!line.QtyInWhs || line.QtyInWhs.length === 0) {
-      fetchItemByCode(line.ItemCode).then((item) => {
-        if (item?.QtyInWhs) {
-          const qtyInWhs: any[] = item.QtyInWhs;
-          const fromWhs = line.FromWhsCode;
-          const whRecord = qtyInWhs.find(
-            (w: any) => (w.WarehouseCode || w.warehouseCode) === fromWhs
-          );
-          const onHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
-          updateLine(line.ItemCode, {
-            QtyInWhs: qtyInWhs,
-            OnHand: onHand,
-            ManSerNum: item.ManSerNum,
-            ManBtchNum: item.ManBtchNum,
-          });
-        }
-      });
-    }
-  }, [line.ItemCode]);
+    if (line.QtyInWhs && line.QtyInWhs.length > 0) return;
+    if (fetchedItemRef.current === line.ItemCode) return;
+    fetchedItemRef.current = line.ItemCode;
+
+    fetchItemByCode(line.ItemCode).then((item) => {
+      if (item?.QtyInWhs) {
+        const qtyInWhs: any[] = item.QtyInWhs;
+        const fromWhs = line.FromWhsCode;
+        const whRecord = qtyInWhs.find(
+          (w: any) => (w.WarehouseCode || w.warehouseCode || w.WhsCode) === fromWhs
+        );
+        const onHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
+        updateLine(line.ItemCode, {
+          QtyInWhs: qtyInWhs,
+          OnHand: onHand,
+          ManSerNum: item.ManSerNum,
+          ManBtchNum: item.ManBtchNum,
+        });
+      }
+    });
+  }, [line.ItemCode, line.FromWhsCode, updateLine]);
 
   useEffect(() => {
-    setDraftLine((prev) => (prev === line ? prev : line));
-  }, [line, index]);
+    setDraftLine(line);
+  }, [
+    line.ItemCode,
+    line.Dscription,
+    line.Quantity,
+    line.FromWhsCode,
+    line.WhsCode,
+    line.BPLid,
+    line.OnHand,
+    line.UoMCode,
+    line.MeasureUnit,
+    line.AccountCode,
+  ]);
 
   const saveRow = (updatedLine = draftLine) => {
     updateLine(line.ItemCode, updatedLine);
@@ -83,7 +98,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
     if (whsMode === "from") {
       const qtyInWhs = line.QtyInWhs || [];
       const whRecord = qtyInWhs.find(
-        (w: any) => (w.WarehouseCode || w.warehouseCode) === wh.WhsCode
+        (w: any) => (w.WarehouseCode || w.warehouseCode || w.WhsCode) === wh.WhsCode
       );
       const whOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
       updated = { ...draftLine, FromWhsCode: wh.WhsCode, OnHand: whOnHand };
@@ -94,15 +109,16 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
     saveRow(updated);
   };
 
-  // Backfill BPLid from the primary (To/single) warehouse for lines that already have one but no branch yet
+  // Backfill BPLid from warehouse for lines that don't have a branch yet
   useEffect(() => {
-    if (line.ItemCode && line.WhsCode && line.BPLid === undefined) {
+    if (!bplBackfilledRef.current && line.ItemCode && line.WhsCode && line.BPLid === undefined && warehouses.length > 0) {
       const branchId = resolveBranchForWarehouse(line.WhsCode, warehouses);
       if (branchId !== undefined) {
+        bplBackfilledRef.current = true;
         updateLine(line.ItemCode, { BPLid: branchId });
       }
     }
-  }, [line.WhsCode, line.BPLid, warehouses]);
+  }, [line.ItemCode, line.WhsCode, line.BPLid, warehouses, updateLine]);
 
   return (
     <>
@@ -186,7 +202,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
-          value={resolveBranchName(draftLine.BPLid, allBranches)}
+          value={resolveBranchName(draftLine.BPLid ?? resolveBranchForWarehouse(draftLine.WhsCode, warehouses), allBranches)}
           disabled
           readOnly
         />

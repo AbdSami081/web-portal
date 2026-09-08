@@ -48,20 +48,6 @@ type FormData = z.infer<typeof schema>;
 
 export default function InvTransferPage() {
   const router = useRouter();
-  const {
-    lines,
-    reset: resetStore,
-    fromWarehouse,
-    toWarehouse,
-    series,
-    priceList,
-    postingDate,
-    comments,
-    journalMemo,
-    customer,
-    DocEntry,
-    attachments,
-  } = useInventoryDocument();
 
   const defaultValues: FormData = useMemo(() => ({
     CardCode: "",
@@ -80,12 +66,19 @@ export default function InvTransferPage() {
     DocumentLines: [],
     FromWarehouse: "",
     ToWarehouse: "",
-    Series: series || "",
-    PriceList: priceList || "",
-    PostingDate: postingDate || "",
+    Series: "",
+    PriceList: "",
+    PostingDate: "",
   }), []);
 
   const handleSubmit = async (data: FormData) => {
+    const {
+      lines,
+      reset: resetStore,
+      DocEntry,
+      attachments,
+    } = useInventoryDocument.getState();
+
     try {
       let result;
 
