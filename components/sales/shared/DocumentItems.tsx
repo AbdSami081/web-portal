@@ -199,6 +199,9 @@ export function DocumentItems() {
     });
   };
 
+  const fieldAccess = useSalesDocument(
+  (state) => state.fieldAccess
+);
   const columns = [
     {
       key: "actions",
@@ -319,7 +322,8 @@ export function DocumentItems() {
     },
   ].filter(col => {
     if (col.key === "actions") return true;
-    return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
+    return fieldAccess.includes(col.key);
+   // return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
   // Append line-table UDF columns (e.g. RDR1 UDFs) so they render as extra line columns.

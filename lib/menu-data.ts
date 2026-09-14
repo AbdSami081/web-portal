@@ -312,6 +312,11 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "Report Access",
                 url: "/dashboard/administration/report-access",
             },
+            {
+                id: "1ae254b9-2a1e-4799-a348-2bbc004bd0e9",
+                title: "User Access Fields",
+                url: "/dashboard/administration/fields-access",
+            },
         ],
     },
 ];

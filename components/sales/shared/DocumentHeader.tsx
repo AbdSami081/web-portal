@@ -95,7 +95,12 @@ export function DocumentHeader() {
       setCloseModalOpen(false);
     }
   };
+const fieldAccess = useSalesDocument(
+  (state) => state.fieldAccess
+);
 
+const hasFieldAccess = (fieldName: string) =>
+  fieldAccess.includes(fieldName);
   const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
@@ -391,7 +396,9 @@ export function DocumentHeader() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-4">
-        {getFieldSettings(config.type, "headerFieds", "CardCode").visible !== false && (
+        {/* {getFieldSettings(config.type, "headerFieds", "CardCode").visible !== false && ( */}
+        {hasFieldAccess("CardCode") &&
+  getFieldSettings(config.type, "headerFieds", "CardCode").visible !== false && (
           <div className="flex items-center gap-3">
             <AppLabel className="w-28 shrink-0">Customer</AppLabel>
             <div className="flex items-center">
@@ -470,7 +477,9 @@ export function DocumentHeader() {
 
       <div className="flex flex-col lg:flex-row justify-between gap-4">
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
-          {getFieldSettings(config.type, "headerFieds", "CardName").visible !== false && (
+          {/* {getFieldSettings(config.type, "headerFieds", "CardName").visible !== false && ( */}
+          {hasFieldAccess("CardName") &&
+  getFieldSettings(config.type, "headerFieds", "CardName").visible !== false && (
             <div className="flex items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0">Name</AppLabel>
               <Input
@@ -483,7 +492,8 @@ export function DocumentHeader() {
             </div>
           )}
 
-          {getFieldSettings(config.type, "headerFieds", "BPLId").visible !== false && (
+          {/* {getFieldSettings(config.type, "headerFieds", "BPLId").visible !== false && ( */}
+          {hasFieldAccess("BPLid") &&(
             <div className="flex items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0">Branch</AppLabel>
               <Select
@@ -512,7 +522,9 @@ export function DocumentHeader() {
         </div>
 
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
-          {getFieldSettings(config.type, "headerFieds", "DocStatus").visible !== false && (
+          {/* {getFieldSettings(config.type, "headerFieds", "DocStatus").visible !== false && ( */}
+          {hasFieldAccess("DocStatus") &&
+  getFieldSettings(config.type, "headerFieds", "DocStatus").visible !== false && (
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Status</AppLabel>
               <Select
@@ -545,7 +557,9 @@ export function DocumentHeader() {
             </div>
           )}
 
-          {getFieldSettings(config.type, "headerFieds", "DocDate").visible !== false && (
+          {/* {getFieldSettings(config.type, "headerFieds", "DocDate").visible !== false && ( */}
+          {hasFieldAccess("DocDate") &&
+  getFieldSettings(config.type, "headerFieds", "DocDate").visible !== false && (
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Posting Date</AppLabel>
               <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "DocDate").enable} onChange={(e) => {
@@ -555,7 +569,8 @@ export function DocumentHeader() {
             </div>
           )}
 
-          {getFieldSettings(config.type, "headerFieds", "DocDueDate").visible !== false && (
+          {hasFieldAccess("DocDueDate") &&
+  getFieldSettings(config.type, "headerFieds", "DocDueDate").visible !== false && (
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">
                 {getDateLabel(config.type)}
@@ -567,7 +582,8 @@ export function DocumentHeader() {
             </div>
           )}
 
-          {getFieldSettings(config.type, "headerFieds", "TaxDate").visible !== false && (
+          {hasFieldAccess("TaxDate") &&
+  getFieldSettings(config.type, "headerFieds", "TaxDate").visible !== false && (
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
               <Input type="date" {...register("TaxDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "TaxDate").enable} onChange={(e) => {

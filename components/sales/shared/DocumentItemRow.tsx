@@ -46,10 +46,34 @@ export function DocumentLineRow({ index, line }: Props) {
     return getFieldSettings(config.type, "linesFieds", fieldName).enable !== false;
   };
 
-  const isFieldVisible = (fieldName: string) => {
-    return getFieldSettings(config.type, "linesFieds", fieldName).visible !== false;
-  };
+  // const isFieldVisible = (fieldName: string) => {
+  //   return getFieldSettings(config.type, "linesFieds", fieldName).visible !== false;
+  // };
+  const fieldAccess = useSalesDocument(
+  (state) => state.fieldAccess
+);
 
+const hasFieldAccess = (fieldName: string) =>
+  fieldAccess.includes(fieldName);
+
+// const isFieldVisible = (fieldName: string) => {
+//   return (
+//     hasFieldAccess(fieldName) &&
+//     getFieldSettings(config.type, "linesFieds", fieldName).visible !== false
+//   );
+// };
+
+
+const isFieldVisible = (fieldName: string) => {
+  return (
+    fieldAccess.includes(fieldName) &&
+    getFieldSettings(
+      config.type,
+      "linesFieds",
+      fieldName
+    ).visible !== false
+  );
+};
   // A line that is closed (line-level status bost_Close / IsClosed = tYES)
   // or on a financial document in update mode must stay locked: no remove, no field edits.
   const isLineClosed = line.IsClosed === "tYES" || line.LineStatus === "bost_Close";
