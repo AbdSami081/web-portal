@@ -18,6 +18,7 @@ import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/
 import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
+import { useLineFmsAuto } from "@/hooks/useFMS";
 
 interface Props {
   index: number;
@@ -53,6 +54,11 @@ export function PurchaseItemRow({ index, line }: Props) {
   };
 
   const [draftLine, setDraftLine] = useState(line);
+  const patchLine = (patch: { [key: string]: any }) => {
+    setDraftLine((prev) => ({ ...prev, ...patch }));
+    updateLineByIndex(index, patch);
+  };
+  useLineFmsAuto(draftLine, patchLine, isLineDisabled);
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
   const priceGuard = usePositiveField("Price", line.Price);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
@@ -513,10 +519,7 @@ export function PurchaseItemRow({ index, line }: Props) {
             .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
             .map(([k, v]) => [k, String(v)])
         )}
-        onPatch={(patch) => {
-          setDraftLine((prev) => ({ ...prev, ...patch }));
-          updateLineByIndex(index, patch);
-        }}
+        onPatch={patchLine}
       />
 
       <WarehouseSelectorDialog

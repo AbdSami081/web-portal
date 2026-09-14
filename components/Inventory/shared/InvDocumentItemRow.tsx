@@ -17,6 +17,7 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { useInvDocConfig } from "./InvDocumentLayout";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
+import { useLineFmsAuto } from "@/hooks/useFMS";
 
 interface Props {
   index: number;
@@ -83,6 +84,13 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   const saveRow = (updatedLine = draftLine) => {
     updateLine(line.ItemCode, updatedLine);
   };
+
+  const patchLine = (patch: Record<string, any>) => {
+    const updated = { ...draftLine, ...patch };
+    setDraftLine(updated as InventoryDocumentLine);
+    updateLine(line.ItemCode, updated);
+  };
+  useLineFmsAuto(draftLine, patchLine, isClosed);
 
   const stopEnterSubmit = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
@@ -275,11 +283,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
             .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
             .map(([k, v]) => [k, String(v)])
         )}
-        onPatch={(patch) => {
-          const updated = { ...draftLine, ...patch };
-          setDraftLine(updated as InventoryDocumentLine);
-          updateLine(line.ItemCode, updated);
-        }}
+        onPatch={patchLine}
       />
 
       <WarehouseSelectorDialog

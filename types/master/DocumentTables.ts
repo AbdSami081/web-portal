@@ -2,6 +2,9 @@ import { DocumentType } from "./DocumentType";
 
 export function getMasterTable(docType: number): string {
   switch (docType) {
+    case DocumentType.BusinessPartner:
+      return "OCRD";
+
     case DocumentType.Quotation:
       return "OQUT";
 

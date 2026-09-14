@@ -27,7 +27,7 @@ import { patchDraftDocument } from "@/api+/sap/draft/draftService";
 import { buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
-import { linesHaveInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
+import { linesHaveInvalidPrice, linesHaveInvalidQuantity } from "@/lib/sap/helpers/priceValidationHelper";
 import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
 import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
 
@@ -537,6 +537,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             const state = usePurchaseDocument.getState();
             const currentUserId = user?.sapUserId;
 
+            if (linesHaveInvalidQuantity(state.lines)) {
+              toast.info("One or more items have a quantity of 0 or less. Please set a valid quantity before submitting.");
+              return;
+            }
             if (linesHaveInvalidPrice(state.lines)) {
               toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
               return;

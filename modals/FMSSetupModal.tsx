@@ -143,6 +143,8 @@ const FMSSetupModal: React.FC<Props> = ({
   const [queryText, setQueryText] = useState("");
   const [triggerType, setTriggerType] = useState<"Manual" | "Auto">("Manual");
   const [triggerField, setTriggerField] = useState("");
+  const [triggerPickerOpen, setTriggerPickerOpen] = useState(false);
+  const [triggerSearch, setTriggerSearch] = useState("");
   const [testContext, setTestContext] = useState<Record<string, string>>({});
 
   const loadConfigs = useCallback(async () => {
@@ -176,11 +178,6 @@ const FMSSetupModal: React.FC<Props> = ({
       const f = raw as FmsFieldOption;
       const key = f.name?.trim().toLowerCase();
       if (!key || seen.has(key)) continue;
-      const isUdf =
-        (f.source ?? "").toLowerCase() === "udf" ||
-        (f.fieldType ?? "").trim().toUpperCase() === "UDF" ||
-        (f.name ?? "").trim().toUpperCase().startsWith("U_");
-      if (isUdf) continue;
       seen.add(key);
       out.push(f);
     }
@@ -197,6 +194,8 @@ const FMSSetupModal: React.FC<Props> = ({
     setQueryText("");
     setTriggerType("Manual");
     setTriggerField("");
+    setTriggerSearch("");
+    setTriggerPickerOpen(false);
     setTestResult(null);
     setTestContext({});
   };
@@ -662,27 +661,109 @@ const FMSSetupModal: React.FC<Props> = ({
                     <Label className="text-xs font-semibold text-emerald-900">
                       Source Trigger Field (Watch this field for changes)
                     </Label>
-                    <Input
-                      value={triggerField}
-                      onChange={(e) => setTriggerField(e.target.value)}
-                      placeholder="e.g. CardCode, ItemCode"
-                      className="h-8 text-xs bg-white border-emerald-300 focus:border-emerald-500"
-                    />
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span className="text-[11px] text-emerald-800 font-medium mr-1">
-                        Quick Pick:
-                      </span>
-                      {COMMON_TRIGGER_FIELDS.map((f) => (
+
+                    <Popover open={triggerPickerOpen} onOpenChange={setTriggerPickerOpen}>
+                      <PopoverTrigger asChild>
                         <button
-                          key={f}
                           type="button"
-                          onClick={() => setTriggerField(f)}
-                          className="text-[10px] font-mono bg-white border border-emerald-300 hover:bg-emerald-100 text-emerald-800 rounded-md px-2 py-0.5 transition-colors shadow-2xs"
+                          role="combobox"
+                          aria-expanded={triggerPickerOpen}
+                          className="flex w-full h-8 items-center justify-between gap-2 rounded-lg border border-emerald-300 bg-white px-3 text-xs shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                         >
-                          {f}
+                          <span className="min-w-0 truncate font-mono text-slate-700">
+                            {triggerField || (
+                              <span className="text-slate-400 font-sans">
+                                -- Select field to watch --
+                              </span>
+                            )}
+                          </span>
+                          <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         </button>
-                      ))}
-                    </div>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="p-0 w-[--radix-popover-trigger-width] min-w-[320px]"
+                        align="start"
+                      >
+                        <Command
+                          filter={(value, search) =>
+                            value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+                          }
+                        >
+                          <CommandInput
+                            placeholder="Search, or type any field name..."
+                            className="text-xs"
+                            value={triggerSearch}
+                            onValueChange={setTriggerSearch}
+                          />
+                          <CommandList>
+                            <CommandEmpty className="py-3 text-center text-xs text-slate-400">
+                              No match — type a name and use “Custom” below.
+                            </CommandEmpty>
+                            {triggerSearch.trim() &&
+                              !fieldOptions.some(
+                                (f) => f.name.toLowerCase() === triggerSearch.trim().toLowerCase()
+                              ) && (
+                                <CommandGroup heading="Custom">
+                                  <CommandItem
+                                    value={`__custom__ ${triggerSearch}`}
+                                    onSelect={() => {
+                                      setTriggerField(triggerSearch.trim());
+                                      setTriggerPickerOpen(false);
+                                    }}
+                                    className="flex items-center gap-2 text-xs"
+                                  >
+                                    <span className="font-mono text-slate-700">
+                                      Use “{triggerSearch.trim()}”
+                                    </span>
+                                  </CommandItem>
+                                </CommandGroup>
+                              )}
+                            {COMMON_TRIGGER_FIELDS.length > 0 && (
+                              <CommandGroup heading="Common">
+                                {COMMON_TRIGGER_FIELDS.map((f) => (
+                                  <CommandItem
+                                    key={`common-${f}`}
+                                    value={`common ${f}`}
+                                    onSelect={() => {
+                                      setTriggerField(f);
+                                      setTriggerPickerOpen(false);
+                                    }}
+                                    className="flex items-center gap-2 text-xs"
+                                  >
+                                    <span className="font-mono text-slate-700">{f}</span>
+                                    {triggerField === f && (
+                                      <Check className="ml-auto w-3.5 h-3.5 text-emerald-600" />
+                                    )}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
+                            <CommandGroup heading="Fields">
+                              {fieldOptions.map((f) => (
+                                <CommandItem
+                                  key={`trg-${f.name}`}
+                                  value={`${f.name} ${f.title}`}
+                                  onSelect={() => {
+                                    setTriggerField(f.name);
+                                    setTriggerPickerOpen(false);
+                                  }}
+                                  className="flex items-center gap-2 text-xs"
+                                >
+                                  <ScopeBadge scope={f.fieldType} />
+                                  <span className="font-mono text-slate-700">{f.name}</span>
+                                  {f.title && f.title !== f.name && (
+                                    <span className="truncate text-slate-400">— {f.title}</span>
+                                  )}
+                                  {triggerField === f.name && (
+                                    <Check className="ml-auto w-3.5 h-3.5 text-emerald-600" />
+                                  )}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
               </div>
@@ -692,7 +773,7 @@ const FMSSetupModal: React.FC<Props> = ({
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                     <Code2 className="w-4 h-4 text-blue-600" />
-                    SQL Query <span className="text-red-500">*</span>
+                    Query <span className="text-red-500">*</span>
                   </Label>
                   <div className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
                     <Info className="w-3 h-3 text-slate-400" />

@@ -8,7 +8,7 @@ import {
   useContext,
   ReactNode,
 } from "react";
-import { useWatch, UseFormSetValue, Control } from "react-hook-form";
+import { useWatch, useFormContext, UseFormSetValue, Control } from "react-hook-form";
 import {
   FmsConfigDto,
   FmsExecuteResult,
@@ -200,6 +200,80 @@ const NOOP_FMS: FmsContextValue = {
 
 export function useFmsContext(): FmsContextValue {
   return useContext(FmsContext) ?? NOOP_FMS;
+}
+
+export function useLineFmsAuto(
+  line: Record<string, any> | null | undefined,
+  onPatch: (patch: Record<string, any>) => void,
+  disabled = false
+) {
+  const { fmsConfigs, runFmsForTarget } = useFmsContext();
+  const formCtx = useFormContext();
+  const lastRunRef = useRef<Record<string, string>>({});
+  const patchRef = useRef(onPatch);
+  patchRef.current = onPatch;
+
+  const autoLineConfigs = useMemo(
+    () =>
+      fmsConfigs.filter(
+        (c) =>
+          c.triggerType === "Auto" &&
+          ((c.fieldScope ?? "").toUpperCase() === "L" ||
+            (c.targetField ?? "").toUpperCase().startsWith("U_"))
+      ),
+    [fmsConfigs]
+  );
+
+  const fieldsPerConfig = useMemo(
+    () =>
+      autoLineConfigs
+        .filter((cfg) => !!cfg.triggerField)
+        .map((cfg) => ({ cfg, fields: [cfg.triggerField as string] })),
+    [autoLineConfigs]
+  );
+
+  const watchedFieldNames = useMemo(
+    () => [...new Set(fieldsPerConfig.flatMap((x) => x.fields))],
+    [fieldsPerConfig]
+  );
+
+  const headerValues = useWatch({
+    control: formCtx?.control,
+    name: watchedFieldNames as any,
+  });
+
+  useEffect(() => {
+    if (disabled || !line || !fieldsPerConfig.length) return;
+
+    const headerMap: Record<string, any> = {};
+    watchedFieldNames.forEach((name, i) => {
+      headerMap[name] = Array.isArray(headerValues) ? headerValues[i] : headerValues;
+    });
+
+    const rowContext = flattenFormContext(line);
+
+    for (const { cfg, fields } of fieldsPerConfig) {
+      if (!fields.length) continue;
+
+      const parts: string[] = [];
+      let hasValue = false;
+      for (const f of fields) {
+        const v = line[f] ?? headerMap[f];
+        if (v !== undefined && v !== null && v !== "") hasValue = true;
+        parts.push(`${f}=${v ?? ""}`);
+      }
+      if (!hasValue) continue;
+
+      const runKey = parts.join("|");
+      if (lastRunRef.current[cfg.targetField] === runKey) continue;
+      lastRunRef.current[cfg.targetField] = runKey;
+
+      void runFmsForTarget(cfg.targetField, rowContext, (v) =>
+        patchRef.current({ [cfg.targetField]: v })
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [line, disabled, fieldsPerConfig, headerValues]);
 }
 
 function flattenFormContext(values: Record<string, any>): Record<string, string> {

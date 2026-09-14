@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/production/documentConfig";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
+import { linesHaveInvalidQuantity } from "@/lib/sap/helpers/priceValidationHelper";
 import { FilePlus2, Keyboard, Loader2 } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { HeaderModalAction } from "@/components/header-modal-action";
@@ -293,6 +294,10 @@ export function PRDDocumentLayout<T extends FieldValues>({
           onSubmit={async (e) => {
             e.preventDefault();
             handleSubmit(async (data) => {
+              if (linesHaveInvalidQuantity(useIFPRDDocument.getState().lines, "PlannedQuantity")) {
+                toast.info("One or more items have a quantity of 0 or less. Please set a valid quantity before submitting.");
+                return;
+              }
               if (isPendingApproval && docNav.draftEntry) {
                 const pendingRole = docNav.approvalRole === "approver" ? "approver" : "originator";
                 const canEditPending = pendingRole === "approver" ? canAuthorizerUpdateDraft : canOriginatorUpdateDraft;

@@ -169,7 +169,7 @@ export const executeFmsQuery = async (request: FmsExecuteRequest): Promise<FmsEx
   return normalizeResult(res.data);
 };
 
-/** Admin preview: test a raw SQL query before saving */
+/** Admin preview: test a raw query before saving */
 export const testFmsQuery = async (request: FmsTestQueryRequest): Promise<FmsExecuteResult> => {
   const payload = {
     QueryText: request.queryText,

@@ -114,7 +114,7 @@ export default function ReportGeneratePage() {
 
         const payload = {
           FilePath: fullPath,
-          database: user?.companyDB || "SBODemoAU",
+          database: user?.companyDB,
           format: "pdf",
           parameters,
         };
@@ -160,7 +160,7 @@ export default function ReportGeneratePage() {
 
       const payload = {
         FilePath: fullPath,
-        database: user?.companyDB || "SBODemoAU",
+        database: user?.companyDB,
         format: "pdf",
         parameters: parametersObject,
       };
