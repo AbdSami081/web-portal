@@ -9,6 +9,7 @@ import { clearApiResponseCache } from "@/lib/apiClient";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { getBranches, getMyBranches } from "@/api+/sap/branch";
 import { toast } from "sonner";
+import {Field, getAllFields,assignUserFields} from "@/api+/sap/administration/administrationService";
 
 interface User {
   empId: string;
@@ -42,6 +43,7 @@ interface AuthContextType {
   user: User | null;
   accessToken: string | null;
   isPermissionsLoading: boolean;
+  fields: Field[];
   login: (userName: string, password: string, dbParams?: Partial<LoginPayload>) => Promise<void>;
   logout: () => void;
 }
@@ -164,6 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isPermissionsLoading, setIsPermissionsLoading] = useState(false);
+  const [fields, setFields] = useState<Field[]>([]);
   const bootstrappedRef = useRef(false);
   const loginInProgressRef = useRef(false);
 
@@ -186,6 +189,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAccessToken(token);
     useAuthStore.getState().startExpiryTimer(token);
     setUser(buildUser(decoded, null, companyDB, initialOverrides));
+    
 
     void refreshPermissions(
       decoded,
@@ -260,6 +264,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const immediateUser = buildUser(decoded, null, companyDB, overrides);
       setUser(immediateUser);
       router.push("/dashboard");
+      // Load master fields after successful login
+// Load master fields after successful login
+// try {
+//   const masterFields = await getAllFields();
+//   setFields(masterFields);
+//   console.log("Master fields loaded:", masterFields);
+// } catch (error) {
+//   console.error("Failed to load master fields:", error);
+//   setFields([]);
+// }
 
       void refreshPermissions(
         decoded,
@@ -297,6 +311,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setAccessToken(null);
     setIsPermissionsLoading(false);
+    setFields([]);
     if (typeof window !== "undefined") {
       localStorage.removeItem("sapUserId");
     }
@@ -309,7 +324,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, isPermissionsLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, accessToken, isPermissionsLoading, fields, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

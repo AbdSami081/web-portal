@@ -53,7 +53,8 @@ interface SalesDocumentStore {
   loadedDraftData: any | null;
   setLoadedDraftData: (data: any) => void;
   setIsCopying: (val: boolean) => void;
-
+fieldAccess: string[];
+setFieldAccess: (fields: string[]) => void;
   setCustomer: (c: BusinessPartner) => void;
   setDocDate: (d: string) => void;
   setDocDueDate: (d: string) => void;
@@ -131,7 +132,8 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     udfs: {},
     isCopying: false,
     loadedDraftData: null,
-
+fieldAccess: [],
+setFieldAccess: (fields) => set({ fieldAccess: fields }),
     setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setIsCopying: (val) => set({ isCopying: val }),
     setCustomer: (c) => set({ customer: c }),

@@ -14,9 +14,40 @@ import { ReactJsxRuntime } from "next/dist/server/route-modules/app-page/vendore
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useEffect } from "react";
+import { useAuth } from "@/context/authContext";
+import { getAllFields } from "@/api+/sap/administration/administrationService";
 
 export default function NewQuotationPage() {
   const loadFromDocument = useSalesDocument((state) => state.loadFromDocument);
+
+// const { user } = useAuth();
+
+// const setFieldAccess = useSalesDocument(
+//   (state) => state.setFieldAccess
+// );
+
+// useEffect(() => {
+//   const loadAccess = async () => {
+//     if (!user?.empId) return;
+
+//     const fields = await getAllFields(
+//       user.empId,
+//       String(DocumentType.Quotation)
+//     );
+
+//     const allowed = fields
+//       .filter((x: any) => x.Enabled === "Y")
+//       .map((x: any) => x.U_FieldName);
+
+//     setFieldAccess(allowed);
+//   };
+
+//   loadAccess();
+// }, [user?.empId]);
+
+
+
 
   const defaultValues: QuotationFormData = {
     CardCode: "",

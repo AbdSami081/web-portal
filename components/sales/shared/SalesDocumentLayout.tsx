@@ -24,7 +24,7 @@ import { UDFLayout } from "@/components/shared/UDFSheet";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import HeaderActions from "@/components/Custom/HeaderAction";
-import { useAuth } from "@/context/authContext";
+
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
@@ -46,6 +46,8 @@ import { useFMS, FmsProvider } from "@/hooks/useFMS";
 import FMSSelectionModal from "@/modals/FMSSelectionModal";
 import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
 import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
+import { getAllFields } from "@/api+/sap/administration/administrationService";
+import { useAuth } from "@/context/authContext";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -210,6 +212,33 @@ export function SalesDocumentLayout<T extends FieldValues>({
     targetField: string;
     onSelect: (val: string) => void;
   }>({ rows: [], columns: [], targetField: "", onSelect: () => {} });
+
+
+
+const setFieldAccess = useSalesDocument(
+  (state) => state.setFieldAccess
+);
+
+useEffect(() => {
+  const loadAccess = async () => {
+    if (!user?.empId) return;
+
+    const fields = await getAllFields(
+      user.empId,
+      String(docType)
+    );
+
+    const allowed = fields
+      .filter((x: any) => x.Enabled === "Y")
+      .map((x: any) => x.U_FieldName);
+
+    setFieldAccess(allowed);
+  };
+
+  loadAccess();
+}, [user?.empId]);
+
+
 
   const fms = useFMS({
     docType,
