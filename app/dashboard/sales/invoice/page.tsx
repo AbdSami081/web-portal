@@ -47,6 +47,7 @@ export default function InvoicePage() {
         freight,
         additionalExpenses,
         includeLines: false,
+        targetDocType: DocumentType.ARInvoice,
       });
 
       try {

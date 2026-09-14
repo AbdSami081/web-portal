@@ -30,6 +30,13 @@ const statusMap: Record<string, string> = {
   bost_Close: "Closed",
 };
 
+const FATHER_TYPE_MAP: Record<string, string> = {
+  P: "cPayments_sum",
+  D: "cDelivery_sum",
+};
+
+const mapFatherType = (raw: string): string => FATHER_TYPE_MAP[raw.trim().toUpperCase()] || raw;
+
 
 export function DocumentHeader() {
   const {
@@ -225,6 +232,11 @@ export function DocumentHeader() {
       setCurrency(bp.Currency as any);
     }
 
+    if (config.type === DocumentType.ARInvoice) {
+      setValue("FatherType", bp.FatherType ? mapFatherType(bp.FatherType) : "", { shouldDirty: true });
+      setValue("FatherCard", bp.FatherCard || "", { shouldDirty: true });
+    }
+
     setModalOpen(false);
   };
 
@@ -346,6 +358,11 @@ export function DocumentHeader() {
       setComments(documentData.Comments || "");
       setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
       setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
+
+      if (config.type === DocumentType.ARInvoice) {
+        setValue("FatherType", (documentData as any).FatherType || "");
+        setValue("FatherCard", (documentData as any).FatherCard || "");
+      }
 
       if (resolvedAsDraft) {
         useSalesDocument.getState().setLoadedDraftData(documentData);
