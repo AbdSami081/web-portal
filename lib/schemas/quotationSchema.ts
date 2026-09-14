@@ -29,6 +29,8 @@ export const quotationSchema = z.object({
   Comments: z.string().optional(),
   DocStatus: z.string().optional(),
   BPL_IDAssignedToInvoice: z.number().optional(),
+  FatherType: z.string().optional(),
+  FatherCard: z.string().optional(),
 });
 
 export type QuotationFormData = z.infer<typeof quotationSchema>;

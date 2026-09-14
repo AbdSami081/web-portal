@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AppLabel } from "@/components/Custom/AppLabel";
 import { ItemSelectorDialog } from "../../../modals/ItemSelectorDialog";
+import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { DocumentLineRow } from "./DocumentItemRow";
 import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
+import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +17,7 @@ import { useSalesDocConfig } from "./SalesDocumentLayout";
 import {
   Plus,
   FileText,
+  Search,
 } from "lucide-react";
 import {
   Tooltip,
@@ -35,7 +41,7 @@ import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 
 export function DocumentItems() {
-  const { watch } = useFormContext();
+  const { watch, setValue, register } = useFormContext();
 
   const selectedCardCode =
     watch("CardCode");
@@ -58,7 +64,11 @@ export function DocumentItems() {
   const [activeTab, setActiveTab] =
     useState("content");
 
+  const [fatherCardModalOpen, setFatherCardModalOpen] = useState(false);
+
   const config = useSalesDocConfig();
+
+  const isARInvoice = config.type === DocumentType.ARInvoice;
 
   const isTableDisabled =
     config.isDisabledTable(docStatus);
@@ -339,7 +349,7 @@ export function DocumentItems() {
         onValueChange={setActiveTab}
         className="w-full pt-1 overflow-x-auto"
       >
-        <TabsList className="grid w-[240px] grid-cols-2 mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800">
+        <TabsList className={`grid ${isARInvoice ? "w-[360px] grid-cols-3" : "w-[240px] grid-cols-2"} mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800`}>
           <TabsTrigger
             value="content"
             className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400"
@@ -359,6 +369,15 @@ export function DocumentItems() {
               </span>
             )}
           </TabsTrigger>
+
+          {isARInvoice && (
+            <TabsTrigger
+              value="accounting"
+              className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400"
+            >
+              Accounting
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent
@@ -550,7 +569,65 @@ export function DocumentItems() {
             }
           />
         </TabsContent>
+
+        {isARInvoice && (
+          <TabsContent
+            value="accounting"
+            className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6"
+          >
+            <div className="w-full space-y-4 border rounded p-4">
+              <div className="flex items-center gap-3">
+                <AppLabel className="w-40 shrink-0">Consolidation Type</AppLabel>
+                <Select
+                  value={watch("FatherType") || ""}
+                  onValueChange={(val) => setValue("FatherType", val, { shouldDirty: true })}
+                  disabled={isEditMode}
+                >
+                  <SelectTrigger className="w-64" data-fms-field="FatherType">
+                    <SelectValue placeholder="Select consolidation type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cPayments_sum">Payments Consolidation</SelectItem>
+                    <SelectItem value="cDelivery_sum">Delivery Consolidation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <AppLabel className="w-40 shrink-0">Father Card</AppLabel>
+                <div className="flex items-center gap-1 w-64" data-fms-field="FatherCard">
+                  <Input
+                    {...register("FatherCard")}
+                    disabled
+                    className="h-8"
+                    placeholder="Select a business partner"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    disabled={isEditMode}
+                    onClick={() => setFatherCardModalOpen(true)}
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
+
+      <BusinessPartnerSelectorDialog
+        open={fatherCardModalOpen}
+        onClose={() => setFatherCardModalOpen(false)}
+        onSelect={(bp: BusinessPartner) => {
+          setValue("FatherCard", bp.CardCode, { shouldDirty: true });
+          setFatherCardModalOpen(false);
+        }}
+        cardType="C"
+      />
 
       <ItemSelectorDialog
         open={dialogOpen}

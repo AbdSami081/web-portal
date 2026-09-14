@@ -115,6 +115,11 @@ export function buildSalesDocumentPayload({
       })),
     }),
     ...(freight > 0 && { Freight: freight }),
+    ...(targetDocType === DocumentType.ARInvoice &&
+      data.FatherType && {
+        FatherType: data.FatherType,
+        FatherCard: data.FatherCard || "",
+      }),
   };
 }
 
@@ -127,10 +132,11 @@ export function buildSalesDocumentPatchPayload({
   additionalExpenses = [],
   downPaymentType,
   includeLines = true,
+  targetDocType,
 }: Pick<
   BuildSalesPayloadOptions,
   "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses" | "downPaymentType"
-> & { includeLines?: boolean }) {
+> & { includeLines?: boolean; targetDocType?: DocumentType }) {
   return {
     Comments: data.Comments,
     ...(data.DocDate && { DocDate: data.DocDate }),
@@ -178,5 +184,10 @@ export function buildSalesDocumentPatchPayload({
       })),
     }),
     ...(includeLines && freight > 0 && { Freight: freight }),
+    ...(targetDocType === DocumentType.ARInvoice &&
+      data.FatherType && {
+        FatherType: data.FatherType,
+        FatherCard: data.FatherCard || "",
+      }),
   };
 }
