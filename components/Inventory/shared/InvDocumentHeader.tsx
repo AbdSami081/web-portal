@@ -97,7 +97,6 @@ export function InvDocumentHeader() {
   const isLoadedDocument = !!DocEntry && DocEntry > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
   const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
-
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
   const watchedBranch = watch("BPL_IDAssignedToInvoice");
 

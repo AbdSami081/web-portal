@@ -93,16 +93,6 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 p-12 flex flex-col justify-between w-full h-full text-white">
-          <div className="animate-in fade-in slide-in-from-top duration-1000">
-            <div className="flex items-center gap-3 group">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20 transition-transform group-hover:rotate-12">
-                <ShieldCheck className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-black tracking-tighter leading-none">SuperNova</span>
-              </div>
-            </div>
-          </div>
 
           <div className="max-w-xl space-y-8">
             <div className="space-y-4 animate-in fade-in slide-in-from-left duration-1000 delay-300">

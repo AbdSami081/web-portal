@@ -1,9 +1,11 @@
+import Image from "next/image";
 import { AppSidebar } from "@/components/app-sidebar";
 import HeaderNav from "@/components/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RouteGuard } from "@/components/route-guard";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { BranchSelectionModal } from "@/components/shared/BranchSelectionModal";
+import supernovaIcon from "@/public/assets/icon.ico";
 
 const DashboardLayout = ({
   children,
@@ -21,6 +23,12 @@ const DashboardLayout = ({
               {children}
             </RouteGuard>
           </div>
+          <footer className="shrink-0 border-t border-zinc-200/60 bg-white px-4 py-1.5 text-[13px] font-medium tracking-wide text-zinc-400">
+            <div className="flex items-center justify-end gap-1.5">
+              <span>Powered by SuperNova</span>
+              {/* <Image src={supernovaIcon} alt="" className="h-3 w-3 shrink-0 object-contain" /> */}
+            </div>
+          </footer>
         </NotificationProvider>
       </SidebarInset>
       <BranchSelectionModal />

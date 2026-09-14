@@ -20,6 +20,7 @@ import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/
 import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells, LineCellFms } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
+import { useLineFmsAuto } from "@/hooks/useFMS";
 
 
 interface Props {
@@ -66,6 +67,7 @@ export function DocumentLineRow({ index, line }: Props) {
   };
 
   const [draftLine, setDraftLine] = useState(line);
+  useLineFmsAuto(draftLine, patchLine, isLineDisabled);
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
   const priceGuard = usePositiveField("Price", line.Price);
   const [whDialogOpen, setWhDialogOpen] = useState(false);

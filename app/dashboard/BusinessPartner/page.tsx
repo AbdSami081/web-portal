@@ -28,6 +28,7 @@ import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 import { Search, List, Loader2, X } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -48,6 +49,9 @@ import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { HeaderActionPortal } from "@/components/header-portal";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { getSapErrorMessage } from "@/lib/errorHelper";
+import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
+import { UDFLayout } from "@/components/shared/UDFSheet";
+import { useUDFStore } from "@/stores/useUDFStore";
 
 const EMPTY_FORM = {
   Series: "",
@@ -120,6 +124,14 @@ export default function BPMasterDataPage() {
   const [isExistingBP, setIsExistingBP] = useState(false);
 
   const [formData, setFormData] = useState({ ...EMPTY_FORM });
+
+  const methods = useForm<Record<string, any>>({ defaultValues: {} });
+  const [bpUdfValues, setBpUdfValues] = useState<Record<string, any>>({});
+  const fetchUdfDefinitions = useUDFStore((state) => state.fetchDefinitions);
+
+  useEffect(() => {
+    fetchUdfDefinitions(DocumentType.BusinessPartner);
+  }, [fetchUdfDefinitions]);
 
   const getResourceName = (type: number) => {
     switch (type) {
@@ -300,7 +312,7 @@ export default function BPMasterDataPage() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "f") {
         e.preventDefault();
         e.stopPropagation();
         openBPModal();
@@ -319,6 +331,8 @@ export default function BPMasterDataPage() {
     setIsExistingBP(false);
     setSearchValue("");
     setListSearch("");
+    setBpUdfValues({});
+    methods.reset({});
   };
 
   // Builds a Card Code from a series' prefix + next-number + digit padding.
@@ -358,6 +372,14 @@ export default function BPMasterDataPage() {
       return;
     }
 
+    const udfValues = methods.getValues();
+    const udfPayload = Object.entries(udfValues).reduce<Record<string, any>>((acc, [key, value]) => {
+      if (key.startsWith("U_") && value !== undefined && value !== null && value !== "") {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
     const payload = {
       CardCode: formData.CardCode.trim(),
       CardName: formData.CardName.trim(),
@@ -393,6 +415,8 @@ export default function BPMasterDataPage() {
       ProjectCode: formData.Project ? String(formData.Project).split(" - ")[0] : "",
 
       U_NTNRegistered: "Registered",
+
+      ...udfPayload,
 
       Notes: formData.Remarks || "",
       FreeText: formData.FreeText || "",
@@ -431,6 +455,8 @@ export default function BPMasterDataPage() {
       ProjectCode: formData.Project ? String(formData.Project).split(" - ")[0] : "",
 
       U_NTNRegistered: "Registered",
+
+      ...udfPayload,
 
       Notes: formData.Remarks || "",
       FreeText: formData.FreeText || "",
@@ -523,6 +549,15 @@ export default function BPMasterDataPage() {
       );
     }
 
+    const udfValues = Object.entries(item).reduce<Record<string, any>>((acc, [key, value]) => {
+      if (key.startsWith("U_") && value !== undefined && value !== null) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+    methods.reset(udfValues);
+    setBpUdfValues(udfValues);
+
     setIsExistingBP(true);
     setOpen(false);
     setListSearch("");
@@ -564,7 +599,10 @@ export default function BPMasterDataPage() {
   const isCardCodeLocked = isExistingBP || selectedSeries?.IsManual === "tNO";
 
   return (
+   <FormProvider {...methods}>
     <div className="min-h-screen bg-[#fafafa]">
+      <FieldNameInspector />
+      <UDFLayout docType={DocumentType.BusinessPartner} values={bpUdfValues} />
       <HeaderActionPortal>
         <HeaderActions
           DocEntry={0}
@@ -1099,5 +1137,6 @@ export default function BPMasterDataPage() {
         </div>
       </div>
     </div>
+   </FormProvider>
   );
 }

@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePRDDocConfig } from "./PRDDocumentLayout";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
+import { useLineFmsAuto } from "@/hooks/useFMS";
 
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
@@ -56,6 +57,13 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const saveRow = () => {
     updateLine(index, draftLine);
   };
+
+  const patchLine = (patch: Record<string, any>) => {
+    const updated = { ...draftLine, ...patch };
+    setDraftLine(updated as any);
+    updateLine(index, updated);
+  };
+  useLineFmsAuto(draftLine, patchLine, initialStatus === "boposClosed");
 
   return (
     <>
@@ -289,11 +297,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
             .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
             .map(([k, v]) => [k, String(v)])
         )}
-        onPatch={(patch) => {
-          const updated = { ...draftLine, ...patch };
-          setDraftLine(updated as any);
-          updateLine(index, updated);
-        }}
+        onPatch={patchLine}
       />
 
       <GenericModal

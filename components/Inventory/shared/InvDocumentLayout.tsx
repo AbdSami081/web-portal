@@ -41,6 +41,7 @@ import {
 import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
+import { linesHaveInvalidQuantity } from "@/lib/sap/helpers/priceValidationHelper";
 import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
 import { RelationshipMapView } from "@/components/shared/RelationshipMapView";
 import { useRelationshipMapStore } from "@/stores/useRelationshipMapStore";
@@ -490,6 +491,10 @@ export function InvDocumentLayout<T extends FieldValues>({
     const state = useInventoryDocument.getState();
     const currentUserId = user?.sapUserId;
     const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
+    if (linesHaveInvalidQuantity(state.lines)) {
+      toast.info("One or more items have a quantity of 0 or less. Please set a valid quantity before submitting.");
+      return;
+    }
     if (isBranchMissing((finalData as any).BPL_IDAssignedToInvoice)) {
       toast.error("Please select a branch before submitting.");
       return;
