@@ -15,7 +15,7 @@ function parseJwtPart(token: string) {
     }
 }
 
-export async function getFilteredMenu(accessToken: string, allowedIds?: string[]): Promise<MenuItem[]> {
+export async function getFilteredMenu(accessToken: string, allowedIds?: string[], isSuperAdmin?: boolean): Promise<MenuItem[]> {
     if (!accessToken) return [];
 
     let allowed: string[] = [];
@@ -25,10 +25,13 @@ export async function getFilteredMenu(accessToken: string, allowedIds?: string[]
     } else {
         const decoded = parseJwtPart(accessToken);
         const allowedModulesClaim = decoded?.AllowedModules || decoded?.allowedModules;
-        if (!decoded || !allowedModulesClaim) return [];
 
-        const allowedStr = allowedModulesClaim as string;
-        allowed = allowedStr.split(',').map(m => m.trim().toLowerCase());
+        if (allowedModulesClaim) {
+            const allowedStr = allowedModulesClaim as string;
+            allowed = allowedStr.split(',').map(m => m.trim().toLowerCase());
+        } else if (!decoded || !isSuperAdmin) {
+            return [];
+        }
     }
 
     if (allowed.includes("all")) {

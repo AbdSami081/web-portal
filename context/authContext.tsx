@@ -78,7 +78,7 @@ const buildUser = (
   let uniqueAllowed = tokenModules;
   if (access) {
     const dbAllowed = access.flatMap((a) => (a.componentId ? [a.moduleId, a.componentId] : [a.moduleId]));
-    uniqueAllowed = dbAllowed.map((id) => id.toLowerCase());
+    uniqueAllowed = [...new Set([...tokenModules, ...dbAllowed.map((id) => id.toLowerCase())])];
   }
 
   const role = decoded.role || decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];

@@ -31,7 +31,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     async function loadMenu() {
       if (accessToken && user) {
         try {
-          const filtered = await getFilteredMenu(accessToken, user.allowedModules);
+          const filtered = await getFilteredMenu(accessToken, user.allowedModules, user.isSuperAdmin);
 
           const userAllowedLower = (user.allowedModules || []).map((m: string) => m.toLowerCase());
 
