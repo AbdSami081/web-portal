@@ -26,7 +26,6 @@ import { UDFLayout } from "@/components/shared/UDFSheet";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
-import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
 import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
@@ -87,7 +86,6 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
 
   const { user } = useAuth();
-  const { canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const [approvalTemplates, setApprovalTemplates] = React.useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = React.useState(false);
   const [pendingFinalData, setPendingFinalData] = React.useState<T | null>(null);
@@ -304,22 +302,8 @@ export function PRDDocumentLayout<T extends FieldValues>({
               }
 
               if (isPendingApproval && docNav.draftEntry) {
-                const pendingRole = docNav.approvalRole === "approver" ? "approver" : "originator";
-                const canEditPending = pendingRole === "approver" ? canAuthorizerUpdateDraft : canOriginatorUpdateDraft;
-                if (!canEditPending) {
-                  toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
-                  return;
-                }
-                try {
-                  await patchDraftDocument(Number(docNav.draftEntry), data);
-                  toast.success("Draft updated. It remains pending approval.");
-                  finishAndReset();
-                  setBadgeState(null);
-                  return;
-                } catch (err: any) {
-                  toast.error(err?.response?.data?.Message || "Failed to update the pending draft");
-                  return;
-                }
+                toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
+                return;
               }
 
               if (isApprovedDraft && docNav.draftEntry) {

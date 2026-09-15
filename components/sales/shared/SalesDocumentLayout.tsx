@@ -26,7 +26,6 @@ import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog"
 import HeaderActions from "@/components/Custom/HeaderAction";
 
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
-import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
 import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
@@ -195,7 +194,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
   const { user } = useAuth();
-  const { canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const [serialModalOpen, setSerialModalOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<T | null>(null);
@@ -547,27 +545,7 @@ useEffect(() => {
           }
 
           if (isPendingApproval && docNav.draftEntry) {
-            const pendingRole = docNav.approvalRole === "approver" ? "approver" : "originator";
-            const canEditPending = pendingRole === "approver" ? canAuthorizerUpdateDraft : canOriginatorUpdateDraft;
-            if (!canEditPending) {
-              toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
-              return;
-            }
-            try {
-              const pendingPatchPayload = buildSalesDocumentPatchPayload({
-                data: finalData as any,
-                lines: state.lines,
-                discountPercent: state.discountPercent,
-                freight: state.freight,
-                additionalExpenses: state.additionalExpenses,
-              });
-              await patchDraftDocument(Number(docNav.draftEntry), pendingPatchPayload);
-              toast.success("Draft updated. It remains pending approval.");
-              finishAndReset();
-              setBadgeState(null);
-            } catch (err: any) {
-              toast.error(err?.response?.data?.Message || "Failed to update the pending draft");
-            }
+            toast.info("This document is currently awaiting approval. You cannot modify it until it has been approved or rejected.");
             return;
           }
 

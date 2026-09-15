@@ -68,8 +68,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild className="hover:bg-white/5 active:bg-white/10 transition-all py-6 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:h-16">
               <Link href="/dashboard" className="flex items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
                 <div className="flex flex-col text-left leading-none ml-4 group-data-[collapsible=icon]:hidden overflow-hidden">
-                  <span className="font-bold text-white tracking-tight text-xl uppercase truncate">
-                    {(user?.companyName || user?.companyDB || "Company").trim().split(" ")[0]}
+                  <span className="font-bold text-white tracking-tight text-xl truncate">
+                    {(user?.companyName || user?.companyDB || "Company")}
                   </span>
                   <div className="h-[2px] w-8 bg-white/60 my-1" />
                   <span className="text-[9px] text-slate-400 font-black tracking-widest uppercase opacity-80 leading-none truncate">

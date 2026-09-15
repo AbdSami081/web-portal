@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, useRef } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   getRelationshipMap,
   RelationshipMapResponseDto,
   RelationshipNodeDto,
 } from "@/api+/sap/relationshipMap/relationshipMapService";
+import { getMenuInfoByObjectCode, buildDocumentUrl } from "@/lib/menu-lookup";
+import { stageDocNavParams } from "@/lib/docNavParams";
 import {
   Loader2,
   Lock,
@@ -45,6 +48,8 @@ export function RelationshipMapView({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [zoom, setZoom] = useState<number>(1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Pan / Drag State
   const [isPanning, setIsPanning] = useState(false);
@@ -225,6 +230,39 @@ export function RelationshipMapView({
   };
 
   const handleMouseUp = () => setIsPanning(false);
+
+  const handleNodeClick = (node: PositionedNode) => {
+    if (node.IsCurrent) {
+      onClose();
+      return;
+    }
+
+    const menuInfo = getMenuInfoByObjectCode(node.ObjType);
+    if (!menuInfo) {
+      toast.warning("This document type can't be opened directly in the portal.");
+      return;
+    }
+
+    const url = buildDocumentUrl(menuInfo.url, {
+      objectType: String(node.ObjType),
+      objectEntry: String(node.DocNum),
+      isDraft: false,
+    });
+
+    const cleanPath = url.split("?")[0];
+    stageDocNavParams(cleanPath, {
+      docEntry: String(node.DocNum),
+      docType: String(node.ObjType),
+    });
+
+    onClose();
+
+    if (cleanPath === pathname) {
+      window.location.href = cleanPath;
+    } else {
+      router.push(cleanPath);
+    }
+  };
 
   return (
     <div className="w-full h-full min-h-[calc(100vh-170px)] flex flex-col bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-200">
@@ -452,6 +490,8 @@ export function RelationshipMapView({
               return (
                 <div
                   key={node.Id}
+                  onClick={() => handleNodeClick(node)}
+                  title={isCurrent ? "Current document" : "Open this document"}
                   style={{
                     position: "absolute",
                     left: `${node.x}px`,
@@ -459,7 +499,7 @@ export function RelationshipMapView({
                     width: `${node.width}px`,
                     height: `${node.height}px`,
                   }}
-                  className={`rounded border shadow-sm flex flex-col bg-white transition-all overflow-hidden ${
+                  className={`rounded border shadow-sm flex flex-col bg-white transition-all overflow-hidden cursor-pointer hover:shadow-md hover:-translate-y-0.5 ${
                     isCurrent
                       ? "border-[#D4B830] ring-2 ring-[#EDC93A]/50 shadow-md"
                       : "border-[#8FAFC9]"

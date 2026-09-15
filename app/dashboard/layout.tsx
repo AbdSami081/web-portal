@@ -5,6 +5,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RouteGuard } from "@/components/route-guard";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { BranchSelectionModal } from "@/components/shared/BranchSelectionModal";
+import { RelationshipMapRouteWatcher } from "@/components/shared/RelationshipMapRouteWatcher";
 import logoImage from "@/public/assets/logo.png";
 
 const DashboardLayout = ({
@@ -14,6 +15,7 @@ const DashboardLayout = ({
 }>) => {
   return (
     <SidebarProvider>
+      <RelationshipMapRouteWatcher />
       <AppSidebar />
       <SidebarInset className="flex flex-col min-h-0 overflow-hidden">
         <NotificationProvider>

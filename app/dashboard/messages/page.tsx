@@ -316,14 +316,37 @@ export default function MessagesOverviewPage() {
 
   }, [selectedMessage]);
 
+  const approvalDocumentLink = useMemo(() => {
+    if (!selectedApproval) return null;
+
+    const rawObjectEntry = selectedApproval.ObjectEntry?.toString().trim();
+    const objectEntry = rawObjectEntry && rawObjectEntry !== "0" ? rawObjectEntry : undefined;
+    const rawDraftEntry = selectedApproval.DraftEntry?.toString().trim();
+    const draftEntry = rawDraftEntry && rawDraftEntry !== "0" ? rawDraftEntry : undefined;
+    const objectType =
+      selectedApproval.ObjectType != null && `${selectedApproval.ObjectType}` !== ""
+        ? String(normalizeObjectCode(selectedApproval.ObjectType))
+        : selectedApproval.ObjectType;
+    const approvalRequestCode = selectedApproval.ApprovalRequestCode;
+
+    if (objectEntry) {
+      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber: undefined, approvalRequestCode };
+    }
+    if (draftEntry) {
+      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber: undefined, approvalRequestCode };
+    }
+
+    return null;
+  }, [selectedApproval]);
+
   const handleDocumentLinkClick = (link: {
     objectType: string;
     objectEntry?: string;
     draftEntry?: string;
     isDraft: boolean;
     sourceDraftNumber?: number | null;
-    approvalRequestCode?: number ; 
-  }) => {
+    approvalRequestCode?: number ;
+  }, statusOverride?: string) => {
     const cleanKey = (v?: string | number | null) =>
       v === undefined || v === null ? undefined : v.toString().trim().split(/\s+/)[0] || undefined;
 
@@ -344,16 +367,18 @@ export default function MessagesOverviewPage() {
       return;
     }
 
+    const rawStatus = statusOverride ?? selectedMessage?.ApprovalStatus;
+
     const url = buildDocumentUrl(menuInfo.url, {
       objectType: link.objectType,
       objectEntry: link.isDraft ? undefined : (sourceKey ?? objectKey),
       draftEntry: draftKey,
       isDraft: link.isDraft,
       approvalRequestCode: link.approvalRequestCode,
-      approvalStatus: selectedMessage?.ApprovalStatus
+      approvalStatus: rawStatus
     });
 
-    const status = (selectedMessage?.ApprovalStatus || "").toLowerCase();
+    const status = (rawStatus || "").toLowerCase();
     const isApprovedStatus = status.includes("approved");
     const isPendingStatus = status.includes("pending");
     const approvalRole = isPendingStatus ? "approver" : "originator";
@@ -366,7 +391,7 @@ export default function MessagesOverviewPage() {
       docType: String(link.objectType),
       draft: link.isDraft ? "1" : undefined,
       approvalRequestCode: link.approvalRequestCode ? String(link.approvalRequestCode) : undefined,
-      approvalStatus: selectedMessage?.ApprovalStatus,
+      approvalStatus: rawStatus,
       approvalRole,
       approvalReadOnly,
     });
@@ -682,6 +707,48 @@ export default function MessagesOverviewPage() {
                               </p>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {approvalDocumentLink && (
+                      <div className="space-y-3 pt-4 border-t border-slate-100">
+                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                          <Paperclip className="h-3.5 w-3.5 text-slate-400" /> Linked Document
+                        </h4>
+                        <div className="border border-slate-200/80 rounded-xl overflow-hidden shadow-sm">
+                          <Table>
+                            <TableBody>
+                              <TableRow className="hover:bg-slate-50/50">
+                                <TableCell className="py-3">
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-bold text-slate-800">
+                                      {getObjectName(approvalDocumentLink.objectType)}
+                                      {approvalDocumentLink.isDraft && (
+                                        <span className="ml-1.5 text-[9px] font-semibold text-amber-600 uppercase tracking-wide">
+                                          (Draft)
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-semibold font-mono mt-0.5">
+                                      Key: {approvalDocumentLink.isDraft ? approvalDocumentLink.draftEntry : approvalDocumentLink.objectEntry}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center py-3 w-[80px]">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDocumentLinkClick(approvalDocumentLink, selectedApproval.ApprovalStatus || selectedApproval.Status)}
+                                    className="h-7 w-7 text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                                    title="Open Document in SAP"
+                                  >
+                                    <ArrowUpRight className="h-4 w-4 stroke-[2.5]" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
                         </div>
                       </div>
                     )}
