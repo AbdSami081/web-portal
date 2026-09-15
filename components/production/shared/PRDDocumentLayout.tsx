@@ -27,7 +27,7 @@ import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
-import { APPROVED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
+import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
 import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
 import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
@@ -87,7 +87,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
 
 
   const { user } = useAuth();
-  const { canUpdateApprovedDocument, canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
+  const { canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const [approvalTemplates, setApprovalTemplates] = React.useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = React.useState(false);
   const [pendingFinalData, setPendingFinalData] = React.useState<T | null>(null);
@@ -298,6 +298,11 @@ export function PRDDocumentLayout<T extends FieldValues>({
                 toast.info("One or more items have a quantity of 0 or less. Please set a valid quantity before submitting.");
                 return;
               }
+              if (isRejectedApproval && docNav.draftEntry) {
+                toast.info(REJECTED_DOC_EDIT_BLOCKED_MSG);
+                return;
+              }
+
               if (isPendingApproval && docNav.draftEntry) {
                 const pendingRole = docNav.approvalRole === "approver" ? "approver" : "originator";
                 const canEditPending = pendingRole === "approver" ? canAuthorizerUpdateDraft : canOriginatorUpdateDraft;
@@ -336,34 +341,10 @@ export function PRDDocumentLayout<T extends FieldValues>({
                       toast.error(msg || "Failed to create the document");
                       return;
                     }
-                    toast.info("This draft changed after approval — sending it back for re-approval.");
                   }
                 }
 
-                if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
-                  toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
-                  return;
-                }
-
-                try {
-                  await patchDraftDocument(Number(docNav.draftEntry), data);
-                } catch (err: any) {
-                  toast.error(err?.response?.data?.Message || "Failed to save changes to the approval draft");
-                  return;
-                }
-
-
-                try {
-                  const reTemplates = await getCurrentUserApprovalTemplates(
-                    user?.sapUserId || 0,
-                    getApprovalDocumentType(docType)
-                  );
-                  if (reTemplates && reTemplates.length > 0) setApprovalTemplates(reTemplates);
-                } catch {}
-
-                setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-                setPendingFinalData(null);
-                setApprovalModalOpen(true);
+                toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
                 return;
               }
 

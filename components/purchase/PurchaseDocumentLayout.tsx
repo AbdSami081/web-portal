@@ -92,7 +92,7 @@ import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialo
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
-import { APPROVED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
+import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
 import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
 import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
@@ -131,7 +131,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   title,
 }: PurchaseDocumentLayoutProps<T>) {
   const { user } = useAuth();
-  const { canUpdateApprovedDocument, canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
+  const { canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = React.useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
@@ -189,7 +189,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const authWithout = isAuthorizationWithout(authStatus);
   const authBadge = mapAuthorizationStatus(authStatus);
   const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
-  const approvalApplies = useUserHasApprovalTemplate(docType);
+  const approvalApplies = useUserHasApprovalTemplate(docType, pathname);
   const documentLoaded = Number(DocEntry) > 0 || !!loadedDraftData;
   const isPostedLoaded = Number(DocEntry) > 0 && !docNav.draftEntry;
   const draftBadgeVisible =
@@ -578,41 +578,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             }
 
             if (isRejectedApproval && docNav.draftEntry) {
-              try {
-                const patchPayload = buildPurchaseDocumentPatchPayload({
-                  data: data as any,
-                  lines: state.lines,
-                  discountPercent: state.discountPercent,
-                  freight: state.freight,
-                  rounding: state.rounding,
-                  additionalExpenses: state.additionalExpenses,
-                  includeLines: [
-                    DocumentType.PurchaseRequests,
-                    DocumentType.PurchaseQuotation,
-                    DocumentType.PurchaseOrder,
-                  ].includes(docType),
-                });
-                await patchDraftDocument(Number(docNav.draftEntry), patchPayload);
-              } catch (err: any) {
-                toast.error(err?.response?.data?.Message || "Failed to update approval draft");
-                return;
-              }
-              if (currentUserId) {
-                try {
-                  const docTypeStr = getApprovalDocumentType(docType, pathname);
-                  const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
-                  if (activeTemplates && activeTemplates.length > 0) {
-                    setApprovalTemplates(activeTemplates);
-                    setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-                    setApprovalModalOpen(true);
-                    return;
-                  }
-                } catch {
-                  /* fall through */
-                }
-              }
-              toast.success("Draft updated. The approval request will be re-submitted.");
-              finishAndReset();
+              toast.info(REJECTED_DOC_EDIT_BLOCKED_MSG);
               return;
             }
 
@@ -669,54 +635,17 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                     toast.error(msg || "Failed to create the document");
                     return;
                   }
-                  toast.info("This draft changed after approval — sending it back for re-approval.");
                 }
               }
 
-              if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
-                toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
-                return;
-              }
-
-              try {
-                const patchPayload = buildPurchaseDocumentPatchPayload({
-                  data: data as any,
-                  lines: state.lines,
-                  discountPercent: state.discountPercent,
-                  freight: state.freight,
-                  rounding: state.rounding,
-                  additionalExpenses: state.additionalExpenses,
-                  includeLines: [
-                    DocumentType.PurchaseRequests,
-                    DocumentType.PurchaseQuotation,
-                    DocumentType.PurchaseOrder,
-                  ].includes(docType),
-                });
-                await patchDraftDocument(Number(docNav.draftEntry), patchPayload);
-              } catch (err: any) {
-                toast.error(err?.response?.data?.Message || "Failed to update approval draft");
-                return;
-              }
-
-
-              try {
-                const reTemplates = await getCurrentUserApprovalTemplates(
-                  user?.sapUserId || 0,
-                  getApprovalDocumentType(docType)
-                );
-                if (reTemplates && reTemplates.length > 0) setApprovalTemplates(reTemplates);
-              } catch {}
-
-              setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-              setPendingFinalData(null);
-              setApprovalModalOpen(true);
+              toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
               return;
             }
 
             if (currentUserId) {
               setIsCheckingApproval(true);
               try {
-                const docTypeStr = getApprovalDocumentType(docType);
+                const docTypeStr = getApprovalDocumentType(docType, pathname);
                 const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
                 if (activeTemplates && activeTemplates.length > 0) {
                   setApprovalTemplates(activeTemplates);

@@ -27,7 +27,7 @@ import HeaderActions from "@/components/Custom/HeaderAction";
 
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
-import { APPROVED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
+import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
 import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
 import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
@@ -195,7 +195,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
   const { user } = useAuth();
-  const { canUpdateApprovedDocument, canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
+  const { canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const [serialModalOpen, setSerialModalOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<T | null>(null);
@@ -542,38 +542,7 @@ useEffect(() => {
           }
 
           if (isRejectedApproval && docNav.draftEntry) {
-            try {
-              const patchPayload = buildSalesDocumentPatchPayload({
-                data: finalData as any,
-                lines: state.lines,
-                discountPercent: state.discountPercent,
-                freight: state.freight,
-                additionalExpenses: state.additionalExpenses,
-              });
-              await patchDraftDocument(Number(docNav.draftEntry), patchPayload);
-            } catch (err: any) {
-              toast.error(err?.response?.data?.Message || "Failed to update approval draft");
-              return;
-            }
-
-            const currentUserIdRe = user?.sapUserId;
-            if (currentUserIdRe) {
-              try {
-                const docTypeStr = getApprovalDocumentType(docType);
-                const activeTemplates = await getCurrentUserApprovalTemplates(currentUserIdRe, docTypeStr);
-                if (activeTemplates && activeTemplates.length > 0) {
-                  setApprovalTemplates(activeTemplates);
-                  setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-                  setApprovalModalOpen(true);
-                  return;
-                }
-              } catch {
-                /* fall through to normal submit */
-              }
-            }
-            toast.success("Draft updated. The approval request will be re-submitted.");
-            finishAndReset();
-            setBadgeState(null);
+            toast.info(REJECTED_DOC_EDIT_BLOCKED_MSG);
             return;
           }
 
@@ -620,42 +589,10 @@ useEffect(() => {
                   toast.error(msg || "Failed to create the document");
                   return;
                 }
-                toast.info("This draft changed after approval — sending it back for re-approval.");
               }
             }
 
-            if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
-              toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
-              return;
-            }
-
-            try {
-              const approvedPatchPayload = buildSalesDocumentPatchPayload({
-                data: finalData as any,
-                lines: state.lines,
-                discountPercent: state.discountPercent,
-                freight: state.freight,
-                additionalExpenses: state.additionalExpenses,
-              });
-              await patchDraftDocument(Number(docNav.draftEntry), approvedPatchPayload);
-            } catch (err: any) {
-              toast.error(err?.response?.data?.Message || "Failed to save changes to the approval draft");
-              return;
-            }
-
-
-            try {
-              const reTemplates = await getCurrentUserApprovalTemplates(
-                user?.sapUserId || 0,
-                getApprovalDocumentType(docType)
-              );
-              if (reTemplates && reTemplates.length > 0) setApprovalTemplates(reTemplates);
-            } catch {}
-
-            console.log("[SQ submit] approved-draft changed -> opening re-approval modal", { draftEntry: docNav.draftEntry });
-            setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-            setPendingFinalData(null);
-            setApprovalModalOpen(true);
+            toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
             return;
           }
 

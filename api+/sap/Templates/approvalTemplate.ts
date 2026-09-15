@@ -13,6 +13,7 @@ export const getApprovalDocumentType = (docType: number | string, pathname = "")
   const currentPath = pathname.toLowerCase();
 
  if (currentPath.includes("apdownpaymentrequest")) return "atdtPurchaseDownPayment";
+ if (currentPath.includes("apdownpaymentinvoice")) return "atdtPurchaseDownPayment";
 
   switch (numType) {
     case DocumentType.Quotation:

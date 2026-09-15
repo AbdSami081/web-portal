@@ -21,10 +21,10 @@ function check(userId: number, docTypeStr: string): Promise<boolean> {
   return entry;
 }
 
-export function useUserHasApprovalTemplate(docType: number | string): boolean {
+export function useUserHasApprovalTemplate(docType: number | string, pathname = ""): boolean {
   const { user } = useAuth();
   const userId = Number(user?.sapUserId) || 0;
-  const docTypeStr = getApprovalDocumentType(docType);
+  const docTypeStr = getApprovalDocumentType(docType, pathname);
   const [hasTemplate, setHasTemplate] = useState(false);
 
   useEffect(() => {

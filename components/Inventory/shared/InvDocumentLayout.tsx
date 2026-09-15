@@ -25,7 +25,7 @@ import HeaderActions from "@/components/Custom/HeaderAction";
 import { useAuth } from "@/context/authContext";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
-import { APPROVED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
+import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
 import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
 import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
@@ -212,7 +212,7 @@ export function InvDocumentLayout<T extends FieldValues>({
 
   const [isSaving, setIsSaving] = useState(false);
   const { user } = useAuth();
-  const { canUpdateApprovedDocument, canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
+  const { canOriginatorUpdateDraft, canAuthorizerUpdateDraft } = useApprovalSettings();
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
@@ -524,34 +524,7 @@ export function InvDocumentLayout<T extends FieldValues>({
     }
 
     if (isRejectedApproval && docNav.draftEntry) {
-      setIsSaving(true);
-      try {
-        await patchDraftDocument(Number(docNav.draftEntry), buildDraftPatchPayload());
-      } catch (err) {
-        toast.error(getSapErrorMessage(err) || "Failed to update approval draft");
-        setIsSaving(false);
-        return;
-      }
-
-      let templates = approvalTemplates;
-      if (currentUserId) {
-        try {
-          const docTypeStr = getApprovalDocumentType(docType);
-          templates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
-        } catch {
-          templates = [];
-        }
-      }
-      if (templates && templates.length > 0) {
-        setApprovalTemplates(templates);
-        setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-        setIsSaving(false);
-        setApprovalModalOpen(true);
-        return;
-      }
-      toast.success("Draft updated. The approval request will be re-submitted.");
-      resetFormAndNav();
-      setIsSaving(false);
+      toast.info(REJECTED_DOC_EDIT_BLOCKED_MSG);
       return;
     }
 
@@ -593,38 +566,10 @@ export function InvDocumentLayout<T extends FieldValues>({
             toast.error(msg || "Failed to create document from draft");
             return;
           }
-          toast.info("This draft changed after approval — sending it back for re-approval.");
         }
       }
 
-      if (!canUpdateApprovedDocument || !canOriginatorUpdateDraft) {
-        toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
-        return;
-      }
-
-      setIsSaving(true);
-      try {
-        await patchDraftDocument(Number(docNav.draftEntry), buildDraftPatchPayload());
-      } catch (patchErr) {
-        toast.error(getSapErrorMessage(patchErr) || "Failed to save changes to the approval draft");
-        setIsSaving(false);
-        return;
-      }
-
-
-      setIsSaving(false);
-
-      try {
-        const reTemplates = await getCurrentUserApprovalTemplates(
-          currentUserId || 0,
-          getApprovalDocumentType(docType)
-        );
-        if (reTemplates && reTemplates.length > 0) setApprovalTemplates(reTemplates);
-      } catch {}
-
-      setPendingReApproval({ draftId: Number(docNav.draftEntry), docType: String(docType) });
-      setPendingFinalData(null);
-      setApprovalModalOpen(true);
+      toast.info(APPROVED_DOC_EDIT_BLOCKED_MSG);
       return;
     }
 

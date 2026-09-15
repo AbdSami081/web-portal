@@ -1,7 +1,10 @@
 import { ApprovalTemplate } from "@/types/template.type";
 
 export const APPROVED_DOC_EDIT_BLOCKED_MSG =
-  "Approved documents can only be created, not edited. Please contact your administrator.";
+  "This document has already been approved and cannot be updated. Please create a new document instead.";
+
+export const REJECTED_DOC_EDIT_BLOCKED_MSG =
+  "This document was rejected and cannot be updated or re-submitted. Please create a new document instead.";
 
 type ApprovalDoc = Record<string, any>;
 
