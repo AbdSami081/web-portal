@@ -7,6 +7,7 @@ export type MenuItem = {
     isActive?: boolean;
     objectCode?: string | number;
     isReporting?: boolean;
+    allowFieldsAuth?: boolean;
     items?: MenuItem[];
 };
 
@@ -48,6 +49,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/quotation/new",
                 objectCode: 23,
                 isReporting: true,
+                allowFieldsAuth :false
             },
             {
                 id: "b683b385-cdab-4677-90c0-94cdd22970d4",
@@ -55,6 +57,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/order",
                 objectCode: 17,
                 isReporting: true,
+                  allowFieldsAuth :true
             },
             {
                 id: "267b80a3-f1d3-4cee-ba5a-fc58b341e018",
@@ -62,6 +65,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/delivery",
                 objectCode: 15,
                 isReporting: true,
+                  allowFieldsAuth :true
             },
             {
                 id: "f46c594d-61ca-487d-8e20-1f9b0372931d",
@@ -69,6 +73,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/invoice",
                 objectCode: 13,
                 isReporting: true,
+                  allowFieldsAuth :true
             },
             {
                 id: "c8e1a2f4-7b39-4d82-9e51-2a6d4b8f01c3",
@@ -76,6 +81,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/return_request",
                 objectCode: 234000031,
                 isReporting: true,
+                  allowFieldsAuth :false
             },
             {
                 id: "8e2b9c71-4a1f-4f8a-9b16-5d7e3a2b1c09",
@@ -83,6 +89,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/return",
                 objectCode: 16,
                 isReporting: true,
+                  allowFieldsAuth :false
             },
             {
                 id: "e5a7b9c1-3d2f-4e8a-8c15-4a6b7c8d9e01",
@@ -90,6 +97,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/dp_request",
                 objectCode: 204,
                 isReporting: true,
+                  allowFieldsAuth :false
             },
             {
                 id: "d4f6a8b2-1c3e-4d7a-9b14-3e5a6b7c8d90",
@@ -97,6 +105,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/dp_invoice",
                 objectCode: 203,
                 isReporting: true,
+                 allowFieldsAuth :false
             },
             {
                 id: "7a9b1c3d-5e7f-4a8b-9c12-1d3e5f7a9b1c",
@@ -104,6 +113,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/ar_creditmemo",
                 objectCode: 14,
                 isReporting: true,
+                 allowFieldsAuth :false
             },
         ],
     },
@@ -120,6 +130,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/request/new",
                 objectCode: 1470000113,
                 isReporting: true,
+                 allowFieldsAuth :true
             },
             {
                 id: "8a4b1eed-bb98-4ce2-ade2-63cf9f77ec37",
@@ -141,6 +152,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/grpo/new",
                 objectCode: 20,
                 isReporting: true,
+                 allowFieldsAuth :true
             },
             {
                 id: "e9abfe0b-c738-4942-a643-3e3ca2db5016",
@@ -176,6 +188,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/apdownpaymentinvoice",
                 objectCode: 204,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "aec23e2c-f38c-4864-9938-16ba3619c1a6",
@@ -207,6 +220,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/inventory/transfer-request",
                 objectCode: 1250000001,
                 isReporting: true,
+                 allowFieldsAuth :true
             },
             {
                 id: "0cfd14b5-f714-4f56-b552-bca3b2fec8e6",
@@ -214,6 +228,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/inventory/transfer",
                 objectCode: 67,
                 isReporting: true,
+                 allowFieldsAuth :true
             },
             {
                 id: "396e0217-175b-44d6-af6b-d735559f886e",
@@ -221,6 +236,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/inventory/Good_Issue",
                 objectCode: 60,
                 isReporting: true,
+                 allowFieldsAuth :true
             },
             {
                 id: "d159c928-1124-4a49-a9cb-fe3fc928b6e1",
@@ -279,6 +295,7 @@ export const SERVER_MENUS: MenuItem[] = [
                         id: "a67c4065-5bd6-426b-bb81-c339ddc4276b",
                         title: "Import Report",
                         url: "/dashboard/reports/upload",
+                        
                     },
                     {
                         id: "3351796e-25ad-4bc1-8e47-28a47c19bceb",
