@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Supernova | Web Portal",
+  title: "SuperNova | Web Portal",
   description: "Advanced Enterprise Portal for SAP Business One",
   icons: {
     icon: [

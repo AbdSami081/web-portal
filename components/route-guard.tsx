@@ -33,7 +33,7 @@ export function RouteGuard({ children }: { children: ReactNode }) {
         const flatMenus: { id: string, url: string }[] = [];
         const flattenMenus = (items: typeof SERVER_MENUS) => {
             items.forEach(item => {
-                if (item.url !== "#") flatMenus.push({ id: item.id, url: item.url });
+                if (item.url !== "#" && item.url !== "/dashboard") flatMenus.push({ id: item.id, url: item.url });
                 if (item.items && item.items.length > 0) {
                     flattenMenus(item.items);
                 }
