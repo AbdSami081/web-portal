@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import {SERVER_MENUS} from "@/lib/menu-data";
 import { Switch } from "@/components/ui/switch";
 
 import {
@@ -350,13 +350,36 @@ export default function FieldAccessManagement() {
   /*
    * Documents
    */
+  console.log("SERVER_MENUS:", SERVER_MENUS);
+  const filteredMenus = SERVER_MENUS
+  .map((menu) => ({
+    ...menu,
+    items: menu.items?.filter(
+      (item) => item.allowFieldsAuth === true
+    ),
+  }))
+  .filter(
+    (menu) =>
+      menu.items && menu.items.length > 0
+  );
+  console.log("Filtered Menus:", filteredMenus);
+  // const documents = useMemo(() => {
+  //   return Object.entries(filteredMenus).filter(
+  //     ([key, value]) =>
+  //       typeof value === "number" ||
+  //       !isNaN(Number(value))
+  //   );
+  // }, []);
   const documents = useMemo(() => {
-    return Object.entries(DocumentType).filter(
-      ([key, value]) =>
-        typeof value === "number" ||
-        !isNaN(Number(value))
-    );
-  }, []);
+  return filteredMenus.flatMap(
+    (menu) =>
+      menu.items?.filter(
+        (item) => item.allowFieldsAuth === true
+      ) ?? []
+  );
+}, [filteredMenus]);
+
+console.log("Documents:", documents);
 
 
   /*
@@ -806,16 +829,14 @@ const handleSave = async () => {
                   </SelectTrigger>
 
                   <SelectContent>
-                    {documents.map(
-                      ([key, value]) => (
-                        <SelectItem
-                          key={`${key}-${value}`}
-                          value={String(value)}
-                        >
-                          {key}
-                        </SelectItem>
-                      )
-                    )}
+                    {documents.map((item) => (
+    <SelectItem
+      key={item.id}
+      value={String(item.objectCode)}
+    >
+      {item.title}
+    </SelectItem>
+  ))}
                   </SelectContent>
                 </Select>
               </div>
