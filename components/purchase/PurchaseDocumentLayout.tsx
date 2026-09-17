@@ -339,7 +339,6 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
         return [
           DocumentType.PurchaseQuotation,
           DocumentType.PurchaseOrder,
-          DocumentType.GoodsReceiptPO,
           DocumentType.APInvoice,
         ];
       case DocumentType.PurchaseQuotation:
@@ -503,23 +502,16 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const copyFromOptions = (() => {
     if (isApDownPaymentRequestPage) return [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation];
     if (docType === DocumentType.APDownPaymentInvoice) return [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation];
-    // A Purchase Request is the earliest stage in the chain, so every later stage can be
-    // sourced from one directly, not just from the immediately preceding stage.
     if (docType === DocumentType.PurchaseQuotation) return [DocumentType.PurchaseRequests];
     if (docType === DocumentType.PurchaseOrder) return [DocumentType.PurchaseQuotation, DocumentType.PurchaseRequests];
-    if (docType === DocumentType.GoodsReceiptPO) return [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation, DocumentType.PurchaseRequests];
+    if (docType === DocumentType.GoodsReceiptPO) return [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation];
     if (docType === DocumentType.APInvoice) {
       return isReserveInvoicePage
         ? [DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation]
         : [DocumentType.GoodsReceiptPO, DocumentType.PurchaseOrder, DocumentType.PurchaseQuotation, DocumentType.PurchaseRequests];
     }
-    // A/P Credit Memo is normally created as a reversal against an already-posted
-    // Invoice, or against a GRPO when goods are being returned without an invoice yet.
     if (docType === DocumentType.APCreditMemo) return [DocumentType.APInvoice, DocumentType.GoodsReceiptPO];
-    // Goods Return is normally created from a Goods Return Request (the approval step)
-    // or directly from the original GRPO.
     if (docType === DocumentType.GoodsReturn) return [DocumentType.GoodsReturnRequest, DocumentType.GoodsReceiptPO];
-    // Goods Return Request is itself normally raised against a GRPO.
     if (docType === DocumentType.GoodsReturnRequest) return [DocumentType.GoodsReceiptPO];
     return [];
   })();
