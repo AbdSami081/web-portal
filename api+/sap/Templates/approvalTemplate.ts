@@ -5,7 +5,8 @@ import { DocumentType } from "@/types/master/DocumentType";
 export const getTemplateDocuments = async (): Promise<ApprovalTemplate[]> => {
   const res = await apiClient.get("api/Approval/ApprovalTemplates");
   if (!res.data) return [];
-  return res.data as ApprovalTemplate[];
+  const templates = res.data.value || res.data.ApprovalTemplate || res.data;
+  return Array.isArray(templates) ? templates : [];
 };
 
 export const getApprovalDocumentType = (docType: number | string, pathname = ""): string => {
