@@ -8,6 +8,7 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
+import { UoMSelectorDialog } from "@/modals/UoMSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
 import { fetchItemByCode } from "@/lib/sap/helpers/itemCacheHelper";
 import { distribtionLstOCRCO2, distribtionLstOCRCO3, distribtionLstOCRCO4 } from "@/app/data/cogsData";
@@ -15,6 +16,7 @@ import { taxcCodeGrp, freightTypes, uomOptions, calculateFreightTax, calculateLi
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
+import { isManualUom } from "@/utils/inventoryUom";
 import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
@@ -95,6 +97,7 @@ const isFieldVisible = (fieldName: string) => {
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
   const priceGuard = usePositiveField("Price", line.Price);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
+  const [uomDialogOpen, setUomDialogOpen] = useState(false);
   const [cogsModalOpen, setCogsModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
   const [cogsData, setCogsData] = useState<Record[]>([]);
@@ -430,6 +433,18 @@ const isFieldVisible = (fieldName: string) => {
               disabled
               readOnly
             />
+            {!isManualUom(draftLine.UoMCode) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={() => setUomDialogOpen(true)}
+                disabled={!isCellEditable("UoMCode")}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            )}
             <LineCellFms field="UoMCode" line={draftLine} onPatch={patchLine} disabled={!isCellEditable("UoMCode")} />
           </div>
         </td>
@@ -634,6 +649,14 @@ const isFieldVisible = (fieldName: string) => {
         }}
         itemCode={line.ItemCode}
         itemQtyInWhs={line.QtyInWhs}
+      />
+
+      <UoMSelectorDialog
+        open={uomDialogOpen}
+        onClose={() => setUomDialogOpen(false)}
+        onSelect={(uom) => {
+          patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
+        }}
       />
 
       <GenericModal

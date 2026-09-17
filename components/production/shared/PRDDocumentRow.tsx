@@ -12,7 +12,8 @@ import { useFormContext } from "react-hook-form";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { PRDDocumentLine } from "@/types/production/PRDDoc.type";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
-import { normalizeInventoryUom } from "@/utils/inventoryUom";
+import { normalizeInventoryUom, isManualUom } from "@/utils/inventoryUom";
+import { UoMSelectorDialog } from "@/modals/UoMSelectorDialog";
 import { resolveBranchName } from "@/lib/sap/helpers/branchHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
 
@@ -39,6 +40,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const plannedQtyGuard = usePositiveField("Planned quantity", line.PlannedQuantity);
 
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
+  const [uomDialogOpen, setUomDialogOpen] = useState(false);
 
   useEffect(() => {
     setDraftLine(line);
@@ -225,7 +227,21 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
       {config.itemColumns.uomCode && (
         <td className="py-2 px-4 text-center text-gray-700">
-          <span className="block w-full truncate">{normalizeInventoryUom(line.UoMCode)}</span>
+          <div className="flex items-center justify-center gap-1">
+            <span className="block truncate">{normalizeInventoryUom(line.UoMCode)}</span>
+            {!isManualUom(line.UoMCode) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={() => setUomDialogOpen(true)}
+                disabled={initialStatus === "boposClosed"}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </td>
       )}
 
@@ -316,6 +332,14 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
           { key: "WhsName", label: "Name" },
         ]}
         getSelectValue={(item) => item.WhsCode}
+      />
+
+      <UoMSelectorDialog
+        open={uomDialogOpen}
+        onClose={() => setUomDialogOpen(false)}
+        onSelect={(uom) => {
+          patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
+        }}
       />
     </>
   );

@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { clearPermissionsCache } from "@/lib/api/permissionsCache";
 import { clearApiResponseCache } from "@/lib/apiClient";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { useUoMStore } from "@/stores/useUoMStore";
 import { getBranches, getMyBranches } from "@/api+/sap/branch";
 import { toast } from "sonner";
 import {Field, getAllFields,assignUserFields} from "@/api+/sap/administration/administrationService";
@@ -200,6 +201,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsPermissionsLoading
     );
     void initializeBranchSession();
+    void useUoMStore.getState().loadUoMs();
   }, []);
 
   useEffect(() => {
@@ -264,6 +266,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const immediateUser = buildUser(decoded, null, companyDB, overrides);
       setUser(immediateUser);
       router.push("/dashboard");
+      void useUoMStore.getState().loadUoMs();
       // Load master fields after successful login
 // Load master fields after successful login
 // try {
@@ -320,6 +323,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     clearApiResponseCache();
     useAuthStore.getState().resetSession();
     useBranchStore.getState().clearBranch();
+    useUoMStore.getState().reset();
     router.push("/");
   };
 

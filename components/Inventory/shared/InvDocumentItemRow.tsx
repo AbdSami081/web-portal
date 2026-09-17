@@ -7,9 +7,10 @@ import { useFormContext } from "react-hook-form";
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
+import { UoMSelectorDialog } from "@/modals/UoMSelectorDialog";
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { fetchItemByCode } from "@/lib/sap/helpers/itemCacheHelper";
-import { normalizeInventoryUom } from "@/utils/inventoryUom";
+import { normalizeInventoryUom, isManualUom } from "@/utils/inventoryUom";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
@@ -36,11 +37,15 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
+  const [uomDialogOpen, setUomDialogOpen] = useState(false);
   const fetchedItemRef = useRef<string | null>(null);
   const bplBackfilledRef = useRef(false);
 
   const docStatus = watch("DocStatus") || "bost_Open";
   const isClosed = docStatus === "bost_Close";
+  const docEntry = watch("DocEntry");
+  const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
+  const isRowLocked = isClosed || (isGoodIssue && isEditMode);
 
   // Fetch QtyInWhs from Item API if not present on the line (e.g. when loading existing documents)
   useEffect(() => {
@@ -134,9 +139,9 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           variant="ghost"
           className="h-6 w-6 p-0 hover:bg-red-100/10"
           onClick={() => removeLine(index)}
-          disabled={isClosed}
+          disabled={isRowLocked}
         >
-          <Trash className={`h-4 w-4 ${isClosed ? "text-gray-500" : "text-red-500"}`} />
+          <Trash className={`h-4 w-4 ${isRowLocked ? "text-gray-500" : "text-red-500"}`} />
         </Button>
       </td>
 
@@ -153,6 +158,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           onChange={(e) => setDraftLine({ ...draftLine, Dscription: e.target.value })}
           onKeyDown={stopEnterSubmit}
           onBlur={() => saveRow()}
+          disabled={isRowLocked}
         />
       </td>
 
@@ -174,6 +180,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
                 setWhsMode("from");
                 setIsWhsModalOpen(true);
               }}
+              disabled={isRowLocked}
             >
               <Search className="h-4 w-4" />
             </Button>
@@ -198,6 +205,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
               setWhsMode("to");
               setIsWhsModalOpen(true);
             }}
+            disabled={isRowLocked}
           >
             <Search className="h-4 w-4" />
           </Button>
@@ -239,6 +247,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
             if (!ok) setDraftLine(finalLine);
             saveRow(finalLine);
           }}
+          disabled={isRowLocked}
         />
       </td>
 
@@ -256,12 +265,26 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
 
       {/* UoM Code*/}
       <td className="py-2 px-4">
-        <Input
-          className="h-6 w-full bg-slate-50 cursor-not-allowed"
-          value={normalizeInventoryUom(draftLine.UoMCode)}
-          disabled
-          readOnly
-        />
+        <div className="flex items-center gap-1">
+          <Input
+            className="h-6 w-full bg-slate-50 cursor-not-allowed"
+            value={normalizeInventoryUom(draftLine.UoMCode)}
+            disabled
+            readOnly
+          />
+          {!isManualUom(draftLine.UoMCode) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={() => setUomDialogOpen(true)}
+              disabled={isRowLocked}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </td>
 
         {/* UoM Name*/}
@@ -277,7 +300,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       <LineUDFCells
         docType={invConfig.type}
         line={draftLine}
-        disabled={isClosed}
+        disabled={isRowLocked}
         fmsContext={Object.fromEntries(
           Object.entries(draftLine)
             .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
@@ -292,6 +315,14 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
         onSelect={handleWhsSelect}
         itemCode={line.ItemCode}
         itemQtyInWhs={line.QtyInWhs}
+      />
+
+      <UoMSelectorDialog
+        open={uomDialogOpen}
+        onClose={() => setUomDialogOpen(false)}
+        onSelect={(uom) => {
+          patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
+        }}
       />
     </>
   );

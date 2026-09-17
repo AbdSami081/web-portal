@@ -45,6 +45,11 @@ export const normalizeInventoryUom = (...values: unknown[]): string => {
   return "";
 };
 
+export const isManualUom = (uomCode: unknown): boolean => {
+  const normalized = normalizeInventoryUom(uomCode);
+  return !normalized || normalized.toLowerCase() === "manual";
+};
+
 export const resolveUoMFromCandidates = (
   uoms: UoMEntry[],
   ...candidates: unknown[]

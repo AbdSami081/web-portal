@@ -6,6 +6,7 @@ import { Settings, Trash, Search } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
+import { UoMSelectorDialog } from "@/modals/UoMSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
 import { distribtionLstOCRCO2, distribtionLstOCRCO3, distribtionLstOCRCO4 } from "@/app/data/cogsData";
 import { calculateFreightTax, calculateLineTax } from "@/utils/taxCalculations";
@@ -16,6 +17,7 @@ import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/branchHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { isManualUom } from "@/utils/inventoryUom";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
@@ -62,6 +64,7 @@ export function PurchaseItemRow({ index, line }: Props) {
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
   const priceGuard = usePositiveField("Price", line.Price);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
+  const [uomDialogOpen, setUomDialogOpen] = useState(false);
   const [cogsModalOpen, setCogsModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
   const [cogsData, setCogsData] = useState<Record[]>([]);
@@ -329,12 +332,26 @@ export function PurchaseItemRow({ index, line }: Props) {
 
       {isFieldVisible("UoMCode") && (
         <td className="w-[100px]">
-          <Input
-            className="h-6 w-full text-center bg-neutral-100"
-            value={draftLine.UoMCode || ""}
-            disabled
-            readOnly
-          />
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full text-center bg-neutral-100"
+              value={draftLine.UoMCode || ""}
+              disabled
+              readOnly
+            />
+            {!isManualUom(draftLine.UoMCode) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={() => setUomDialogOpen(true)}
+                disabled={!isFieldEnabled("UoMCode")}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </td>
       )}
 
@@ -543,6 +560,14 @@ export function PurchaseItemRow({ index, line }: Props) {
         }}
         itemCode={line.ItemCode}
         itemQtyInWhs={line.QtyInWhs}
+      />
+
+      <UoMSelectorDialog
+        open={uomDialogOpen}
+        onClose={() => setUomDialogOpen(false)}
+        onSelect={(uom) => {
+          patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
+        }}
       />
 
       <GenericModal

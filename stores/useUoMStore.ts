@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { getUOMs } from "@/api+/sap/master-data/uom/index";
 
-interface UoM {
+export interface UoM {
   AbsEntry: number;
   Code: string;
   Name: string;
