@@ -46,7 +46,7 @@ import FMSSelectionModal from "@/modals/FMSSelectionModal";
 import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
 import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
 import { getAllFields } from "@/api+/sap/administration/administrationService";
-import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
+import { resolveFieldAuthDocType, findMenuItemByPath, isRouteAllowed } from "@/lib/menu-data";
 import { useAuth } from "@/context/authContext";
 
 
@@ -434,6 +434,21 @@ useEffect(() => {
     return [];
   })();
 
+  const COPY_TO_ROUTES: Partial<Record<DocumentType, string>> = {
+    [DocumentType.Order]: "/dashboard/sales/order",
+    [DocumentType.Delivery]: "/dashboard/sales/delivery",
+    [DocumentType.ARInvoice]: "/dashboard/sales/invoice",
+    [DocumentType.DownPaymentRequest]: "/dashboard/sales/dp_request",
+    [DocumentType.DownPaymentInvoice]: "/dashboard/sales/dp_invoice",
+    [DocumentType.CreditMemo]: "/dashboard/sales/ar_creditmemo",
+    [DocumentType.SalesReturn]: "/dashboard/sales/return",
+  };
+
+  const allowedCopyToOptions = copyToOptions.filter((dt) => {
+    const route = COPY_TO_ROUTES[dt];
+    return route ? isRouteAllowed(route, user?.allowedModules) : false;
+  });
+
   const handleCopyClick = (selected?: string) => {
     const copyType = selected || selectedCopyTo;
 
@@ -711,7 +726,7 @@ useEffect(() => {
 
                 <Select
                   value={selectedCopyTo}
-                  disabled={copyToOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom || isLoadingCopyTo}
+                  disabled={allowedCopyToOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom || isLoadingCopyTo}
                   onValueChange={(value) => {
                     setSelectedCopyTo(value);
                     handleCopyClick(value);
@@ -728,37 +743,37 @@ useEffect(() => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {copyToOptions.includes(DocumentType.Order) && (
+                      {allowedCopyToOptions.includes(DocumentType.Order) && (
                         <SelectItem value={DocumentType.Order.toString()}>
                           Sales Order
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.Delivery) && (
+                      {allowedCopyToOptions.includes(DocumentType.Delivery) && (
                         <SelectItem value={DocumentType.Delivery.toString()}>
                           Delivery
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.ARInvoice) && (
+                      {allowedCopyToOptions.includes(DocumentType.ARInvoice) && (
                         <SelectItem value={DocumentType.ARInvoice.toString()}>
                           AR Invoice
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.DownPaymentRequest) && (
+                      {allowedCopyToOptions.includes(DocumentType.DownPaymentRequest) && (
                         <SelectItem value={DocumentType.DownPaymentRequest.toString()}>
                           A/R Down Payment Request
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.DownPaymentInvoice) && (
+                      {allowedCopyToOptions.includes(DocumentType.DownPaymentInvoice) && (
                         <SelectItem value={DocumentType.DownPaymentInvoice.toString()}>
                           A/R Down Payment Invoice
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.CreditMemo) && (
+                      {allowedCopyToOptions.includes(DocumentType.CreditMemo) && (
                         <SelectItem value={DocumentType.CreditMemo.toString()}>
                           A/R Credit Memo
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.SalesReturn) && (
+                      {allowedCopyToOptions.includes(DocumentType.SalesReturn) && (
                         <SelectItem value={DocumentType.SalesReturn.toString()}>
                           Sales Return
                         </SelectItem>

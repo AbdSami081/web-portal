@@ -24,7 +24,7 @@ import { UDFLayout } from "@/components/shared/UDFSheet";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useAuth } from "@/context/authContext";
 import { getAllFields } from "@/api+/sap/administration/administrationService";
-import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
+import { resolveFieldAuthDocType, findMenuItemByPath, isRouteAllowed } from "@/lib/menu-data";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
@@ -481,7 +481,9 @@ export function InvDocumentLayout<T extends FieldValues>({
     }
   };
 
-  const canCopyTo = docType === DocumentType.InvTransferReq;
+  const canCopyTo =
+    docType === DocumentType.InvTransferReq &&
+    isRouteAllowed("/dashboard/inventory/transfer", user?.allowedModules);
   const canCopyFrom = docType === DocumentType.InvTransfer;
   const isEditMode = Boolean(DocEntry && DocEntry > 0);
   const isClosed = (store.docStatus || "").toLowerCase() === "bost_close" || (store.docStatus || "").toLowerCase() === "close";

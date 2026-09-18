@@ -99,7 +99,7 @@ import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
 import { getAllFields } from "@/api+/sap/administration/administrationService";
-import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
+import { resolveFieldAuthDocType, findMenuItemByPath, isRouteAllowed } from "@/lib/menu-data";
 
 const COPY_TO_RESERVE_INVOICE_VALUE = "reserve-invoice";
 const COPY_TO_AP_DOWNPAYMENT_REQUEST_VALUE = "apdownpaymentrequest";
@@ -375,6 +375,23 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
         return [];
     }
   })();
+
+  const COPY_TO_ROUTES: Partial<Record<DocumentType, string>> = {
+    [DocumentType.PurchaseOrder]: "/dashboard/purchase/order/new",
+    [DocumentType.GoodsReceiptPO]: "/dashboard/purchase/grpo/new",
+    [DocumentType.APInvoice]: "/dashboard/purchase/invoice/new",
+    [DocumentType.APCreditMemo]: "/dashboard/purchase/apcreditmemo",
+    [DocumentType.GoodsReturn]: "/dashboard/purchase/goodsreturn",
+    [DocumentType.APDownPaymentInvoice]: "/dashboard/purchase/apdownpaymentinvoice",
+  };
+
+  const allowedCopyToOptions = copyToOptions.filter((dt) => {
+    const route = COPY_TO_ROUTES[dt];
+    return route ? isRouteAllowed(route, user?.allowedModules) : false;
+  });
+
+  const canCopyToReserveInvoice = isRouteAllowed("/dashboard/purchase/reserve-invoice/new", user?.allowedModules);
+  const canCopyToApDownPaymentRequest = isRouteAllowed("/dashboard/purchase/apdownpaymentrequest", user?.allowedModules);
 
   const handleCopyClick = (selected?: string) => {
     const copyType = selected || selectedCopyTo;
@@ -752,7 +769,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
                 <Select
                   value={selectedCopyTo}
-                  disabled={copyToOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom || isLoadingCopyTo}
+                  disabled={allowedCopyToOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom || isLoadingCopyTo}
                   onValueChange={(value) => {
                     setSelectedCopyTo(value);
                     handleCopyClick(value);
@@ -769,42 +786,42 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {copyToOptions.includes(DocumentType.PurchaseOrder) && (
+                      {allowedCopyToOptions.includes(DocumentType.PurchaseOrder) && (
                         <SelectItem value={DocumentType.PurchaseOrder.toString()}>
                           Purchase Order
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.GoodsReceiptPO) && (
+                      {allowedCopyToOptions.includes(DocumentType.GoodsReceiptPO) && (
                         <SelectItem value={DocumentType.GoodsReceiptPO.toString()}>
                           Goods Receipt PO
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.APInvoice) && (
+                      {allowedCopyToOptions.includes(DocumentType.APInvoice) && (
                         <SelectItem value={DocumentType.APInvoice.toString()}>
                           AP Invoice
                         </SelectItem>
                       )}
-                      {(docType === DocumentType.PurchaseOrder || docType === DocumentType.PurchaseQuotation) && (
+                      {(docType === DocumentType.PurchaseOrder || docType === DocumentType.PurchaseQuotation) && canCopyToReserveInvoice && (
                         <SelectItem value={COPY_TO_RESERVE_INVOICE_VALUE}>
                           AP Reserve Invoice
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.APCreditMemo) && (
+                      {allowedCopyToOptions.includes(DocumentType.APCreditMemo) && (
                         <SelectItem value={DocumentType.APCreditMemo.toString()}>
                           A/P Credit Memo
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.GoodsReturn) && (
+                      {allowedCopyToOptions.includes(DocumentType.GoodsReturn) && (
                         <SelectItem value={DocumentType.GoodsReturn.toString()}>
                           Goods Return
                         </SelectItem>
                       )}
-                      {copyToOptions.includes(DocumentType.APDownPaymentInvoice) && (
+                      {allowedCopyToOptions.includes(DocumentType.APDownPaymentInvoice) && (
                         <SelectItem value={DocumentType.APDownPaymentInvoice.toString()}>
                           A/P Down Payment Invoice
                         </SelectItem>
                       )}
-                      {(docType === DocumentType.PurchaseOrder || docType === DocumentType.PurchaseQuotation) && (
+                      {(docType === DocumentType.PurchaseOrder || docType === DocumentType.PurchaseQuotation) && canCopyToApDownPaymentRequest && (
                         <SelectItem value={COPY_TO_AP_DOWNPAYMENT_REQUEST_VALUE}>
                           A/P Down Payment Request
                         </SelectItem>

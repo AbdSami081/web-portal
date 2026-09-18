@@ -35,7 +35,7 @@ import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
 import { getAllFields } from "@/api+/sap/administration/administrationService";
-import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
+import { resolveFieldAuthDocType, findMenuItemByPath, isRouteAllowed } from "@/lib/menu-data";
 import { patchDraftDocument } from "@/api+/sap/draft/draftService";
 import { useFMS, FmsProvider } from "@/hooks/useFMS";
 import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
@@ -444,7 +444,8 @@ export function PRDDocumentLayout<T extends FieldValues>({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {docType === DocumentType.ProductionOrder && (
+                      {docType === DocumentType.ProductionOrder &&
+                        isRouteAllowed("/dashboard/inventory/transfer-request", user?.allowedModules) && (
                         <SelectItem value={DocumentType.InvTransferReq.toString()}>
                           Inventory Transfer Request
                         </SelectItem>

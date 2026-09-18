@@ -415,3 +415,14 @@ export const filterMenusByAllowedModules = (
 export const findMenuItemByPath = (pathname: string): MenuItem | undefined => {
     return collectLeafItems(SERVER_MENUS).find((item) => item.url === pathname);
 };
+
+export const isRouteAllowed = (
+    route: string,
+    allowedModules: string[] | undefined | null
+): boolean => {
+    if (!allowedModules || allowedModules.length === 0) return false;
+    if (allowedModules.some((m) => m.toLowerCase() === "all")) return true;
+    const item = findMenuItemByPath(route);
+    if (!item) return false;
+    return allowedModules.map((m) => m.toLowerCase()).includes(item.id.toLowerCase());
+};
