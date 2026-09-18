@@ -22,6 +22,7 @@ import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper"
 import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 export function PurchaseItems() {
   const { watch } = useFormContext();
@@ -40,6 +41,7 @@ export function PurchaseItems() {
   const [activeTab, setActiveTab] = useState("content");
   const config = usePurchaseDocConfig();
   const isTableDisabled = config.isDisabledTable(docStatus);
+  const { multiBranchEnabled } = useApprovalSettings();
 
   const { freightsWithCharges, warehouses, loadMasterData, loadWarehouses } = useMasterDataStore();
   const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
@@ -153,6 +155,7 @@ export function PurchaseItems() {
     { key: "Freight3LCAmount", title: "Freight 3 (LC)", width: 180 },
   ].filter(col => {
     if (col.key === "actions") return true;
+    if (col.key === "BPLid" && !multiBranchEnabled) return false;
     return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 

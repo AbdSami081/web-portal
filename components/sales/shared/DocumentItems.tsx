@@ -39,6 +39,7 @@ import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 export function DocumentItems() {
   const { watch, setValue, register } = useFormContext();
@@ -212,6 +213,7 @@ export function DocumentItems() {
   const fieldAccess = useSalesDocument(
   (state) => state.fieldAccess
 );
+  const { multiBranchEnabled } = useApprovalSettings();
   const columns = [
     {
       key: "actions",
@@ -332,6 +334,7 @@ export function DocumentItems() {
     },
   ].filter(col => {
     if (col.key === "actions") return true;
+    if (col.key === "BPLid" && !multiBranchEnabled) return false;
     return fieldAccess.includes(col.key);
    // return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });

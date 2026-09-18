@@ -24,6 +24,7 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 import { findDraftByNumber } from "@/api+/sap/draft/draftService";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -68,6 +69,7 @@ export function DocumentHeader() {
   const [isClosing, setIsClosing] = useState(false);
 
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
+  const { multiBranchEnabled } = useApprovalSettings();
   const watchedBranch = watch("BPL_IDAssignedToInvoice");
 
   useEffect(() => {
@@ -510,7 +512,7 @@ const hasFieldAccess = (fieldName: string) =>
           )}
 
           {/* {getFieldSettings(config.type, "headerFieds", "BPLId").visible !== false && ( */}
-          {hasFieldAccess("BPLid") &&(
+          {multiBranchEnabled && hasFieldAccess("BPLid") &&(
             <div className="flex items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0">Branch</AppLabel>
               <Select

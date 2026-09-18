@@ -28,11 +28,13 @@ import { usePRDDocConfig } from "./PRDDocumentLayout";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
   const { updateLine, removeLine, initialStatus } = useIFPRDDocument();
   const { allBranches } = useBranchStore();
+  const { multiBranchEnabled } = useApprovalSettings();
   const [draftLine, setDraftLine] = useState<PRDDocumentLine>(line);
   const config = usePRDDocConfig();
   const headerPlannedQty = watch("PlannedQuantity");
@@ -260,7 +262,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               disabled
               readOnly
             />
-            {draftLine.BPLid !== undefined && (
+            {multiBranchEnabled && draftLine.BPLid !== undefined && (
               <span
                 className="h-7 shrink-0 flex items-center px-1.5 rounded bg-gray-100 text-gray-500 text-[10px]"
                 title="Branch (derived from warehouse)"

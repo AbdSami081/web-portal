@@ -40,6 +40,7 @@ import { useDocNavParams } from "@/lib/docNavParams";
 import { useAuth } from "@/context/authContext";
 import { getAdminSettings } from "@/api+/sap/administration/administrationService";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 
@@ -120,6 +121,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
 
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
+  const { multiBranchEnabled } = useApprovalSettings();
   const watchedBranch = watch("BPL_IDAssignedToInvoice");
 
   useEffect(() => {
@@ -495,6 +497,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
             />
           </div>
 
+          {multiBranchEnabled && (
           <div className="flex items-center w-full gap-3">
             <AppLabel className="w-28 shrink-0">Branch</AppLabel>
             <Select
@@ -519,6 +522,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
               </SelectContent>
             </Select>
           </div>
+          )}
 
           {isPurchaseRequest && (
             <>

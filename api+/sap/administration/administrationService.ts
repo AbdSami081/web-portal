@@ -9,6 +9,7 @@ export interface AdminSettings {
   CanAuthorizerUpdateDraft: boolean;
   IsApprovalProcessEnabled: boolean | null;
   SendApprovalEmailNotification: boolean | null;
+  MultiBranchEnabled: boolean;
 }
 export interface Field {
   FieldId: number;

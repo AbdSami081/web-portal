@@ -19,6 +19,7 @@ import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { useInvDocConfig } from "./InvDocumentLayout";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 interface Props {
   index: number;
@@ -34,6 +35,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   const allBranches = useBranchStore((s) => s.allBranches);
   const invConfig = useInvDocConfig();
   const [draftLine, setDraftLine] = useState<InventoryDocumentLine>(line);
+  const { multiBranchEnabled } = useApprovalSettings();
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
@@ -213,6 +215,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       </td>
 
       {/* Branch (derived from Warehouse) */}
+      {multiBranchEnabled && (
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
@@ -221,6 +224,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           readOnly
         />
       </td>
+      )}
 
       {/* Quantity */}
       <td className="py-2 px-4">

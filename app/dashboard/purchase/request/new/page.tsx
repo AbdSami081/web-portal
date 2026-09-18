@@ -138,7 +138,11 @@ export default function PurchaseRequestPage() {
       const documentData = await postPurchaseRequest(payload);
       if (!documentData?.DocEntry) throw new Error("Failed to create request");
       loadFromDocument(documentData, DocumentType.PurchaseRequests);
-      toast.success(`Request #${documentData.DocNum} created successfully`);
+      if (documentData.IsDraft) {
+        toast.success("Purchase Request submitted for approval.");
+      } else {
+        toast.success(`Request #${documentData.DocNum} created successfully`);
+      }
       return documentData;
     } catch (error: any) {
       const message = getSapErrorMessage(error);

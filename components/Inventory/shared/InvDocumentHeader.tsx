@@ -26,6 +26,7 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 
@@ -98,6 +99,7 @@ export function InvDocumentHeader() {
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
   const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
+  const { multiBranchEnabled } = useApprovalSettings();
   const watchedBranch = watch("BPL_IDAssignedToInvoice");
 
   useEffect(() => {
@@ -445,6 +447,7 @@ export function InvDocumentHeader() {
           </div>
         )}
 
+        {multiBranchEnabled && (
         <div className="flex items-center gap-3 w-full">
           <AppLabel className="w-28 shrink-0">Branch</AppLabel>
           <Select
@@ -469,6 +472,7 @@ export function InvDocumentHeader() {
             </SelectContent>
           </Select>
         </div>
+        )}
 
         {config.type !== DocumentType.GoodIssue && (
           <div className="flex items-center gap-3 w-full">

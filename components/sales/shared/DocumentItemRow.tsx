@@ -23,6 +23,7 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells, LineCellFms } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 
 interface Props {
@@ -101,6 +102,7 @@ const isFieldVisible = (fieldName: string) => {
   const [cogsModalOpen, setCogsModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
   const [cogsData, setCogsData] = useState<Record[]>([]);
+  const { multiBranchEnabled } = useApprovalSettings();
 
   // Fetch QtyInWhs from Item API if not present on the line (e.g. when loading existing documents)
   useEffect(() => {
@@ -413,7 +415,7 @@ const isFieldVisible = (fieldName: string) => {
         </td>
       )}
 
-      {isFieldVisible("BPLid") && (
+      {multiBranchEnabled && isFieldVisible("BPLid") && (
         <td className="py-2 px-2">
           <Input
             className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"

@@ -179,7 +179,6 @@ export const SERVER_MENUS: MenuItem[] = [
                 id: "fc37b27e-b139-48da-8d1d-eff1563c104f",
                 title: "A/P Down Payment Request",
                 url: "/dashboard/purchase/apdownpaymentrequest",
-                objectCode: 1470000113,
                 isReporting: true,
             },
             {

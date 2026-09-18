@@ -10,7 +10,7 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { getBranches, getMyBranches } from "@/api+/sap/branch";
 import { toast } from "sonner";
-import {Field, getAllFields,assignUserFields} from "@/api+/sap/administration/administrationService";
+import {Field, getAllFields,assignUserFields, getAdminSettings} from "@/api+/sap/administration/administrationService";
 
 interface User {
   empId: string;
@@ -116,6 +116,14 @@ const initializeBranchSession = async (force = false) => {
   const shouldDecidePopup = force || (branchStore.sessionDefaultBranch === null && !branchStore.needsBranchSelection);
 
   try {
+    const adminSettings = await getAdminSettings();
+    if (adminSettings?.MultiBranchEnabled === false) {
+      branchStore.setAllBranches([]);
+      branchStore.setAssignedBranches([]);
+      branchStore.setNeedsBranchSelection(false);
+      return;
+    }
+
     const [allBranches, myBranches] = await Promise.all([
       getBranches(),
       getMyBranches(),

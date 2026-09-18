@@ -21,6 +21,7 @@ import { isManualUom } from "@/utils/inventoryUom";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 interface Props {
   index: number;
@@ -68,6 +69,7 @@ export function PurchaseItemRow({ index, line }: Props) {
   const [cogsModalOpen, setCogsModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
   const [cogsData, setCogsData] = useState<Record[]>([]);
+  const { multiBranchEnabled } = useApprovalSettings();
 
   useEffect(() => {
     setDraftLine(line);
@@ -319,7 +321,7 @@ export function PurchaseItemRow({ index, line }: Props) {
         </td>
       )}
 
-      {isFieldVisible("BPLid") && (
+      {multiBranchEnabled && isFieldVisible("BPLid") && (
         <td className="w-[90px]">
           <Input
             className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"

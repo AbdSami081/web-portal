@@ -29,6 +29,7 @@ import { List } from "lucide-react";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { useBranchStore } from "@/stores/useBranchStore";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className, id }: any) => {
   const [localValue, setLocalValue] = useState(value ? value.toString() : "");
@@ -97,6 +98,7 @@ export function PRDDocumentHeader() {
   const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus, setBranch } = useIFPRDDocument();
   const { loadWarehouses } = useMasterDataStore();
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
+  const { multiBranchEnabled } = useApprovalSettings();
   const watchedBranch = watch("BPL_IDAssignedToInvoice");
   const docEntryForBranch = watch("DocEntry") || watch("AbsoluteEntry");
   const { allowMultiBom: allowMultiBomConfig } = useAuthStore();
@@ -808,7 +810,7 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-        {config.headerFields.branch && (
+        {config.headerFields.branch && multiBranchEnabled && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Branch</AppLabel>
             <Select

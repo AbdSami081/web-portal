@@ -8,6 +8,7 @@ export interface ApprovalSettings {
   canOriginatorUpdateDraft: boolean;
   canAuthorizerUpdateDraft: boolean;
   enableApprovalProcessInDI: boolean;
+  multiBranchEnabled: boolean;
   loaded: boolean;
 }
 
@@ -16,6 +17,7 @@ const PERMISSIVE: ApprovalSettings = {
   canOriginatorUpdateDraft: true,
   canAuthorizerUpdateDraft: true,
   enableApprovalProcessInDI: true,
+  multiBranchEnabled: true,
   loaded: false,
 };
 
@@ -31,6 +33,7 @@ export function useApprovalSettings(): ApprovalSettings {
         canOriginatorUpdateDraft: data.CanOriginatorUpdateDraft !== false,
         canAuthorizerUpdateDraft: data.CanAuthorizerUpdateDraft !== false,
         enableApprovalProcessInDI: data.EnableApprovalProcessInDI !== false,
+        multiBranchEnabled: data.MultiBranchEnabled !== false,
         loaded: true,
       });
     });

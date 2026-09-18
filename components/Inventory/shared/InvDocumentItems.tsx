@@ -21,6 +21,7 @@ import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialo
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import { toast } from "sonner";
 import { linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
+import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 export function InvDocumentItems() {
   const { watch } = useFormContext();
@@ -30,6 +31,7 @@ export function InvDocumentItems() {
   } = useInventoryDocument();
   const config = useInvDocConfig();
   const isGoodIssue = config.type === DocumentType.GoodIssue;
+  const { multiBranchEnabled } = useApprovalSettings();
   const uoms = useUoMStore((state) => state.uoms);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
@@ -75,7 +77,7 @@ export function InvDocumentItems() {
   const docEntry = watch("DocEntry");
   const isEditMode = isLineLockedDocType && Boolean(docEntry && Number(docEntry) > 0);
 
-  const columns = isGoodIssue
+  const columns = (isGoodIssue
     ? [
         { key: "actions",   title: "Actions",     width: 80  },
         { key: "ItemCode",  title: "Item",        width: 180 },
@@ -98,12 +100,13 @@ export function InvDocumentItems() {
         { key: "OnHand",    title: "Qty In Whs",   width: 120 },
         { key: "UoMCode",   title: "UoM Code",     width: 140 },
         { key: "UoMName",   title: "UoM Name",     width: 140 },
-      ];
+      ]
+  ).filter((col) => multiBranchEnabled || col.key !== "BPLid");
 
   const lineUdfs = useLineUDFs(config.type);
   const columnsWithUdf = useMemo(
     () => [...columns, ...lineUdfColumns(lineUdfs)],
-    [isGoodIssue, lineUdfs]
+    [isGoodIssue, lineUdfs, multiBranchEnabled]
   );
 
   const handleOnSelectItems = (items: Item[]) => {
