@@ -624,6 +624,7 @@ const isFieldVisible = (fieldName: string) => {
         docType={config.type}
         line={draftLine}
         disabled={isLineDisabled}
+        allowedFields={fieldAccess}
         fmsContext={Object.fromEntries(
           Object.entries(draftLine)
             .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")

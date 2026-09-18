@@ -58,6 +58,7 @@ export default function InventoryDraftPage() {
   });
 
   const { loadFromDocument } = useInventoryDocument();
+  const fieldAccess = useInventoryDocument((s) => s.fieldAccess);
 
   useEffect(() => {
     const draftId = Number((draftEntryStr ?? "").toString().trim().split(/\s+/)[0]);
@@ -171,7 +172,7 @@ export default function InventoryDraftPage() {
     >
       <InvDocumentHeader />
       <InvDocumentItems />
-      <UDFLayout docType={targetDocType} />
+      <UDFLayout docType={targetDocType} allowedFields={fieldAccess} />
       <InvDocumentFooter />
     </InvDocumentLayout>
   );

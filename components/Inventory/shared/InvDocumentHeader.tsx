@@ -65,7 +65,9 @@ export function InvDocumentHeader() {
     setComments,
     journalMemo,
     setJournalMemo,
+    fieldAccess,
   } = useInventoryDocument();
+  const hasFieldAccess = (f: string) => fieldAccess.includes(f);
   const loadWarehouses = useMasterDataStore((s) => s.loadWarehouses);
   const rawWarehouses = useMasterDataStore((s) => s.rawWarehouses);
   const [localWarehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
@@ -407,7 +409,7 @@ export function InvDocumentHeader() {
   return (
     <div className="flex flex-col lg:flex-row gap-4">
       <div className="flex flex-col gap-2 w-full lg:w-1/2">
-        {config.type !== DocumentType.GoodIssue && (
+        {config.type !== DocumentType.GoodIssue && hasFieldAccess("CardCode") && (
           <div className="flex items-center gap-3">
             <AppLabel className="w-28 shrink-0">Customer</AppLabel>
             <div className="flex items-center gap-2">
@@ -434,7 +436,7 @@ export function InvDocumentHeader() {
           </div>
         )}
 
-        {config.type !== DocumentType.GoodIssue && (
+        {config.type !== DocumentType.GoodIssue && hasFieldAccess("CardName") && (
           <div className="flex items-center gap-3 w-full">
             <AppLabel className="w-28 shrink-0">Name</AppLabel>
             <Input
@@ -447,7 +449,7 @@ export function InvDocumentHeader() {
           </div>
         )}
 
-        {multiBranchEnabled && (
+        {multiBranchEnabled && hasFieldAccess("BPL_IDAssignedToInvoice") && (
         <div className="flex items-center gap-3 w-full">
           <AppLabel className="w-28 shrink-0">Branch</AppLabel>
           <Select
@@ -474,7 +476,7 @@ export function InvDocumentHeader() {
         </div>
         )}
 
-        {config.type !== DocumentType.GoodIssue && (
+        {config.type !== DocumentType.GoodIssue && hasFieldAccess("FromWarehouse") && (
           <div className="flex items-center gap-3 w-full">
             <AppLabel className="w-28 shrink-0">From Warehouse</AppLabel>
             <div className="flex items-center gap-2">
@@ -498,7 +500,7 @@ export function InvDocumentHeader() {
           </div>
         )}
 
-        {config.type !== DocumentType.GoodIssue && (
+        {config.type !== DocumentType.GoodIssue && hasFieldAccess("ToWarehouse") && (
           <div className="flex items-center gap-3 w-full">
             <AppLabel className="w-28 shrink-0">To Warehouse</AppLabel>
             <div className="flex items-center gap-2">
@@ -604,6 +606,7 @@ export function InvDocumentHeader() {
           </div>
         )}
 
+        {hasFieldAccess("DocDate") && (
         <div className="flex justify-end items-center gap-3 w-full">
           <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
           <Input
@@ -618,6 +621,7 @@ export function InvDocumentHeader() {
             disabled={DocEntry > 0}
           />
         </div>
+        )}
       </div>
 
       <BusinessPartnerSelectorDialog

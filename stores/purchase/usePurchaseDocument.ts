@@ -28,6 +28,7 @@ interface PurchaseDocumentStore {
   discountPercent: number;
   isDownPayment: boolean;
   currency: string;
+  fieldAccess: string[];
   
   DocEntry: number;
   DocNum: number;
@@ -78,6 +79,7 @@ interface PurchaseDocumentStore {
   setDiscountPercent: (p: number) => void;
   setIsDownPayment: (v: boolean) => void;
   setDiscountSum: (s: number) => void;
+  setFieldAccess: (fields: string[]) => void;
   setCurrency: (c: string) => void;
   setDocTotal: (dt: number) => void;
   setLineSerials: (itemCode: string, serials: { InternalSerialNumber: string }[]) => void;
@@ -136,6 +138,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     udfs: {},
     isCopying: false,
     loadedDraftData: null,
+    fieldAccess: [],
 
     setVendor: (v) => set({ vendor: v }),
     setRequester: (r) => set({ requester: r }),
@@ -156,6 +159,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     setDiscountPercent: (p) => { set({ discountPercent: Math.min(100, Math.max(0, Number(p) || 0)) }); get().calculateTotals(); },
     setIsDownPayment: (v) => { set({ isDownPayment: !!v }); get().calculateTotals(); },
     setDiscountSum: (s) => { set({ discSum: s }); get().calculateTotals(); },
+    setFieldAccess: (fields) => set({ fieldAccess: fields }),
     setCurrency: (c) => set({ currency: c }),
     setDocTotal: (dt) => set({ DocTotal: dt }),
 

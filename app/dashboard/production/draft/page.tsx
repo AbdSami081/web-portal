@@ -51,6 +51,7 @@ export default function ProductionDraftPage() {
   });
 
   const { loadFromDocument } = useIFPRDDocument();
+  const fieldAccess = useIFPRDDocument((s) => s.fieldAccess);
   const loadedDraftIdRef = React.useRef<number | null>(null);
 
   useEffect(() => {
@@ -165,7 +166,7 @@ export default function ProductionDraftPage() {
     >
       <PRDDocumentHeader />
       <PRDDocumentItems />
-      <UDFLayout docType={targetDocType} />
+      <UDFLayout docType={targetDocType} allowedFields={fieldAccess} />
       <PRDDocumentFooter />
     </PRDDocumentLayout>
   );

@@ -31,6 +31,8 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   const { watch } = useFormContext();
   const updateLine = useInventoryDocument((s) => s.updateLine);
   const removeLine = useInventoryDocument((s) => s.removeLine);
+  const fieldAccess = useInventoryDocument((s) => s.fieldAccess);
+  const isFieldVisible = (f: string) => fieldAccess.includes(f);
   const warehouses = useMasterDataStore((s) => s.warehouses);
   const allBranches = useBranchStore((s) => s.allBranches);
   const invConfig = useInvDocConfig();
@@ -148,11 +150,14 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       </td>
 
       {/* Item Code */}
+      {isFieldVisible("ItemCode") && (
       <td className="py-2 px-4">
         <span className="block w-full truncate font-medium">{line.ItemCode}</span>
       </td>
+      )}
 
       {/* Description */}
+      {isFieldVisible("Dscription") && (
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full"
@@ -163,9 +168,10 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           disabled={isRowLocked}
         />
       </td>
+      )}
 
       {/* From Warehouse */}
-      {!isGoodIssue && (
+      {!isGoodIssue && isFieldVisible("FromWhsCode") && (
         <td className="py-2 px-4">
           <div className="flex items-center gap-1 w-full">
             <Input
@@ -191,6 +197,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       )}
 
       {/* Warehouse (To Warehouse for transfers; single warehouse for Good Issue) */}
+      {isFieldVisible("WhsCode") && (
       <td className="py-2 px-4">
         <div className="flex items-center gap-1 w-full">
           <Input
@@ -213,9 +220,10 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           </Button>
         </div>
       </td>
+      )}
 
       {/* Branch (derived from Warehouse) */}
-      {multiBranchEnabled && (
+      {multiBranchEnabled && isFieldVisible("BPLid") && (
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-center text-[10px]"
@@ -227,6 +235,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       )}
 
       {/* Quantity */}
+      {isFieldVisible("Quantity") && (
       <td className="py-2 px-4">
         <Input
           name={`Qty-${index}`}
@@ -254,8 +263,10 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           disabled={isRowLocked}
         />
       </td>
+      )}
 
       {/* Qty In Whs */}
+      {isFieldVisible("OnHand") && (
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full text-right bg-slate-50 cursor-not-allowed"
@@ -266,8 +277,10 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           readOnly
         />
       </td>
+      )}
 
       {/* UoM Code*/}
+      {isFieldVisible("UoMCode") && (
       <td className="py-2 px-4">
         <div className="flex items-center gap-1">
           <Input
@@ -290,8 +303,10 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           )}
         </div>
       </td>
+      )}
 
         {/* UoM Name*/}
+      {isFieldVisible("MeasureUnit") && (
       <td className="py-2 px-4">
         <Input
           className="h-6 w-full bg-slate-50 cursor-not-allowed"
@@ -300,6 +315,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           readOnly
         />
       </td>
+      )}
 
       <LineUDFCells
         docType={invConfig.type}
@@ -311,6 +327,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
             .map(([k, v]) => [k, String(v)])
         )}
         onPatch={patchLine}
+        allowedFields={fieldAccess}
       />
 
       <WarehouseSelectorDialog

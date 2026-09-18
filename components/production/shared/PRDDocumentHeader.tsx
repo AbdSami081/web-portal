@@ -96,6 +96,8 @@ export function PRDDocumentHeader() {
   const LIST_PAGE_SIZE = 20;
 
   const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus, setBranch } = useIFPRDDocument();
+  const fieldAccess = useIFPRDDocument((s) => s.fieldAccess);
+  const hasFieldAccess = (f: string) => fieldAccess.includes(f);
   const { loadWarehouses } = useMasterDataStore();
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
   const { multiBranchEnabled } = useApprovalSettings();
@@ -550,7 +552,7 @@ export function PRDDocumentHeader() {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
 
-        {config.headerFields.reference && (
+        {config.headerFields.reference && hasFieldAccess("Ref2") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Reference</AppLabel>
             <Input
@@ -563,7 +565,7 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-        {config.headerFields.docDate && (
+        {config.headerFields.docDate && hasFieldAccess("TaxDate") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">
               {docType === SAPDocumentType.ProductionOrder ? "Document Date" : "Posting Date"}
@@ -572,7 +574,7 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-        {config.headerFields.type && (
+        {config.headerFields.type && hasFieldAccess("ProductionOrderType") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Type</AppLabel>
             <Select
@@ -596,7 +598,7 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-        {config.headerFields.productNo && (
+        {config.headerFields.productNo && hasFieldAccess("ItemNo") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Product No.</AppLabel>
             <div className="flex items-center gap-2 flex-1 relative">
@@ -684,14 +686,14 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-        {config.headerFields.productDescription && (
+        {config.headerFields.productDescription && hasFieldAccess("ProductDescription") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Description</AppLabel>
             <Input type="text" {...register("ProductDescription")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
           </div>
         )}
 
-        {config.headerFields.status && (
+        {config.headerFields.status && hasFieldAccess("ProductionOrderStatus") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Status</AppLabel>
             <Controller
@@ -736,7 +738,7 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-        {config.headerFields.plannedQuantity && (
+        {config.headerFields.plannedQuantity && hasFieldAccess("PlannedQuantity") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Planned Qty</AppLabel>
             <Controller
@@ -757,7 +759,7 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-        {config.headerFields.warehouse && (
+        {config.headerFields.warehouse && hasFieldAccess("Warehouse") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Warehouse</AppLabel>
             <div className="flex items-center gap-2 flex-1">
@@ -782,35 +784,35 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
-        {config.headerFields.priority && (
+        {config.headerFields.priority && hasFieldAccess("Priority") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Priority</AppLabel>
             <Input type="number" {...register("Priority")} className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed" readOnly />
           </div>
         )}
 
-        {config.headerFields.orderDate && (
+        {config.headerFields.orderDate && hasFieldAccess("CreationDate") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Order Date</AppLabel>
             <Input type="date" {...register("CreationDate")} className="h-8 flex-1" disabled={!!docNum} />
           </div>
         )}
 
-        {config.headerFields.startDate && (
+        {config.headerFields.startDate && hasFieldAccess("StartDate") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Start Date</AppLabel>
             <Input type="date" {...register("StartDate")} className="h-8 flex-1" disabled={!!docNum} />
           </div>
         )}
 
-        {config.headerFields.dueDate && (
+        {config.headerFields.dueDate && hasFieldAccess("DueDate") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Due Date</AppLabel>
             <Input type="date" {...register("DueDate")} className="h-8 flex-1" />
           </div>
         )}
 
-        {config.headerFields.branch && multiBranchEnabled && (
+        {config.headerFields.branch && multiBranchEnabled && hasFieldAccess("BPL_IDAssignedToInvoice") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Branch</AppLabel>
             <Select

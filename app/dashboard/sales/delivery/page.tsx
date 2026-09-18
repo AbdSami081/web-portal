@@ -20,6 +20,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 
 export default function DeliveryPage() {
   const router = useRouter();
+  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -125,7 +126,7 @@ export default function DeliveryPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.Delivery} />
+      <UDFLayout docType={DocumentType.Delivery} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

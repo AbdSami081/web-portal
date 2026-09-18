@@ -19,6 +19,7 @@ import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from 
 const today = new Date().toISOString().split("T")[0];
 
 export default function NewReserveInvoicePage() {
+  const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
   const [defaultValues] = useState<APInvoiceFormData>({
     CardCode: "",
     CardName: "",
@@ -142,7 +143,7 @@ export default function NewReserveInvoicePage() {
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={PurchaseDocumentType.APReserveInvoice} />
         <PurchaseItems />
-        <UDFLayout docType={DocumentType.APReserveInvoice} />
+        <UDFLayout docType={DocumentType.APReserveInvoice} allowedFields={fieldAccess} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

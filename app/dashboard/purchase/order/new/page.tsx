@@ -18,6 +18,7 @@ import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from 
 const today = new Date().toISOString().split("T")[0];
 
 export default function NewPurchaseOrderPage() {
+  const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
   const [defaultValues] = useState<PurchaseQuotationFormData>({
     CardCode: "",
     CardName: "",
@@ -141,7 +142,7 @@ export default function NewPurchaseOrderPage() {
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={PurchaseDocumentType.PurchaseOrder} />
         <PurchaseItems />
-        <UDFLayout docType={DocumentType.PurchaseOrder} />
+        <UDFLayout docType={DocumentType.PurchaseOrder} allowedFields={fieldAccess} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

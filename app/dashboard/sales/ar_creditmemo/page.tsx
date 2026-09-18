@@ -15,6 +15,7 @@ import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentServ
 import { UDFLayout } from "@/components/shared/UDFSheet";
 
 export default function ARCreditMemoPage() {
+  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
   const defaultValues: QuotationFormData = {
     CardCode: "",
     CardName: "",
@@ -119,7 +120,7 @@ export default function ARCreditMemoPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.CreditMemo} />
+      <UDFLayout docType={DocumentType.CreditMemo} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

@@ -28,6 +28,7 @@ export function InvDocumentItems() {
   const {
     lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment,
     serialModalOpen, setSerialModalOpen, batchModalOpen, setBatchModalOpen, selectedLineForModal, setSelectedLineForModal,
+    fieldAccess,
   } = useInventoryDocument();
   const config = useInvDocConfig();
   const isGoodIssue = config.type === DocumentType.GoodIssue;
@@ -101,12 +102,12 @@ export function InvDocumentItems() {
         { key: "UoMCode",   title: "UoM Code",     width: 140 },
         { key: "UoMName",   title: "UoM Name",     width: 140 },
       ]
-  ).filter((col) => multiBranchEnabled || col.key !== "BPLid");
+  ).filter((col) => (multiBranchEnabled || col.key !== "BPLid") && (col.key === "actions" || fieldAccess.includes(col.key)));
 
   const lineUdfs = useLineUDFs(config.type);
   const columnsWithUdf = useMemo(
-    () => [...columns, ...lineUdfColumns(lineUdfs)],
-    [isGoodIssue, lineUdfs, multiBranchEnabled]
+    () => [...columns, ...lineUdfColumns(lineUdfs, fieldAccess)],
+    [isGoodIssue, lineUdfs, multiBranchEnabled, fieldAccess]
   );
 
   const handleOnSelectItems = (items: Item[]) => {

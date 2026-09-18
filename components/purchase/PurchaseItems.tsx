@@ -36,6 +36,7 @@ export function PurchaseItems() {
     addAttachment,
     removeAttachment,
     updateAttachment,
+    fieldAccess,
   } = usePurchaseDocument();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
@@ -156,11 +157,11 @@ export function PurchaseItems() {
   ].filter(col => {
     if (col.key === "actions") return true;
     if (col.key === "BPLid" && !multiBranchEnabled) return false;
-    return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
+    return fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
   const lineUdfs = useLineUDFs(config.type);
-  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs)];
+  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs, fieldAccess)];
 
   const isFinancialPurchaseDoc = isPostedPurchaseDocType(config.type);
 

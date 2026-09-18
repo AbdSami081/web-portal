@@ -20,6 +20,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 export default function APDownPaymentInvoicePage() {
+  const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
   const today = new Date().toISOString().split("T")[0];
   const [defaultValues] = useState<APDownPaymentInoviceFormData>({
     CardName: "",
@@ -160,7 +161,7 @@ export default function APDownPaymentInvoicePage() {
         <div className="flex flex-col gap-6">
           <PurchaseVendorHeader docType={DocumentType.APDownPaymentInvoice} />
           <PurchaseItems />
-          <UDFLayout docType={DocumentType.APDownPaymentInvoice} />
+          <UDFLayout docType={DocumentType.APDownPaymentInvoice} allowedFields={fieldAccess} />
           <PurchaseFooter />
         </div>
       </PurchaseDocumentLayout>

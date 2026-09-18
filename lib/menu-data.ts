@@ -32,6 +32,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/BusinessPartner",
                 objectCode: 2,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
         ],
     },
@@ -49,7 +50,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/quotation/new",
                 objectCode: 23,
                 isReporting: true,
-                allowFieldsAuth :false
+                allowFieldsAuth :true
             },
             {
                 id: "b683b385-cdab-4677-90c0-94cdd22970d4",
@@ -81,7 +82,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/return_request",
                 objectCode: 234000031,
                 isReporting: true,
-                  allowFieldsAuth :false
+                  allowFieldsAuth :true
             },
             {
                 id: "8e2b9c71-4a1f-4f8a-9b16-5d7e3a2b1c09",
@@ -89,7 +90,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/return",
                 objectCode: 16,
                 isReporting: true,
-                  allowFieldsAuth :false
+                  allowFieldsAuth :true
             },
             {
                 id: "e5a7b9c1-3d2f-4e8a-8c15-4a6b7c8d9e01",
@@ -97,7 +98,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/dp_request",
                 objectCode: 204,
                 isReporting: true,
-                  allowFieldsAuth :false
+                  allowFieldsAuth :true
             },
             {
                 id: "d4f6a8b2-1c3e-4d7a-9b14-3e5a6b7c8d90",
@@ -105,7 +106,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/dp_invoice",
                 objectCode: 203,
                 isReporting: true,
-                 allowFieldsAuth :false
+                 allowFieldsAuth :true
             },
             {
                 id: "7a9b1c3d-5e7f-4a8b-9c12-1d3e5f7a9b1c",
@@ -113,7 +114,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/sales/ar_creditmemo",
                 objectCode: 14,
                 isReporting: true,
-                 allowFieldsAuth :false
+                 allowFieldsAuth :true
             },
         ],
     },
@@ -138,6 +139,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/quotation/new",
                 objectCode: 54,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "a234f19e-11e6-42b8-b982-76d987948bcd",
@@ -145,6 +147,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/order/new",
                 objectCode: 22,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "2294ad1e-c1fd-44c0-ad1e-e1320ca7c0e7",
@@ -160,6 +163,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/invoice/new",
                 objectCode: 18,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "f2c8d7a4-5b61-4e9a-9c32-7d8e1f6a204b",
@@ -167,6 +171,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/reserve-invoice/new",
                 objectCode: 18,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "a1dd9b32-38c1-4c1e-9672-298c6302833a",
@@ -174,12 +179,14 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/apcreditmemo",
                 objectCode: 19,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "fc37b27e-b139-48da-8d1d-eff1563c104f",
                 title: "A/P Down Payment Request",
                 url: "/dashboard/purchase/apdownpaymentrequest",
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "41cab34b-5457-43f6-b325-8c5daf395586",
@@ -195,6 +202,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/goodsreturnrequest",
                 objectCode: 234000032,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "02256c89-56c0-40e6-bbd6-0be2d2bbd360",
@@ -202,6 +210,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/goodsreturn",
                 objectCode: 21,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
         ],
     },
@@ -260,6 +269,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/production/production-order",
                 objectCode: 202,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "39dcf313-04a4-49df-943f-866483b30538",
@@ -267,6 +277,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/production/issue-for-production",
                 objectCode: 60,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
             {
                 id: "aba68f41-0e50-4624-9ae5-f917299ea8c6",
@@ -274,6 +285,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/production/receipt-from-production",
                 objectCode: 59,
                 isReporting: true,
+                allowFieldsAuth: true,
             },
         ],
     },
@@ -336,3 +348,70 @@ export const SERVER_MENUS: MenuItem[] = [
         ],
     },
 ];
+
+const collectLeafItems = (items: MenuItem[]): MenuItem[] => {
+    const leaves: MenuItem[] = [];
+    const walk = (nodes: MenuItem[]) => {
+        nodes.forEach((node) => {
+            if (node.items && node.items.length > 0) {
+                walk(node.items);
+            } else {
+                leaves.push(node);
+            }
+        });
+    };
+    walk(items);
+    return leaves;
+};
+
+const objectCodeCounts = (() => {
+    const counts = new Map<string, number>();
+    collectLeafItems(SERVER_MENUS).forEach((item) => {
+        if (item.objectCode === undefined || item.objectCode === null) return;
+        const key = String(item.objectCode);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+})();
+
+export const resolveFieldAuthDocType = (item: MenuItem): string => {
+    if (item.objectCode === undefined || item.objectCode === null) return item.id;
+    const key = String(item.objectCode);
+    return (objectCodeCounts.get(key) ?? 0) > 1 ? item.id : key;
+};
+
+export const filterMenusByAllowedModules = (
+    menus: MenuItem[],
+    allowedModules: string[] | undefined | null
+): MenuItem[] => {
+    if (!allowedModules || allowedModules.length === 0) return [];
+
+    if (allowedModules.some((m) => m.toLowerCase() === "all")) {
+        return menus;
+    }
+
+    const allowed = allowedModules.map((m) => m.toLowerCase());
+
+    const filterRecursive = (items: MenuItem[]): MenuItem[] => {
+        return items
+            .map((item) => {
+                const clone: MenuItem = { ...item };
+                if (clone.items?.length) {
+                    clone.items = filterRecursive(clone.items);
+                }
+                return clone;
+            })
+            .filter((item) => {
+                if (item.id && allowed.includes(item.id.toLowerCase())) {
+                    return true;
+                }
+                return !!item.items?.length;
+            });
+    };
+
+    return filterRecursive(menus);
+};
+
+export const findMenuItemByPath = (pathname: string): MenuItem | undefined => {
+    return collectLeafItems(SERVER_MENUS).find((item) => item.url === pathname);
+};

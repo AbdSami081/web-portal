@@ -23,6 +23,7 @@ export default function SalesDraftPage() {
   const docNav = resolveDocNavParams(searchParams, pathname);
   const draftEntryStr = docNav.draftEntry ?? null;
   const docTypeParam = docNav.docType ?? null;
+  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
 
   const [isLoading, setIsLoading] = useState(true);
   const [targetDocType, setTargetDocType] = useState<DocumentType>(() => {
@@ -162,7 +163,7 @@ export default function SalesDraftPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={targetDocType} />
+      <UDFLayout docType={targetDocType} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

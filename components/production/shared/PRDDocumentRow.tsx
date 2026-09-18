@@ -32,7 +32,7 @@ import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
-  const { updateLine, removeLine, initialStatus } = useIFPRDDocument();
+  const { updateLine, removeLine, initialStatus, fieldAccess } = useIFPRDDocument();
   const { allBranches } = useBranchStore();
   const { multiBranchEnabled } = useApprovalSettings();
   const [draftLine, setDraftLine] = useState<PRDDocumentLine>(line);
@@ -85,31 +85,31 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
-      {config.itemColumns.orderNumber && (
+      {config.itemColumns.orderNumber && fieldAccess.includes("OrderNumber") && (
         <td className="py-2 px-4 text-center">
           <span className="block w-full truncate font-medium text-gray-700">{line.OrderNumber}</span>
         </td>
       )}
 
-      {config.itemColumns.type && (
+      {config.itemColumns.type && fieldAccess.includes("ItemType") && (
         <td className="py-2 px-4">
           <span className="block w-full truncate font-medium text-gray-700">{line.ItemType?.replace(/^[pd]it_/, "")}</span>
         </td>
       )}
 
-      {config.itemColumns.itemCode && (
+      {config.itemColumns.itemCode && fieldAccess.includes("ItemNo") && (
         <td className="py-2 px-4">
           <span className="block w-full truncate font-medium text-gray-700">{line.ItemNo}</span>
         </td>
       )}
 
-      {config.itemColumns.itemDescription && (
+      {config.itemColumns.itemDescription && fieldAccess.includes("ItemName") && (
         <td className="py-2 px-4 min-w-0" title={line.ItemName}>
           <span className="block w-full truncate font-medium text-gray-700">{line.ItemName}</span>
         </td>
       )}
 
-      {config.itemColumns.baseQty && (
+      {config.itemColumns.baseQty && fieldAccess.includes("BaseQuantity") && (
         <td className="py-2 px-4 text-center">
           <Input
             type="number"
@@ -156,13 +156,13 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
-      {config.itemColumns.baseRatio && (
+      {config.itemColumns.baseRatio && fieldAccess.includes("BaseRatio") && (
         <td className="py-2 px-4 text-center">
           <span className="block w-full truncate font-medium text-gray-700">{Number(draftLine.BaseRatio ?? 0).toLocaleString()}</span>
         </td>
       )}
 
-      {config.itemColumns.plannedQty && (
+      {config.itemColumns.plannedQty && fieldAccess.includes("PlannedQuantity") && (
         <td className="py-2 px-4 text-center">
           {config.itemColumns.openQty ? (
             <span className="font-medium text-gray-700">{Number(line.OriginalPlannedQuantity ?? line.PlannedQuantity).toLocaleString()}</span>
@@ -197,13 +197,13 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
-      {config.itemColumns.issued && (
+      {config.itemColumns.issued && fieldAccess.includes("IssuedQuantity") && (
         <td className="py-2 px-4 text-center text-gray-700">
           <span className="block w-full truncate">{line.IssuedQuantity || 0}</span>
         </td>
       )}
 
-      {config.itemColumns.openQty && (
+      {config.itemColumns.openQty && fieldAccess.includes("PlannedQuantity") && (
         <td className="py-2 px-4 text-center">
           <Input
             type="number"
@@ -227,7 +227,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
-      {config.itemColumns.uomCode && (
+      {config.itemColumns.uomCode && fieldAccess.includes("UoMCode") && (
         <td className="py-2 px-4 text-center text-gray-700">
           <div className="flex items-center justify-center gap-1">
             <span className="block truncate">{normalizeInventoryUom(line.UoMCode)}</span>
@@ -247,13 +247,13 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
-      {config.itemColumns.uomName && (
+      {config.itemColumns.uomName && fieldAccess.includes("MeasureUnit") && (
         <td className="py-2 px-4 text-center text-gray-700">
           <span className="block w-full truncate">{line.MeasureUnit || getUoMName(normalizeInventoryUom(line.UoMCode)) || ""}</span>
         </td>
       )}
 
-      {config.itemColumns.warehouse && (
+      {config.itemColumns.warehouse && fieldAccess.includes("Warehouse") && (
         <td className="py-2 px-4 text-center text-gray-700">
           <div className="flex w-full items-center gap-1">
             <Input
@@ -284,7 +284,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
-      {config.itemColumns.issueMethod && (
+      {config.itemColumns.issueMethod && fieldAccess.includes("ProductionOrderIssueType") && (
         <td className="py-2 px-4">
           <Select
             value={draftLine.ProductionOrderIssueType || "im_Manual"}
@@ -310,6 +310,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         docType={config.type}
         line={draftLine}
         disabled={initialStatus === "boposClosed"}
+        allowedFields={fieldAccess}
         fmsContext={Object.fromEntries(
           Object.entries(draftLine)
             .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")

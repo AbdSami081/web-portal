@@ -11,7 +11,9 @@ export default function InvDocumentFooter() {
     setComments,
     journalMemo,
     setJournalMemo,
+    fieldAccess,
   } = useInventoryDocument();
+  const hasFieldAccess = (f: string) => fieldAccess.includes(f);
 
   const { triggerFMS } = useFmsContext();
   const { watch, setValue } = useFormContext();
@@ -25,6 +27,7 @@ export default function InvDocumentFooter() {
   return (
     <>
       <div className="grid grid-cols-2 gap-10 -mt-0">
+        {hasFieldAccess("JournalMemo") && (
         <div>
           <AppLabel htmlFor="journalComments">Journal Remarks</AppLabel>
           <Textarea
@@ -38,7 +41,9 @@ export default function InvDocumentFooter() {
             placeholder="Enter journal remarks..."
           />
         </div>
+        )}
 
+        {hasFieldAccess("Comments") && (
         <div>
           <div className="flex items-center gap-1">
             <AppLabel htmlFor="remarks">Remarks</AppLabel>
@@ -56,6 +61,7 @@ export default function InvDocumentFooter() {
             placeholder="Enter remarks or comments..."
           />
         </div>
+        )}
       </div>
     </>
   );

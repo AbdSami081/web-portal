@@ -20,6 +20,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 
 export default function InvoicePage() {
   const router = useRouter();
+  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -124,7 +125,7 @@ export default function InvoicePage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.ARInvoice} />
+      <UDFLayout docType={DocumentType.ARInvoice} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

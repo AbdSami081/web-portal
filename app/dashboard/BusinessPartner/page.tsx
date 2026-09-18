@@ -25,6 +25,10 @@ import {
 
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/authContext";
+import { getAllFields } from "@/api+/sap/administration/administrationService";
+import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
 
 import { Search, List, Loader2, X } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -132,6 +136,26 @@ export default function BPMasterDataPage() {
   useEffect(() => {
     fetchUdfDefinitions(DocumentType.BusinessPartner);
   }, [fetchUdfDefinitions]);
+
+  const { user } = useAuth();
+  const pathname = usePathname();
+  const [fieldAccess, setFieldAccess] = useState<string[]>([]);
+  const hasFieldAccess = (field: string) => fieldAccess.includes(field);
+
+  useEffect(() => {
+    const loadAccess = async () => {
+      if (!user?.empId) return;
+      const menuItem = findMenuItemByPath(pathname);
+      const fieldAuthDocType = menuItem
+        ? resolveFieldAuthDocType(menuItem)
+        : String(DocumentType.BusinessPartner);
+      const fields = await getAllFields(user.empId, fieldAuthDocType);
+      setFieldAccess(
+        fields.filter((x: any) => x.Enabled === "Y").map((x: any) => x.U_FieldName)
+      );
+    };
+    loadAccess();
+  }, [user?.empId, pathname]);
 
   const getResourceName = (type: number) => {
     switch (type) {
@@ -602,7 +626,7 @@ export default function BPMasterDataPage() {
    <FormProvider {...methods}>
     <div className="min-h-screen bg-[#fafafa]">
       <FieldNameInspector />
-      <UDFLayout docType={DocumentType.BusinessPartner} values={bpUdfValues} />
+      <UDFLayout docType={DocumentType.BusinessPartner} values={bpUdfValues} allowedFields={fieldAccess} />
       <HeaderActionPortal>
         <HeaderActions
           DocEntry={0}
@@ -795,6 +819,7 @@ export default function BPMasterDataPage() {
                   </SelectContent>
                 </Select>
 
+                {hasFieldAccess("CardCode") && (
                 <div className="relative w-45">
                   <Input
                     value={formData.CardCode}
@@ -815,8 +840,10 @@ export default function BPMasterDataPage() {
                     </button>
                   )}
                 </div>
+                )}
               </div>
 
+              {hasFieldAccess("CardType") && (
               <div className="flex items-center gap-2">
                 <Select
                   value={formData.CardType}
@@ -835,6 +862,7 @@ export default function BPMasterDataPage() {
                   </SelectContent>
                 </Select>
               </div>
+              )}
 
               <div className="ml-auto flex items-center gap-2">
                 <Input
@@ -861,6 +889,7 @@ export default function BPMasterDataPage() {
               </div>
             </div>
 
+            {hasFieldAccess("CardName") && (
             <div className="flex items-center gap-2">
               <label className="w-20 shrink-0 text-sm">Name</label>
               <Input
@@ -870,7 +899,9 @@ export default function BPMasterDataPage() {
                 className="h-7 w-45"
               />
             </div>
+            )}
 
+            {hasFieldAccess("GroupCode") && (
             <div className="flex items-center gap-2">
               <label className="w-20 shrink-0 text-sm">Group</label>
               <Select value={formData.Group} onValueChange={(value) => handleChange("Group", value)}>
@@ -886,7 +917,9 @@ export default function BPMasterDataPage() {
                 </SelectContent>
               </Select>
             </div>
+            )}
 
+            {hasFieldAccess("Currency") && (
             <div className="flex items-center gap-2">
               <label className="w-20 shrink-0 text-sm">Currency</label>
               <Select value={formData.Currency} onValueChange={(value) => handleChange("Currency", value)}>
@@ -902,6 +935,7 @@ export default function BPMasterDataPage() {
                 </SelectContent>
               </Select>
             </div>
+            )}
           </div>
         </div>
 
@@ -924,6 +958,7 @@ export default function BPMasterDataPage() {
           <TabsContent value="general">
             <div className="rounded-md border bg-white p-5">
               <div className="grid grid-cols-3 gap-x-5 gap-y-3">
+                {hasFieldAccess("Phone1") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Tel 1</label>
                   <Input
@@ -932,7 +967,9 @@ export default function BPMasterDataPage() {
                     className="h-7 flex-1 min-w-0"
                   />
                 </div>
+                )}
 
+                {hasFieldAccess("Phone2") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Tel 2</label>
                   <Input
@@ -941,7 +978,9 @@ export default function BPMasterDataPage() {
                     className="h-7 flex-1 min-w-0"
                   />
                 </div>
+                )}
 
+                {hasFieldAccess("Cellular") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Mobile Phone</label>
                   <Input
@@ -950,7 +989,9 @@ export default function BPMasterDataPage() {
                     className="h-7 flex-1 min-w-0"
                   />
                 </div>
+                )}
 
+                {hasFieldAccess("Fax") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Fax</label>
                   <Input
@@ -959,7 +1000,9 @@ export default function BPMasterDataPage() {
                     className="h-7 flex-1 min-w-0"
                   />
                 </div>
+                )}
 
+                {hasFieldAccess("EmailAddress") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">E-Mail</label>
                   <Input
@@ -968,7 +1011,9 @@ export default function BPMasterDataPage() {
                     className="h-7 flex-1 min-w-0"
                   />
                 </div>
+                )}
 
+                {hasFieldAccess("Website") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Web Site</label>
                   <Input
@@ -977,7 +1022,9 @@ export default function BPMasterDataPage() {
                     className="h-7 flex-1 min-w-0"
                   />
                 </div>
+                )}
 
+                {hasFieldAccess("ShippingType") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Shipping Type</label>
                   <div className="flex flex-1 min-w-0 items-center gap-1">
@@ -993,12 +1040,14 @@ export default function BPMasterDataPage() {
                     </Button>
                   </div>
                 </div>
+                )}
 
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Password</label>
                   <Input type="password" className="h-7 flex-1 min-w-0" />
                 </div>
 
+                {hasFieldAccess("Indicator") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Factoring</label>
                   <div className="flex flex-1 min-w-0 items-center gap-1">
@@ -1014,7 +1063,9 @@ export default function BPMasterDataPage() {
                     </Button>
                   </div>
                 </div>
+                )}
 
+                {hasFieldAccess("ProjectCode") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Project</label>
                   <div className="flex flex-1 min-w-0 items-center gap-1">
@@ -1030,7 +1081,9 @@ export default function BPMasterDataPage() {
                     </Button>
                   </div>
                 </div>
+                )}
 
+                {hasFieldAccess("Industry") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Industry</label>
                   <div className="flex flex-1 min-w-0 items-center gap-1">
@@ -1046,7 +1099,9 @@ export default function BPMasterDataPage() {
                     </Button>
                   </div>
                 </div>
+                )}
 
+                {hasFieldAccess("CompanyPrivate") && (
                 <div className="flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Business Type</label>
                   <div className="flex flex-1 min-w-0 items-center gap-1">
@@ -1062,7 +1117,9 @@ export default function BPMasterDataPage() {
                     </Button>
                   </div>
                 </div>
+                )}
 
+                {hasFieldAccess("Notes") && (
                 <div className="col-span-3 mt-1 flex items-start gap-2">
                   <label className="w-28 shrink-0 pt-2 text-sm font-medium">Remarks</label>
                   <Textarea
@@ -1071,7 +1128,9 @@ export default function BPMasterDataPage() {
                     className="h-20 max-w-[500px] resize-none"
                   />
                 </div>
+                )}
 
+                {hasFieldAccess("Valid") && (
                 <div className="col-span-3 mt-1 flex items-center gap-2">
                   <label className="w-28 shrink-0 text-sm font-medium">Status</label>
                   <RadioGroup
@@ -1099,11 +1158,13 @@ export default function BPMasterDataPage() {
                     </div>
                   </RadioGroup>
                 </div>
+                )}
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="remarks">
+            {hasFieldAccess("FreeText") && (
             <div className="mt-6 rounded-md border p-5">
               <label className="mb-2 block text-sm font-medium">Remarks</label>
               <Textarea
@@ -1113,6 +1174,7 @@ export default function BPMasterDataPage() {
                 rows={6}
               />
             </div>
+            )}
           </TabsContent>
         </Tabs>
 

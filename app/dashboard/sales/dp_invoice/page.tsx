@@ -15,6 +15,7 @@ import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentServ
 import { UDFLayout } from "@/components/shared/UDFSheet";
 
 export default function ARDownPaymentInvoicePage() {
+  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
   const defaultValues: QuotationFormData = {
     CardCode: "",
     CardName: "",
@@ -121,7 +122,7 @@ export default function ARDownPaymentInvoicePage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.DownPaymentInvoice} />
+      <UDFLayout docType={DocumentType.DownPaymentInvoice} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

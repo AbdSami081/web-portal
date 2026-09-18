@@ -29,7 +29,9 @@ interface IFPRDDocumentStore {
   }[];
   udfs: Record<string, any>;
   loadedDraftData: any | null;
+  fieldAccess: string[];
   setLoadedDraftData: (data: any) => void;
+  setFieldAccess: (fields: string[]) => void;
   addAttachment: (file: File) => void;
   removeAttachment: (lineNum: number) => void;
   updateAttachment: (lineNum: number, updated: Partial<IFPRDDocumentStore["attachments"][0]>) => void;
@@ -62,8 +64,10 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
     attachments: [],
     udfs: {},
     loadedDraftData: null,
+    fieldAccess: [],
 
     setLoadedDraftData: (data) => set({ loadedDraftData: data }),
+    setFieldAccess: (fields) => set({ fieldAccess: fields }),
     setWarehouses: (warehouses) => set({ warehouses }),
     setBranch: (branch) => set({ branch }),
     setCustomer: (customer) => set({ customer }),

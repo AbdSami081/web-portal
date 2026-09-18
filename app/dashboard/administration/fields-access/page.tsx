@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Check,
+  ChevronsUpDown,
+  FileText,
+  Save,
   Search,
   ShieldCheck,
-  User,
-  Save,
-  FileText,
+  Users,
 } from "lucide-react";
 
 import {
@@ -18,34 +19,29 @@ import {
 import {
   getAllFields,
   assignUserFields,
- 
 } from "@/api+/sap/administration/administrationService";
 
 import { Button } from "@/components/ui/button";
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-
 import { Input } from "@/components/ui/input";
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {SERVER_MENUS} from "@/lib/menu-data";
 import { Switch } from "@/components/ui/switch";
 
 import {
-  DocumentType,
-} from "@/types/master/DocumentType";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+import { SERVER_MENUS, resolveFieldAuthDocType, filterMenusByAllowedModules } from "@/lib/menu-data";
+import { cn } from "@/lib/utils";
 
 import { useAuth } from "@/context/authContext";
 import { toast } from "sonner";
@@ -123,6 +119,10 @@ export default function FieldAccessManagement() {
 
   const [search, setSearch] = useState("");
 
+  const [userSearch, setUserSearch] = useState("");
+
+  const [isDocPickerOpen, setIsDocPickerOpen] = useState(false);
+
   const [hasChanges, setHasChanges] = useState(false);
 
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -135,9 +135,6 @@ export default function FieldAccessManagement() {
   const [isSaving, setIsSaving] = useState(false);
 
 
-  /*
-   * Company
-   */
   useEffect(() => {
     const company =
       (user as any)?.companyDB ??
@@ -179,28 +176,6 @@ export default function FieldAccessManagement() {
   /*
    * Load fields
    */
-  // useEffect(() => {
-  //   const loadFields = async () => {
-  //     try {
-  //       setIsLoadingFields(true);
-
-  //       const response = await getAllFields(selectedUser, selectedDocument);
-
-  //       const data = Array.isArray(response)
-  //         ? response.map(normalizeField)
-  //         : [];
-
-  //       setAllFields(data);
-  //     } catch (error) {
-  //       console.error("Failed to load fields:", error);
-  //       setAllFields([]);
-  //     } finally {
-  //       setIsLoadingFields(false);
-  //     }
-  //   };
-
-  //   loadFields();
-  // }, []);
   useEffect(() => {
   if (!selectedUser || !selectedDocument) {
     setAllFields([]);
@@ -347,11 +322,12 @@ export default function FieldAccessManagement() {
   };
 
 
-  /*
-   * Documents
-   */
-  console.log("SERVER_MENUS:", SERVER_MENUS);
-  const filteredMenus = SERVER_MENUS
+  const accessibleMenus = filterMenusByAllowedModules(
+    SERVER_MENUS,
+    (user as any)?.allowedModules
+  );
+
+  const filteredMenus = accessibleMenus
   .map((menu) => ({
     ...menu,
     items: menu.items?.filter(
@@ -362,14 +338,7 @@ export default function FieldAccessManagement() {
     (menu) =>
       menu.items && menu.items.length > 0
   );
-  console.log("Filtered Menus:", filteredMenus);
-  // const documents = useMemo(() => {
-  //   return Object.entries(filteredMenus).filter(
-  //     ([key, value]) =>
-  //       typeof value === "number" ||
-  //       !isNaN(Number(value))
-  //   );
-  // }, []);
+
   const documents = useMemo(() => {
   return filteredMenus.flatMap(
     (menu) =>
@@ -379,7 +348,37 @@ export default function FieldAccessManagement() {
   );
 }, [filteredMenus]);
 
-console.log("Documents:", documents);
+
+  const selectedDocumentTitle = useMemo(() => {
+    const item = documents.find(
+      (item) => selectedDocument === resolveFieldAuthDocType(item)
+    );
+
+    return item?.title ?? "";
+  }, [documents, selectedDocument]);
+
+  const filteredUsers = useMemo(() => {
+    const value = userSearch.trim().toLowerCase();
+
+    if (!value) {
+      return users;
+    }
+
+    return users.filter(
+      (u) =>
+        u.fullName?.toLowerCase().includes(value) ||
+        String(u.empId ?? "").toLowerCase().includes(value)
+    );
+  }, [users, userSearch]);
+
+
+  const selectedUserName = useMemo(() => {
+    const found = users.find(
+      (u) => String(u.empId ?? "") === selectedUser
+    );
+
+    return found?.fullName ?? selectedUser;
+  }, [users, selectedUser]);
 
 
   /*
@@ -660,431 +659,347 @@ const handleSave = async () => {
 
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-
-        {/* Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0D0D0D]">
-                <ShieldCheck className="h-5 w-5 text-white" />
-              </div>
-
-              <div>
-                <h1 className="text-2xl font-semibold">
-                  Field Access Management
-                </h1>
-
-                <p className="text-sm text-muted-foreground">
-                  Manage user access to document fields
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="rounded-lg border px-3 py-2 text-sm">
-              Enabled Fields:
-              <span className="ml-2 font-semibold">
-                {enabledFields.length}
-              </span>
-            </div>
-
-            <Button
-              onClick={handleSave}
-              disabled={
-                !selectedUser ||
-                !selectedDocument ||
-                !hasChanges ||
-                isSaving
-              }
-              className="bg-[#0D0D0D] text-white hover:bg-[#0D0D0D]/90"
-            >
-              <Save className="mr-2 h-4 w-4" />
-
-              {isSaving
-                ? "Saving..."
-                : "Save Changes"}
-            </Button>
-          </div>
+    <div className="flex flex-col h-full bg-white font-sans overflow-hidden">
+      <header className="flex h-14 items-center justify-between border-b px-6 bg-slate-50/50">
+        <div className="flex items-center gap-4">
+          <ShieldCheck className="h-5 w-5 text-slate-400" />
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+            Field Access
+          </h2>
         </div>
 
+        <div className="flex items-center gap-3">
+          <div className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500">
+            Enabled Fields
+            <span className="ml-1.5 text-slate-900">
+              {enabledFields.length}
+            </span>
+          </div>
 
-        {/* Selection Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Access Configuration
-            </CardTitle>
+          <Button
+            onClick={handleSave}
+            disabled={
+              !selectedUser ||
+              !selectedDocument ||
+              !hasChanges ||
+              isSaving
+            }
+            className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-md px-6 shadow-sm"
+          >
+            <Save className="h-3.5 w-3.5 mr-2" />
+            {isSaving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </header>
 
-            <CardDescription>
-              Select a user and document to manage field permissions.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-
-              {/* User */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  User
-                </label>
-
-                <Select
-                  value={selectedUser}
-                  onValueChange={(value) => {
-                    setSelectedUser(value);
-                    setSelectedFields([]);
-                    setHasChanges(false);
-                  }}
-                >
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-
-                      <SelectValue
-                        placeholder={
-                          isLoadingUsers
-                            ? "Loading users..."
-                            : "Select user"
-                        }
-                      />
-                    </div>
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    {users.map((u: any) => {
-
-                      /*
-                       * Actual SAP user code.
-                       *
-                       * Prefer UserCode / userCode.
-                       * Fallback to empId if your API
-                       * already returns Dev01 there.
-                       */
-                      const userCode = String(
-                        u.userCode ??
-                        u.UserCode ??
-                        u.empId ??
-                        u.EmpId ??
-                        ""
-                      );
-
-                      const fullName =
-                        u.fullName ??
-                        u.FullName ??
-                        u.userName ??
-                        u.UserName ??
-                        userCode;
-
-                      if (!userCode) {
-                        return null;
-                      }
-
-                      return (
-                        <SelectItem
-                          key={userCode}
-                          value={userCode}
-                        >
-                          <div className="flex flex-col">
-                            <span>
-                              {fullName}
-                            </span>
-
-                            <span className="text-xs text-muted-foreground">
-                              {userCode}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-
-
-              {/* Document */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Document
-                </label>
-
-                <Select
-                  value={selectedDocument}
-                  onValueChange={(value) => {
-                    setSelectedDocument(value);
-                    setSelectedFields([]);
-                    setHasChanges(false);
-                  }}
-                >
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-
-                      <SelectValue placeholder="Select document" />
-                    </div>
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    {documents.map((item) => (
-    <SelectItem
-      key={item.id}
-      value={String(item.objectCode)}
-    >
-      {item.title}
-    </SelectItem>
-  ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
+      <div className="flex flex-1 overflow-hidden">
+        <aside className="w-80 border-r flex flex-col bg-slate-50/30">
+          <div className="p-4 border-b bg-white">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                placeholder="Search users..."
+                className="pl-9 h-9 text-[11px] border-slate-200"
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+              />
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-
-        {/* Fields */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
-              <div>
-                <CardTitle>
-                  Document Fields
-                </CardTitle>
-
-                <CardDescription>
-                  Enable or disable individual fields for the selected user.
-                </CardDescription>
+          <div className="flex-1 overflow-y-auto">
+            {isLoadingUsers ? (
+              <div className="p-6 text-center text-[11px] text-slate-400">
+                Loading users...
               </div>
-
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-                <Input
-                  value={search}
-                  onChange={(e) =>
-                    setSearch(e.target.value)
-                  }
-                  placeholder="Search fields..."
-                  className="pl-9"
-                />
-              </div>
-
-            </div>
-          </CardHeader>
-
-
-          <CardContent>
-
-            {!selectedUser ||
-            !selectedDocument ? (
-              <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-dashed">
-                <div className="text-center">
-                  <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-
-                  <p className="font-medium">
-                    Select user and document
-                  </p>
-
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Choose a user and document to view available fields.
-                  </p>
-                </div>
-              </div>
-            ) : isLoadingFields ||
-              isLoadingAssignments ? (
-              <div className="flex min-h-[300px] items-center justify-center">
-                <div className="text-sm text-muted-foreground">
-                  Loading fields...
-                </div>
-              </div>
-            ) : documentFields.length === 0 ? (
-              <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-dashed">
-                <div className="text-center">
-                  <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-
-                  <p className="font-medium">
-                    No fields found
-                  </p>
-
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    No fields are configured for this document.
-                  </p>
-                </div>
-              </div>
-            ) : fieldGroups.length === 0 ? (
-              <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-dashed">
-                <p className="text-sm text-muted-foreground">
-                  No fields match your search.
-                </p>
+            ) : filteredUsers.length === 0 ? (
+              <div className="p-6 text-center text-[11px] text-slate-400">
+                No users found.
               </div>
             ) : (
-              <div className="space-y-6">
+              filteredUsers.map((u) => {
+                const userCode = String(u.empId ?? "");
+                const isSelected = selectedUser === userCode;
 
-                {fieldGroups.map(
-                  (group) => {
-                    const status =
-                      getGroupStatus(group);
-
-                    return (
+                return (
+                  <button
+                    key={userCode}
+                    onClick={() => {
+                      setSelectedUser(userCode);
+                      setSelectedFields([]);
+                      setHasChanges(false);
+                    }}
+                    className={cn(
+                      "w-full px-6 py-4 text-left transition-all border-b last:border-0",
+                      isSelected
+                        ? "bg-white border-l-4 border-l-blue-600 shadow-sm"
+                        : "hover:bg-slate-100/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
                       <div
-                        key={group.type}
-                        className="overflow-hidden rounded-lg border"
+                        className={cn(
+                          "h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold",
+                          isSelected
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-200 text-slate-500"
+                        )}
                       >
+                        {u.fullName?.charAt(0) ?? "?"}
+                      </div>
 
-                        {/* Group Header */}
-                        <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-3">
+                      <div>
+                        <p
+                          className={cn(
+                            "text-xs font-bold",
+                            isSelected ? "text-blue-700" : "text-slate-700"
+                          )}
+                        >
+                          {u.fullName}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Employee ID: {userCode}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </aside>
 
-                          <div className="flex items-center gap-3">
+        <main className="flex-1 bg-white flex flex-col overflow-hidden">
+          {!selectedUser ? (
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <Users className="h-12 w-12 text-slate-100 mb-4" />
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                Select an Identity
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="p-6 border-b flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight truncate">
+                    Field Access for {selectedUserName}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Select a document, then enable or disable its fields.
+                  </p>
+                </div>
 
-                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-background border">
-                              <FileText className="h-4 w-4" />
-                            </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <Popover open={isDocPickerOpen} onOpenChange={setIsDocPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        className="w-64 justify-between h-9 text-xs border-slate-200 font-medium"
+                      >
+                        <span className="truncate">
+                          {selectedDocumentTitle || "Select document..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-3.5 w-3.5 opacity-50 shrink-0" />
+                      </Button>
+                    </PopoverTrigger>
 
-                            <div>
-                              <p className="font-medium">
-                                {group.title}
-                              </p>
+                    <PopoverContent className="w-72 p-0" align="end">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search documents..."
+                          className="text-xs"
+                        />
+                        <CommandList>
+                          <CommandEmpty className="py-4 text-center text-xs text-slate-400">
+                            No documents found.
+                          </CommandEmpty>
 
-                              <p className="text-xs text-muted-foreground">
-                                {group.fields.length} fields
-                              </p>
-                            </div>
+                          {filteredMenus.map((menu) => (
+                            <CommandGroup key={menu.id} heading={menu.title}>
+                              {menu.items?.map((item) => {
+                                const docType = resolveFieldAuthDocType(item);
 
-                          </div>
-
-
-                          <div className="flex items-center gap-3">
-
-                            <span className="text-xs text-muted-foreground">
-                              {status.enabled
-                                ? "All enabled"
-                                : status.partial
-                                ? "Partially enabled"
-                                : "Disabled"}
-                            </span>
-
-                            <Switch
-                              checked={
-                                status.enabled
-                              }
-                              onCheckedChange={(
-                                checked
-                              ) =>
-                                toggleGroup(
-                                  group,
-                                  checked
-                                )
-                              }
-                            />
-
-                          </div>
-                        </div>
-
-
-                        {/* Fields */}
-                        <div className="divide-y">
-
-                          {group.fields.map(
-                            (field) => {
-                              const fieldEnabled =
-                                isFieldEnabled(
-                                  field.FieldName
+                                return (
+                                  <CommandItem
+                                    key={item.id}
+                                    value={item.title}
+                                    onSelect={() => {
+                                      setSelectedDocument(docType);
+                                      setSelectedFields([]);
+                                      setHasChanges(false);
+                                      setIsDocPickerOpen(false);
+                                    }}
+                                  >
+                                    {selectedDocument === docType && (
+                                      <Check className="h-3.5 w-3.5" />
+                                    )}
+                                    {item.title}
+                                  </CommandItem>
                                 );
+                              })}
+                            </CommandGroup>
+                          ))}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  <div className="relative w-56">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Input
+                      placeholder="Search fields..."
+                      className="pl-9 h-9 text-xs border-slate-200"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                {!selectedDocument ? (
+                  <div className="h-full flex flex-col items-center justify-center">
+                    <FileText className="h-10 w-10 text-slate-100 mb-3" />
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      Select a Document
+                    </p>
+                  </div>
+                ) : isLoadingFields || isLoadingAssignments ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      Loading fields...
+                    </p>
+                  </div>
+                ) : documentFields.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center">
+                    <FileText className="h-10 w-10 text-slate-100 mb-3" />
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      No Fields Found
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      No fields are configured for this document.
+                    </p>
+                  </div>
+                ) : fieldGroups.length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      No Matches
+                    </p>
+                  </div>
+                ) : (
+                  <div className="max-w-5xl mx-auto space-y-4">
+                    {fieldGroups.map((group) => {
+                      const status = getGroupStatus(group);
+
+                      return (
+                        <div
+                          key={group.type}
+                          className="border rounded-xl overflow-hidden bg-white"
+                        >
+                          <div className="flex items-center justify-between border-b bg-slate-50/30 px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-lg bg-white border flex items-center justify-center">
+                                <FileText className="h-4 w-4 text-slate-400" />
+                              </div>
+
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                                  {group.title}
+                                </p>
+                                <p className="text-[10px] text-slate-400">
+                                  {group.fields.length} fields
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                                {status.enabled
+                                  ? "All enabled"
+                                  : status.partial
+                                  ? "Partially enabled"
+                                  : "Disabled"}
+                              </span>
+
+                              <Switch
+                                checked={status.enabled}
+                                onCheckedChange={(checked) =>
+                                  toggleGroup(group, checked)
+                                }
+                              />
+                            </div>
+                          </div>
+
+                          <div className="divide-y">
+                            {group.fields.map((field) => {
+                              const fieldEnabled = isFieldEnabled(
+                                field.FieldName
+                              );
 
                               return (
                                 <div
-                                  key={
-                                    field.FieldName
-                                  }
-                                  className="flex items-center justify-between px-4 py-3 hover:bg-muted/30"
+                                  key={field.FieldName}
+                                  className="flex items-center justify-between px-4 py-3 hover:bg-slate-50/50"
                                 >
-
                                   <div className="min-w-0">
-
                                     <div className="flex items-center gap-2">
-
-                                      <p className="truncate text-sm font-medium">
-                                        {field.FieldTitle ||
-                                          field.FieldName}
+                                      <p className="truncate text-xs font-bold text-slate-700">
+                                        {field.FieldTitle || field.FieldName}
                                       </p>
 
                                       {fieldEnabled && (
-                                        <Check className="h-4 w-4 shrink-0" />
+                                        <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />
                                       )}
-
                                     </div>
 
-                                    <p className="mt-1 text-xs text-muted-foreground">
+                                    <p className="mt-0.5 text-[10px] text-slate-400">
                                       {field.FieldName}
                                     </p>
-
                                   </div>
 
-
                                   <Switch
-                                    checked={
-                                      fieldEnabled
-                                    }
+                                    checked={fieldEnabled}
                                     onCheckedChange={() =>
-                                      toggleField(
-                                        field.FieldName
-                                      )
+                                      toggleField(field.FieldName)
                                     }
                                   />
-
                                 </div>
                               );
-                            }
-                          )}
-
+                            })}
+                          </div>
                         </div>
-
-                      </div>
-                    );
-                  }
+                      );
+                    })}
+                  </div>
                 )}
-
-              </div>
-            )}
-
-          </CardContent>
-        </Card>
-
-
-        {/* Footer */}
-        {selectedUser &&
-          selectedDocument &&
-          hasChanges && (
-            <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3">
-
-              <div>
-                <p className="text-sm font-medium">
-                  Unsaved changes
-                </p>
-
-                <p className="text-xs text-muted-foreground">
-                  Save your changes to update field permissions.
-                </p>
               </div>
 
-              <Button
-                variant="outline"
-                onClick={handleReset}
-                disabled={isSaving}
-              >
-                Reset
-              </Button>
+              {selectedUser && selectedDocument && hasChanges && (
+                <div className="border-t bg-slate-50/50 px-6 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-slate-700">
+                      Unsaved changes
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      Save your changes to update field permissions.
+                    </p>
+                  </div>
 
-            </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={isSaving}
+                    className="h-8 text-xs"
+                  >
+                    Reset
+                  </Button>
+                </div>
+              )}
+            </>
           )}
-
+        </main>
       </div>
     </div>
   );
 }
-

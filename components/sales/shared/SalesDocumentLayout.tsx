@@ -46,6 +46,7 @@ import FMSSelectionModal from "@/modals/FMSSelectionModal";
 import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
 import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
 import { getAllFields } from "@/api+/sap/administration/administrationService";
+import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
 import { useAuth } from "@/context/authContext";
 
 
@@ -216,14 +217,18 @@ export function SalesDocumentLayout<T extends FieldValues>({
 const setFieldAccess = useSalesDocument(
   (state) => state.setFieldAccess
 );
+const fieldAccess = useSalesDocument((state) => state.fieldAccess);
 
 useEffect(() => {
   const loadAccess = async () => {
     if (!user?.empId) return;
 
+    const menuItem = findMenuItemByPath(pathname);
+    const fieldAuthDocType = menuItem ? resolveFieldAuthDocType(menuItem) : String(docType);
+
     const fields = await getAllFields(
       user.empId,
-      String(docType)
+      fieldAuthDocType
     );
 
     const allowed = fields
@@ -234,7 +239,7 @@ useEffect(() => {
   };
 
   loadAccess();
-}, [user?.empId]);
+}, [user?.empId, pathname]);
 
 
 
@@ -368,6 +373,10 @@ useEffect(() => {
       TaxDate: today,
     } as any);
     lineReset();
+    if (config.isDownPayment) {
+      useSalesDocument.getState().setDiscountPercent(100);
+      useSalesDocument.getState().setIsDownPayment(true);
+    }
   };
 
   const finishAndReset = () => {
@@ -784,7 +793,7 @@ useEffect(() => {
             getSelectValue={(item) => item.DocNum}
             isLoading={isLoadingCopyFrom}
           />
-          <UDFLayout docType={docType} values={storeUdfs} />
+          <UDFLayout docType={docType} values={storeUdfs} allowedFields={fieldAccess} />
 
           <SerialNumberSelectionDialog
             open={serialModalOpen}

@@ -105,7 +105,8 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     watch,
     setValue,
   } = useFormContext();
-  const { requester, setRequester, loadFromDocument, setDocDate, setDocDueDate, setTaxDate, setRequiredDate, setComments } = usePurchaseDocument();
+  const { requester, setRequester, loadFromDocument, setDocDate, setDocDueDate, setTaxDate, setRequiredDate, setComments, fieldAccess } = usePurchaseDocument();
+  const hasFieldAccess = (f: string) => fieldAccess.includes(f);
   const { user } = useAuth();
 
   const config = usePurchaseDocConfig();
@@ -393,43 +394,47 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {isPurchaseRequest ? (
-            <>
-              <AppLabel className="w-28 shrink-0">Requester</AppLabel>
-              <div className="flex items-center">
-                <Input
-                  id="requester-field"
-                  type="text"
-                  {...register("Requester")}
-                  className="h-8 w-48"
-                  placeholder="Requester"
-                  disabled
-                />
-              </div>
-            </>
+            hasFieldAccess("Requester") && (
+              <>
+                <AppLabel className="w-28 shrink-0">Requester</AppLabel>
+                <div className="flex items-center">
+                  <Input
+                    id="requester-field"
+                    type="text"
+                    {...register("Requester")}
+                    className="h-8 w-48"
+                    placeholder="Requester"
+                    disabled
+                  />
+                </div>
+              </>
+            )
           ) : (
-            <>
-              <AppLabel className="w-28 shrink-0">Vendor</AppLabel>
-              <div className="flex items-center">
-                <Input
-                  id="card-code-field"
-                  type="text"
-                  {...register("CardCode")}
-                  className="h-8 w-48 pr-10"
-                  placeholder="Card Code"
-                  disabled
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="ml-2 h-8 w-8 cursor-pointer"
-                  onClick={() => setModalOpen(true)}
-                  disabled={isHeaderDisabled}
-                >
-                  <Search className="h-5 w-5" />
-                </Button>
-              </div>
-            </>
+            hasFieldAccess("CardCode") && (
+              <>
+                <AppLabel className="w-28 shrink-0">Vendor</AppLabel>
+                <div className="flex items-center">
+                  <Input
+                    id="card-code-field"
+                    type="text"
+                    {...register("CardCode")}
+                    className="h-8 w-48 pr-10"
+                    placeholder="Card Code"
+                    disabled
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="ml-2 h-8 w-8 cursor-pointer"
+                    onClick={() => setModalOpen(true)}
+                    disabled={isHeaderDisabled}
+                  >
+                    <Search className="h-5 w-5" />
+                  </Button>
+                </div>
+              </>
+            )
           )}
         </div>
 
@@ -484,6 +489,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
       <div className="flex flex-col lg:flex-row justify-between gap-4">
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
+          {hasFieldAccess(isPurchaseRequest ? "RequesterName" : "CardName") && (
           <div className="flex items-center w-full gap-3">
             <AppLabel className="w-28 shrink-0">
               {isPurchaseRequest ? "Requester Full Name" : "Name"}
@@ -496,8 +502,9 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
               disabled
             />
           </div>
+          )}
 
-          {multiBranchEnabled && (
+          {multiBranchEnabled && hasFieldAccess("BPL_IDAssignedToInvoice") && (
           <div className="flex items-center w-full gap-3">
             <AppLabel className="w-28 shrink-0">Branch</AppLabel>
             <Select
@@ -526,6 +533,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
           {isPurchaseRequest && (
             <>
+              {hasFieldAccess("SendNotification") && (
               <div className="flex items-center w-full gap-3 pt-1">
                 <div className="flex items-center h-8">
                   <input
@@ -546,6 +554,8 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
                   </label>
                 </div>
               </div>
+              )}
+              {hasFieldAccess("RequesterEmail") && (
               <div className="flex items-center w-full gap-3">
                 <AppLabel className="w-28 shrink-0">E-mail Address</AppLabel>
                 <Input
@@ -556,6 +566,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
                   disabled={isHeaderDisabled || watch("SendNotification") !== "tYES"}
                 />
               </div>
+              )}
             </>
           )}
         </div>
@@ -585,6 +596,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
             </Select>
           </div>
 
+          {hasFieldAccess("DocDate") && (
           <div className="flex justify-end items-center w-full gap-3">
             <AppLabel className="w-28 shrink-0 text-right">Posting Date</AppLabel>
             <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
@@ -592,7 +604,9 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
               setDocDate(e.target.value);
             }} />
           </div>
+          )}
 
+          {hasFieldAccess("DocDueDate") && (
           <div className="flex justify-end items-center w-full gap-3">
             <AppLabel className="w-28 shrink-0 text-right">
               {getDateLabel(config.type)}
@@ -602,7 +616,9 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
               setDocDueDate(e.target.value);
             }} />
           </div>
+          )}
 
+          {hasFieldAccess("TaxDate") && (
           <div className="flex justify-end items-center w-full gap-3">
             <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
             <Input type="date" {...register("TaxDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {
@@ -610,8 +626,9 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
               setTaxDate(e.target.value);
             }} />
           </div>
+          )}
 
-          {needsRequiredDate && (
+          {needsRequiredDate && hasFieldAccess("RequiredDate") && (
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Required Date</AppLabel>
               <Input type="date" {...register("RequiredDate")} className="h-8 w-48" disabled={isHeaderDisabled} onChange={(e) => {

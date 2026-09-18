@@ -18,6 +18,7 @@ import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from 
 const today = new Date().toISOString().split("T")[0];
 
 export default function NewAPInvoicePage() {
+  const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
   const [defaultValues] = useState<APInvoiceFormData>({
     CardCode: "",
     CardName: "",
@@ -143,7 +144,7 @@ export default function NewAPInvoicePage() {
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={PurchaseDocumentType.APInvoice} />
         <PurchaseItems />
-        <UDFLayout docType={DocumentType.APInvoice} />
+        <UDFLayout docType={DocumentType.APInvoice} allowedFields={fieldAccess} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

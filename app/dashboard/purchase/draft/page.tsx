@@ -61,6 +61,7 @@ export default function PurchaseDraftPage() {
   });
 
   const { loadFromDocument } = usePurchaseDocument();
+  const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
 
   useEffect(() => {
     const draftId = Number((draftEntryStr ?? "").toString().trim().split(/\s+/)[0]);
@@ -168,7 +169,7 @@ export default function PurchaseDraftPage() {
     >
       <PurchaseVendorHeader docType={targetDocType} />
       <PurchaseItems />
-      <UDFLayout docType={targetDocType} />
+      <UDFLayout docType={targetDocType} allowedFields={fieldAccess} />
       <PurchaseFooter />
     </PurchaseDocumentLayout>
   );

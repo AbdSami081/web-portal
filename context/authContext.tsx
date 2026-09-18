@@ -11,6 +11,7 @@ import { useUoMStore } from "@/stores/useUoMStore";
 import { getBranches, getMyBranches } from "@/api+/sap/branch";
 import { toast } from "sonner";
 import {Field, getAllFields,assignUserFields, getAdminSettings} from "@/api+/sap/administration/administrationService";
+import { usePublicConfigStore } from "@/stores/usePublicConfigStore";
 
 interface User {
   empId: string;
@@ -26,18 +27,11 @@ interface User {
 
 const resolveCompanyName = (companyDB: string): string => {
   const db = (companyDB || "").trim();
-  try {
-    const list = JSON.parse(process.env.NEXT_PUBLIC_SAP_DATABASES || "[]") as Array<{
-      CompanyName?: string;
-      CompanyDB?: string;
-    }>;
-    const match =
-      list.find((d) => (d.CompanyDB || "").toLowerCase() === db.toLowerCase()) ||
-      (list.length === 1 ? list[0] : undefined);
-    return match?.CompanyName || db;
-  } catch {
-    return db;
-  }
+  const list = usePublicConfigStore.getState().sapDatabases;
+  const match =
+    list.find((d) => (d.CompanyDB || "").toLowerCase() === db.toLowerCase()) ||
+    (list.length === 1 ? list[0] : undefined);
+  return match?.CompanyName || db;
 };
 
 interface AuthContextType {
@@ -182,6 +176,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (bootstrappedRef.current) return;
     bootstrappedRef.current = true;
+
+    void usePublicConfigStore.getState().load();
 
     const token = getAccessToken();
     if (!token) return;

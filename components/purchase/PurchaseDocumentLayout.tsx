@@ -98,6 +98,8 @@ import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
+import { getAllFields } from "@/api+/sap/administration/administrationService";
+import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
 
 const COPY_TO_RESERVE_INVOICE_VALUE = "reserve-invoice";
 const COPY_TO_AP_DOWNPAYMENT_REQUEST_VALUE = "apdownpaymentrequest";
@@ -169,7 +171,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   });
 
   const { handleSubmit, reset, watch, setValue, formState: { isSubmitting, isDirty, errors } } = methods;
-  const { reset: lineReset, lines, requester, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, loadedDraftData } = usePurchaseDocument(
+  const { reset: lineReset, lines, requester, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, loadedDraftData, fieldAccess } = usePurchaseDocument(
     useShallow(state => ({
       reset: state.reset,
       lines: state.lines,
@@ -180,6 +182,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
       setIsCopying: state.setIsCopying,
       udfs: state.udfs,
       loadedDraftData: state.loadedDraftData,
+      fieldAccess: state.fieldAccess,
     }))
   );
 
@@ -249,6 +252,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
       TaxDate: today,
     } as any);
     lineReset();
+    if (config.isDownPayment) {
+      usePurchaseDocument.getState().setDiscountPercent(100);
+      usePurchaseDocument.getState().setIsDownPayment(true);
+    }
   };
 
   const finishAndReset = () => {
@@ -433,6 +440,18 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   React.useEffect(() => {
     fetchUdfDefinitions(docType);
   }, [docType, fetchUdfDefinitions]);
+
+  const setFieldAccess = usePurchaseDocument((state) => state.setFieldAccess);
+  React.useEffect(() => {
+    const loadAccess = async () => {
+      if (!user?.empId) return;
+      const menuItem = findMenuItemByPath(pathname);
+      const fieldAuthDocType = menuItem ? resolveFieldAuthDocType(menuItem) : String(docType);
+      const fields = await getAllFields(user.empId, fieldAuthDocType);
+      setFieldAccess(fields.filter((x: any) => x.Enabled === "Y").map((x: any) => x.U_FieldName));
+    };
+    loadAccess();
+  }, [user?.empId, pathname]);
 
   React.useEffect(() => {
     usePurchaseDocument.getState().setIsDownPayment(!!config.isDownPayment);
@@ -826,7 +845,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             getSelectValue={(item) => item.DocNum}
             isLoading={isLoadingCopyFrom}
           />
-          <UDFLayout docType={docType} values={storeUdfs} />
+          <UDFLayout docType={docType} values={storeUdfs} allowedFields={fieldAccess} />
 
           <SerialNumberSelectionDialog
             open={serialModalOpen}

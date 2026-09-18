@@ -75,33 +75,30 @@ export function useLineUDFs(docType: number): LineUDFDef[] {
   return lineDefs ?? EMPTY_LINE_UDFS;
 }
 
-/** Column descriptors (key/title/width) for the line UDFs, to append to a table's column list. */
 export function lineUdfColumns(
-  lineUdfs: LineUDFDef[]
+  lineUdfs: LineUDFDef[],
+  allowedFields?: string[] | null
 ): { key: string; title: string; width: number }[] {
-  return lineUdfs.map((u) => ({
-    key: `U_${u.Name}`,
-    title: u.Description || `U_${u.Name}`,
-    width: 170,
-  }));
+  return lineUdfs
+    .filter((u) => !allowedFields || allowedFields.includes(`U_${u.Name}`))
+    .map((u) => ({
+      key: `U_${u.Name}`,
+      title: u.Description || `U_${u.Name}`,
+      width: 170,
+    }));
 }
 
 interface LineUDFCellsProps {
   docType: number;
-  /** Current line object (values read by `U_<Name>` key). */
   line: Record<string, any>;
-  /** Apply a partial patch to the line. */
   onPatch: (patch: Record<string, any>) => void;
   disabled?: boolean;
-  /** Extra key/value context (the line row) passed to any FMS query on these fields. */
   fmsContext?: Record<string, string>;
   tdClassName?: string;
+  /** When provided, only UDFs whose `U_<Name>` key is in this list render (field-access gating). */
+  allowedFields?: string[] | null;
 }
 
-/**
- * Renders one `<td>` per line-table UDF. The order here MUST match the order of
- * `lineUdfColumns(...)` appended to the table's column list.
- */
 export function LineUDFCells({
   docType,
   line,
@@ -109,8 +106,12 @@ export function LineUDFCells({
   disabled = false,
   fmsContext,
   tdClassName = "py-2 px-2",
+  allowedFields,
 }: LineUDFCellsProps) {
-  const lineUdfs = useLineUDFs(docType);
+  const lineUdfsRaw = useLineUDFs(docType);
+  const lineUdfs = allowedFields
+    ? lineUdfsRaw.filter((u) => allowedFields.includes(`U_${u.Name}`))
+    : lineUdfsRaw;
   if (!lineUdfs.length) return null;
 
   return (

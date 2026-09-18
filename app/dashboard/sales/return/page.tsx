@@ -20,6 +20,7 @@ import { UDFLayout } from "@/components/shared/UDFSheet";
 
 export default function ReturnPage() {
   const router = useRouter();
+  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -125,7 +126,7 @@ export default function ReturnPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.SalesReturn} />
+      <UDFLayout docType={DocumentType.SalesReturn} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

@@ -34,6 +34,8 @@ import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
+import { getAllFields } from "@/api+/sap/administration/administrationService";
+import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
 import { patchDraftDocument } from "@/api+/sap/draft/draftService";
 import { useFMS, FmsProvider } from "@/hooks/useFMS";
 import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
@@ -107,6 +109,19 @@ export function PRDDocumentLayout<T extends FieldValues>({
   useEffect(() => {
     fetchUdfDefinitions(docType);
   }, [docType, fetchUdfDefinitions]);
+
+  const setFieldAccess = useIFPRDDocument((state) => state.setFieldAccess);
+  const fieldAccess = useIFPRDDocument((state) => state.fieldAccess);
+  useEffect(() => {
+    const loadAccess = async () => {
+      if (!user?.empId) return;
+      const menuItem = findMenuItemByPath(pathname);
+      const fieldAuthDocType = menuItem ? resolveFieldAuthDocType(menuItem) : String(docType);
+      const fields = await getAllFields(user.empId, fieldAuthDocType);
+      setFieldAccess(fields.filter((x: any) => x.Enabled === "Y").map((x: any) => x.U_FieldName));
+    };
+    loadAccess();
+  }, [user?.empId, pathname]);
 
   const methods = useForm<T>({
     resolver: zodResolver(schema as any),
@@ -451,7 +466,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
               )}
             </div>
           </div>
-          <UDFLayout docType={docType} values={udfs} />
+          <UDFLayout docType={docType} values={udfs} allowedFields={fieldAccess} />
 
           <RequestDocumentGenerationModal
             open={approvalModalOpen}

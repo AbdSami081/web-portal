@@ -336,12 +336,10 @@ export function DocumentItems() {
     if (col.key === "actions") return true;
     if (col.key === "BPLid" && !multiBranchEnabled) return false;
     return fieldAccess.includes(col.key);
-   // return getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
-  // Append line-table UDF columns (e.g. RDR1 UDFs) so they render as extra line columns.
   const lineUdfs = useLineUDFs(config.type);
-  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs)];
+  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs, fieldAccess)];
 
   const isFinancialDoc = isPostedSalesDocType(config.type);
 

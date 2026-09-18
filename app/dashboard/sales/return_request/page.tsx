@@ -15,6 +15,7 @@ import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentServ
 import { UDFLayout } from "@/components/shared/UDFSheet";
 
 export default function ReturnRequestPage() {
+  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
   const defaultValues: QuotationFormData = {
     CardCode: "",
     CardName: "",
@@ -118,7 +119,7 @@ export default function ReturnRequestPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.ReturnRequest} />
+      <UDFLayout docType={DocumentType.ReturnRequest} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

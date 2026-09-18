@@ -20,6 +20,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 
 export default function OrderPage() {
   const router = useRouter();
+  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -123,7 +124,7 @@ export default function OrderPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.Order} />
+      <UDFLayout docType={DocumentType.Order} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

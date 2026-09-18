@@ -18,6 +18,7 @@ import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from 
 const today = new Date().toISOString().split("T")[0];
 
 export default function NewGoodsReceiptPOPage() {
+  const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
   const [defaultValues] = useState<GoodsReceiptPOFormData>({
     CardCode: "",
     CardName: "",
@@ -143,7 +144,7 @@ export default function NewGoodsReceiptPOPage() {
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={PurchaseDocumentType.GoodsReceiptPO} />
         <PurchaseItems />
-        <UDFLayout docType={DocumentType.GoodsReceiptPO} />
+        <UDFLayout docType={DocumentType.GoodsReceiptPO} allowedFields={fieldAccess} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

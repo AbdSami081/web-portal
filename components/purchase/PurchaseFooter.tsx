@@ -28,8 +28,10 @@ export function PurchaseFooter() {
     setTaxTotal,
     setComments,
     TotalFreight = 0,
-    discSum = 0
+    discSum = 0,
+    fieldAccess,
   } = usePurchaseDocument();
+  const hasFieldAccess = (f: string) => fieldAccess.includes(f);
 
   const docStatus = watch("DocStatus");
   const docEntry = watch("DocEntry");
@@ -62,6 +64,7 @@ export function PurchaseFooter() {
         </div>
 
         <div className={`mt-2 space-y-3 bg-slate-100 p-4 rounded-lg text-sm -mt-12`}>
+          {hasFieldAccess("TotalBeforeDiscount") && (
           <div className="grid grid-cols-2 gap-2 items-center">
             <AppLabel>Total Before Discount</AppLabel>
             <div className="relative">
@@ -74,7 +77,9 @@ export function PurchaseFooter() {
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
           </div>
+          )}
 
+          {hasFieldAccess("DiscountPercent") && (
           <div className="grid grid-cols-2 gap-2 items-center">
             <AppLabel>{config.isDownPayment ? "DPM" : "Discount"}</AppLabel>
             <div className="flex gap-2 items-center">
@@ -111,7 +116,9 @@ export function PurchaseFooter() {
               </div>
             </div>
           </div>
+          )}
 
+          {hasFieldAccess("TotalFreight") && (
           <div className="grid grid-cols-2 gap-2 items-center">
             <div className="flex items-center gap-1">
               <AppLabel>Freight</AppLabel>
@@ -126,7 +133,9 @@ export function PurchaseFooter() {
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
           </div>
+          )}
 
+          {hasFieldAccess("Rounding") && (
           <div className="grid grid-cols-2 gap-2 items-center">
             <div className="flex items-center gap-2">
               <input type="checkbox" className="h-3 w-3" disabled={isFooterDisabled} />
@@ -144,7 +153,9 @@ export function PurchaseFooter() {
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
           </div>
+          )}
 
+          {hasFieldAccess("TaxTotal") && (
           <div className="grid grid-cols-2 gap-2 items-center">
             <AppLabel>Tax</AppLabel>
             <div className="relative">
@@ -157,7 +168,9 @@ export function PurchaseFooter() {
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">{currency}</span>
             </div>
           </div>
+          )}
 
+          {hasFieldAccess("DocTotal") && (
           <div className="grid grid-cols-2 gap-2 items-center border-t border-gray-300 pt-2">
             <AppLabel className="font-bold text-sm">Total</AppLabel>
             <div className="relative">
@@ -170,6 +183,7 @@ export function PurchaseFooter() {
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-900 font-black">{currency}</span>
             </div>
           </div>
+          )}
         </div>
       </div>
     </>

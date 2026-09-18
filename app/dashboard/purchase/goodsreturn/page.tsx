@@ -16,6 +16,7 @@ import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from 
 const today = new Date().toISOString().split("T")[0];
 
 export default function GoodReturnPage() {
+  const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
   // const { lines, DocTotal, TaxTotal, freight, discountPercent } = usePurchaseDocument();
 
   const [defaultValues] = useState<GoodsReturnFormData>({
@@ -140,7 +141,7 @@ export default function GoodReturnPage() {
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={DocumentType.GoodsReturn} />
         <PurchaseItems />
-          <UDFLayout docType={DocumentType.GoodsReturn} />
+          <UDFLayout docType={DocumentType.GoodsReturn} allowedFields={fieldAccess} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

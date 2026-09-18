@@ -29,6 +29,7 @@ interface IOPRDDocumentStore {
   serialModalOpen: boolean;
   batchModalOpen: boolean;
   selectedLineForModal: any | null;
+  fieldAccess: string[];
 
   setLoadedDraftData: (data: any) => void;
   setSerialModalOpen: (open: boolean) => void;
@@ -65,6 +66,7 @@ interface IOPRDDocumentStore {
   removeAttachment: (lineNum: number) => void;
   updateAttachment: (lineNum: number, updated: Partial<IOPRDDocumentStore["attachments"][0]>) => void;
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
+  setFieldAccess: (fields: string[]) => void;
   reset: () => void;
 }
 
@@ -84,8 +86,6 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     DocEntry: 0,
     DocNum: 0,
     lastLoadedDocType: null,
-
-    // Header defaults
     fromWarehouse: "",
     toWarehouse: "",
     comments: "",
@@ -102,7 +102,9 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     serialModalOpen: false,
     batchModalOpen: false,
     selectedLineForModal: null,
+    fieldAccess: [],
 
+    setFieldAccess: (fields) => set({ fieldAccess: fields }),
     setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setSerialModalOpen: (open) => set({ serialModalOpen: open }),
     setBatchModalOpen: (open) => set({ batchModalOpen: open }),

@@ -35,7 +35,7 @@ interface Record {
 
 export function PurchaseItemRow({ index, line }: Props) {
   const { watch } = useFormContext();
-  const { updateLineByIndex, removeLine } = usePurchaseDocument();
+  const { updateLineByIndex, removeLine, fieldAccess } = usePurchaseDocument();
   const { freightsWithCharges, freightTypes, warehouses } = useMasterDataStore();
   const { allBranches } = useBranchStore();
   const config = usePurchaseDocConfig();
@@ -53,7 +53,7 @@ export function PurchaseItemRow({ index, line }: Props) {
   };
 
   const isFieldVisible = (fieldName: string) => {
-    return getFieldSettings(config.type, "linesFieds", fieldName).visible !== false;
+    return fieldAccess.includes(fieldName) && getFieldSettings(config.type, "linesFieds", fieldName).visible !== false;
   };
 
   const [draftLine, setDraftLine] = useState(line);
@@ -533,6 +533,7 @@ export function PurchaseItemRow({ index, line }: Props) {
         docType={config.type}
         line={draftLine}
         disabled={isLineDisabled}
+        allowedFields={fieldAccess}
         fmsContext={Object.fromEntries(
           Object.entries(draftLine)
             .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")

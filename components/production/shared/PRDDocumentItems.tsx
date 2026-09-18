@@ -23,6 +23,7 @@ export function PRDDocumentItems() {
   const headerWarehouse = watch("Warehouse");
   const itemNo = watch("ItemNo");
   const { lines, addLine, customer, warehouses, attachments, addAttachment, removeAttachment, updateAttachment, initialStatus } = useIFPRDDocument();
+  const fieldAccess = useIFPRDDocument((s) => s.fieldAccess);
   const config = usePRDDocConfig();
   const uoms = useUoMStore((state) => state.uoms);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -60,47 +61,47 @@ export function PRDDocumentItems() {
       title: "Actions",
       width: 80,
     },
-    config.itemColumns.orderNumber && {
+    config.itemColumns.orderNumber && fieldAccess.includes("OrderNumber") && {
       key: "OrderNumber",
       title: "Order Number",
       width: 140,
     },
-    config.itemColumns.type && {
+    config.itemColumns.type && fieldAccess.includes("ItemType") && {
       key: "ItemType",
       title: "Type",
       width: 120,
     },
-    config.itemColumns.itemCode && {
+    config.itemColumns.itemCode && fieldAccess.includes("ItemNo") && {
       key: "ItemNo",
       title: "Item No",
       width: 180,
     },
-    config.itemColumns.itemDescription && {
+    config.itemColumns.itemDescription && fieldAccess.includes("ItemName") && {
       key: "ItemName",
       title: "Item Description",
       width: 260,
     },
-    config.itemColumns.baseQty && {
+    config.itemColumns.baseQty && fieldAccess.includes("BaseQuantity") && {
       key: "BaseQuantity",
       title: "Base Qty",
       width: 130,
     },
-    config.itemColumns.baseRatio && {
+    config.itemColumns.baseRatio && fieldAccess.includes("BaseRatio") && {
       key: "BaseRatio",
       title: "Base Ratio",
       width: 130,
     },
-    config.itemColumns.plannedQty && {
+    config.itemColumns.plannedQty && fieldAccess.includes("PlannedQuantity") && {
       key: "PlannedQuantity",
       title: "Planned Qty",
       width: 140,
     },
-    config.itemColumns.issued && {
+    config.itemColumns.issued && fieldAccess.includes("IssuedQuantity") && {
       key: "IssuedQuantity",
       title: "Issued",
       width: 120,
     },
-    config.itemColumns.openQty && {
+    config.itemColumns.openQty && fieldAccess.includes("PlannedQuantity") && {
       key: "OpenQuantity",
       title: "Open Qty",
       width: 120,
@@ -110,22 +111,22 @@ export function PRDDocumentItems() {
       title: "Available",
       width: 120,
     },
-    config.itemColumns.uomCode && {
+    config.itemColumns.uomCode && fieldAccess.includes("UoMCode") && {
       key: "UoMCode",
       title: "UoM Code",
       width: 120,
     },
-    config.itemColumns.uomName && {
+    config.itemColumns.uomName && fieldAccess.includes("MeasureUnit") && {
       key: "UoMName",
       title: "UoM Name",
       width: 130,
     },
-    config.itemColumns.warehouse && {
+    config.itemColumns.warehouse && fieldAccess.includes("Warehouse") && {
       key: "Warehouse",
       title: "Warehouse",
       width: 180,
     },
-    config.itemColumns.issueMethod && {
+    config.itemColumns.issueMethod && fieldAccess.includes("ProductionOrderIssueType") && {
       key: "ProductionOrderIssueType",
       title: "Issue Method",
       width: 170,
@@ -137,7 +138,7 @@ export function PRDDocumentItems() {
   }[];
 
   const lineUdfs = useLineUDFs(config.type);
-  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs)];
+  const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs, fieldAccess)];
 
   return (
     <div className="grid w-full relative pt-2 overflow-visible">

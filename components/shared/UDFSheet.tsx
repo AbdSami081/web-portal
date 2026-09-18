@@ -33,6 +33,8 @@ import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
 interface DocumentUDFList<T extends FieldValues> {
   docType: DocumentType;
   values?: Record<string, any>;
+  /** When provided, only UDFs whose `U_<Name>` key is in this list render (field-access gating). */
+  allowedFields?: string[] | null;
 }
 
 interface UDF {
@@ -47,16 +49,12 @@ interface UDF {
     Description: string;
   }[];
 }
-
-// Several pages render <UDFLayout> AND sit inside a document layout that renders
-// its own — so two instances can mount. This module-level owner lets only the
-// first-mounted instance stay live (own the Ctrl+Shift+U shortcut and the Sheet);
-// the rest render nothing. Prevents the panel opening twice.
 const udfLayoutOwner = { current: null as symbol | null };
 
 export function UDFLayout<T extends FieldValues>({
   docType,
   values,
+  allowedFields,
 }: DocumentUDFList<T>) {
   const [open, setOpen] = useState(false);
   const { control, setValue, register } = useFormContext<T>();
@@ -78,7 +76,10 @@ export function UDFLayout<T extends FieldValues>({
     };
   }, []);
 
-  const definitions = useUDFStore(state => state.definitions[docType]);
+  const definitionsRaw = useUDFStore(state => state.definitions[docType]);
+  const definitions = allowedFields
+    ? definitionsRaw?.filter((d) => allowedFields.includes(`U_${d.Name}`))
+    : definitionsRaw;
   const isLoading = useUDFStore(state => state.isLoading[docType]);
 
   useEffect(() => {

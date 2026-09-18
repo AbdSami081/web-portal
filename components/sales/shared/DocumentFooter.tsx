@@ -26,7 +26,8 @@ export default function DocumentFooter() {
     setDiscountSum,
     setComments,
     TotalFreight = 0,
-    discSum = 0
+    discSum = 0,
+    fieldAccess,
   } = useSalesDocument();
 
   const isFieldEnabled = (fieldName: string) => {
@@ -34,7 +35,7 @@ export default function DocumentFooter() {
   };
 
   const isFieldVisible = (fieldName: string) => {
-    return getFieldSettings(config.type, "headerFieds", fieldName).visible !== false;
+    return fieldAccess.includes(fieldName) && getFieldSettings(config.type, "headerFieds", fieldName).visible !== false;
   };
 
   const docStatus = watch("DocStatus");

@@ -23,6 +23,8 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useAuth } from "@/context/authContext";
+import { getAllFields } from "@/api+/sap/administration/administrationService";
+import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
@@ -211,6 +213,18 @@ export function InvDocumentLayout<T extends FieldValues>({
 
   const [isSaving, setIsSaving] = useState(false);
   const { user } = useAuth();
+  const setFieldAccess = useInventoryDocument((state) => state.setFieldAccess);
+  const fieldAccess = useInventoryDocument((state) => state.fieldAccess);
+  useEffect(() => {
+    const loadAccess = async () => {
+      if (!user?.empId) return;
+      const menuItem = findMenuItemByPath(pathname);
+      const fieldAuthDocType = menuItem ? resolveFieldAuthDocType(menuItem) : String(docType);
+      const fields = await getAllFields(user.empId, fieldAuthDocType);
+      setFieldAccess(fields.filter((x: any) => x.Enabled === "Y").map((x: any) => x.U_FieldName));
+    };
+    loadAccess();
+  }, [user?.empId, pathname]);
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [pendingFinalData, setPendingFinalData] = useState<T | null>(null);
@@ -760,7 +774,7 @@ export function InvDocumentLayout<T extends FieldValues>({
             onSearch={handleItrSearch}
             searchValue={itrSearch}
           />
-          <UDFLayout docType={docType} values={store.udfs} />
+          <UDFLayout docType={docType} values={store.udfs} allowedFields={fieldAccess} />
 
           <RequestDocumentGenerationModal
             open={approvalModalOpen}

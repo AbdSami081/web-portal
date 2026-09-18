@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePublicConfigStore } from "@/stores/usePublicConfigStore";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -31,14 +32,12 @@ export default function LoginPage() {
   const [subIndex, setSubIndex] = useState(0);
   const [reverse, setReverse] = useState(false);
 
-  const databases = useMemo(() => {
-    try {
-      return JSON.parse(process.env.NEXT_PUBLIC_SAP_DATABASES || "[]");
-    } catch (e) {
-      console.error("Failed to parse databases from env", e);
-      return [];
-    }
-  }, []);
+  const databases = usePublicConfigStore((state) => state.sapDatabases);
+  const loadPublicConfig = usePublicConfigStore((state) => state.load);
+
+  useEffect(() => {
+    loadPublicConfig();
+  }, [loadPublicConfig]);
 
   useEffect(() => {
     if (subIndex === words[index].length + 1 && !reverse) {

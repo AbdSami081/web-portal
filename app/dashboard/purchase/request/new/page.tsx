@@ -21,6 +21,7 @@ const today = new Date().toISOString().split("T")[0];
 
 export default function PurchaseRequestPage() {
   const loadFromDocument = usePurchaseDocument((state) => state.loadFromDocument);
+  const fieldAccess = usePurchaseDocument((state) => state.fieldAccess);
   const { user } = useAuth();
 
   const [defaultValues] = useState<PurchaseRequestFormData>({
@@ -161,7 +162,7 @@ export default function PurchaseRequestPage() {
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={PurchaseDocumentType.PurchaseRequests} />
         <PurchaseItems />
-        <UDFLayout docType={DocumentType.PurchaseRequests} />
+        <UDFLayout docType={DocumentType.PurchaseRequests} allowedFields={fieldAccess} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

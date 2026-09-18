@@ -29,7 +29,8 @@ export default function PRDDocumentFooter() {
   const [isLoadingLines, setIsLoadingLines] = useState(false);
   const [modalTitle, setModalTitle] = useState("Select Production Order");
 
-  const { addLine, loadFromDocument } = useIFPRDDocument();
+  const { addLine, loadFromDocument, fieldAccess } = useIFPRDDocument();
+  const hasFieldAccess = (f: string) => fieldAccess.includes(f);
 
   const handleFetchOrders = async () => {
     setModalTitle("Select Production Order");
@@ -172,39 +173,43 @@ export default function PRDDocumentFooter() {
     <div className="space-y-6 mt-8 border-t pt-6 bg-zinc-50/50 p-6 rounded-xl border border-zinc-100 shadow-sm transition-all hover:shadow-md">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1">
-              <AppLabel htmlFor="comments">Remarks</AppLabel>
-              <FmsFieldButton field="Comments" />
+          {hasFieldAccess("Comments") && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-1">
+                <AppLabel htmlFor="comments">Remarks</AppLabel>
+                <FmsFieldButton field="Comments" />
+              </div>
+              <Textarea
+                id="comments"
+                {...register("Comments")}
+                onKeyDown={fmsKeyDown("Comments", triggerFMS)}
+                rows={4}
+                placeholder="Enter additional information or notes here..."
+                className="resize-none border-zinc-200 focus:border-zinc-400 focus:ring-zinc-100 transition-all text-sm leading-relaxed"
+              />
             </div>
-            <Textarea
-              id="comments"
-              {...register("Comments")}
-              onKeyDown={fmsKeyDown("Comments", triggerFMS)}
-              rows={4}
-              placeholder="Enter additional information or notes here..."
-              className="resize-none border-zinc-200 focus:border-zinc-400 focus:ring-zinc-100 transition-all text-sm leading-relaxed"
-            />
-          </div>
+          )}
         </div>
 
         <div className="space-y-4">
-          <div className="flex flex-col gap-2">
-            <AppLabel htmlFor="pickRmrk">
-              {[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? "Journal Remarks" : "Pick and Pack Remarks"}
-            </AppLabel>
-            <Textarea
-              id="pickRmrk"
-              {...register([DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? "JournalMemo" : "PickRmrk")}
-              rows={4}
-              placeholder={
-                [DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type)
-                  ? "Enter journal remarks..."
-                  : "Enter pick and pack specific instructions..."
-              }
-              className="resize-none border-zinc-200 focus:border-zinc-400 focus:ring-zinc-100 transition-all text-sm leading-relaxed"
-            />
-          </div>
+          {hasFieldAccess([DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? "JournalMemo" : "PickRmrk") && (
+            <div className="flex flex-col gap-2">
+              <AppLabel htmlFor="pickRmrk">
+                {[DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? "Journal Remarks" : "Pick and Pack Remarks"}
+              </AppLabel>
+              <Textarea
+                id="pickRmrk"
+                {...register([DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type) ? "JournalMemo" : "PickRmrk")}
+                rows={4}
+                placeholder={
+                  [DocumentType.IssueForProduction, DocumentType.ReceiptFromProduction].includes(config.type)
+                    ? "Enter journal remarks..."
+                    : "Enter pick and pack specific instructions..."
+                }
+                className="resize-none border-zinc-200 focus:border-zinc-400 focus:ring-zinc-100 transition-all text-sm leading-relaxed"
+              />
+            </div>
+          )}
           {config.footerActions?.showProductionOrderButton && (
             <div className="flex justify-end mt-2 gap-2">
               <Button
