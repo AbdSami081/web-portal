@@ -21,6 +21,7 @@ import {
   SidebarMenuSub,
 } from "./ui/sidebar";
 import { cn } from "@/lib/utils";
+import { clearDocNavParams } from "@/lib/docNavParams";
 
 type NavItem = {
   id?: string;
@@ -91,7 +92,7 @@ function RecursiveMenuItem({
   if (!hasChildren) {
     return (
       <li>
-        <Link href={item.url} className={buttonClasses}>
+        <Link href={item.url} className={buttonClasses} onClick={() => clearDocNavParams()}>
           <div className="size-4 flex items-center justify-center shrink-0 mt-0.5">
             <div className={cn(
                 "size-1.5 rounded-full transition-all", 
@@ -280,7 +281,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                         isDirectlyActive ? level1ActiveClasses : level1InactiveClasses
                     )}
                   >
-                    <Link href={item.url} className="flex items-start w-full gap-3">
+                    <Link href={item.url} className="flex items-start w-full gap-3" onClick={() => clearDocNavParams()}>
                       {item.icon && <item.icon size={19} className={cn("shrink-0", isDirectlyActive ? "mt-0.5" : "text-slate-400 mt-0.5")} />}
                       <span className="font-semibold text-[14px] text-left whitespace-normal break-words flex-1 leading-tight group-data-[collapsible=icon]:hidden">
                         {item.title}

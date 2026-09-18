@@ -108,6 +108,7 @@ export function PRDDocumentHeader() {
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
   const autoCreatedRef = useState(() => ({ current: false }))[0];
+  const initialDocumentLoadRef = useRef<string | null>(null);
 
   useEffect(() => {
     const isDraft = (docNav.draft ?? searchParams.get("draft")) === "1";
@@ -117,8 +118,17 @@ export function PRDDocumentHeader() {
     if (isDraft && draftEntryParam) {
       const draftId = parseInt(draftEntryParam);
       if (!isNaN(draftId)) {
+        const requestKey = `draft:${draftEntryParam}`;
+        if (initialDocumentLoadRef.current === requestKey) return;
+        initialDocumentLoadRef.current = requestKey;
         loadDraftDoc(draftId);
       }
+    } else if (docEntryParam) {
+      const requestKey = `document:${docEntryParam}`;
+      if (initialDocumentLoadRef.current === requestKey) return;
+      initialDocumentLoadRef.current = requestKey;
+      setSearchValue(docEntryParam);
+      fetchDocument(docEntryParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

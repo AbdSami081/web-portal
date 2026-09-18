@@ -178,6 +178,14 @@ export function InvDocumentLayout<T extends FieldValues>({
     resetStore();
     clearDocNavParams(router, pathname);
   };
+
+  useEffect(() => {
+    if (!skipAutoReset && !docNav.docEntry && !docNav.draftEntry) {
+      reset(defaultValues as any);
+      resetStore();
+    }
+  }, [pathname, docNav.docEntry, docNav.draftEntry, skipAutoReset]);
+
   const store = useInventoryDocument(
     useShallow(state => ({
       customer: state.customer,

@@ -370,6 +370,13 @@ useEffect(() => {
     lineReset();
   };
 
+  useEffect(() => {
+    if (!skipAutoReset && !docNav.docEntry && !docNav.draftEntry) {
+      ResetForm();
+      setBadgeState(null);
+    }
+  }, [pathname, docNav.docEntry, docNav.draftEntry, skipAutoReset]);
+
   const finishAndReset = () => {
     ResetForm();
     clearDocNavParams(router, pathname);

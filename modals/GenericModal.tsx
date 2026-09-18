@@ -23,6 +23,7 @@ interface GenericModalProps<T> {
   open: boolean;
   onClose: () => void;
   onSelect: (value: any) => void;
+  onRowClick?: (item: T) => void;
   data: T[];
   columns: Column[];
   title: string;
@@ -41,6 +42,7 @@ export function GenericModal<T>({
   open,
   onClose,
   onSelect,
+  onRowClick,
   data,
   columns,
   title,
@@ -139,7 +141,7 @@ export function GenericModal<T>({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-full h-[85vh] flex flex-col p-6 overflow-hidden">
+      <DialogContent className="!max-w-[50vw] w-[50vw] h-[85vh] flex flex-col p-6 overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -232,7 +234,11 @@ export function GenericModal<T>({
                             ? "bg-zinc-100 hover:bg-zinc-100"
                             : "hover:bg-zinc-50"
                         }`}
-                        onClick={() => (multiple ? toggleSelectItem(item) : setSelected(item))}
+                        onClick={() => {
+                          if (onRowClick) onRowClick(item);
+                          else if (multiple) toggleSelectItem(item);
+                          else setSelected(item);
+                        }}
                         onDoubleClick={!multiple ? handleChoose : undefined}
                       >
                         {multiple && (
