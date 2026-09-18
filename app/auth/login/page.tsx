@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePublicConfigStore } from "@/stores/usePublicConfigStore";
+import { VersionBadge } from "@/components/version-badge";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -243,6 +244,8 @@ export default function LoginPage() {
           </form>
 
         </div>
+
+        <VersionBadge className="absolute bottom-3 right-4 text-[11px] font-medium tracking-wide text-slate-400" />
       </div>
     </div>
   );
