@@ -114,6 +114,7 @@ const hasFieldAccess = (fieldName: string) =>
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
   const autoCreatedRef = React.useRef(false);
+  const initialDocumentLoadRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     const draftParam = (docNav.draft ?? searchParams.get("draft")) === "1";
@@ -122,6 +123,10 @@ const hasFieldAccess = (fieldName: string) =>
     const draftEntryParam = docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
 
     if (!docEntryParam && !(draftParam && draftEntryParam)) return;
+
+    const requestKey = `${draftParam ? "draft" : "document"}:${docEntryParam}:${draftEntryParam}`;
+    if (initialDocumentLoadRef.current === requestKey) return;
+    initialDocumentLoadRef.current = requestKey;
 
     setSearchValue(docEntryParam);
     fetchDocument(docEntryParam, { isDraft: draftParam }, Number(draftEntryParam));
@@ -374,6 +379,8 @@ const hasFieldAccess = (fieldName: string) =>
       if (resolvedAsDraft) {
         useSalesDocument.getState().setLoadedDraftData(documentData);
       }
+
+      toast.success(`Document #${documentData.DocNum ?? docNum} loaded successfully.`);
     }
   } catch (error: any) {
     if (error.response?.status === 404) {

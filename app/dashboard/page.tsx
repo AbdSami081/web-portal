@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -25,6 +26,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import apiClient from "@/lib/apiClient";
+import { GenericModal } from "@/modals/GenericModal";
+import { buildDocumentUrl, getMenuInfoByObjectCode, getMenuUrlsByObjectCode } from "@/lib/menu-lookup";
+import { stageDocNavParams } from "@/lib/docNavParams";
 import {
   Tabs,
   TabsContent,
@@ -109,13 +114,141 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 
-const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, description }: any) => {
+type DashboardSummaryItem = {
+  title: string;
+  amount: string | number;
+  category: string;
+  cardKey: string;
+  docType?: string | number;
+  trend?: string;
+  trendValue?: string | number;
+  description?: string;
+};
+
+type DashboardSummaryGroup = {
+  category: string;
+  cards: DashboardSummaryItem[];
+};
+
+const iconForCard = (title: string) => {
+  const normalizedTitle = title.toLowerCase();
+
+  if (normalizedTitle.includes("purchase") || normalizedTitle.includes("quotation") || normalizedTitle.includes("invoice")) {
+    return ShoppingCart;
+  }
+  if (normalizedTitle.includes("inventory") || normalizedTitle.includes("item") || normalizedTitle.includes("receipt") || normalizedTitle.includes("issue")) {
+    return Package;
+  }
+  if (normalizedTitle.includes("payment") || normalizedTitle.includes("bank")) {
+    return CreditCard;
+  }
+  return Activity;
+};
+
+const getSummaryItems = (data: unknown): DashboardSummaryItem[] => {
+  const response = data as any;
+  const envelope = response?.value ?? response?.data ?? response;
+  const list = Array.isArray(envelope)
+    ? envelope
+    : Array.isArray(envelope?.items)
+      ? envelope.items
+      : Array.isArray(envelope?.cards)
+        ? envelope.cards
+        : envelope && typeof envelope === "object"
+          ? Object.entries(envelope)
+            .filter(([, value]) => Array.isArray(value))
+            .flatMap(([category, cards]) => (cards as any[]).map((card) => ({ ...card, category })))
+          : [];
+
+  if (!Array.isArray(list)) return [];
+
+  return list.flatMap((item: any) => {
+    const category = String(item.category ?? item.Category ?? item.group ?? item.Group ?? item.groupName ?? item.GroupName ?? "Other");
+    const cards = Array.isArray(item.cards ?? item.Cards ?? item.items ?? item.Items)
+      ? item.cards ?? item.Cards ?? item.items ?? item.Items
+      : [item];
+
+    return cards.map((card: any) => ({
+      title: String(card.title ?? card.Title ?? card.name ?? card.Name ?? card.label ?? card.Label ?? card.cardTitle ?? card.CardTitle ?? card.cardName ?? card.CardName ?? ""),
+      amount: card.amount ?? card.Amount ?? card.count ?? card.Count ?? card.value ?? card.Value ?? card.cardValue ?? card.CardValue ?? 0,
+      category: String(card.category ?? card.Category ?? category),
+      cardKey: String(card.cardKey ?? card.CardKey ?? card.cardkey ?? card.Cardkey ?? card.card_key ?? card.Card_Key ?? card.dashboardCardKey ?? card.DashboardCardKey ?? card.key ?? card.Key ?? ""),
+      docType: card.docType ?? card.DocType ?? card.documentType ?? card.DocumentType ?? card.objectType ?? card.ObjectType ?? card.objectCode ?? card.ObjectCode,
+      trend: card.trend ?? card.Trend,
+      trendValue: card.trendValue ?? card.TrendValue,
+      description: card.description ?? card.Description,
+    })).filter((card: DashboardSummaryItem) => card.title);
+  });
+};
+
+const getDocumentRows = (data: unknown): Record<string, unknown>[] => {
+  const raw = data as any;
+  const rows = Array.isArray(raw) ? raw : raw?.value ?? raw?.data ?? raw?.items ?? raw?.documents ?? [];
+  return Array.isArray(rows) ? rows : [];
+};
+
+const getDocumentTotal = (data: unknown): number | undefined => {
+  const raw = data as any;
+  const total = raw?.total ?? raw?.totalCount ?? raw?.count ?? raw?.totalRecords;
+  const numericTotal = Number(total);
+  return Number.isFinite(numericTotal) ? numericTotal : undefined;
+};
+
+const groupSummaryItems = (items: DashboardSummaryItem[]): DashboardSummaryGroup[] => {
+  return items.reduce<DashboardSummaryGroup[]>((groups, item) => {
+    const group = groups.find((entry) => entry.category === item.category);
+    if (group) {
+      group.cards.push(item);
+    } else {
+      groups.push({ category: item.category, cards: [item] });
+    }
+    return groups;
+  }, []);
+};
+
+const getDocumentRoute = (docType: string | number, category: string, title: string) => {
+  const routes = getMenuUrlsByObjectCode(docType);
+  if (routes.length === 0) return getMenuInfoByObjectCode(docType)?.url;
+
+  const context = `${category} ${title}`.toLowerCase();
+  const preferredModule = context.includes("issue for production")
+    ? "production"
+    : context.includes("good issue")
+      ? "inventory"
+      : context.includes("inventory")
+    ? "inventory"
+    : context.includes("production")
+      ? "production"
+      : context.includes("purchase") || context.includes("purchasing")
+        ? "purchase"
+        : context.includes("sales")
+          ? "sales"
+          : "";
+
+  if (preferredModule) {
+    const moduleRoute = routes.find((route) => route.toLowerCase().includes(`/dashboard/${preferredModule}/`));
+    if (moduleRoute) return moduleRoute;
+  }
+
+  return routes[0];
+};
+
+const getFallbackProductionDocType = (category: string, title: string) => {
+  const context = `${category} ${title}`.toLowerCase();
+  if (!context.includes("production")) return undefined;
+  if (context.includes("receipt from production")) return 59;
+  if (context.includes("issue for production")) return 60;
+  if (context.includes("production order")) return 202;
+  return undefined;
+};
+
+const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, description, onClick }: any) => {
   const isPositive = trend === "up";
   const hasTrend = Boolean(trendValue);
   const hasDescription = Boolean(description);
 
   return (
-    <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-zinc-200 hover:border-zinc-400 transition-all duration-300">
+    <Card onClick={onClick} className={`overflow-hidden bg-white/50 backdrop-blur-sm border-zinc-200 hover:border-zinc-400 transition-all duration-300 ${onClick ? "cursor-pointer" : ""}`}>
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <div className="p-2 bg-zinc-100 rounded-lg border border-zinc-200">
@@ -143,24 +276,186 @@ const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, descripti
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [summaryGroups, setSummaryGroups] = useState<DashboardSummaryGroup[]>([]);
+  const [documentRows, setDocumentRows] = useState<Record<string, unknown>[]>([]);
+  const [documentColumns, setDocumentColumns] = useState<{ key: string; label: string }[]>([]);
+  const [selectedCard, setSelectedCard] = useState<DashboardSummaryItem | null>(null);
+  const [documentsModalOpen, setDocumentsModalOpen] = useState(false);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [hasMoreDocuments, setHasMoreDocuments] = useState(false);
+  const DOCUMENTS_PAGE_SIZE = 20;
+
+  const setDocumentPagination = (raw: any, loadedCount: number, pageCount: number) => {
+    const total = getDocumentTotal(raw);
+    setHasMoreDocuments(
+      Boolean(raw?.hasMore) ||
+      pageCount === DOCUMENTS_PAGE_SIZE ||
+      (total !== undefined && loadedCount < total)
+    );
+  };
+
+  const openCardDocuments = async (card: DashboardSummaryItem) => {
+    if (!card.cardKey) return;
+
+    setIsLoadingDocuments(true);
+    try {
+      const response = await apiClient.get(`/api/Dashboard/${encodeURIComponent(card.cardKey)}/Documents`, {
+        params: { skip: 0, top: DOCUMENTS_PAGE_SIZE },
+      });
+      const raw = response.data as any;
+      const normalizedRows = getDocumentRows(raw);
+      const firstRow = normalizedRows[0] ?? {};
+      const hiddenKeys = new Set(["DocEntry", "docEntry", "DocType", "docType", "ObjectType", "objectType", "CardKey", "cardKey"]);
+      const columns = Object.keys(firstRow)
+        .filter((key) => !hiddenKeys.has(key) && typeof firstRow[key] !== "object")
+        .map((key) => ({ key, label: key.replace(/([A-Z])/g, " $1").trim() }));
+
+      setDocumentRows(normalizedRows);
+      setDocumentColumns(columns);
+      setDocumentPagination(raw, normalizedRows.length, normalizedRows.length);
+      setSelectedCard(card);
+      setDocumentsModalOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch dashboard documents:", error);
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
+
+  const loadMoreDocuments = async () => {
+    if (!selectedCard?.cardKey || isLoadingDocuments || !hasMoreDocuments) return;
+
+    setIsLoadingDocuments(true);
+    try {
+      const response = await apiClient.get(`/api/Dashboard/${encodeURIComponent(selectedCard.cardKey)}/Documents`, {
+        params: { skip: documentRows.length, top: DOCUMENTS_PAGE_SIZE },
+      });
+      const raw = response.data as any;
+      const normalizedRows = getDocumentRows(raw);
+      const newRows = normalizedRows.filter((row) => {
+        const rowKey = row.DocEntry ?? row.docEntry ?? row.DocNum ?? row.docNum ?? row.AbsoluteEntry ?? row.absoluteEntry;
+        return !documentRows.some((existingRow) => {
+          const existingKey = existingRow.DocEntry ?? existingRow.docEntry ?? existingRow.DocNum ?? existingRow.docNum ?? existingRow.AbsoluteEntry ?? existingRow.absoluteEntry;
+          return rowKey !== undefined && rowKey === existingKey;
+        });
+      });
+
+      setDocumentRows((previousRows) => [...previousRows, ...newRows]);
+      setDocumentPagination(raw, documentRows.length + newRows.length, normalizedRows.length);
+    } catch (error) {
+      console.error("Failed to load more dashboard documents:", error);
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
+
+  const openDocument = (row: Record<string, unknown>) => {
+    const docEntry = row.DocNum ?? row.docNum ?? row.DocumentNumber ?? row.documentNumber ?? row.DocEntry ?? row.docEntry ?? row.AbsoluteEntry ?? row.absoluteEntry ?? row.DocumentEntry ?? row.documentEntry;
+    const docType = row.DocType ?? row.docType ?? row.DocumentType ?? row.documentType ?? row.ObjectType ?? row.objectType ?? row.ObjectCode ?? row.objectCode ?? selectedCard?.docType ?? getFallbackProductionDocType(selectedCard?.category ?? "", selectedCard?.title ?? "");
+    if (!docEntry || !docType) return;
+
+    const documentRoute = getDocumentRoute(
+      String(docType),
+      selectedCard?.category ?? "",
+      selectedCard?.title ?? ""
+    );
+    if (!documentRoute) return;
+
+    const cleanPath = buildDocumentUrl(documentRoute, {
+      objectType: String(docType),
+      objectEntry: String(docEntry),
+      isDraft: false,
+    }).split("?")[0];
+
+    stageDocNavParams(cleanPath, {
+      docEntry: String(docEntry),
+      docType: String(docType),
+    });
+    setDocumentsModalOpen(false);
+    router.push(cleanPath);
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchDashboardSummary = async () => {
+      try {
+        const response = await apiClient.get("api/Dashboard/Summary");
+        if (isMounted) {
+          setSummaryGroups(groupSummaryItems(getSummaryItems(response.data)));
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard summary:", error);
+      }
+    };
+
+    fetchDashboardSummary();
+    const refreshInterval = window.setInterval(fetchDashboardSummary, 30000);
+    window.addEventListener("focus", fetchDashboardSummary);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", fetchDashboardSummary);
+    };
+  }, []);
+
   return (
     <div className="flex w-full flex-col gap-6 p-6 lg:p-8 bg-zinc-50/50">
+      {summaryGroups.map((group) => (
+        <section key={group.category} className="space-y-3">
+          <h2 className="text-lg font-semibold text-zinc-900">{group.category}</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+            {group.cards.map((card) => (
+              <DashboardCard
+                key={`${group.category}-${card.title}`}
+                title={card.title}
+                amount={card.amount}
+                trend={card.trend}
+                trendValue={card.trendValue}
+                icon={iconForCard(card.title)}
+                description={card.description}
+                onClick={() => openCardDocuments(card)}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+      <GenericModal
+        open={documentsModalOpen}
+        onClose={() => setDocumentsModalOpen(false)}
+        onSelect={() => undefined}
+        onRowClick={openDocument}
+        data={documentRows}
+        columns={documentColumns}
+        title={`${selectedCard?.title ?? "Documents"} Documents`}
+        isLoading={isLoadingDocuments}
+        onLoadMore={loadMoreDocuments}
+        hasMore={hasMoreDocuments}
+      />
+    </div>
+  );
 
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+  /*
+  // return (
+  //   <div className="flex w-full flex-col gap-6 p-6 lg:p-8 bg-zinc-50/50">
+
+  //     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
       
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Business Overview</h1>
-          <p className="text-muted-foreground">Monitor your business performance and key metrics in real-time.</p>
-        </div>
+  //       <div>
+  //         <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Business Overview</h1>
+  //         <p className="text-muted-foreground">Monitor your business performance and key metrics in real-time.</p>
+  //       </div>
 
 
         {/* <div className="flex items-center gap-2">
           <Button variant="outline" className="h-9 shadow-sm border-zinc-200 hover:bg-zinc-100">Download Report</Button>
           <Button className="h-9 shadow-sm bg-zinc-900 text-white hover:bg-zinc-800">Create New</Button>
-        </div> */}
-      </div>
+        </div> */ /*}
+      // </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardCard
           title="My Open Inv. Transfer"
           amount="10"
@@ -193,7 +488,7 @@ export default function DashboardPage() {
           icon={Package}
           description=""
         />
-      </div>
+      </div> */ /*}
 
       {/* <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="bg-zinc-200/50 p-1 border border-zinc-200">
@@ -463,7 +758,7 @@ export default function DashboardPage() {
             </div>
           </Card>
         </TabsContent>
-      </Tabs> */}
-    </div>
-  );
+      </Tabs> */
+    // </div>
+  ;
 }
