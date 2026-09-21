@@ -34,6 +34,8 @@ export default function LoginPage() {
   const [reverse, setReverse] = useState(false);
 
   const databases = usePublicConfigStore((state) => state.sapDatabases);
+  const isConfigLoading = usePublicConfigStore((state) => state.loading);
+  const isConfigLoaded = usePublicConfigStore((state) => state.loaded);
   const loadPublicConfig = usePublicConfigStore((state) => state.load);
 
   useEffect(() => {
@@ -148,16 +150,24 @@ export default function LoginPage() {
                 <FieldLabel htmlFor="database" className="text-slate-800 font-bold text-[10px] tracking-widest uppercase opacity-70">
                   Database
                 </FieldLabel>
-                <Select value={selectedDb} onValueChange={setSelectedDb}>
+                <Select value={selectedDb} onValueChange={setSelectedDb} disabled={isConfigLoading}>
                   <SelectTrigger
                     id="database"
-                    className="w-full h-12 bg-white border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all text-base font-medium shadow-sm"
+                    disabled={isConfigLoading}
+                    className="w-full h-12 bg-white border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all text-base font-medium shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-
-                    <SelectValue placeholder="Select Database" />
+                    <div className="flex items-center gap-2">
+                      {isConfigLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400 shrink-0" />}
+                      <SelectValue placeholder={isConfigLoading ? "Loading databases..." : "Select Database"} />
+                    </div>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl overflow-hidden border-slate-200">
-                    {databases.length > 0 ? (
+                    {isConfigLoading ? (
+                      <div className="p-4 flex items-center justify-center gap-2 text-slate-500 text-sm">
+                        <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                        <span>Loading databases...</span>
+                      </div>
+                    ) : databases.length > 0 ? (
                       databases.map((db: any) => (
                         <SelectItem key={db.CompanyDB} value={db.CompanyDB} className="py-2 focus:bg-slate-50 cursor-pointer">
                           <div className="flex items-center gap-3">
@@ -169,7 +179,9 @@ export default function LoginPage() {
                         </SelectItem>
                       ))
                     ) : (
-                      <div className="p-4 text-center text-slate-500 italic text-sm">No databases configured</div>
+                      <div className="p-4 text-center text-slate-500 italic text-sm">
+                        {isConfigLoaded ? "No databases configured" : "Loading databases..."}
+                      </div>
                     )}
                   </SelectContent>
                 </Select>

@@ -69,16 +69,16 @@ const normalizeField = (field: any): Field => ({
   FieldId: Number(field.FieldId ?? field.Code ?? 0),
 
   FieldName:
-    field.FieldName ??
     field.U_FieldName ??
+    field.FieldName ??
     field.Name ??
     "",
 
   FieldTitle:
     field.U_FieldTitle ??
     field.FieldTitle ??
-    field.FieldName ??
     field.U_FieldName ??
+    field.FieldName ??
     "",
 
   ObjectId:
@@ -202,27 +202,30 @@ export default function FieldAccessManagement() {
 
       // Only enabled/allowed fields
       const assignedKeys = data
-        .filter(
-          (item: any) =>
-            String(
-              item.Enabled ??
-              item.U_IsAllowed ??
-              "N"
-            ).toUpperCase() === "Y"
-        )
-        .map(
-          (item: any) =>
+        .filter((item: any) => {
+          const allowed =
+            item.Enabled ??
+            item.enabled ??
+            item.U_IsAllowed ??
+            item.IsAllowed ??
+            "N";
+          return (
+            String(allowed).toUpperCase() === "Y" ||
+            allowed === true
+          );
+        })
+        .map((item: any) => {
+          return (
             item.U_FieldName ??
             item.FieldName ??
+            item.U_FieldKey ??
+            item.FieldKey ??
             ""
-        )
-        .filter(
-          (key: string) => key.trim() !== ""
-        );
+          );
+        })
+        .filter((key: string) => key.trim() !== "");
 
-      setSelectedFields(
-        Array.from(new Set(assignedKeys))
-      );
+      setSelectedFields(Array.from(new Set(assignedKeys)));
     } catch (error) {
       console.error("Failed to load fields:", error);
       setAllFields([]);
@@ -236,27 +239,8 @@ export default function FieldAccessManagement() {
   loadFields();
 }, [selectedUser, selectedDocument]);
 
-
   /*
-   * Load assignments whenever
-   * user + document changes
-   */
-  useEffect(() => {
-    if (!selectedUser || !selectedDocument) {
-      setSelectedFields([]);
-      setHasChanges(false);
-      return;
-    }
-
-    loadUserFields(
-      selectedUser,
-      selectedDocument
-    );
-  }, [selectedUser, selectedDocument]);
-
-
-  /*
-   * Load user's existing fields
+   * Load user's existing fields (used for Reset)
    */
   const loadUserFields = async (
     userCode: string,
@@ -266,29 +250,17 @@ export default function FieldAccessManagement() {
       setIsLoadingAssignments(true);
       setHasChanges(false);
 
-      const response =
-        await getAllFields(
-          userCode,
-          docType
-        );
+      const response = await getAllFields(userCode, docType);
+      const data = Array.isArray(response) ? response : [];
 
-      const data = Array.isArray(response)
-        ? response
-        : [];
-
-      /*
-       * Only Y permissions are enabled
-       *
-       * U_FieldKey = actual field name
-       */
       const assignedKeys = data
         .filter((item: any) => {
           const allowed =
+            item.Enabled ??
+            item.enabled ??
             item.U_IsAllowed ??
             item.IsAllowed ??
-            item.Enabled ??
-            item.enabled;
-
+            "N";
           return (
             String(allowed).toUpperCase() === "Y" ||
             allowed === true
@@ -296,25 +268,18 @@ export default function FieldAccessManagement() {
         })
         .map((item: any) => {
           return (
+            item.U_FieldName ??
+            item.FieldName ??
             item.U_FieldKey ??
             item.FieldKey ??
-            item.FieldName ??
             ""
           );
         })
-        .filter(
-          (key: string) => key.trim() !== ""
-        );
+        .filter((key: string) => key.trim() !== "");
 
-      setSelectedFields(
-        Array.from(new Set(assignedKeys))
-      );
+      setSelectedFields(Array.from(new Set(assignedKeys)));
     } catch (error) {
-      console.error(
-        "Failed to load user field assignments:",
-        error
-      );
-
+      console.error("Failed to load user field assignments:", error);
       setSelectedFields([]);
     } finally {
       setIsLoadingAssignments(false);

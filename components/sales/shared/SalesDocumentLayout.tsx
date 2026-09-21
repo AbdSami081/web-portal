@@ -387,6 +387,7 @@ useEffect(() => {
   const handleNewDocumentClick = () => {
     ResetForm();
     setBadgeState(null);
+    clearDocNavParams(router, pathname);
   };
 
   const isApprovalDraftContext =

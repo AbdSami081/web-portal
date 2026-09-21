@@ -6,14 +6,42 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, HttpTransportT
 import { useAuth } from "./authContext";
 import { toast } from "sonner";
 import { SAPMessage, getMyAlerts, getMyAlertsCount } from "@/api+/sap/notification";
+import apiClient from "@/lib/apiClient";
+
+export interface ApprovalRemarksEntry {
+  Stage?: string | null;
+  ApproverUserID?: string | null;
+  Status?: string | null;
+  Remarks?: string | null;
+  DecisionDate?: string | null;
+}
+
+export interface PendingApproval {
+  ApprovalRequestCode: number;
+  ObjectType: string;
+  ObjectEntry: number;
+  DraftEntry: number;
+  Status?: string;
+  ApprovalStatus?: string;
+  Remarks: string;
+  RemarksHistory?: ApprovalRemarksEntry[];
+  ApprovalCreationDate: string;
+  OriginatorID?: number;
+  CurrentStage?: number;
+}
 
 interface NotificationContextType {
   messages: SAPMessage[];
   unreadCount: number;
   isLoading: boolean;
+  pendingApprovals: PendingApproval[];
+  isLoadingApprovals: boolean;
   /** Re-fetches the user's alerts. Resolves true on success, false on failure (never throws). */
   refreshNotifications: () => Promise<boolean>;
+  /** Re-fetches the user's pending approvals. Resolves true on success, false on failure. */
+  refreshPendingApprovals: (silent?: boolean) => Promise<boolean>;
   clearUnread: () => void;
+  optimisticRemoveApproval: (requestCode: number) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -23,6 +51,8 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [messages, setMessages] = useState<SAPMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const [isLoadingApprovals, setIsLoadingApprovals] = useState(false);
   const router = useRouter();
   const connectionRef = useRef<HubConnection | null>(null);
 
@@ -42,11 +72,36 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshPendingApprovals = async (silent = false): Promise<boolean> => {
+    if (!accessToken) return false;
+    if (!silent) setIsLoadingApprovals(true);
+    try {
+      const res = await apiClient.get("api/Notifications/GetPendingApprovals");
+      const data = res.data as any;
+      let approvals: PendingApproval[] = [];
+      if (data?.value && Array.isArray(data.value)) approvals = data.value;
+      else if (Array.isArray(data)) approvals = data;
+      else if (data?.ApprovalRequests && Array.isArray(data.ApprovalRequests)) approvals = data.ApprovalRequests;
+      setPendingApprovals(approvals);
+      return true;
+    } catch (error) {
+      console.error("Failed to fetch pending approvals", error);
+      return false;
+    } finally {
+      if (!silent) setIsLoadingApprovals(false);
+    }
+  };
+
+  const optimisticRemoveApproval = (requestCode: number) => {
+    setPendingApprovals((prev) => prev.filter((a) => a.ApprovalRequestCode !== requestCode));
+  };
+
   useEffect(() => {
     if (accessToken) {
-      void refreshNotifications();
+      void Promise.all([refreshNotifications(), refreshPendingApprovals()]);
     } else {
       setMessages([]);
+      setPendingApprovals([]);
       setUnreadCount(0);
     }
   }, [accessToken]);
@@ -113,7 +168,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
     connection.onreconnected(async (connectionId) => {
       console.log("[SignalR] Connection re-established. Connection ID:", connectionId);
-      await refreshNotifications();
+      await Promise.all([refreshNotifications(), refreshPendingApprovals(true)]);
     });
 
     connection.onclose((error) => {
@@ -129,6 +184,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       console.log("Real-time notification received: ", msg);
       setMessages((prev) => [msg, ...prev]);
       setUnreadCount((c) => c + 1);
+
+      // Sync pending approvals in background when new alerts arrive
+      void refreshPendingApprovals(true);
 
       toast.info(`New SAP Alert: ${msg.Subject}`, {
         description: msg.Text || "",
@@ -160,8 +218,12 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         messages,
         unreadCount,
         isLoading,
+        pendingApprovals,
+        isLoadingApprovals,
         refreshNotifications,
+        refreshPendingApprovals,
         clearUnread,
+        optimisticRemoveApproval,
       }}
     >
       {children}

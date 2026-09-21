@@ -75,7 +75,12 @@ export const resolveDocNavParams = (
   }
 
   const pending = readStored(PENDING_KEY);
-  const active = readStored(ACTIVE_KEY);
+  let active = readStored(ACTIVE_KEY);
+
+  if (active && active.pathname !== pathname) {
+    writeStored(ACTIVE_KEY, null);
+    active = null;
+  }
 
   if (pending && pending.pathname === pathname) {
     writeStored(ACTIVE_KEY, pending);

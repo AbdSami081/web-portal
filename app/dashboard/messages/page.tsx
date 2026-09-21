@@ -7,6 +7,7 @@ import { SAPMessage, getMyAlerts, PAGE_SIZE } from "@/api+/sap/notification";
 import apiClient from "@/lib/apiClient";
 import { rejectApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -29,51 +30,26 @@ import { buildDocumentUrl, getMenuInfoByObjectCode, normalizeObjectCode } from "
 import { stageDocNavParams } from "@/lib/docNavParams";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
-interface ApprovalRemarksEntry {
-  Stage?: string | null;
-  ApproverUserID?: string | null;
-  Status?: string | null;
-  Remarks?: string | null;
-  DecisionDate?: string | null;
-}
+import { ApprovalRemarksEntry, PendingApproval } from "@/context/NotificationContext";
 
-interface PendingApproval {
-  ApprovalRequestCode: number;
-  ObjectType: string;
-  ObjectEntry: number;
-  DraftEntry: number;
-  Status?: string;
-  ApprovalStatus?: string;
-  Remarks: string;
-  RemarksHistory?: ApprovalRemarksEntry[];
-  ApprovalCreationDate: string;
-  OriginatorID?: number;
-  CurrentStage?: number;
-}
-
-const getPendingApprovals = async (): Promise<PendingApproval[]> => {
-  try {
-    const res = await apiClient.get("api/Notifications/GetPendingApprovals");
-    const data = res.data as any;
-    if (data?.value && Array.isArray(data.value)) return data.value;
-    if (Array.isArray(data)) return data;
-    if (data?.ApprovalRequests && Array.isArray(data.ApprovalRequests)) return data.ApprovalRequests;
-    return [];
-  } catch {
-    return [];
-  }
-};
 
 export default function MessagesOverviewPage() {
-  const { messages: contextMessages, isLoading, refreshNotifications, clearUnread } = useNotifications();
+  const {
+    messages: contextMessages,
+    isLoading,
+    refreshNotifications,
+    clearUnread,
+    pendingApprovals,
+    isLoadingApprovals,
+    refreshPendingApprovals,
+    optimisticRemoveApproval,
+  } = useNotifications();
   const [messages, setMessages] = useState<SAPMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<SAPMessage | null>(null);
   const [activeTab, setActiveTab] = useState<string>("inbox");
   const [hasMore, setHasMore] = useState(false);
   const [nextSkip, setNextSkip] = useState(PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
-  const [isLoadingApprovals, setIsLoadingApprovals] = useState(false);
   const [selectedApproval, setSelectedApproval] = useState<PendingApproval | null>(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [approveRemarks, setApproveRemarks] = useState("");
@@ -120,26 +96,12 @@ export default function MessagesOverviewPage() {
     }
   }, [sortedMessages, selectedMessage]);
 
-  const fetchPendingApprovals = async () => {
-    setIsLoadingApprovals(true);
-    try {
-      const data = await getPendingApprovals();
-      setPendingApprovals(data);
-    } catch {
-      toast.error("Failed to load pending approvals");
-    } finally {
-      setIsLoadingApprovals(false);
-    }
-  };
-
-  useEffect(() => {
-    void fetchPendingApprovals();
-  }, []);
-
   const handleRefresh = async () => {
-    const ok = await refreshNotifications();
-    await fetchPendingApprovals();
-    if (ok) {
+    const [okMsg, okAppr] = await Promise.all([
+      refreshNotifications(),
+      refreshPendingApprovals(true),
+    ]);
+    if (okMsg || okAppr) {
       toast.success("Messages refreshed successfully");
     } else {
       toast.error("Failed to refresh messages. Please try again.");
@@ -148,24 +110,28 @@ export default function MessagesOverviewPage() {
 
   const handleApprove = async () => {
     if (!selectedApproval) return;
+    const reqCode = selectedApproval.ApprovalRequestCode;
     setIsApproving(true);
     try {
       if (approveDecision === "reject") {
-        await rejectApprovalRequest(selectedApproval.ApprovalRequestCode, approveRemarks || "Rejected");
-        toast.success(`Approval request #${selectedApproval.ApprovalRequestCode} rejected.`);
+        optimisticRemoveApproval(reqCode);
+        await rejectApprovalRequest(reqCode, approveRemarks || "Rejected");
+        toast.success(`Approval request #${reqCode} rejected.`);
       } else {
+        optimisticRemoveApproval(reqCode);
         await apiClient.patch(
-          `api/Approval/ApprovalRequests/${selectedApproval.ApprovalRequestCode}/approve`,
+          `api/Approval/ApprovalRequests/${reqCode}/approve`,
           { Remarks: approveRemarks || "Approved" }
         );
-        toast.success(`Approval request #${selectedApproval.ApprovalRequestCode} approved successfully!`);
+        toast.success(`Approval request #${reqCode} approved successfully!`);
       }
       setApproveDialogOpen(false);
       setApproveRemarks("");
       setSelectedApproval(null);
-      await fetchPendingApprovals();
+      await refreshPendingApprovals(true);
     } catch (err: any) {
       toast.error(err?.response?.data?.Message || "Failed to update request");
+      await refreshPendingApprovals(true);
     } finally {
       setIsApproving(false);
     }
@@ -420,10 +386,10 @@ export default function MessagesOverviewPage() {
           variant="outline"
           size="sm"
           onClick={handleRefresh}
-          disabled={isLoading}
+          disabled={isLoading || isLoadingApprovals}
           className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 h-9 rounded-lg"
         >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-4 w-4 ${(isLoading || isLoadingApprovals) ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
@@ -460,7 +426,21 @@ export default function MessagesOverviewPage() {
             </div>
 
             <TabsContent value="inbox" className="flex-1 flex flex-col min-h-0 m-0 border-0 outline-none">
-              {messages.length === 0 ? (
+              {isLoading && messages.length === 0 ? (
+                <div className="p-4 space-y-3">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 py-2.5 border-b border-slate-100">
+                      <Skeleton className="h-4 w-4 rounded-full" />
+                      <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/3" />
+                      </div>
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-4 w-14" />
+                    </div>
+                  ))}
+                </div>
+              ) : messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-4">
                   <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
                     <Mail className="h-6 w-6 text-slate-300" />
@@ -569,9 +549,17 @@ export default function MessagesOverviewPage() {
             </TabsContent>
 
             <TabsContent value="approvals" className="flex-1 flex flex-col min-h-0 m-0 border-0 outline-none">
-              {isLoadingApprovals ? (
-                <div className="flex-1 flex items-center justify-center">
-                  <RefreshCw className="h-5 w-5 animate-spin text-slate-400" />
+              {isLoadingApprovals && pendingApprovals.length === 0 ? (
+                <div className="p-4 space-y-3">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 py-2.5 border-b border-slate-100">
+                      <Skeleton className="h-4 w-12 font-mono" />
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-4 w-16 ml-auto" />
+                    </div>
+                  ))}
                 </div>
               ) : pendingApprovals.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-4">

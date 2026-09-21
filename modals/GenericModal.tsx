@@ -33,6 +33,7 @@ interface GenericModalProps<T> {
   multiple?: boolean;
   onSearch?: (value: string) => void;
   searchValue?: string;
+  onRowClick?: (item: T) => void;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -51,6 +52,7 @@ export function GenericModal<T>({
   multiple = false,
   onSearch,
   searchValue,
+  onRowClick,
 }: GenericModalProps<T>) {
   const [localSearch, setLocalSearch] = useState("");
   const isServerSearch = typeof onSearch === "function";
@@ -123,6 +125,12 @@ export function GenericModal<T>({
       }
     } else {
       if (selected) {
+        if (onRowClick) {
+          onRowClick(selected);
+          onClose();
+          setSelected(null);
+          return;
+        }
         const value = getSelectValue ? getSelectValue(selected) : (selected as any)[columns[0].key];
         onSelect(value);
         onClose();
@@ -232,7 +240,15 @@ export function GenericModal<T>({
                             ? "bg-zinc-100 hover:bg-zinc-100"
                             : "hover:bg-zinc-50"
                         }`}
-                        onClick={() => (multiple ? toggleSelectItem(item) : setSelected(item))}
+                        onClick={() => {
+                          if (multiple) {
+                            toggleSelectItem(item);
+                          } else if (onRowClick) {
+                            onRowClick(item);
+                          } else {
+                            setSelected(item);
+                          }
+                        }}
                         onDoubleClick={!multiple ? handleChoose : undefined}
                       >
                         {multiple && (

@@ -72,7 +72,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     {(user?.companyName || user?.companyDB || "Company")}
                   </span>
                   <div className="h-[2px] w-8 bg-white/60 my-1" />
-                  <span className="text-[9px] text-slate-400 font-black tracking-widest uppercase opacity-80 leading-none truncate">
+                  <span className="text-[9px] text-slate-400 font-black tracking-widest opacity-80 leading-none truncate">
                     {user?.companyDB || "—"}
                   </span>
                 </div>

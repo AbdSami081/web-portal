@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -25,6 +26,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import apiClient from "@/lib/apiClient";
+import { toast } from "sonner";
+import { GenericModal } from "@/modals/GenericModal";
+import { buildDocumentUrl, getMenuInfoByObjectCode, getMenuUrlsByObjectCode } from "@/lib/menu-lookup";
+import { stageDocNavParams } from "@/lib/docNavParams";
 import {
   Tabs,
   TabsContent,
@@ -35,13 +42,26 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowLeftRight,
+  ArrowRightLeft,
   DollarSign,
   Users,
   CreditCard,
   Activity,
   TrendingUp,
   Package,
-  ShoppingCart
+  PackageCheck,
+  PackageMinus,
+  ShoppingCart,
+  RefreshCw,
+  Truck,
+  Receipt,
+  FileText,
+  ClipboardList,
+  RotateCcw,
+  Banknote,
+  Warehouse,
+  Factory,
 } from "lucide-react";
 import {
   Area,
@@ -109,23 +129,204 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 
-const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, description }: any) => {
+type DashboardSummaryItem = {
+  title: string;
+  amount: string | number;
+  category: string;
+  cardKey: string;
+  docType?: string | number;
+  trend?: string;
+  trendValue?: string | number;
+  description?: string;
+};
+
+type DashboardSummaryGroup = {
+  category: string;
+  cards: DashboardSummaryItem[];
+};
+
+const iconForCard = (title: string) => {
+  const t = title.toLowerCase();
+
+  // Sales
+  if (t.includes("sales order") || t.includes("open order")) return ShoppingCart;
+  if (t.includes("quotation") && !t.includes("purchase")) return FileText;
+  if (t.includes("delivery") || t.includes("deliveries")) return Truck;
+  if (t.includes("a/r invoice") || t.includes("ar invoice") || (t.includes("invoice") && !t.includes("a/p"))) return Receipt;
+  if (t.includes("return") && !t.includes("purchase")) return RotateCcw;
+  if (t.includes("credit memo") || t.includes("credit note")) return CreditCard;
+  if (t.includes("down payment")) return Banknote;
+
+  // Purchase
+  if (t.includes("purchase order") || t.includes("purchase quotation")) return ClipboardList;
+  if (t.includes("a/p invoice") || t.includes("ap invoice") || (t.includes("invoice") && t.includes("purchase"))) return Receipt;
+  if (t.includes("goods receipt") || t.includes("grpo") || t.includes("receipt")) return PackageCheck;
+
+  // Inventory
+  if (t.includes("transfer request")) return ArrowLeftRight;
+  if (t.includes("inventory transfer") || t.includes("transfer")) return ArrowRightLeft;
+  if (t.includes("goods issue") || t.includes("issue for production")) return PackageMinus;
+  if (t.includes("inventory") || t.includes("stock")) return Warehouse;
+
+  // Production
+  if (t.includes("production order")) return Factory;
+  if (t.includes("receipt from production")) return PackageCheck;
+
+  // Default
+  if (t.includes("purchase")) return ShoppingCart;
+  if (t.includes("invoice")) return Receipt;
+  if (t.includes("payment")) return CreditCard;
+  if (t.includes("sales")) return TrendingUp;
+  return Package;
+};
+
+const getSummaryItems = (data: unknown): DashboardSummaryItem[] => {
+  const response = data as any;
+  const envelope = response?.value ?? response?.data ?? response;
+  const list = Array.isArray(envelope)
+    ? envelope
+    : Array.isArray(envelope?.items)
+      ? envelope.items
+      : Array.isArray(envelope?.cards)
+        ? envelope.cards
+        : envelope && typeof envelope === "object"
+          ? Object.entries(envelope)
+            .filter(([, value]) => Array.isArray(value))
+            .flatMap(([category, cards]) => (cards as any[]).map((card) => ({ ...card, category })))
+          : [];
+
+  if (!Array.isArray(list)) return [];
+
+  return list.flatMap((item: any) => {
+    const category = String(item.category ?? item.Category ?? item.group ?? item.Group ?? item.groupName ?? item.GroupName ?? "Other");
+    const cards = Array.isArray(item.cards ?? item.Cards ?? item.items ?? item.Items)
+      ? item.cards ?? item.Cards ?? item.items ?? item.Items
+      : [item];
+
+    return cards.map((card: any) => ({
+      title: String(card.title ?? card.Title ?? card.name ?? card.Name ?? card.label ?? card.Label ?? card.cardTitle ?? card.CardTitle ?? card.cardName ?? card.CardName ?? ""),
+      amount: card.amount ?? card.Amount ?? card.count ?? card.Count ?? card.value ?? card.Value ?? card.cardValue ?? card.CardValue ?? 0,
+      category: String(card.category ?? card.Category ?? category),
+      cardKey: String(card.cardKey ?? card.CardKey ?? card.cardkey ?? card.Cardkey ?? card.card_key ?? card.Card_Key ?? card.dashboardCardKey ?? card.DashboardCardKey ?? card.key ?? card.Key ?? ""),
+      docType: card.docType ?? card.DocType ?? card.documentType ?? card.DocumentType ?? card.objectType ?? card.ObjectType ?? card.objectCode ?? card.ObjectCode,
+      trend: card.trend ?? card.Trend,
+      trendValue: card.trendValue ?? card.TrendValue,
+      description: card.description ?? card.Description,
+    })).filter((card: DashboardSummaryItem) => card.title);
+  });
+};
+
+const getDocumentRows = (data: unknown): Record<string, unknown>[] => {
+  const raw = data as any;
+  const rows = Array.isArray(raw) ? raw : raw?.value ?? raw?.data ?? raw?.items ?? raw?.documents ?? [];
+  return Array.isArray(rows) ? rows : [];
+};
+
+const getDocumentTotal = (data: unknown): number | undefined => {
+  const raw = data as any;
+  const total = raw?.total ?? raw?.totalCount ?? raw?.count ?? raw?.totalRecords;
+  const numericTotal = Number(total);
+  return Number.isFinite(numericTotal) ? numericTotal : undefined;
+};
+
+const groupSummaryItems = (items: DashboardSummaryItem[]): DashboardSummaryGroup[] => {
+  return items.reduce<DashboardSummaryGroup[]>((groups, item) => {
+    const group = groups.find((entry) => entry.category === item.category);
+    if (group) {
+      group.cards.push(item);
+    } else {
+      groups.push({ category: item.category, cards: [item] });
+    }
+    return groups;
+  }, []);
+};
+
+const getDocumentRoute = (docType: string | number, category: string, title: string) => {
+  const routes = getMenuUrlsByObjectCode(docType);
+  if (routes.length === 0) return getMenuInfoByObjectCode(docType)?.url;
+
+  const context = `${category} ${title}`.toLowerCase();
+  const preferredModule = context.includes("issue for production")
+    ? "production"
+    : context.includes("good issue")
+      ? "inventory"
+      : context.includes("inventory")
+    ? "inventory"
+    : context.includes("production")
+      ? "production"
+      : context.includes("purchase") || context.includes("purchasing")
+        ? "purchase"
+        : context.includes("sales")
+          ? "sales"
+          : "";
+
+  if (preferredModule) {
+    const moduleRoute = routes.find((route) => route.toLowerCase().includes(`/dashboard/${preferredModule}/`));
+    if (moduleRoute) return moduleRoute;
+  }
+
+  return routes[0];
+};
+
+const getFallbackProductionDocType = (category: string, title: string) => {
+  const context = `${category} ${title}`.toLowerCase();
+  if (!context.includes("production")) return undefined;
+  if (context.includes("receipt from production")) return 59;
+  if (context.includes("issue for production")) return 60;
+  if (context.includes("production order")) return 202;
+  return undefined;
+};
+
+const DashboardCardSkeleton = () => (
+  <Card className="h-full flex flex-col justify-between overflow-hidden bg-white/50 backdrop-blur-sm border-zinc-200 shadow-xs py-5 gap-0">
+    <CardHeader className="p-0 px-5 pb-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1.5 flex-1 min-h-[64px]">
+          <Skeleton className="h-4 w-3/4 bg-zinc-200" />
+          <Skeleton className="h-3 w-1/2 bg-zinc-100" />
+        </div>
+        <Skeleton className="h-7 w-7 rounded-lg bg-zinc-100 shrink-0" />
+      </div>
+    </CardHeader>
+    <CardContent className="p-0 px-5 mt-auto">
+      <Skeleton className="h-8 w-16 bg-zinc-200" />
+    </CardContent>
+  </Card>
+);
+
+const DEFAULT_SKELETON_GROUPS = [
+  { category: "Sales", count: 5 },
+  { category: "Purchase", count: 4 },
+  { category: "Inventory", count: 3 },
+  { category: "Production", count: 3 },
+];
+
+const DashboardCard = ({ title, amount, trend, trendValue, description, icon: Icon, onClick }: any) => {
   const isPositive = trend === "up";
   const hasTrend = Boolean(trendValue);
   const hasDescription = Boolean(description);
 
   return (
-    <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-zinc-200 hover:border-zinc-400 transition-all duration-300">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <div className="p-2 bg-zinc-100 rounded-lg border border-zinc-200">
-          <Icon className="h-4 w-4 text-zinc-900" />
+    <Card
+      onClick={onClick}
+      className={`h-full flex flex-col justify-between overflow-hidden bg-white/50 backdrop-blur-sm border-zinc-200 hover:border-zinc-400 hover:shadow-sm transition-all duration-200 py-5 gap-0 ${onClick ? "cursor-pointer" : ""}`}
+    >
+      <CardHeader className="p-0 px-5 pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground min-h-[64px] flex items-start leading-snug flex-1">
+            {title}
+          </CardTitle>
+          {Icon && (
+            <div className="shrink-0 p-1.5 bg-zinc-100 rounded-lg border border-zinc-200 mt-0.5">
+              <Icon className="h-4 w-4 text-zinc-600" />
+            </div>
+          )}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-4xl font-bold text-zinc-900">{amount}</div>
+      <CardContent className="p-0 px-5 mt-auto">
+        <div className="text-3xl font-bold text-zinc-900 tracking-tight leading-none">{amount}</div>
         {(hasTrend || hasDescription) && (
-          <div className="flex items-center mt-1">
+          <div className="flex items-center mt-2">
             {hasTrend && (
               <span className={`flex items-center text-xs font-medium ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {isPositive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
@@ -143,24 +344,252 @@ const DashboardCard = ({ title, amount, trend, trendValue, icon: Icon, descripti
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [summaryGroups, setSummaryGroups] = useState<DashboardSummaryGroup[]>([]);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isRefreshingRef = useRef(false);
+  const [documentRows, setDocumentRows] = useState<Record<string, unknown>[]>([]);
+  const [documentColumns, setDocumentColumns] = useState<{ key: string; label: string }[]>([]);
+  const [selectedCard, setSelectedCard] = useState<DashboardSummaryItem | null>(null);
+  const [documentsModalOpen, setDocumentsModalOpen] = useState(false);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [hasMoreDocuments, setHasMoreDocuments] = useState(false);
+  const DOCUMENTS_PAGE_SIZE = 20;
+
+  const setDocumentPagination = (raw: any, loadedCount: number, pageCount: number) => {
+    const total = getDocumentTotal(raw);
+    setHasMoreDocuments(
+      Boolean(raw?.hasMore) ||
+      pageCount === DOCUMENTS_PAGE_SIZE ||
+      (total !== undefined && loadedCount < total)
+    );
+  };
+
+  const openCardDocuments = async (card: DashboardSummaryItem) => {
+    if (!card.cardKey) return;
+
+    setIsLoadingDocuments(true);
+    try {
+      const response = await apiClient.get(`/api/Dashboard/${encodeURIComponent(card.cardKey)}/Documents`, {
+        params: { skip: 0, top: DOCUMENTS_PAGE_SIZE },
+      });
+      const raw = response.data as any;
+      const normalizedRows = getDocumentRows(raw);
+      const firstRow = normalizedRows[0] ?? {};
+      const hiddenKeys = new Set(["DocEntry", "docEntry", "DocType", "docType", "ObjectType", "objectType", "CardKey", "cardKey"]);
+      const columns = Object.keys(firstRow)
+        .filter((key) => !hiddenKeys.has(key) && typeof firstRow[key] !== "object")
+        .map((key) => ({ key, label: key.replace(/([A-Z])/g, " $1").trim() }));
+
+      setDocumentRows(normalizedRows);
+      setDocumentColumns(columns);
+      setDocumentPagination(raw, normalizedRows.length, normalizedRows.length);
+      setSelectedCard(card);
+      setDocumentsModalOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch dashboard documents:", error);
+      toast.error("Failed to fetch documents for this card.");
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
+
+  const loadMoreDocuments = async () => {
+    if (!selectedCard?.cardKey || isLoadingDocuments || !hasMoreDocuments) return;
+
+    setIsLoadingDocuments(true);
+    try {
+      const response = await apiClient.get(`/api/Dashboard/${encodeURIComponent(selectedCard.cardKey)}/Documents`, {
+        params: { skip: documentRows.length, top: DOCUMENTS_PAGE_SIZE },
+      });
+      const raw = response.data as any;
+      const normalizedRows = getDocumentRows(raw);
+      const newRows = normalizedRows.filter((row) => {
+        const rowKey = row.DocEntry ?? row.docEntry ?? row.DocNum ?? row.docNum ?? row.AbsoluteEntry ?? row.absoluteEntry;
+        return !documentRows.some((existingRow) => {
+          const existingKey = existingRow.DocEntry ?? existingRow.docEntry ?? existingRow.DocNum ?? existingRow.docNum ?? existingRow.AbsoluteEntry ?? existingRow.absoluteEntry;
+          return rowKey !== undefined && rowKey === existingKey;
+        });
+      });
+
+      setDocumentRows((previousRows) => [...previousRows, ...newRows]);
+      setDocumentPagination(raw, documentRows.length + newRows.length, normalizedRows.length);
+    } catch (error) {
+      console.error("Failed to load more dashboard documents:", error);
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
+
+  const openDocument = (row: Record<string, unknown>) => {
+    const docEntry = row.DocNum ?? row.docNum ?? row.DocumentNumber ?? row.documentNumber ?? row.DocEntry ?? row.docEntry ?? row.AbsoluteEntry ?? row.absoluteEntry ?? row.DocumentEntry ?? row.documentEntry;
+    const docType = row.DocType ?? row.docType ?? row.DocumentType ?? row.documentType ?? row.ObjectType ?? row.objectType ?? row.ObjectCode ?? row.objectCode ?? selectedCard?.docType ?? getFallbackProductionDocType(selectedCard?.category ?? "", selectedCard?.title ?? "");
+    if (!docEntry || !docType) {
+      toast.error("Unable to determine document type or number.");
+      return;
+    }
+
+    const documentRoute = getDocumentRoute(
+      String(docType),
+      selectedCard?.category ?? "",
+      selectedCard?.title ?? ""
+    );
+    if (!documentRoute) {
+      toast.warning(`Route not configured for document type ${docType}`);
+      return;
+    }
+
+    const cleanPath = buildDocumentUrl(documentRoute, {
+      objectType: String(docType),
+      objectEntry: String(docEntry),
+      isDraft: false,
+    }).split("?")[0];
+
+    stageDocNavParams(cleanPath, {
+      docEntry: String(docEntry),
+      docType: String(docType),
+    });
+    setDocumentsModalOpen(false);
+    router.push(cleanPath);
+  };
+
+  const handleRefresh = async () => {
+    if (isRefreshingRef.current || isRefreshing) return;
+    isRefreshingRef.current = true;
+    setIsRefreshing(true);
+    try {
+      const response = await apiClient.get("api/Dashboard/Summary");
+      setSummaryGroups(groupSummaryItems(getSummaryItems(response.data)));
+      toast.success("Dashboard data refreshed");
+    } catch (error) {
+      console.error("Failed to refresh dashboard:", error);
+      toast.error("Failed to refresh dashboard data");
+    } finally {
+      setIsRefreshing(false);
+      isRefreshingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchDashboardSummary = async () => {
+      try {
+        const response = await apiClient.get("api/Dashboard/Summary");
+        if (isMounted) {
+          setSummaryGroups(groupSummaryItems(getSummaryItems(response.data)));
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard summary:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoadingSummary(false);
+        }
+      }
+    };
+
+    fetchDashboardSummary();
+    const refreshInterval = window.setInterval(fetchDashboardSummary, 30000);
+    window.addEventListener("focus", fetchDashboardSummary);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", fetchDashboardSummary);
+    };
+  }, []);
+
   return (
     <div className="flex w-full flex-col gap-6 p-6 lg:p-8 bg-zinc-50/50">
-
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-      
+      {/* Top Header with Refresh Button */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Business Overview</h1>
-          <p className="text-muted-foreground">Monitor your business performance and key metrics in real-time.</p>
+          <h1 className="text-xl font-bold tracking-tight text-zinc-900 leading-none">Dashboard</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Overview of your business documents and workflow metrics.
+          </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing || isLoadingSummary}
+          className="bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100 gap-2 h-9 rounded-lg transition-colors shadow-xs"
+          title="Refresh dashboard metrics"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin text-zinc-900" : "text-zinc-600"}`} />
+          <span>Refresh</span>
+        </Button>
+      </div>
+
+      {isLoadingSummary && summaryGroups.length === 0 ? (
+        DEFAULT_SKELETON_GROUPS.map((group) => (
+          <section key={group.category} className="space-y-3">
+            <Skeleton className="h-5 w-28 bg-zinc-200 rounded" />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+              {Array.from({ length: group.count }).map((_, idx) => (
+                <DashboardCardSkeleton key={`${group.category}-skeleton-${idx}`} />
+              ))}
+            </div>
+          </section>
+        ))
+      ) : (
+        summaryGroups.map((group) => (
+          <section key={group.category} className={`space-y-3 transition-opacity duration-300 ${isRefreshing ? "opacity-60" : "opacity-100"}`}>
+            <h2 className="text-lg font-semibold text-zinc-900">{group.category}</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+              {group.cards.map((card) => (
+                <DashboardCard
+                  key={`${group.category}-${card.title}`}
+                  title={card.title}
+                  amount={card.amount}
+                  trend={card.trend}
+                  trendValue={card.trendValue}
+                  description={card.description}
+                  icon={iconForCard(card.title)}
+                  onClick={() => openCardDocuments(card)}
+                />
+              ))}
+            </div>
+          </section>
+        ))
+      )}
+
+      <GenericModal
+        open={documentsModalOpen}
+        onClose={() => setDocumentsModalOpen(false)}
+        onSelect={() => undefined}
+        onRowClick={openDocument}
+        data={documentRows}
+        columns={documentColumns}
+        title={`${selectedCard?.title ?? "Documents"} Documents`}
+        isLoading={isLoadingDocuments}
+        onLoadMore={loadMoreDocuments}
+        hasMore={hasMoreDocuments}
+      />
+    </div>
+  );
+
+  /*
+  // return (
+  //   <div className="flex w-full flex-col gap-6 p-6 lg:p-8 bg-zinc-50/50">
+
+  //     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      
+  //       <div>
+  //         <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Business Overview</h1>
+  //         <p className="text-muted-foreground">Monitor your business performance and key metrics in real-time.</p>
+  //       </div>
 
 
         {/* <div className="flex items-center gap-2">
           <Button variant="outline" className="h-9 shadow-sm border-zinc-200 hover:bg-zinc-100">Download Report</Button>
           <Button className="h-9 shadow-sm bg-zinc-900 text-white hover:bg-zinc-800">Create New</Button>
-        </div> */}
-      </div>
+        </div> */ /*}
+      // </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardCard
           title="My Open Inv. Transfer"
           amount="10"
@@ -193,7 +622,7 @@ export default function DashboardPage() {
           icon={Package}
           description=""
         />
-      </div>
+      </div> */ /*}
 
       {/* <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="bg-zinc-200/50 p-1 border border-zinc-200">
@@ -463,7 +892,7 @@ export default function DashboardPage() {
             </div>
           </Card>
         </TabsContent>
-      </Tabs> */}
-    </div>
-  );
+      </Tabs> */
+    // </div>
+  ;
 }
