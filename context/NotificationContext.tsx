@@ -35,14 +35,17 @@ interface NotificationContextType {
   unreadCount: number;
   isLoading: boolean;
   pendingApprovals: PendingApproval[];
+  pendingApprovalsTotalCount: number;
+  pendingApprovalsHasMore: boolean;
   isLoadingApprovals: boolean;
-  /** Re-fetches the user's alerts. Resolves true on success, false on failure (never throws). */
-  refreshNotifications: () => Promise<boolean>;
-  /** Re-fetches the user's pending approvals. Resolves true on success, false on failure. */
-  refreshPendingApprovals: (silent?: boolean) => Promise<boolean>;
+  isLoadingMoreApprovals: boolean;
+    refreshNotifications: () => Promise<boolean>;refreshPendingApprovals: (silent?: boolean) => Promise<boolean>;
+  loadMorePendingApprovals: () => Promise<boolean>;
   clearUnread: () => void;
   optimisticRemoveApproval: (requestCode: number) => void;
 }
+
+const PENDING_APPROVALS_PAGE_SIZE = 20;
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
@@ -52,7 +55,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const [pendingApprovalsTotalCount, setPendingApprovalsTotalCount] = useState(0);
+  const [pendingApprovalsHasMore, setPendingApprovalsHasMore] = useState(false);
   const [isLoadingApprovals, setIsLoadingApprovals] = useState(false);
+  const [isLoadingMoreApprovals, setIsLoadingMoreApprovals] = useState(false);
   const router = useRouter();
   const connectionRef = useRef<HubConnection | null>(null);
 
@@ -72,17 +78,32 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const extractApprovalsPage = (data: any): { approvals: PendingApproval[]; totalCount: number; hasMore: boolean } => {
+    if (data?.items && Array.isArray(data.items)) {
+      return {
+        approvals: data.items,
+        totalCount: typeof data.totalCount === "number" ? data.totalCount : data.items.length,
+        hasMore: !!data.hasMore,
+      };
+    }
+    let approvals: PendingApproval[] = [];
+    if (data?.value && Array.isArray(data.value)) approvals = data.value;
+    else if (Array.isArray(data)) approvals = data;
+    else if (data?.ApprovalRequests && Array.isArray(data.ApprovalRequests)) approvals = data.ApprovalRequests;
+    return { approvals, totalCount: approvals.length, hasMore: false };
+  };
+
   const refreshPendingApprovals = async (silent = false): Promise<boolean> => {
     if (!accessToken) return false;
     if (!silent) setIsLoadingApprovals(true);
     try {
-      const res = await apiClient.get("api/Notifications/GetPendingApprovals");
-      const data = res.data as any;
-      let approvals: PendingApproval[] = [];
-      if (data?.value && Array.isArray(data.value)) approvals = data.value;
-      else if (Array.isArray(data)) approvals = data;
-      else if (data?.ApprovalRequests && Array.isArray(data.ApprovalRequests)) approvals = data.ApprovalRequests;
+      const res = await apiClient.get("api/Notifications/GetPendingApprovals", {
+        params: { skip: 0, top: PENDING_APPROVALS_PAGE_SIZE },
+      });
+      const { approvals, totalCount, hasMore } = extractApprovalsPage(res.data);
       setPendingApprovals(approvals);
+      setPendingApprovalsTotalCount(totalCount);
+      setPendingApprovalsHasMore(hasMore);
       return true;
     } catch (error) {
       console.error("Failed to fetch pending approvals", error);
@@ -92,8 +113,29 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loadMorePendingApprovals = async (): Promise<boolean> => {
+    if (!accessToken || isLoadingMoreApprovals) return false;
+    setIsLoadingMoreApprovals(true);
+    try {
+      const res = await apiClient.get("api/Notifications/GetPendingApprovals", {
+        params: { skip: pendingApprovals.length, top: PENDING_APPROVALS_PAGE_SIZE },
+      });
+      const { approvals, totalCount, hasMore } = extractApprovalsPage(res.data);
+      setPendingApprovals((prev) => [...prev, ...approvals]);
+      setPendingApprovalsTotalCount(totalCount);
+      setPendingApprovalsHasMore(hasMore);
+      return true;
+    } catch (error) {
+      console.error("Failed to load more pending approvals", error);
+      return false;
+    } finally {
+      setIsLoadingMoreApprovals(false);
+    }
+  };
+
   const optimisticRemoveApproval = (requestCode: number) => {
     setPendingApprovals((prev) => prev.filter((a) => a.ApprovalRequestCode !== requestCode));
+    setPendingApprovalsTotalCount((prev) => Math.max(0, prev - 1));
   };
 
   useEffect(() => {
@@ -219,9 +261,13 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         unreadCount,
         isLoading,
         pendingApprovals,
+        pendingApprovalsTotalCount,
+        pendingApprovalsHasMore,
         isLoadingApprovals,
+        isLoadingMoreApprovals,
         refreshNotifications,
         refreshPendingApprovals,
+        loadMorePendingApprovals,
         clearUnread,
         optimisticRemoveApproval,
       }}

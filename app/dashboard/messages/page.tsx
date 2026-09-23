@@ -40,8 +40,12 @@ export default function MessagesOverviewPage() {
     refreshNotifications,
     clearUnread,
     pendingApprovals,
+    pendingApprovalsTotalCount,
+    pendingApprovalsHasMore,
     isLoadingApprovals,
+    isLoadingMoreApprovals,
     refreshPendingApprovals,
+    loadMorePendingApprovals,
     optimisticRemoveApproval,
   } = useNotifications();
   const [messages, setMessages] = useState<SAPMessage[]>([]);
@@ -416,9 +420,9 @@ export default function MessagesOverviewPage() {
                   className="rounded-md font-bold text-[10px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
                 >
                   Pending Approvals
-                  {pendingApprovals.length > 0 && (
+                  {pendingApprovalsTotalCount > 0 && (
                     <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full px-1.5 py-0.5 font-bold">
-                      {pendingApprovals.length}
+                      {pendingApprovalsTotalCount}
                     </span>
                   )}
                 </TabsTrigger>
@@ -574,6 +578,7 @@ export default function MessagesOverviewPage() {
                   </div>
                 </div>
               ) : (
+                <>
                 <ScrollArea className="flex-1 w-full overflow-x-auto">
                   <Table className="min-w-[580px]">
                     <TableHeader className="bg-slate-50/70 border-b border-slate-100">
@@ -619,7 +624,26 @@ export default function MessagesOverviewPage() {
                       })}
                     </TableBody>
                   </Table>
-                </ScrollArea>
+                  </ScrollArea>
+                  {pendingApprovalsHasMore && (
+                    <div className="flex justify-center py-3 border-t border-slate-100">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={loadMorePendingApprovals}
+                        disabled={isLoadingMoreApprovals}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-2 text-xs font-medium"
+                      >
+                        {isLoadingMoreApprovals ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        )}
+                        {isLoadingMoreApprovals ? "Loading..." : "Load More"}
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </TabsContent>
           </Tabs>
@@ -680,11 +704,16 @@ export default function MessagesOverviewPage() {
                       </p>
                     </div>
 
-                    {selectedApproval.RemarksHistory && selectedApproval.RemarksHistory.length > 0 && (
+                    {(() => {
+                      const meaningfulRemarksHistory = (selectedApproval.RemarksHistory || []).filter(
+                        (entry) => entry.Stage || entry.ApproverUserID || entry.Remarks
+                      );
+                      if (meaningfulRemarksHistory.length === 0) return null;
+                      return (
                       <div>
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Prior Approver Remarks</h4>
                         <div className="space-y-2.5">
-                          {selectedApproval.RemarksHistory.map((entry, idx) => (
+                          {meaningfulRemarksHistory.map((entry, idx) => (
                             <div key={idx} className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
                               <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
                                 <span>{entry.Stage ? `Stage #${entry.Stage}` : "Stage"} · User #{entry.ApproverUserID ?? "—"}</span>
@@ -697,7 +726,8 @@ export default function MessagesOverviewPage() {
                           ))}
                         </div>
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {approvalDocumentLink && (
                       <div className="space-y-3 pt-4 border-t border-slate-100">

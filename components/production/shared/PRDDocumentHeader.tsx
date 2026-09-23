@@ -123,6 +123,9 @@ export function PRDDocumentHeader() {
       if (!isNaN(draftId)) {
         loadDraftDoc(draftId);
       }
+    } else if (docEntryParam) {
+      setSearchValue(docEntryParam);
+      fetchDocument(docEntryParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
