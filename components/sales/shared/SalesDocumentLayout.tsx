@@ -335,8 +335,22 @@ useEffect(() => {
     }
   };
 
+  const lastDefaultValuesRef = React.useRef<string | null>(null);
+
   useEffect(() => {
     const state = useSalesDocument.getState();
+    const defaultValuesKey = JSON.stringify(defaultValues ?? {});
+
+    // defaultValues is a fresh object literal on every render of the page
+    // component, so a plain [defaultValues] dependency re-fires this effect
+    // on any unrelated re-render (e.g. fieldAccess/UDFs loading) after a
+    // copy-to navigation - wiping the just-restored data back to blank
+    // since isCopying has already flipped false by then. Compare by content
+    // instead of identity so the reset/restore only runs once per real change.
+    if (defaultValuesKey === lastDefaultValuesRef.current) {
+      return;
+    }
+    lastDefaultValuesRef.current = defaultValuesKey;
 
     if (isCopying) {
       reset({
@@ -357,7 +371,7 @@ useEffect(() => {
     } else if (!isDirty && !skipAutoReset) {
       ResetForm();
     }
-  }, [defaultValues]);
+  }, [defaultValues, isCopying, isDirty, skipAutoReset, reset, setIsCopying]);
 
   const ResetForm = () => {
     const today = new Date().toISOString().split("T")[0];

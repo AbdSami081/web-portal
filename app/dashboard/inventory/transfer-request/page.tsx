@@ -83,6 +83,7 @@ export default function InvTransferRequestPage() {
       DocNum,
       attachments,
       lastLoadedDocType,
+      salesPersonCode,
     } = useInventoryDocument.getState();
 
     try {
@@ -92,6 +93,7 @@ export default function InvTransferRequestPage() {
           lines,
           fromWarehouse,
           toWarehouse,
+          salesPersonCode,
         });
 
         await patchInventoryTransferRequest(Number(DocEntry), payload);
@@ -119,6 +121,7 @@ export default function InvTransferRequestPage() {
         lines,
         fromWarehouse,
         toWarehouse,
+        salesPersonCode,
       });
 
       const result = await postInventoryTransferRequest(payload);

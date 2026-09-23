@@ -81,6 +81,7 @@ export default function InvTransferPage() {
       toWarehouse,
       DocEntry,
       attachments,
+      salesPersonCode,
     } = useInventoryDocument.getState();
 
     try {
@@ -93,6 +94,7 @@ export default function InvTransferPage() {
           lines,
           fromWarehouse,
           toWarehouse,
+          salesPersonCode,
         });
         result = await patchInventoryTransfer(DocEntry, payload);
         toast.success(`Inventory Transfer updated!`);
@@ -104,6 +106,7 @@ export default function InvTransferPage() {
           lines,
           fromWarehouse,
           toWarehouse,
+          salesPersonCode,
         });
 
         result = await postInventoryTransfer(payload);

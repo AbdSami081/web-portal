@@ -33,7 +33,7 @@ export default function ARCreditMemoPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses, salesPersonCode } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.CreditMemo) {
       const patchPayload = buildSalesDocumentPatchPayload({
@@ -42,6 +42,7 @@ export default function ARCreditMemoPage() {
         discountPercent,
         freight,
         additionalExpenses,
+        salesPersonCode,
         includeLines: false,
       });
 
@@ -78,6 +79,7 @@ export default function ARCreditMemoPage() {
       discountPercent,
       freight,
       additionalExpenses,
+      salesPersonCode,
     });
 
     try {

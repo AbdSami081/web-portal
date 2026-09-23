@@ -33,7 +33,7 @@ export default function ARDownPaymentRequestPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses, salesPersonCode } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.DownPaymentRequest) {
       const patchPayload = buildSalesDocumentPatchPayload({
@@ -42,6 +42,7 @@ export default function ARDownPaymentRequestPage() {
         discountPercent,
         freight,
         additionalExpenses,
+        salesPersonCode,
         downPaymentType: "dptRequest",
       });
       
@@ -78,6 +79,7 @@ export default function ARDownPaymentRequestPage() {
       discountPercent,
       freight,
       additionalExpenses,
+      salesPersonCode,
       downPaymentType: "dptRequest",
     });
 console.log(payload);

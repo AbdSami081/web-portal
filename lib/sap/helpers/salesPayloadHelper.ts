@@ -12,6 +12,7 @@ interface BuildSalesPayloadOptions {
   freight?: number;
   additionalExpenses?: Array<{ ExpenseCode: number; LineTotal: number; VatGroup?: string; TaxCode?: string }>;
   downPaymentType?: string;
+  salesPersonCode?: number | null;
 }
 
 function withBaseLineNumber<T extends object>(entries: T[] | undefined, lineIndex: number): T[] | undefined {
@@ -57,6 +58,7 @@ export function buildSalesDocumentPayload({
   freight = 0,
   additionalExpenses = [],
   downPaymentType,
+  salesPersonCode,
 }: BuildSalesPayloadOptions) {
   const hasCopyFrom =
     docEntry &&
@@ -74,6 +76,7 @@ export function buildSalesDocumentPayload({
     ...(downPaymentType
       ? { DownPaymentType: downPaymentType, DownPaymentPercentage: discountPercent || 0 }
       : { DiscountPercent: discountPercent || 0 }),
+    ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
     DocumentLines: lines.map((line, index) => {
       const baseFields: Record<string, unknown> = {
         ItemCode: line.ItemCode,
@@ -133,9 +136,10 @@ export function buildSalesDocumentPatchPayload({
   downPaymentType,
   includeLines = true,
   targetDocType,
+  salesPersonCode,
 }: Pick<
   BuildSalesPayloadOptions,
-  "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses" | "downPaymentType"
+  "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses" | "downPaymentType" | "salesPersonCode"
 > & { includeLines?: boolean; targetDocType?: DocumentType }) {
   return {
     Comments: data.Comments,
@@ -147,6 +151,7 @@ export function buildSalesDocumentPatchPayload({
       : includeLines
         ? { DiscountPercent: discountPercent || 0 }
         : {}),
+    ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
     ...(includeLines && {
       DocumentLines: lines.map((line, index) => {
         const baseFields: Record<string, unknown> = {
