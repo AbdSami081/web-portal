@@ -17,10 +17,15 @@ import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentServ
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useState } from "react";
 
 export default function InvoicePage() {
   const router = useRouter();
   const fieldAccess = useSalesDocument((s) => s.fieldAccess);
+  //  const [documentMode, setDocumentMode] = useState<"items" | "service">(
+  //     "items",
+  //   );
+  
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -115,6 +120,7 @@ export default function InvoicePage() {
       throw error;
     }
   };
+  
 
   return (
     <SalesDocumentLayout
@@ -122,6 +128,7 @@ export default function InvoicePage() {
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
       docType={DocumentType.ARInvoice}
+      // documentMode={document}
     >
       <DocumentHeader />
       <DocumentItems />

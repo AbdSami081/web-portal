@@ -53,6 +53,7 @@ interface SalesDocumentStore {
   loadedDraftData: any | null;
   setLoadedDraftData: (data: any) => void;
   setIsCopying: (val: boolean) => void;
+  
 fieldAccess: string[];
 setFieldAccess: (fields: string[]) => void;
   setCustomer: (c: BusinessPartner) => void;
@@ -75,7 +76,10 @@ setFieldAccess: (fields: string[]) => void;
   setLineBatches: (itemCode: string, batches: { BatchNumber: string; Quantity: number }[]) => void;
   removeLine: (itemCode: string) => void;
 
-
+documentMode: "items" | "service";
+setDocumentMode: (
+  mode: "items" | "service"
+) => void;
   calculateTotals: () => void;
   reset: () => void;
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
@@ -133,6 +137,10 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     isCopying: false,
     loadedDraftData: null,
 fieldAccess: [],
+documentMode: "items",
+
+setDocumentMode: (mode) =>
+  set({ documentMode: mode }),
 setFieldAccess: (fields) => set({ fieldAccess: fields }),
     setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setIsCopying: (val) => set({ isCopying: val }),
@@ -145,6 +153,7 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
       set({ freight: parseSafe(f) });
       get().calculateTotals();
     },
+    
     setRounding: (r) => {
       set({ rounding: parseSafe(r) });
       get().calculateTotals();
@@ -192,9 +201,14 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
           const lines = s.lines.map((line) => {
             if (line.ItemCode === itemCode) {
               const updatedLine = { ...line, ...updated };
-              const qty = parseSafe(updatedLine.Quantity);
-              const price = parseSafe(updatedLine.Price);
-              updatedLine.LineTotal = qty * price;
+              // const qty = parseSafe(updatedLine.Quantity);
+              // const price = parseSafe(updatedLine.Price);
+              // updatedLine.LineTotal = qty * price;
+              if (get().documentMode === "items") {
+  const qty = parseSafe(updatedLine.Quantity);
+  const price = parseSafe(updatedLine.Price);
+  updatedLine.LineTotal = qty * price;
+}
               return updatedLine;
             }
             return line;
@@ -258,7 +272,11 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
         const lineDiscountPercent = parseSafe(line.DiscountPercent);
         const itemTaxRate = parseSafe(line.TaxRate);
 
-        const lineSubtotal = quantity * unitPrice;
+        // const lineSubtotal = quantity * unitPrice;
+        const lineSubtotal =
+  get().documentMode === "service"
+    ? parseSafe(line.LineTotal)
+    : parseSafe(line.Quantity) * parseSafe(line.Price);
         const lineDiscountAmount = (lineSubtotal * lineDiscountPercent) / 100;
         const lineAmountAfterDiscount = lineSubtotal - lineDiscountAmount;
 

@@ -12,7 +12,8 @@ import { getBranches, getMyBranches } from "@/api+/sap/branch";
 import { toast } from "sonner";
 import {Field, getAllFields,assignUserFields, getAdminSettings} from "@/api+/sap/administration/administrationService";
 import { usePublicConfigStore } from "@/stores/usePublicConfigStore";
-
+// import { getChartOfAccounts } from "@/api+/sap/financial/financialService";
+import { useChartOfAccountsStore } from "@/stores/useChartOfAccountsStore";
 interface User {
   empId: string;
   sapUserId?: number;
@@ -193,6 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     setAccessToken(token);
     useAuthStore.getState().startExpiryTimer(token);
+    
     setUser(buildUser(decoded, null, companyDB, initialOverrides));
     
 
@@ -206,6 +208,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
     void initializeBranchSession();
     void useUoMStore.getState().loadUoMs();
+    void useChartOfAccountsStore.getState().loadChartOfAccounts();
+    
   }, []);
 
   useEffect(() => {

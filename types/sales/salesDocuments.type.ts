@@ -77,6 +77,23 @@ export interface SalesDocumentLine {
   OrderedQty?: number;
   IsClosed?: string; // "tYES" | "tNO"
   LineStatus?: "bost_Open" | "bost_Close"; 
+  // Service-specific fields
+  AccountCode?: string;
+  AccountName?: string;
+  Description?: string;
+  UnitPrice?: number;
+  TaxTotal?: number;
+  PriceAfterVAT?: number;
+  GrossTotal?: number;
+
+  CostingCode?: string;
+  CostingCode2?: string;
+  CostingCode3?: string;
+  CostingCode4?: string;
+  CostingCode5?: string;
+
+  ProjectCode?: string;
+  TaxOnly?: boolean;
 
   InvQty?: number;
   TotalDoc?: number;

@@ -58,6 +58,7 @@ export const useSalesDocConfig = () => {
   return context;
 };
 
+
 interface SalesDocumentLayoutProps<T extends FieldValues> {
   schema: z.ZodType<T>;
   defaultValues: T;
@@ -501,6 +502,10 @@ useEffect(() => {
       toast.info("Copy to this document type is not implemented yet.");
     }
   };
+const documentMode = useSalesDocument(
+  (state) => state.documentMode
+);
+
 
   return (
     <SalesDocContext.Provider value={config}>
@@ -525,11 +530,11 @@ useEffect(() => {
             authStatus,
           });
 
-          if (linesHaveInvalidQuantity(state.lines)) {
+          if (linesHaveInvalidQuantity(state.lines) && documentMode == "items") {
             toast.info("One or more items have a quantity of 0 or less. Please set a valid quantity before submitting.");
             return;
           }
-          if (linesHaveInvalidPrice(state.lines)) {
+          if (linesHaveInvalidPrice(state.lines) && documentMode == "items") {
             toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
             return;
           }
