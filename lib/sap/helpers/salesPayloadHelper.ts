@@ -12,6 +12,7 @@ interface BuildSalesPayloadOptions {
   freight?: number;
   additionalExpenses?: Array<{ ExpenseCode: number; LineTotal: number; VatGroup?: string; TaxCode?: string }>;
   downPaymentType?: string;
+  documentMode?: "items" | "service";
 }
 
 function withBaseLineNumber<T extends object>(entries: T[] | undefined, lineIndex: number): T[] | undefined {
@@ -57,6 +58,7 @@ export function buildSalesDocumentPayload({
   freight = 0,
   additionalExpenses = [],
   downPaymentType,
+  documentMode,
 }: BuildSalesPayloadOptions) {
   const hasCopyFrom =
     docEntry &&
@@ -67,6 +69,11 @@ export function buildSalesDocumentPayload({
   return {
     CardCode: data.CardCode,
     CardName: data.CardName,
+      DocType:
+    documentMode === "service"
+      ? "dDocument_Service"
+      : "dDocument_Items",
+
     DocDate: data.DocDate,
     DocDueDate: data.DocDueDate,
     TaxDate: data.TaxDate,
@@ -75,8 +82,32 @@ export function buildSalesDocumentPayload({
       ? { DownPaymentType: downPaymentType, DownPaymentPercentage: discountPercent || 0 }
       : { DiscountPercent: discountPercent || 0 }),
     DocumentLines: lines.map((line, index) => {
-      const baseFields: Record<string, unknown> = {
-        ItemCode: line.ItemCode,
+      // const baseFields: Record<string, unknown> = {
+      //   ItemCode: line.ItemCode,
+      //   Quantity: Number(line.Quantity) || 0,
+      //   UnitPrice: Number(line.Price) || 0,
+      //   DiscountPercent: Number(line.DiscountPercent) || 0,
+      //   VatGroup: line.TaxCode || "",
+      //   WarehouseCode: line.WarehouseCode || "",
+      //   UoMCode: line.UoMCode || "",
+      //   AccountCode: line.AccountCode || "",
+      //  AccountName: line.AccountName || "",
+      //  Description: line.Description || "",
+      // };
+const baseFields: Record<string, unknown> =
+  documentMode === "service"
+    ? {
+        AccountCode: line.AccountCode || "",
+        AccountName: line.AccountName || "",
+        Description: line.Description || "",
+        LineTotal: Number(line.LineTotal) || 0,
+          ItemDescription: line.Description || "",
+        UnitPrice: Number(line.LineTotal) || 0,
+        DiscountPercent: Number(line.DiscountPercent) || 0,
+        VatGroup: line.TaxCode || "",
+      }
+    : {
+        ItemCode: line.ItemCode || "",
         Quantity: Number(line.Quantity) || 0,
         UnitPrice: Number(line.Price) || 0,
         DiscountPercent: Number(line.DiscountPercent) || 0,
@@ -84,7 +115,6 @@ export function buildSalesDocumentPayload({
         WarehouseCode: line.WarehouseCode || "",
         UoMCode: line.UoMCode || "",
       };
-
       if (hasCopyFrom) {
         baseFields.BaseType = lastLoadedDocType;
         baseFields.BaseEntry = docEntry;
@@ -133,11 +163,16 @@ export function buildSalesDocumentPatchPayload({
   downPaymentType,
   includeLines = true,
   targetDocType,
+  documentMode = "items",
 }: Pick<
   BuildSalesPayloadOptions,
   "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses" | "downPaymentType"
-> & { includeLines?: boolean; targetDocType?: DocumentType }) {
+> & { includeLines?: boolean; targetDocType?: DocumentType; documentMode?: "items" | "service" }) {
   return {
+      DocType:
+    documentMode === "service"
+      ? "dDocument_Service"
+      : "dDocument_Items",
     Comments: data.Comments,
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
@@ -149,16 +184,35 @@ export function buildSalesDocumentPatchPayload({
         : {}),
     ...(includeLines && {
       DocumentLines: lines.map((line, index) => {
-        const baseFields: Record<string, unknown> = {
-          ItemCode: line.ItemCode,
-          Quantity: Number(line.Quantity) || 0,
-          UnitPrice: Number(line.Price) || 0,
-          DiscountPercent: Number(line.DiscountPercent) || 0,
-          VatGroup: line.TaxCode || "",
-          WarehouseCode: line.WarehouseCode || "",
-          UoMCode: line.UoMCode || "",
-        };
-
+        // const baseFields: Record<string, unknown> = {
+        //   ItemCode: line.ItemCode,
+        //   Quantity: Number(line.Quantity) || 0,
+        //   UnitPrice: Number(line.Price) || 0,
+        //   DiscountPercent: Number(line.DiscountPercent) || 0,
+        //   VatGroup: line.TaxCode || "",
+        //   WarehouseCode: line.WarehouseCode || "",
+        //   UoMCode: line.UoMCode || "",
+        // };
+const baseFields: Record<string, unknown> =
+  documentMode === "service"
+    ? {
+        AccountCode: line.AccountCode || "",
+        AccountName: line.AccountName || "",
+        ItemDescription: line.Description || "",
+        UnitPrice: Number(line.LineTotal) || 0,
+        LineTotal: Number(line.LineTotal) || 0,
+        DiscountPercent: Number(line.DiscountPercent) || 0,
+        VatGroup: line.TaxCode || "",
+      }
+    : {
+        ItemCode: line.ItemCode || "",
+        Quantity: Number(line.Quantity) || 0,
+        UnitPrice: Number(line.Price) || 0,
+        DiscountPercent: Number(line.DiscountPercent) || 0,
+        VatGroup: line.TaxCode || "",
+        WarehouseCode: line.WarehouseCode || "",
+        UoMCode: line.UoMCode || "",
+      };
         if (line.LineNum !== undefined && line.LineNum >= 0) {
           baseFields.LineNum = line.LineNum;
         }

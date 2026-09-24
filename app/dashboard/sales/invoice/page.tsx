@@ -25,7 +25,8 @@ export default function InvoicePage() {
   //  const [documentMode, setDocumentMode] = useState<"items" | "service">(
   //     "items",
   //   );
-  
+  // const { documentMode } = useSalesDocument();
+  const documentMode = useSalesDocument((s) => s.documentMode);
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -54,6 +55,7 @@ export default function InvoicePage() {
         additionalExpenses,
         includeLines: false,
         targetDocType: DocumentType.ARInvoice,
+        documentMode,
       });
 
       try {
@@ -87,11 +89,14 @@ export default function InvoicePage() {
       discountPercent,
       freight,
       additionalExpenses,
+      documentMode
     });
+    //  console.log(payload,"response")
 
     try {
 
       const response = await postARInvoice(payload);
+      console.log(response, "response")
       if (response?.DocEntry || response?.IsDraft) {
         if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(

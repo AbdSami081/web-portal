@@ -305,6 +305,7 @@ useEffect(() => {
         doc = await getSalesDeliveryDocument(docNum);
       } else if (copyFromType === DocumentType.ARInvoice) {
         doc = await getARInvoiceDocument(docNum);
+        // console.log(doc, "doc")
       } else if (copyFromType === DocumentType.ReturnRequest) {
         doc = await getSalesReturnRequestDocument(docNum);
       }
