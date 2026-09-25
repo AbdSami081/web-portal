@@ -17,10 +17,16 @@ import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentServ
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
+import { useState } from "react";
 
 export default function InvoicePage() {
   const router = useRouter();
   const fieldAccess = useSalesDocument((s) => s.fieldAccess);
+  //  const [documentMode, setDocumentMode] = useState<"items" | "service">(
+  //     "items",
+  //   );
+  // const { documentMode } = useSalesDocument();
+  const documentMode = useSalesDocument((s) => s.documentMode);
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -50,6 +56,7 @@ export default function InvoicePage() {
         salesPersonCode,
         includeLines: false,
         targetDocType: DocumentType.ARInvoice,
+        documentMode,
       });
 
       try {
@@ -84,11 +91,14 @@ export default function InvoicePage() {
       freight,
       additionalExpenses,
       salesPersonCode,
+      documentMode,
     });
+    //  console.log(payload,"response")
 
     try {
 
       const response = await postARInvoice(payload);
+      console.log(response, "response")
       if (response?.DocEntry || response?.IsDraft) {
         if (attachments.length > 0 && !response?.IsDraft) {
           const attachmentResult = await uploadAndPatchAttachments(
@@ -117,6 +127,7 @@ export default function InvoicePage() {
       throw error;
     }
   };
+  
 
   return (
     <SalesDocumentLayout
@@ -124,6 +135,7 @@ export default function InvoicePage() {
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
       docType={DocumentType.ARInvoice}
+      // documentMode={document}
     >
       <DocumentHeader />
       <DocumentItems />

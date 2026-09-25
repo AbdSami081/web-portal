@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { BusinessPartner } from "../../types/sales/businessPartner.type";
-import { BaseSalesDocument, DocCurrency, SalesDocumentLine } from "@/types/sales/salesDocuments.type";
+import {
+  BaseSalesDocument,
+  DocCurrency,
+  SalesDocumentLine,
+} from "@/types/sales/salesDocuments.type";
 import { calculateFreightTax } from "@/utils/taxCalculations";
 import { useMasterDataStore } from "./useMasterDataStore";
 import { DocumentType } from "@/types/master/DocumentType";
@@ -54,8 +58,9 @@ interface SalesDocumentStore {
   loadedDraftData: any | null;
   setLoadedDraftData: (data: any) => void;
   setIsCopying: (val: boolean) => void;
-fieldAccess: string[];
-setFieldAccess: (fields: string[]) => void;
+
+  fieldAccess: string[];
+  setFieldAccess: (fields: string[]) => void;
   setCustomer: (c: BusinessPartner) => void;
   setDocDate: (d: string) => void;
   setDocDueDate: (d: string) => void;
@@ -73,11 +78,18 @@ setFieldAccess: (fields: string[]) => void;
 
   addLine: (line: SalesDocumentLine) => void;
   updateLine: (itemCode: string, updated: Partial<SalesDocumentLine>) => void;
-  setLineSerials: (itemCode: string, serials: { InternalSerialNumber: string }[]) => void;
-  setLineBatches: (itemCode: string, batches: { BatchNumber: string; Quantity: number }[]) => void;
+  setLineSerials: (
+    itemCode: string,
+    serials: { InternalSerialNumber: string }[],
+  ) => void;
+  setLineBatches: (
+    itemCode: string,
+    batches: { BatchNumber: string; Quantity: number }[],
+  ) => void;
   removeLine: (itemCode: string) => void;
 
-
+  documentMode: "items" | "service";
+  setDocumentMode: (mode: "items" | "service") => void;
   calculateTotals: () => void;
   reset: () => void;
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
@@ -91,11 +103,18 @@ setFieldAccess: (fields: string[]) => void;
       TaxCode?: string;
       VatGroup?: string;
       Remarks?: string;
-    }[]
+    }[],
   ) => void;
 
   addAttachment: (file: File) => void;
-  updateAttachment: (lineNum: number, updated: Partial<{ FreeText: string; CopyToTarget: boolean; SourcePath: string }>) => void;
+  updateAttachment: (
+    lineNum: number,
+    updated: Partial<{
+      FreeText: string;
+      CopyToTarget: boolean;
+      SourcePath: string;
+    }>,
+  ) => void;
   removeAttachment: (lineNum: number) => void;
 }
 
@@ -135,8 +154,11 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     udfs: {},
     isCopying: false,
     loadedDraftData: null,
-fieldAccess: [],
-setFieldAccess: (fields) => set({ fieldAccess: fields }),
+    fieldAccess: [],
+    documentMode: "items",
+
+    setDocumentMode: (mode) => set({ documentMode: mode }),
+    setFieldAccess: (fields) => set({ fieldAccess: fields }),
     setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setIsCopying: (val) => set({ isCopying: val }),
     setCustomer: (c) => set({ customer: c }),
@@ -148,6 +170,7 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
       set({ freight: parseSafe(f) });
       get().calculateTotals();
     },
+
     setRounding: (r) => {
       set({ rounding: parseSafe(r) });
       get().calculateTotals();
@@ -162,7 +185,8 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
     setDiscountSum: (amount: number) => {
       const amt = parseSafe(amount);
       const { TotalBeforeDiscount } = get();
-      const percent = TotalBeforeDiscount > 0 ? (amt / TotalBeforeDiscount) * 100 : 0;
+      const percent =
+        TotalBeforeDiscount > 0 ? (amt / TotalBeforeDiscount) * 100 : 0;
       set({ discSum: amt, discountPercent: percent });
       get().calculateTotals();
     },
@@ -176,13 +200,15 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
     setTaxTotal: (tt) => set({ TaxTotal: parseSafe(tt) }),
 
     addLine: (line) => {
-      const existingLine = get().lines.find((l) => l.ItemCode === line.ItemCode);
+      const existingLine = get().lines.find(
+        (l) => l.ItemCode === line.ItemCode,
+      );
       if (existingLine) {
         get().updateLine(existingLine.ItemCode, {
           ...existingLine,
           Quantity: existingLine.Quantity + line.Quantity,
           LineTotal: existingLine.Quantity * line.Price,
-          Price: line.Price
+          Price: line.Price,
         });
       } else {
         set((s) => ({ lines: [...s.lines, line] }), false, "addLine");
@@ -196,9 +222,14 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
           const lines = s.lines.map((line) => {
             if (line.ItemCode === itemCode) {
               const updatedLine = { ...line, ...updated };
-              const qty = parseSafe(updatedLine.Quantity);
-              const price = parseSafe(updatedLine.Price);
-              updatedLine.LineTotal = qty * price;
+              // const qty = parseSafe(updatedLine.Quantity);
+              // const price = parseSafe(updatedLine.Price);
+              // updatedLine.LineTotal = qty * price;
+              if (get().documentMode === "items") {
+                const qty = parseSafe(updatedLine.Quantity);
+                const price = parseSafe(updatedLine.Price);
+                updatedLine.LineTotal = qty * price;
+              }
               return updatedLine;
             }
             return line;
@@ -206,7 +237,7 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
           return { lines };
         },
         false,
-        "updateLine"
+        "updateLine",
       );
       get().calculateTotals();
     },
@@ -215,11 +246,13 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
       set(
         (s) => ({
           lines: s.lines.map((line) =>
-            line.ItemCode === itemCode ? { ...line, SerialNumbers: serials } : line
+            line.ItemCode === itemCode
+              ? { ...line, SerialNumbers: serials }
+              : line,
           ),
         }),
         false,
-        "setLineSerials"
+        "setLineSerials",
       );
     },
 
@@ -227,11 +260,13 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
       set(
         (s) => ({
           lines: s.lines.map((line) =>
-            line.ItemCode === itemCode ? { ...line, BatchNumbers: batches } : line
+            line.ItemCode === itemCode
+              ? { ...line, BatchNumbers: batches }
+              : line,
           ),
         }),
         false,
-        "setLineBatches"
+        "setLineBatches",
       );
     },
 
@@ -242,27 +277,37 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
           return { lines };
         },
         false,
-        "removeLine"
+        "removeLine",
       );
       get().calculateTotals();
     },
 
     calculateTotals: () => {
-      const { lines, freight, rounding, additionalExpenses, discountPercent, isDownPayment } = get();
+      const {
+        lines,
+        freight,
+        rounding,
+        additionalExpenses,
+        discountPercent,
+        isDownPayment,
+      } = get();
       const { freightsWithCharges } = useMasterDataStore.getState();
       const headerDiscountPercent = isDownPayment ? 0 : discountPercent;
 
       let overallTotalBeforeDiscount = 0;
       let overallLineFreightAmount = 0;
 
-        const processedLines = lines.map((line: SalesDocumentLine) => {
-        
+      const processedLines = lines.map((line: SalesDocumentLine) => {
         const quantity = parseSafe(line.Quantity);
         const unitPrice = parseSafe(line.Price);
         const lineDiscountPercent = parseSafe(line.DiscountPercent);
         const itemTaxRate = parseSafe(line.TaxRate);
 
-        const lineSubtotal = quantity * unitPrice;
+        // const lineSubtotal = quantity * unitPrice;
+        const lineSubtotal =
+          get().documentMode === "service"
+            ? parseSafe(line.LineTotal)
+            : parseSafe(line.Quantity) * parseSafe(line.Price);
         const lineDiscountAmount = (lineSubtotal * lineDiscountPercent) / 100;
         const lineAmountAfterDiscount = lineSubtotal - lineDiscountAmount;
 
@@ -271,15 +316,32 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
         // discounted taxable base, not on the pre-header-discount line amount. Skipping
         // this step is what caused tax (and therefore DocTotal) to come out higher than
         // SAP's own calculation whenever a footer discount was used.
-        const headerDiscountShareOfLine = (lineAmountAfterDiscount * headerDiscountPercent) / 100;
-        const lineTaxableAmount = lineAmountAfterDiscount - headerDiscountShareOfLine;
+        const headerDiscountShareOfLine =
+          (lineAmountAfterDiscount * headerDiscountPercent) / 100;
+        const lineTaxableAmount =
+          lineAmountAfterDiscount - headerDiscountShareOfLine;
         const itemTaxAmount = lineTaxableAmount * (itemTaxRate / 100);
 
-        const f1 = calculateFreightTax(parseSafe(line.Freight1LCAmount), line.Freight1TaxGroup || "", freightsWithCharges);
-        const f2 = calculateFreightTax(parseSafe(line.Freight2LCAmount), line.Freight2TaxGroup || "", freightsWithCharges);
-        const f3 = calculateFreightTax(parseSafe(line.Freight3LCAmount), line.Freight3TaxGroup || "", freightsWithCharges);
+        const f1 = calculateFreightTax(
+          parseSafe(line.Freight1LCAmount),
+          line.Freight1TaxGroup || "",
+          freightsWithCharges,
+        );
+        const f2 = calculateFreightTax(
+          parseSafe(line.Freight2LCAmount),
+          line.Freight2TaxGroup || "",
+          freightsWithCharges,
+        );
+        const f3 = calculateFreightTax(
+          parseSafe(line.Freight3LCAmount),
+          line.Freight3TaxGroup || "",
+          freightsWithCharges,
+        );
 
-        const lineFreightSubtotal = parseSafe(line.Freight1LCAmount) + parseSafe(line.Freight2LCAmount) + parseSafe(line.Freight3LCAmount);
+        const lineFreightSubtotal =
+          parseSafe(line.Freight1LCAmount) +
+          parseSafe(line.Freight2LCAmount) +
+          parseSafe(line.Freight3LCAmount);
         const lineFreightTaxTotal = f1.taxAmount + f2.taxAmount + f3.taxAmount;
 
         overallTotalBeforeDiscount += lineAmountAfterDiscount;
@@ -289,21 +351,34 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
           ...line,
           Quantity: quantity,
           Price: unitPrice,
-          TaxAmount: Number((itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
-          LineTotal: Number((lineAmountAfterDiscount + lineFreightSubtotal + itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
+          TaxAmount:
+            Number((itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
+          LineTotal:
+            Number(
+              (
+                lineAmountAfterDiscount +
+                lineFreightSubtotal +
+                itemTaxAmount +
+                lineFreightTaxTotal
+              ).toFixed(2),
+            ) || 0,
         };
       });
 
       const totalAdditionalExpenses = additionalExpenses.reduce(
         (sum, e) => sum + parseSafe(e.LineTotal),
-        0
+        0,
       );
 
-      const totalTaxAmount = processedLines.reduce((sum, line) => sum + (line.TaxAmount || 0), 0);
+      const totalTaxAmount = processedLines.reduce(
+        (sum, line) => sum + (line.TaxAmount || 0),
+        0,
+      );
       const totalFreightAmount = parseSafe(freight) + overallLineFreightAmount;
-      const calculatedDiscSum = (overallTotalBeforeDiscount * discountPercent) / 100;
+      const calculatedDiscSum =
+        (overallTotalBeforeDiscount * discountPercent) / 100;
 
-     const finalDocTotal =
+      const finalDocTotal =
         overallTotalBeforeDiscount +
         totalTaxAmount +
         totalFreightAmount +
@@ -357,19 +432,27 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
           lines: [],
           TotalBeforeDiscount: 0,
           TaxTotal: 0,
-          DocTotal: 0
+          DocTotal: 0,
         }),
         false,
-        "clearLines"
+        "clearLines",
       );
     },
 
     loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
+      console.log("Loading document into store:", doc, "Type:", type, "IsCopy:", isCopy);
       const rawLines = doc.DocumentLines || doc.lines || [];
       // Resolve UoM master data for proper Code resolution
       const uoms = useUoMStore.getState().uoms || [];
 
       const mappedLines = rawLines.map((line: any, index: number) => {
+          console.log("========== SERVICE LINE ==========");
+  console.log("FULL LINE:", line);
+  console.log("AccountCode:", line.AccountCode);
+  console.log("AccountName:", line.AccountName);
+  console.log("Description:", line.Description);
+  console.log("ItemDescription:", line.ItemDescription);
+  console.log("=================================")
         const qty = parseSafe(line.Quantity);
         const price = parseSafe(line.UnitPrice || line.Price);
         let discount = parseSafe(line.DiscountPercent);
@@ -385,18 +468,33 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
           LineNum: line.LineNum !== undefined ? line.LineNum : index,
           ItemCode: line.ItemCode,
           ItemName: line.ItemDescription || line.ItemName || "",
+          // Service mode
+          AccountCode: line.AccountCode || "",
+          AccountName: line.AccountName || "",
+          Description: line.Description || line.ItemDescription || "",
+
           Quantity: qty,
           Price: price,
           DiscountPercent: discount,
           TaxRate: taxRate,
-          LineTotal: parseSafe(line.LineTotal) || (lineSubtotal - discountAmount + calculatedTax),
+          LineTotal:
+            parseSafe(line.LineTotal) ||
+            lineSubtotal - discountAmount + calculatedTax,
           ManSerNum: line.ManSerNum || (line.SerialNumbers?.length ? "Y" : ""),
           ManBtchNum: line.ManBtchNum || (line.BatchNumbers?.length ? "Y" : ""),
           SerialNumbers: line.SerialNumbers || [],
           BatchNumbers: line.BatchNumbers || [],
           WarehouseCode: line.WarehouseCode || "",
           TaxAmount: parseSafe(line.TaxTotal || line.TaxSum) || calculatedTax,
-          UoMCode: resolveUoMFromCandidates(uoms, line.UoMCode, line.UoMGroupEntry, line.UnitsOfMeasurment) || line.UoMCode || "",
+          UoMCode:
+            resolveUoMFromCandidates(
+              uoms,
+              line.UoMCode,
+              line.UoMGroupEntry,
+              line.UnitsOfMeasurment,
+            ) ||
+            line.UoMCode ||
+            "",
           MeasureUnit: line.MeasureUnit || "",
           TaxCode: line.VatGroup || line.TaxCode,
           BaseType: line.BaseType,
@@ -404,25 +502,48 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
           BaseLine: line.BaseLine,
           Comments: line.Comments,
           LineStatus: line.LineStatus,
-          IsClosed: line.IsClosed || (line.LineStatus === "bost_Close" ? "tYES" : "tNO"),
+          IsClosed:
+            line.IsClosed ||
+            (line.LineStatus === "bost_Close" ? "tYES" : "tNO"),
           RemainingOpenQuantity: line.RemainingOpenQuantity,
 
-          Freight1Type: line.DocumentLineAdditionalExpenses?.[0]?.ExpenseCode?.toString() || "",
-          Freight1LCAmount: parseSafe(line.DocumentLineAdditionalExpenses?.[0]?.LineTotal),
-          Freight1TaxGroup: line.DocumentLineAdditionalExpenses?.[0]?.TaxCode || line.DocumentLineAdditionalExpenses?.[0]?.VatGroup || "",
-          
-          Freight2Type: line.DocumentLineAdditionalExpenses?.[1]?.ExpenseCode?.toString() || "",
-          Freight2LCAmount: parseSafe(line.DocumentLineAdditionalExpenses?.[1]?.LineTotal),
-          Freight2TaxGroup: line.DocumentLineAdditionalExpenses?.[1]?.TaxCode || line.DocumentLineAdditionalExpenses?.[1]?.VatGroup || "",
-          
-          Freight3Type: line.DocumentLineAdditionalExpenses?.[2]?.ExpenseCode?.toString() || "",
-          Freight3LCAmount: parseSafe(line.DocumentLineAdditionalExpenses?.[2]?.LineTotal),
-          Freight3TaxGroup: line.DocumentLineAdditionalExpenses?.[2]?.TaxCode || line.DocumentLineAdditionalExpenses?.[2]?.VatGroup || "",
+          Freight1Type:
+            line.DocumentLineAdditionalExpenses?.[0]?.ExpenseCode?.toString() ||
+            "",
+          Freight1LCAmount: parseSafe(
+            line.DocumentLineAdditionalExpenses?.[0]?.LineTotal,
+          ),
+          Freight1TaxGroup:
+            line.DocumentLineAdditionalExpenses?.[0]?.TaxCode ||
+            line.DocumentLineAdditionalExpenses?.[0]?.VatGroup ||
+            "",
+
+          Freight2Type:
+            line.DocumentLineAdditionalExpenses?.[1]?.ExpenseCode?.toString() ||
+            "",
+          Freight2LCAmount: parseSafe(
+            line.DocumentLineAdditionalExpenses?.[1]?.LineTotal,
+          ),
+          Freight2TaxGroup:
+            line.DocumentLineAdditionalExpenses?.[1]?.TaxCode ||
+            line.DocumentLineAdditionalExpenses?.[1]?.VatGroup ||
+            "",
+
+          Freight3Type:
+            line.DocumentLineAdditionalExpenses?.[2]?.ExpenseCode?.toString() ||
+            "",
+          Freight3LCAmount: parseSafe(
+            line.DocumentLineAdditionalExpenses?.[2]?.LineTotal,
+          ),
+          Freight3TaxGroup:
+            line.DocumentLineAdditionalExpenses?.[2]?.TaxCode ||
+            line.DocumentLineAdditionalExpenses?.[2]?.VatGroup ||
+            "",
         };
       });
 
       const udfValues: Record<string, any> = {};
-      Object.keys(doc).forEach(key => {
+      Object.keys(doc).forEach((key) => {
         if (key.startsWith("U_")) {
           udfValues[key] = doc[key];
         }
@@ -440,15 +561,29 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
           DocumentStatus: "bost_Open",
         },
         lines: mappedLines,
-        docDate: (doc.DocDate || doc.docDate || new Date().toISOString()).split("T")[0],
-        docDueDate: (doc.DocDueDate || doc.docDueDate || new Date().toISOString()).split("T")[0],
-        taxDate: (doc.TaxDate || doc.taxDate || new Date().toISOString()).split("T")[0],
-        comments: (doc.Comments !== undefined && doc.Comments !== null) ? doc.Comments : (doc.comments !== undefined && doc.comments !== null ? doc.comments : ""),
+        docDate: (doc.DocDate || doc.docDate || new Date().toISOString()).split(
+          "T",
+        )[0],
+        docDueDate: (
+          doc.DocDueDate ||
+          doc.docDueDate ||
+          new Date().toISOString()
+        ).split("T")[0],
+        taxDate: (doc.TaxDate || doc.taxDate || new Date().toISOString()).split(
+          "T",
+        )[0],
+        comments:
+          doc.Comments !== undefined && doc.Comments !== null
+            ? doc.Comments
+            : doc.comments !== undefined && doc.comments !== null
+              ? doc.comments
+              : "",
         freight: parseSafe(doc.Freight || doc.freight),
         rounding: parseSafe(doc.Rounding || doc.rounding),
-        discountPercent: parseSafe(doc.DownPaymentPercentage) > 0
-          ? parseSafe(doc.DownPaymentPercentage)
-          : parseSafe(doc.DiscountPercent || doc.discountPercent),
+        discountPercent:
+          parseSafe(doc.DownPaymentPercentage) > 0
+            ? parseSafe(doc.DownPaymentPercentage)
+            : parseSafe(doc.DiscountPercent || doc.discountPercent),
         currency: doc.DocCurrency || doc.Currency || "USD",
         DocEntry: isCopy ? 0 : parseSafe(doc.DocEntry),
         DocNum: isCopy ? 0 : parseSafe(doc.DocNum),
@@ -462,22 +597,35 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
         DocTotal: parseSafe(doc.DocTotal || doc.docTotal),
         TaxTotal: parseSafe(doc.TaxTotal || doc.taxTotal),
         discSum: parseSafe(doc.DiscSum || doc.discSum),
-        TotalBeforeDiscount: parseSafe(doc.TotalBeforeDiscount || doc.SumBeforeDiscount),
-        additionalExpenses: (doc.DocumentAdditionalExpenses || doc.DocumentLineAdditionalExpenses || doc.additionalExpenses || []).map((e: any) => ({
+        TotalBeforeDiscount: parseSafe(
+          doc.TotalBeforeDiscount || doc.SumBeforeDiscount,
+        ),
+        additionalExpenses: (
+          doc.DocumentAdditionalExpenses ||
+          doc.DocumentLineAdditionalExpenses ||
+          doc.additionalExpenses ||
+          []
+        ).map((e: any) => ({
           ExpenseCode: parseSafe(e.ExpenseCode),
           LineTotal: parseSafe(e.LineTotal),
           TaxCode: e.TaxCode || e.VatGroup || "",
           VatGroup: e.VatGroup || e.TaxCode || "",
-          Remarks: e.Remarks || ""
+          Remarks: e.Remarks || "",
         })),
-        attachments: isCopy ? [] : (doc.Attachments_Lines?.Attachments2_Lines || []).map((line: any) => ({
-          LineNum: line.LineNum,
-          SourcePath: line.SourcePath || "",
-          FileName: line.FileName + (line.FileExtension ? "." + line.FileExtension : ""),
-          AttachmentDate: (line.AttachmentDate || "").split("T")[0],
-          FreeText: line.FreeText || "",
-          CopyToTarget: line.CopyToTargetDoc === "tYES",
-        })),
+        attachments: isCopy
+          ? []
+          : (doc.Attachments_Lines?.Attachments2_Lines || []).map(
+              (line: any) => ({
+                LineNum: line.LineNum,
+                SourcePath: line.SourcePath || "",
+                FileName:
+                  line.FileName +
+                  (line.FileExtension ? "." + line.FileExtension : ""),
+                AttachmentDate: (line.AttachmentDate || "").split("T")[0],
+                FreeText: line.FreeText || "",
+                CopyToTarget: line.CopyToTargetDoc === "tYES",
+              }),
+            ),
         udfs: udfValues,
       });
 
@@ -485,7 +633,9 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
       resolveSerialBatchFlags(mappedLines, (patch) => {
         set((state) => ({
           lines: state.lines.map((line) =>
-            patch.has(line.ItemCode) ? { ...line, ...patch.get(line.ItemCode) } : line
+            patch.has(line.ItemCode)
+              ? { ...line, ...patch.get(line.ItemCode) }
+              : line,
           ),
         }));
       });
@@ -494,13 +644,20 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
 
     addAttachment: (file: File) => {
       const { attachments } = get();
-      const newLineNum = attachments.length > 0 ? Math.max(...attachments.map(a => a.LineNum)) + 1 : 1;
+      const newLineNum =
+        attachments.length > 0
+          ? Math.max(...attachments.map((a) => a.LineNum)) + 1
+          : 1;
 
       let sourcePath = process.env.NEXT_PUBLIC_ATTACHMENT_SOURCE_PATH || "";
-      const fullPath = (file as any).path || (file as any).webkitRelativePath || "";
+      const fullPath =
+        (file as any).path || (file as any).webkitRelativePath || "";
 
       if (fullPath) {
-        const lastIndex = Math.max(fullPath.lastIndexOf('\\'), fullPath.lastIndexOf('/'));
+        const lastIndex = Math.max(
+          fullPath.lastIndexOf("\\"),
+          fullPath.lastIndexOf("/"),
+        );
         if (lastIndex !== -1) {
           sourcePath = fullPath.substring(0, lastIndex);
         }
@@ -513,21 +670,23 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
         AttachmentDate: new Date().toISOString().split("T")[0],
         FreeText: "",
         CopyToTarget: false,
-        File: file
+        File: file,
       };
       set({ attachments: [...attachments, newAttachment] });
     },
 
     updateAttachment: (lineNum, updated) => {
       set((s) => ({
-        attachments: s.attachments.map((a) => a.LineNum === lineNum ? { ...a, ...updated } : a)
+        attachments: s.attachments.map((a) =>
+          a.LineNum === lineNum ? { ...a, ...updated } : a,
+        ),
       }));
     },
 
     removeAttachment: (lineNum) => {
       set((s) => ({
-        attachments: s.attachments.filter((a) => a.LineNum !== lineNum)
+        attachments: s.attachments.filter((a) => a.LineNum !== lineNum),
       }));
     },
-  }))
+  })),
 );

@@ -50,7 +50,8 @@ export const getSalesDeliveryDocument = async (docNum: number): Promise<BaseSale
 export const getARInvoiceDocument = async (docNum: number): Promise<BaseSalesDocument | null> => {
   const res = await apiClient.get(`api/Sales/Invoices?docNum=${docNum}`);
   if (!res.data) return null;
-
+// console.log(res.data, "res.data")
+// console.log(res.data.DocumentLines, "res.data.DocumentLines")
   const doc: BaseSalesDocument = {
     ...res.data,
     comments: res.data.Comments ?? "",
@@ -58,6 +59,7 @@ export const getARInvoiceDocument = async (docNum: number): Promise<BaseSalesDoc
       ...line,
     })),
   };
+
 
   return doc;
 };
