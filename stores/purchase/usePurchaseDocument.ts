@@ -7,6 +7,7 @@ import { calculateFreightTax } from "@/utils/taxCalculations";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { resolveSerialBatchFlags } from "@/lib/sap/helpers/serialBatchHelper";
 import { pickLineUdfs } from "@/lib/sap/helpers/lineUdfHelper";
+import { getChartOfAccounts } from "@/api+/sap/financial/financialService";
 
 interface PurchaseDocumentStore {
   docType: PurchaseDocumentType;
@@ -29,7 +30,9 @@ interface PurchaseDocumentStore {
   isDownPayment: boolean;
   currency: string;
   fieldAccess: string[];
-  
+  documentMode: "items" | "service";
+  setDocumentMode: (mode: "items" | "service") => void;
+
   DocEntry: number;
   DocNum: number;
   TotalBeforeDiscount: number;
@@ -88,6 +91,7 @@ interface PurchaseDocumentStore {
   updateLine: (itemCode: string, updated: Partial<PurchaseDocumentLine>) => void;
   updateLineByIndex: (index: number, updated: Partial<PurchaseDocumentLine>) => void;
   removeLine: (itemCode: string) => void;
+  removeLineByIndex: (index: number) => void;
   clearLines: () => void;
 
   calculateTotals: () => void;
@@ -139,6 +143,8 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     isCopying: false,
     loadedDraftData: null,
     fieldAccess: [],
+    documentMode: "items",
+    setDocumentMode: (mode) => set({ documentMode: mode }),
 
     setVendor: (v) => set({ vendor: v }),
     setRequester: (r) => set({ requester: r }),
@@ -186,11 +192,6 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
       });
       get().calculateTotals();
     },
-    // Same-ItemCode lines (e.g. a return split across two warehouses/batches) all match
-    // the first index findIndex() picks, so updateLine("code", ...) collapses every
-    // matching row onto that one line and flip-flops it between rows on every render —
-    // a real infinite update loop for documents with duplicate item codes. Row-level
-    // effects (PurchaseItemRow) must target their own array position instead.
     updateLineByIndex: (index: number, updated: Partial<PurchaseDocumentLine>) => {
       set((state) => {
         if (index < 0 || index >= state.lines.length) return state;
@@ -227,6 +228,10 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
       set((state) => ({ lines: state.lines.filter((line) => line.ItemCode !== itemCode) }));
       get().calculateTotals();
     },
+    removeLineByIndex: (index: number) => {
+      set((state) => ({ lines: state.lines.filter((_, i) => i !== index) }));
+      get().calculateTotals();
+    },
     clearLines: () => {
       set({ lines: [] });
       get().calculateTotals();
@@ -253,6 +258,9 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
           LineNum: line.LineNum !== undefined ? line.LineNum : index,
           ItemCode: line.ItemCode,
           ItemName: line.ItemDescription || line.ItemName || "",
+          AccountCode: line.AccountCode || "",
+          AccountName: line.AccountName || "",
+          Description: line.Description || line.ItemDescription || "",
           Quantity: qty,
           Price: price,
           DiscountPercent: discount,
@@ -318,12 +326,8 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         currency: doc.DocCurrency || doc.Currency || "USD",
         DocEntry: isCopy ? 0 : parseSafe(doc.DocEntry),
         DocNum: isCopy ? 0 : parseSafe(doc.DocNum),
-        // Every page's submit handler gates PATCH-vs-POST on lastLoadedDocType === its own
-        // DocumentType — this was never actually written to the store (the `type` param was
-        // accepted but unused), so that check was always false and "Update" always created a
-        // duplicate document instead of patching the existing one. Matches useSalesDocument
-        // and useInventoryDocument, which already set this correctly.
         lastLoadedDocType: type ?? null,
+        documentMode: doc.DocType === "dDocument_Service" ? "service" : "items",
         DocTotal: parseSafe(doc.DocTotal || doc.docTotal),
         TaxTotal: parseSafe(doc.TaxTotal || doc.taxTotal),
         discSum: parseSafe(doc.DiscSum || doc.discSum),
@@ -354,6 +358,36 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
           ),
         }));
       });
+
+      const codesNeedingName: string[] = Array.from(
+        new Set<string>(
+          mappedLines
+            .filter((l: any) => l.AccountCode && !l.AccountName)
+            .map((l: any) => l.AccountCode as string),
+        ),
+      );
+      if (codesNeedingName.length > 0) {
+        Promise.all(
+          codesNeedingName.map((code) =>
+            getChartOfAccounts(0, code).then((res) => {
+              const match = res?.value?.find((a: any) => a.Code === code);
+              return match ? { code, name: match.Name } : null;
+            }).catch(() => null),
+          ),
+        ).then((results) => {
+          const nameByCode = new Map(
+            results.filter(Boolean).map((r: any) => [r.code, r.name]),
+          );
+          if (nameByCode.size === 0) return;
+          set((state) => ({
+            lines: state.lines.map((line) =>
+              line.AccountCode && !line.AccountName && nameByCode.has(line.AccountCode)
+                ? { ...line, AccountName: nameByCode.get(line.AccountCode) }
+                : line,
+            ),
+          }));
+        });
+      }
     },
     addAttachment: (file) => {
       set((state) => ({
@@ -384,7 +418,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     },
 
     calculateTotals: () => {
-      const { lines, discountPercent, freight, rounding, additionalExpenses, isDownPayment } = get();
+      const { lines, discountPercent, freight, rounding, additionalExpenses, isDownPayment, documentMode } = get();
       const { freightsWithCharges } = useMasterDataStore.getState();
       const headerDiscountPercent = isDownPayment ? 0 : parseSafe(discountPercent);
 
@@ -397,13 +431,10 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         const lineDiscountPercent = parseSafe(line.DiscountPercent);
         const itemTaxRate = parseSafe(line.TaxRate);
 
-        const lineSubtotal = quantity * unitPrice;
+        const lineSubtotal = documentMode === "service" ? parseSafe(line.LineTotal) : quantity * unitPrice;
         const lineDiscountAmount = (lineSubtotal * lineDiscountPercent) / 100;
         const lineAmountAfterDiscount = lineSubtotal - lineDiscountAmount;
 
-        // SAP applies the document-level (header/footer) Discount % on top of each
-        // line's own discount BEFORE computing tax - tax is calculated on the fully
-        // discounted taxable base, not on the pre-header-discount line amount.
         const headerDiscountShareOfLine = (lineAmountAfterDiscount * headerDiscountPercent) / 100;
         const lineTaxableAmount = lineAmountAfterDiscount - headerDiscountShareOfLine;
         const itemTaxAmount = lineTaxableAmount * (itemTaxRate / 100);
@@ -476,6 +507,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
       attachments: [],
       lastLoadedDocType: null,
       loadedDraftData: null,
+      documentMode: "items",
     }),
   }))
 );

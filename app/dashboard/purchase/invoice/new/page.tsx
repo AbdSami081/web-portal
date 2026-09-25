@@ -60,7 +60,7 @@ export default function NewAPInvoicePage() {
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
 
-    const { discountPercent, freight, rounding, additionalExpenses } = usePurchaseDocument.getState();
+    const { discountPercent, freight, rounding, additionalExpenses, documentMode } = usePurchaseDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.APInvoice) {
       const payload = buildPurchaseDocumentPatchPayload({
@@ -71,6 +71,7 @@ export default function NewAPInvoicePage() {
         rounding,
         additionalExpenses,
         includeLines: false,
+        documentMode,
       });
 
       // Add attachments to payload
@@ -104,6 +105,7 @@ export default function NewAPInvoicePage() {
       freight,
       rounding,
       additionalExpenses,
+      documentMode,
     });
 
     // Add attachments to payload
@@ -121,7 +123,10 @@ export default function NewAPInvoicePage() {
     try {
       const response = await postPurchaseInvoice(payload);
 
-      if (response?.DocEntry) {
+      if (response?.IsDraft) {
+        toast.success("AP Invoice submitted for approval.");
+        return response;
+      } else if (response?.DocEntry) {
         toast.success(`AP Invoice #${response.DocNum} created successfully!`);
         return response;
       } else {

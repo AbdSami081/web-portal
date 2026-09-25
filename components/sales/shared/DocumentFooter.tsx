@@ -1,4 +1,3 @@
-
 import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,8 +48,6 @@ export default function DocumentFooter() {
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isFooterDisabled = isLoadedDocument && docStatus === "bost_Close";
 
-
-
   const commentsField = register("Comments");
   const { triggerFMS } = useFmsContext();
 
@@ -65,7 +62,7 @@ export default function DocumentFooter() {
             <div className="mb-4" data-fms-field="SalesPersonCode">
               <AppLabel htmlFor="SalesPersonCode">Sales Employee</AppLabel>
               <Select
-                value={salesPersonCode !== null && salesPersonCode !== undefined ? String(salesPersonCode) : ""}
+                value={salesPersonCode !== null && salesPersonCode !== undefined ? String(salesPersonCode) : "-1"}
                 onValueChange={(val) => setSalesPersonCode(val === "" ? null : Number(val))}
                 disabled={isFooterDisabled || !isFieldEnabled("SalesPersonCode")}
               >
@@ -160,7 +157,7 @@ export default function DocumentFooter() {
             </div>
           )}
 
-          {/* 3. Freight */}
+          {}
           {isFieldVisible("TotalFreight") && (
             <div className="grid grid-cols-2 gap-2 items-center">
               <div className="flex items-center gap-1">
@@ -179,7 +176,7 @@ export default function DocumentFooter() {
             </div>
           )}
 
-          {/* 4. Rounding */}
+          {}
           {isFieldVisible("Rounding") && (
             <div className="grid grid-cols-2 gap-2 items-center">
               <div className="flex items-center gap-2">
@@ -203,7 +200,7 @@ export default function DocumentFooter() {
             </div>
           )}
 
-          {/* 5. Tax */}
+          {}
           {isFieldVisible("TaxTotal") && (
             <div className="grid grid-cols-2 gap-2 items-center">
               <AppLabel>Tax</AppLabel>
@@ -220,7 +217,7 @@ export default function DocumentFooter() {
             </div>
           )}
 
-          {/* 6. Total */}
+          {}
           {isFieldVisible("DocTotal") && (
             <div className="grid grid-cols-2 gap-2 items-center border-t border-gray-300 pt-2">
               <AppLabel className="font-bold text-sm">Total</AppLabel>

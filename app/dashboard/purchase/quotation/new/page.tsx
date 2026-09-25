@@ -37,7 +37,7 @@ export default function NewPurchaseQuotationPage() {
   });
 
   const handleSubmit = async (data: PurchaseQuotationFormData) => {
-    const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses } = usePurchaseDocument.getState();
+    const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses, documentMode } = usePurchaseDocument.getState();
 
     if (lines.length === 0) {
       toast.error("Please add at least one item.");
@@ -75,6 +75,7 @@ export default function NewPurchaseQuotationPage() {
         freight,
         rounding,
         additionalExpenses,
+        documentMode,
       });
 
       // Add attachments to payload
@@ -109,6 +110,7 @@ export default function NewPurchaseQuotationPage() {
       freight,
       rounding,
       additionalExpenses,
+      documentMode,
     });
 
     // Add attachments to payload
@@ -124,6 +126,10 @@ export default function NewPurchaseQuotationPage() {
     try {
       console.log("Submitting Purchase Quotation with payload:", payload);
       const documentData = await postPurchaseQuotation(payload);
+      if (documentData?.IsDraft) {
+        toast.success("Purchase Quotation submitted for approval.");
+        return documentData;
+      }
       if (!documentData?.DocEntry) throw new Error("Failed to create quotation");
       loadFromDocument(documentData, DocumentType.PurchaseQuotation);
       toast.success(`Quotation #${documentData.DocNum} created successfully`);

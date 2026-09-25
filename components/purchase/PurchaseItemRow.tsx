@@ -22,10 +22,12 @@ import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { useChartOfAccountsStore } from "@/stores/useChartOfAccountsStore";
 
 interface Props {
   index: number;
   line: PurchaseDocumentLine;
+  documentMode?: "items" | "service";
 }
 
 interface Record {
@@ -33,12 +35,23 @@ interface Record {
   Name: string;
 }
 
-export function PurchaseItemRow({ index, line }: Props) {
+const glAccountColumns = [
+  { key: "Code", label: "G/L Account" },
+  { key: "Name", label: "G/L Account Name" },
+];
+
+export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) {
   const { watch } = useFormContext();
-  const { updateLineByIndex, removeLine, fieldAccess } = usePurchaseDocument();
+  const { updateLineByIndex, removeLine, removeLineByIndex, fieldAccess } = usePurchaseDocument();
   const { freightsWithCharges, freightTypes, warehouses } = useMasterDataStore();
   const { allBranches } = useBranchStore();
   const config = usePurchaseDocConfig();
+  const chartOfAccounts = useChartOfAccountsStore((state) => state.chartOfAccounts);
+  const chartOfAccountsHasMore = useChartOfAccountsStore((state) => state.hasMore);
+  const chartOfAccountsLoading = useChartOfAccountsStore((state) => state.isLoading);
+  const loadMoreChartOfAccounts = useChartOfAccountsStore((state) => state.loadMoreChartOfAccounts);
+
+  const isService = documentMode === "service";
 
   const isFinancialPurchaseDoc = isPostedPurchaseDocType(config.type);
 
@@ -63,10 +76,11 @@ export function PurchaseItemRow({ index, line }: Props) {
   };
   useLineFmsAuto(draftLine, patchLine, isLineDisabled);
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
-  const priceGuard = usePositiveField("Price", line.Price);
+  const priceGuard = usePositiveField(isService ? "UnitPrice" : "Price", isService ? line.UnitPrice : line.Price);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
   const [uomDialogOpen, setUomDialogOpen] = useState(false);
   const [cogsModalOpen, setCogsModalOpen] = useState(false);
+  const [glAccountModalOpen, setGlAccountModalOpen] = useState(false);
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
   const [cogsData, setCogsData] = useState<Record[]>([]);
   const { multiBranchEnabled } = useApprovalSettings();
@@ -75,23 +89,22 @@ export function PurchaseItemRow({ index, line }: Props) {
     setDraftLine(line);
   }, [line, index]);
 
-  // Backfill BPLid for lines that already have a warehouse but no branch yet (e.g. loaded documents).
-  // Must target this row's own index: updateLine(ItemCode) would hit the wrong row (or
-  // ping-pong forever) when two lines share the same item code.
   useEffect(() => {
+    if (isService) return;
     if (line.WarehouseCode && line.BPLid === undefined) {
       const branchId = resolveBranchForWarehouse(line.WarehouseCode, warehouses);
       if (branchId !== undefined) {
         updateLineByIndex(index, { BPLid: branchId });
       }
     }
-  }, [line.WarehouseCode, line.BPLid, warehouses, index]);
+  }, [isService, line.WarehouseCode, line.BPLid, warehouses, index]);
 
   useEffect(() => {
     calculateAndUpdate(draftLine);
   }, [
     draftLine.Quantity,
     draftLine.Price,
+    draftLine.LineTotal,
     draftLine.DiscountPercent,
     draftLine.TaxCode,
     draftLine.ItemCode,
@@ -105,22 +118,49 @@ export function PurchaseItemRow({ index, line }: Props) {
   ]);
 
   const calculateAndUpdate = (lineData: PurchaseDocumentLine) => {
-    const quantity = Number(lineData.Quantity) || 0;
-    const price = Number(lineData.Price) || 0;
     const discount = Number(lineData.DiscountPercent) || 0;
 
     const selectedTax = freightsWithCharges.find(t => (t.Code || (t as any).code) === lineData.TaxCode);
     let itemTaxRate = Number(selectedTax?.Rate || 0);
 
-    const subtotal = quantity * price;
-    const discounted = subtotal * (1 - discount / 100);
-    const itemTax = (discounted * itemTaxRate) / 100;
-
     const f1 = calculateFreightTax(Number(lineData.Freight1LCAmount || 0), lineData.Freight1TaxGroup || "", freightsWithCharges);
     const f2 = calculateFreightTax(Number(lineData.Freight2LCAmount || 0), lineData.Freight2TaxGroup || "", freightsWithCharges);
     const f3 = calculateFreightTax(Number(lineData.Freight3LCAmount || 0), lineData.Freight3TaxGroup || "", freightsWithCharges);
+    const freightTax = f1.taxAmount + f2.taxAmount + f3.taxAmount;
 
-    const totalTax = itemTax + f1.taxAmount + f2.taxAmount + f3.taxAmount;
+    if (isService) {
+      const serviceAmount = Number(lineData.LineTotal) || 0;
+      const discountedAmount = serviceAmount * (1 - discount / 100);
+      const serviceTax = (discountedAmount * itemTaxRate) / 100;
+      const taxTotal = Number((serviceTax + freightTax).toFixed(2));
+      const grossTotal = Number((discountedAmount + taxTotal).toFixed(2));
+
+      const updatedLine = {
+        ...lineData,
+        TaxRate: itemTaxRate,
+        Freight1TaxRate: f1.rate,
+        Freight1TaxLCAmount: Number(f1.taxAmount.toFixed(2)),
+        Freight2TaxRate: f2.rate,
+        Freight2TaxLCAmount: Number(f2.taxAmount.toFixed(2)),
+        Freight3TaxRate: f3.rate,
+        Freight3TaxLCAmount: Number(f3.taxAmount.toFixed(2)),
+        TaxAmount: taxTotal,
+        TaxTotal: taxTotal,
+        GrossTotal: grossTotal,
+        LineTotal: serviceAmount,
+      };
+
+      setDraftLine(updatedLine);
+      updateLineByIndex(index, updatedLine);
+      return;
+    }
+
+    const quantity = Number(lineData.Quantity) || 0;
+    const price = Number(lineData.Price) || 0;
+    const subtotal = quantity * price;
+    const discounted = subtotal * (1 - discount / 100);
+    const itemTax = (discounted * itemTaxRate) / 100;
+    const totalTax = itemTax + freightTax;
 
     const updatedLine = {
       ...lineData,
@@ -149,6 +189,298 @@ export function PurchaseItemRow({ index, line }: Props) {
     );
     setCogsModalOpen(true);
   };
+
+  if (isService) {
+    return (
+      <>
+        <td className="py-1 px-2 border-r border-neutral-200 text-center w-[40px]">
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-6 w-6 p-0 hover:bg-red-100/10"
+            onClick={() => removeLineByIndex(index)}
+            disabled={isLineDisabled}
+            title="Remove service"
+          >
+            <Trash className={`h-4 w-4 ${isLineDisabled ? "text-gray-400" : "text-red-500"}`} />
+          </Button>
+        </td>
+
+        {isFieldVisible("AccountCode") && (
+          <td className="py-2 px-2">
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-8 w-full text-left bg-neutral-100"
+                value={draftLine.AccountCode || ""}
+                disabled
+                readOnly
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => setGlAccountModalOpen(true)}
+                disabled={!isFieldEnabled("AccountCode")}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+          </td>
+        )}
+
+        {isFieldVisible("AccountName") && (
+          <td className="py-2 px-2">
+            <Input
+              className="h-8 w-full text-left bg-neutral-100"
+              value={draftLine.AccountName || ""}
+              disabled
+              readOnly
+            />
+          </td>
+        )}
+
+        {isFieldVisible("Description") && (
+          <td className="py-2 px-2">
+            <Input
+              className="h-8 w-full text-left bg-neutral-100"
+              value={draftLine.Description || ""}
+              onChange={(e) => patchLine({ Description: e.target.value })}
+              disabled={!isFieldEnabled("Description")}
+            />
+          </td>
+        )}
+
+        {isFieldVisible("DiscountPercent") && (
+          <td className="py-2 px-2">
+            <Input
+              className="h-6 w-full text-right"
+              type="number"
+              step="any"
+              min={0}
+              max={100}
+              disabled={!isFieldEnabled("DiscountPercent")}
+              value={draftLine.DiscountPercent || 0}
+              onChange={(e) => {
+                const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                setDraftLine({ ...draftLine, DiscountPercent: val });
+              }}
+            />
+          </td>
+        )}
+
+        {isFieldVisible("TaxCode") && (
+          <td className="py-2 px-2">
+            <Select
+              value={draftLine.TaxCode || ""}
+              disabled={!isFieldEnabled("TaxCode")}
+              onValueChange={(val) => patchLine({ TaxCode: val })}
+            >
+              <SelectTrigger className="h-6 w-full text-xs">
+                <SelectValue placeholder="Tax" />
+              </SelectTrigger>
+              <SelectContent>
+                {freightsWithCharges?.map((grp: any) => {
+                  const code = grp.Code || grp.code;
+                  const name = grp.Name || grp.name;
+                  return (
+                    <SelectItem key={code} value={code} className="text-xs">
+                      {code} - {name}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </td>
+        )}
+
+        {isFieldVisible("LineTotal") && (
+          <td className="py-2 px-2">
+            <Input
+              type="number"
+              step="any"
+              className="h-6 w-full text-right"
+              value={draftLine.LineTotal ?? ""}
+              disabled={!isFieldEnabled("LineTotal")}
+              onChange={(e) => {
+                const value = Number(e.target.value) || 0;
+                setDraftLine((prev) => ({ ...prev, LineTotal: value }));
+              }}
+            />
+          </td>
+        )}
+
+        {isFieldVisible("TaxAmount") && (
+          <td className="py-2 px-2">
+            <Input
+              className="h-6 w-full text-right bg-neutral-100"
+              value={draftLine.TaxAmount ?? 0}
+              disabled
+              readOnly
+            />
+          </td>
+        )}
+
+        {isFieldVisible("Freight1Type") && (
+          <td className="py-2 px-2">
+            <Select
+              value={draftLine.Freight1Type || ""}
+              disabled={!isFieldEnabled("Freight1Type")}
+              onValueChange={(val) => {
+                const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
+                const updated = { ...draftLine, Freight1Type: val, Freight1TaxGroup: selectedType?.VatGroupI || selectedType?.VatGroupO || "" };
+                setDraftLine(updated);
+                calculateAndUpdate(updated);
+              }}
+            >
+              <SelectTrigger className="h-6 w-full text-xs">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {freightTypes?.map((type: any) => (
+                  <SelectItem key={type.ExpnsCode} value={type.ExpnsCode?.toString()} className="text-xs">
+                    {type.ExpnsName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </td>
+        )}
+
+        {isFieldVisible("Freight1LCAmount") && (
+          <td className="py-2 px-2">
+            <Input
+              className="h-6 w-full text-right"
+              type="number"
+              step="any"
+              disabled={!isFieldEnabled("Freight1LCAmount")}
+              value={draftLine.Freight1LCAmount || 0}
+              onChange={(e) => setDraftLine((prev) => ({ ...prev, Freight1LCAmount: Number(e.target.value) }))}
+              onBlur={() => calculateAndUpdate(draftLine)}
+            />
+          </td>
+        )}
+
+        {isFieldVisible("Freight2Type") && (
+          <td className="py-2 px-2">
+            <Select
+              value={draftLine.Freight2Type || ""}
+              disabled={!isFieldEnabled("Freight2Type")}
+              onValueChange={(val) => {
+                const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
+                const updated = { ...draftLine, Freight2Type: val, Freight2TaxGroup: selectedType?.VatGroupI || selectedType?.VatGroupO || "" };
+                setDraftLine(updated);
+                calculateAndUpdate(updated);
+              }}
+            >
+              <SelectTrigger className="h-6 w-full text-xs">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {freightTypes?.map((type: any) => (
+                  <SelectItem key={type.ExpnsCode} value={type.ExpnsCode?.toString()} className="text-xs">
+                    {type.ExpnsName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </td>
+        )}
+
+        {isFieldVisible("Freight2LCAmount") && (
+          <td className="py-2 px-2">
+            <Input
+              className="h-6 w-full text-right"
+              type="number"
+              step="any"
+              disabled={!isFieldEnabled("Freight2LCAmount")}
+              value={draftLine.Freight2LCAmount || 0}
+              onChange={(e) => setDraftLine((prev) => ({ ...prev, Freight2LCAmount: Number(e.target.value) }))}
+              onBlur={() => calculateAndUpdate(draftLine)}
+            />
+          </td>
+        )}
+
+        {isFieldVisible("Freight3Type") && (
+          <td className="py-2 px-2">
+            <Select
+              value={draftLine.Freight3Type || ""}
+              disabled={!isFieldEnabled("Freight3Type")}
+              onValueChange={(val) => {
+                const selectedType = freightTypes?.find((t: any) => t.ExpnsCode?.toString() === val);
+                const updated = { ...draftLine, Freight3Type: val, Freight3TaxGroup: selectedType?.VatGroupI || selectedType?.VatGroupO || "" };
+                setDraftLine(updated);
+                calculateAndUpdate(updated);
+              }}
+            >
+              <SelectTrigger className="h-6 w-full text-xs">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {freightTypes?.map((type: any) => (
+                  <SelectItem key={type.ExpnsCode} value={type.ExpnsCode?.toString()} className="text-xs">
+                    {type.ExpnsName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </td>
+        )}
+
+        {isFieldVisible("Freight3LCAmount") && (
+          <td className="py-2 px-2">
+            <Input
+              className="h-6 w-full text-right"
+              type="number"
+              step="any"
+              disabled={!isFieldEnabled("Freight3LCAmount")}
+              value={draftLine.Freight3LCAmount || 0}
+              onChange={(e) => setDraftLine((prev) => ({ ...prev, Freight3LCAmount: Number(e.target.value) }))}
+              onBlur={() => calculateAndUpdate(draftLine)}
+            />
+          </td>
+        )}
+
+        <LineUDFCells
+          docType={config.type}
+          line={draftLine}
+          disabled={isLineDisabled}
+          allowedFields={fieldAccess}
+          fmsContext={Object.fromEntries(
+            Object.entries(draftLine)
+              .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
+              .map(([k, v]) => [k, String(v)])
+          )}
+          onPatch={patchLine}
+        />
+
+        <GenericModal
+          open={glAccountModalOpen}
+          onClose={() => setGlAccountModalOpen(false)}
+          data={chartOfAccounts}
+          onSelect={(value) => {
+            const selectedAccount = chartOfAccounts.find((account: any) => account.Code === value);
+            if (!selectedAccount) return;
+
+            patchLine({
+              AccountCode: selectedAccount.Code,
+              AccountName: selectedAccount.Name,
+              Description: selectedAccount.Name,
+              ItemCode: selectedAccount.Code,
+              ItemName: selectedAccount.Name,
+            });
+
+            setGlAccountModalOpen(false);
+          }}
+          columns={glAccountColumns}
+          title="Select G/L Account"
+          onLoadMore={loadMoreChartOfAccounts}
+          hasMore={chartOfAccountsHasMore}
+          isLoading={chartOfAccountsLoading}
+        />
+      </>
+    );
+  }
 
   return (
     <>

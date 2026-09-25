@@ -60,7 +60,7 @@ export default function NewPurchaseOrderPage() {
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
 
-    const { discountPercent, freight, rounding, additionalExpenses } = usePurchaseDocument.getState();
+    const { discountPercent, freight, rounding, additionalExpenses, documentMode } = usePurchaseDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.PurchaseOrder) {
       const payload = buildPurchaseDocumentPatchPayload({
@@ -70,6 +70,7 @@ export default function NewPurchaseOrderPage() {
         freight,
         rounding,
         additionalExpenses,
+        documentMode,
       });
 
       // Add attachments to payload
@@ -103,6 +104,7 @@ export default function NewPurchaseOrderPage() {
       freight,
       rounding,
       additionalExpenses,
+      documentMode,
     });
 
     // Add attachments to payload
@@ -119,7 +121,10 @@ export default function NewPurchaseOrderPage() {
     try {
       const response = await postPurchaseOrder(payload);
 
-      if (response?.DocEntry) {
+      if (response?.IsDraft) {
+        toast.success("Purchase Order submitted for approval.");
+        return response;
+      } else if (response?.DocEntry) {
         toast.success(`Purchase Order #${response.DocNum} created successfully!`);
         return response;
       } else {

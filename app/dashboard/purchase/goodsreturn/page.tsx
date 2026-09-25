@@ -17,7 +17,6 @@ const today = new Date().toISOString().split("T")[0];
 
 export default function GoodReturnPage() {
   const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
-  // const { lines, DocTotal, TaxTotal, freight, discountPercent } = usePurchaseDocument();
 
   const [defaultValues] = useState<GoodsReturnFormData>({
     CardCode:"",
@@ -57,7 +56,7 @@ export default function GoodReturnPage() {
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
     
-    const { discountPercent, freight, rounding, additionalExpenses } = usePurchaseDocument.getState();
+    const { discountPercent, freight, rounding, additionalExpenses, documentMode } = usePurchaseDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.GoodsReturn) {
       const payload = buildPurchaseDocumentPatchPayload({
@@ -68,6 +67,7 @@ export default function GoodReturnPage() {
         rounding,
         additionalExpenses,
         includeLines: false,
+        documentMode,
       });
 
       // Add attachments to payload
@@ -101,6 +101,7 @@ export default function GoodReturnPage() {
       freight,
       rounding,
       additionalExpenses,
+      documentMode,
     });
 
     // Add attachments to payload
@@ -118,7 +119,10 @@ export default function GoodReturnPage() {
     try {
       const response = await postGoodsReturn(payload);
    
-      if (response?.DocEntry) {
+      if (response?.IsDraft) {
+        toast.success("Goods Return submitted for approval.");
+        return response;
+      } else if (response?.DocEntry) {
         toast.success(`Goods Return #${response.DocNum} created successfully!`);
         return response;
       } else {

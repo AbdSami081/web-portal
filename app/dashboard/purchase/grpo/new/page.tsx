@@ -60,7 +60,7 @@ export default function NewGoodsReceiptPOPage() {
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
     
-    const { discountPercent, freight, rounding, additionalExpenses } = usePurchaseDocument.getState();
+    const { discountPercent, freight, rounding, additionalExpenses, documentMode } = usePurchaseDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.GoodsReceiptPO) {
       const payload = buildPurchaseDocumentPatchPayload({
@@ -71,6 +71,7 @@ export default function NewGoodsReceiptPOPage() {
         rounding,
         additionalExpenses,
         includeLines: false,
+        documentMode,
       });
 
       // Add attachments to payload
@@ -104,6 +105,7 @@ export default function NewGoodsReceiptPOPage() {
       freight,
       rounding,
       additionalExpenses,
+      documentMode,
     });
 
     // Add attachments to payload
@@ -121,7 +123,10 @@ export default function NewGoodsReceiptPOPage() {
     try {
       const response = await postPurchaseGRPO(payload);
    
-      if (response?.DocEntry) {
+      if (response?.IsDraft) {
+        toast.success("GRPO submitted for approval.");
+        return response;
+      } else if (response?.DocEntry) {
         toast.success(`GRPO #${response.DocNum} created successfully!`);
         return response;
       } else {

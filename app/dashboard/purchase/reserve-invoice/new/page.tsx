@@ -35,7 +35,7 @@ export default function NewReserveInvoicePage() {
   });
 
   const handleSubmit = async (data: APInvoiceFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, rounding, additionalExpenses } = usePurchaseDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, rounding, additionalExpenses, documentMode } = usePurchaseDocument.getState();
 
     const newAttachments = attachments.filter(att => att.File);
     const existingAttachments = attachments.filter(att => !att.File);
@@ -70,6 +70,7 @@ export default function NewReserveInvoicePage() {
         rounding,
         additionalExpenses,
         includeLines: false,
+        documentMode,
       });
 
       if (processedAttachments.length > 0) {
@@ -104,6 +105,7 @@ export default function NewReserveInvoicePage() {
       freight,
       rounding,
       additionalExpenses,
+      documentMode,
     });
 
     if (processedAttachments.length > 0) {
@@ -120,7 +122,10 @@ export default function NewReserveInvoicePage() {
     try {
       const response = await postReservePurchaseInvoice(payload);
 
-      if (response?.DocEntry) {
+      if (response?.IsDraft) {
+        toast.success("A/P Reserve Invoice submitted for approval.");
+        return response;
+      } else if (response?.DocEntry) {
         toast.success(`A/P Reserve Invoice #${response.DocNum} created successfully!`);
         return response;
       } else {

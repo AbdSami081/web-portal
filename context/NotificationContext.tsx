@@ -19,6 +19,8 @@ export interface ApprovalRemarksEntry {
 export interface PendingApproval {
   ApprovalRequestCode: number;
   ObjectType: string;
+  CardType?: string | null;
+  IsProductionLinked?: boolean | null;
   ObjectEntry: number;
   DraftEntry: number;
   Status?: string;
@@ -162,7 +164,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Resolve API URL and build Hub Connection
     let baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
     if (baseUrl.endsWith("/")) {
       baseUrl = baseUrl.slice(0, -1);

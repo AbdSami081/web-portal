@@ -83,6 +83,23 @@ export interface PurchaseDocumentLine {
   OrderedQty?: number;
   IsClosed?: string;
 
+  AccountCode?: string;
+  AccountName?: string;
+  Description?: string;
+  UnitPrice?: number;
+  TaxTotal?: number;
+  PriceAfterVAT?: number;
+  GrossTotal?: number;
+
+  CostingCode?: string;
+  CostingCode2?: string;
+  CostingCode3?: string;
+  CostingCode4?: string;
+  CostingCode5?: string;
+
+  ProjectCode?: string;
+  TaxOnly?: boolean;
+
   InvQty?: number;
   TotalDoc?: number;
   PackageQuantity?: number;

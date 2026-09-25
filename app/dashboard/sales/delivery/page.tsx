@@ -39,7 +39,7 @@ export default function DeliveryPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses, salesPersonCode } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses, salesPersonCode, documentMode } = useSalesDocument.getState();
     
     const payload = buildSalesDocumentPayload({
       data,
@@ -51,8 +51,8 @@ export default function DeliveryPage() {
       freight,
       additionalExpenses,
       salesPersonCode,
+      documentMode,
     });
-
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.Delivery) {
       const patchPayload = buildSalesDocumentPatchPayload({
@@ -62,6 +62,7 @@ export default function DeliveryPage() {
         freight,
         additionalExpenses,
         salesPersonCode,
+        documentMode,
         includeLines: false,
       });
 

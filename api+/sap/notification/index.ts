@@ -11,8 +11,10 @@ export interface SAPMessage {
   ApprovalRemarks: string;
   ApprovalCreationDate: string;  
   DraftEntry: string;
-  DraftType: string;             
-  ObjectType: string;            
+  DraftType: string;
+  ObjectType: string;
+  CardType?: string | null;
+  IsProductionLinked?: boolean | null;
   ObjectEntry: string;
   Document?: string;   
   SourceDraftNumber?: number | null;          

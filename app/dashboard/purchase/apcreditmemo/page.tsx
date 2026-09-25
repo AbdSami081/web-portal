@@ -18,7 +18,6 @@ const today = new Date().toISOString().split("T")[0];
 
 export default function APCreditMemoPage() {
   const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
-  // const { lines, DocTotal, TaxTotal, freight, discountPercent } = usePurchaseDocument();
 
   const [defaultValues] = useState<APCreditMemoFormData>({
     CardCode:"",
@@ -58,7 +57,7 @@ export default function APCreditMemoPage() {
 
     const processedAttachments = [...existingAttachments, ...uploadedAttachments];
     
-    const { discountPercent, freight, rounding, additionalExpenses } = usePurchaseDocument.getState();
+    const { discountPercent, freight, rounding, additionalExpenses, documentMode } = usePurchaseDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.APCreditMemo) {
       const payload = buildPurchaseDocumentPatchPayload({
@@ -69,6 +68,7 @@ export default function APCreditMemoPage() {
         rounding,
         additionalExpenses,
         includeLines: false,
+        documentMode,
       });
 
       // Add attachments to payload
@@ -102,6 +102,7 @@ export default function APCreditMemoPage() {
       freight,
       rounding,
       additionalExpenses,
+      documentMode,
     });
 
     // Add attachments to payload
@@ -119,7 +120,10 @@ export default function APCreditMemoPage() {
     try {
       const response = await postApCreditMemo(payload);
    
-      if (response?.DocEntry) {
+      if (response?.IsDraft) {
+        toast.success("AP Credit Memo submitted for approval.");
+        return response;
+      } else if (response?.DocEntry) {
         toast.success(`AP Credit Memo #${response.DocNum} created successfully!`);
         return response;
       } else {

@@ -22,7 +22,6 @@ export default function NewQuotationPage() {
   const loadFromDocument = useSalesDocument((state) => state.loadFromDocument);
   const fieldAccess = useSalesDocument((state) => state.fieldAccess);
 
-
   const defaultValues: QuotationFormData = {
     CardCode: "",
     CardName: "",
@@ -40,7 +39,7 @@ export default function NewQuotationPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses, salesPersonCode } = useSalesDocument.getState();
+    const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses, salesPersonCode, documentMode } = useSalesDocument.getState();
 
     if (lines.length === 0) {
       toast.error("Please add at least one item.");
@@ -55,6 +54,7 @@ export default function NewQuotationPage() {
         freight,
         additionalExpenses,
         salesPersonCode,
+        documentMode,
       });
       try {
         await patchQuotation(Number(DocEntry), patchPayload);
@@ -82,6 +82,7 @@ export default function NewQuotationPage() {
     const payload = {
       CardCode: data.CardCode,
       CardName: data.CardName,
+      DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
       DocDate: data.DocDate,
       DocDueDate: data.DocDueDate,
       TaxDate: data.TaxDate,
@@ -89,15 +90,26 @@ export default function NewQuotationPage() {
       DiscountPercent: discountPercent || 0,
       ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
       DocumentLines: lines.map((line, index) => {
-        const baseFields: any = {
-          ItemCode: line.ItemCode,
-          Quantity: Number(line.Quantity) || 0,
-          UnitPrice: Number(line.Price) || 0,
-          DiscountPercent: Number(line.DiscountPercent) || 0,
-          VatGroup: line.TaxCode || "",
-          WarehouseCode: line.WarehouseCode || "",
-          UoMCode: line.UoMCode || "",
-        };
+        const baseFields: any =
+          documentMode === "service"
+            ? {
+                AccountCode: line.AccountCode || "",
+                AccountName: line.AccountName || "",
+                ItemDescription: line.Description || "",
+                UnitPrice: Number(line.LineTotal) || 0,
+                LineTotal: Number(line.LineTotal) || 0,
+                DiscountPercent: Number(line.DiscountPercent) || 0,
+                VatGroup: line.TaxCode || "",
+              }
+            : {
+                ItemCode: line.ItemCode,
+                Quantity: Number(line.Quantity) || 0,
+                UnitPrice: Number(line.Price) || 0,
+                DiscountPercent: Number(line.DiscountPercent) || 0,
+                VatGroup: line.TaxCode || "",
+                WarehouseCode: line.WarehouseCode || "",
+                UoMCode: line.UoMCode || "",
+              };
         if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Quotation) {
           baseFields.BaseType = lastLoadedDocType;
           baseFields.BaseEntry = DocEntry;
@@ -126,7 +138,6 @@ export default function NewQuotationPage() {
       }),
       ...(freight > 0 && { Freight: freight }),
     };
-
 
     try {
       const documentData = await postQuotation(payload);

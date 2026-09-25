@@ -32,7 +32,6 @@ import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
 import { ApprovalRemarksEntry, PendingApproval } from "@/context/NotificationContext";
 
-
 export default function MessagesOverviewPage() {
   const {
     messages: contextMessages,
@@ -256,8 +255,8 @@ export default function MessagesOverviewPage() {
     }
   };
 
-  const getObjectName = (type: string) => {
-      const menuInfo = getMenuInfoByObjectCode(type);
+  const getObjectName = (type: string, hint?: { cardType?: string | null; isProductionLinked?: boolean | null }) => {
+      const menuInfo = getMenuInfoByObjectCode(type, hint);
       return menuInfo?.title || `Draft (${type})`;
     };
 
@@ -274,12 +273,14 @@ export default function MessagesOverviewPage() {
         : selectedMessage.ObjectType;
     const sourceDraftNumber = selectedMessage.SourceDraftNumber;
     const approvalRequestCode = selectedMessage.ApprovalRequestCode;
+    const cardType = selectedMessage.CardType;
+    const isProductionLinked = selectedMessage.IsProductionLinked;
 
     if (objectEntry) {
-      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber, approvalRequestCode };
+      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber, approvalRequestCode, cardType, isProductionLinked };
     }
     if (draftEntry) {
-      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber, approvalRequestCode };
+      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber, approvalRequestCode, cardType, isProductionLinked };
     }
 
     return null;
@@ -298,12 +299,14 @@ export default function MessagesOverviewPage() {
         ? String(normalizeObjectCode(selectedApproval.ObjectType))
         : selectedApproval.ObjectType;
     const approvalRequestCode = selectedApproval.ApprovalRequestCode;
+    const cardType = selectedApproval.CardType;
+    const isProductionLinked = selectedApproval.IsProductionLinked;
 
     if (objectEntry) {
-      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber: undefined, approvalRequestCode };
+      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber: undefined, approvalRequestCode, cardType, isProductionLinked };
     }
     if (draftEntry) {
-      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber: undefined, approvalRequestCode };
+      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber: undefined, approvalRequestCode, cardType, isProductionLinked };
     }
 
     return null;
@@ -315,7 +318,9 @@ export default function MessagesOverviewPage() {
     draftEntry?: string;
     isDraft: boolean;
     sourceDraftNumber?: number | null;
-    approvalRequestCode?: number ;
+    approvalRequestCode?: number;
+    cardType?: string | null;
+    isProductionLinked?: boolean | null;
   }, statusOverride?: string) => {
     const cleanKey = (v?: string | number | null) =>
       v === undefined || v === null ? undefined : v.toString().trim().split(/\s+/)[0] || undefined;
@@ -331,7 +336,7 @@ export default function MessagesOverviewPage() {
       return;
     }
 
-    const menuInfo = getMenuInfoByObjectCode(link.objectType);
+    const menuInfo = getMenuInfoByObjectCode(link.objectType, { cardType: link.cardType, isProductionLinked: link.isProductionLinked });
     if (!menuInfo) {
       toast.warning(`${getObjectName(link.objectType)} route not configured`);
       return;
@@ -345,7 +350,8 @@ export default function MessagesOverviewPage() {
       draftEntry: draftKey,
       isDraft: link.isDraft,
       approvalRequestCode: link.approvalRequestCode,
-      approvalStatus: rawStatus
+      approvalStatus: rawStatus,
+      disambiguationHint: { cardType: link.cardType, isProductionLinked: link.isProductionLinked }
     });
 
     const status = (rawStatus || "").toLowerCase();
@@ -482,7 +488,7 @@ export default function MessagesOverviewPage() {
                           if (!code || String(code) === "112") {
                             code = msg.ObjectType;
                           }
-                          const menuInfo = code ? getMenuInfoByObjectCode(code) : undefined;
+                          const menuInfo = code ? getMenuInfoByObjectCode(code, { cardType: msg.CardType, isProductionLinked: msg.IsProductionLinked }) : undefined;
                           const docName = menuInfo?.title || (String(code) === "112" ? "Document" : `Document (${code || '112'})`);
                           return (
                             <TableRow
@@ -594,7 +600,7 @@ export default function MessagesOverviewPage() {
                       {sortedPendingApprovals.map((ap) => {
                         const isSelected = selectedApproval?.ApprovalRequestCode === ap.ApprovalRequestCode;
                         const objCode = ap.ObjectType || (ap as any).DraftType;
-                        const docTitle = getMenuInfoByObjectCode(objCode)?.title || (objCode && String(objCode) !== "112" ? `Document (${objCode})` : (ap.DraftEntry ? `Draft #${ap.DraftEntry}` : "Document"));
+                        const docTitle = getMenuInfoByObjectCode(objCode, { cardType: ap.CardType, isProductionLinked: ap.IsProductionLinked })?.title || (objCode && String(objCode) !== "112" ? `Document (${objCode})` : (ap.DraftEntry ? `Draft #${ap.DraftEntry}` : "Document"));
                         return (
                           <TableRow
                             key={ap.ApprovalRequestCode}
@@ -671,7 +677,7 @@ export default function MessagesOverviewPage() {
                       <span className="text-slate-800 font-bold">
                         {(() => {
                           const objCode = selectedApproval.ObjectType || (selectedApproval as any).DraftType;
-                          return getMenuInfoByObjectCode(objCode)?.title || (objCode && String(objCode) !== "112" ? `Type ${objCode}` : (selectedApproval.DraftEntry ? `Draft #${selectedApproval.DraftEntry}` : "Document"));
+                          return getMenuInfoByObjectCode(objCode, { cardType: selectedApproval.CardType, isProductionLinked: selectedApproval.IsProductionLinked })?.title || (objCode && String(objCode) !== "112" ? `Type ${objCode}` : (selectedApproval.DraftEntry ? `Draft #${selectedApproval.DraftEntry}` : "Document"));
                         })()}
                       </span>
                     </div>

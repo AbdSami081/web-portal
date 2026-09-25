@@ -50,7 +50,7 @@ export default function PurchaseRequestPage() {
   });
 
   const handleSubmit = async (data: PurchaseRequestFormData) => {
-    const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses } = usePurchaseDocument.getState();
+    const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses, documentMode } = usePurchaseDocument.getState();
 
     if (lines.length === 0) {
       toast.error("Please add at least one item.");
@@ -88,6 +88,7 @@ export default function PurchaseRequestPage() {
         freight,
         rounding,
         additionalExpenses,
+        documentMode,
       });
 
       // Add attachments to payload
@@ -122,6 +123,7 @@ export default function PurchaseRequestPage() {
       freight,
       rounding,
       additionalExpenses,
+      documentMode,
     });
 
     // Add attachments to payload
@@ -137,13 +139,13 @@ export default function PurchaseRequestPage() {
     try {
       console.log("Submitting Purchase Request with payload:", payload);
       const documentData = await postPurchaseRequest(payload);
+      if (documentData?.IsDraft) {
+        toast.success("Purchase Request submitted for approval.");
+        return documentData;
+      }
       if (!documentData?.DocEntry) throw new Error("Failed to create request");
       loadFromDocument(documentData, DocumentType.PurchaseRequests);
-      if (documentData.IsDraft) {
-        toast.success("Purchase Request submitted for approval.");
-      } else {
-        toast.success(`Request #${documentData.DocNum} created successfully`);
-      }
+      toast.success(`Request #${documentData.DocNum} created successfully`);
       return documentData;
     } catch (error: any) {
       const message = getSapErrorMessage(error);

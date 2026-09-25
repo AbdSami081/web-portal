@@ -13,6 +13,7 @@ import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { resolveSerialBatchFlags } from "@/lib/sap/helpers/serialBatchHelper";
 import { pickLineUdfs } from "@/lib/sap/helpers/lineUdfHelper";
+import { getChartOfAccounts } from "@/api+/sap/financial/financialService";
 
 interface SalesDocumentStore {
   docType: DocumentType;
@@ -54,7 +55,7 @@ interface SalesDocumentStore {
   }[];
   udfs: Record<string, any>;
   isCopying: boolean;
-  lastLoadedDocType: number | null; // Track original doc type
+  lastLoadedDocType: number | null;
   loadedDraftData: any | null;
   setLoadedDraftData: (data: any) => void;
   setIsCopying: (val: boolean) => void;
@@ -222,9 +223,6 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           const lines = s.lines.map((line) => {
             if (line.ItemCode === itemCode) {
               const updatedLine = { ...line, ...updated };
-              // const qty = parseSafe(updatedLine.Quantity);
-              // const price = parseSafe(updatedLine.Price);
-              // updatedLine.LineTotal = qty * price;
               if (get().documentMode === "items") {
                 const qty = parseSafe(updatedLine.Quantity);
                 const price = parseSafe(updatedLine.Price);
@@ -303,7 +301,6 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         const lineDiscountPercent = parseSafe(line.DiscountPercent);
         const itemTaxRate = parseSafe(line.TaxRate);
 
-        // const lineSubtotal = quantity * unitPrice;
         const lineSubtotal =
           get().documentMode === "service"
             ? parseSafe(line.LineTotal)
@@ -311,11 +308,6 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         const lineDiscountAmount = (lineSubtotal * lineDiscountPercent) / 100;
         const lineAmountAfterDiscount = lineSubtotal - lineDiscountAmount;
 
-        // SAP applies the document-level (header/footer) Discount % on top of each
-        // line's own discount BEFORE computing tax - tax is calculated on the fully
-        // discounted taxable base, not on the pre-header-discount line amount. Skipping
-        // this step is what caused tax (and therefore DocTotal) to come out higher than
-        // SAP's own calculation whenever a footer discount was used.
         const headerDiscountShareOfLine =
           (lineAmountAfterDiscount * headerDiscountPercent) / 100;
         const lineTaxableAmount =
@@ -424,6 +416,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         udfs: {},
         isCopying: false,
         loadedDraftData: null,
+        documentMode: "items",
       }),
 
     clearLines: () => {
@@ -442,21 +435,13 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => {
       console.log("Loading document into store:", doc, "Type:", type, "IsCopy:", isCopy);
       const rawLines = doc.DocumentLines || doc.lines || [];
-      // Resolve UoM master data for proper Code resolution
       const uoms = useUoMStore.getState().uoms || [];
 
       const mappedLines = rawLines.map((line: any, index: number) => {
-          console.log("========== SERVICE LINE ==========");
-  console.log("FULL LINE:", line);
-  console.log("AccountCode:", line.AccountCode);
-  console.log("AccountName:", line.AccountName);
-  console.log("Description:", line.Description);
-  console.log("ItemDescription:", line.ItemDescription);
-  console.log("=================================")
         const qty = parseSafe(line.Quantity);
         const price = parseSafe(line.UnitPrice || line.Price);
         let discount = parseSafe(line.DiscountPercent);
-        if (discount < 0) discount = 0; // Prevent negative discount
+        if (discount < 0) discount = 0;
         const taxRate = parseSafe(line.TaxPercentagePerRow || line.VatPrcnt);
 
         const lineSubtotal = qty * price;
@@ -468,7 +453,6 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           LineNum: line.LineNum !== undefined ? line.LineNum : index,
           ItemCode: line.ItemCode,
           ItemName: line.ItemDescription || line.ItemName || "",
-          // Service mode
           AccountCode: line.AccountCode || "",
           AccountName: line.AccountName || "",
           Description: line.Description || line.ItemDescription || "",
@@ -594,6 +578,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
               ? Number(doc.SalesPersonCode)
               : null),
         lastLoadedDocType: type || null,
+        documentMode: doc.DocType === "dDocument_Service" ? "service" : "items",
         DocTotal: parseSafe(doc.DocTotal || doc.docTotal),
         TaxTotal: parseSafe(doc.TaxTotal || doc.taxTotal),
         discSum: parseSafe(doc.DiscSum || doc.discSum),
@@ -639,6 +624,36 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           ),
         }));
       });
+
+      const codesNeedingName: string[] = Array.from(
+        new Set<string>(
+          mappedLines
+            .filter((l: any) => l.AccountCode && !l.AccountName)
+            .map((l: any) => l.AccountCode as string),
+        ),
+      );
+      if (codesNeedingName.length > 0) {
+        Promise.all(
+          codesNeedingName.map((code) =>
+            getChartOfAccounts(0, code).then((res) => {
+              const match = res?.value?.find((a: any) => a.Code === code);
+              return match ? { code, name: match.Name } : null;
+            }).catch(() => null),
+          ),
+        ).then((results) => {
+          const nameByCode = new Map(
+            results.filter(Boolean).map((r: any) => [r.code, r.name]),
+          );
+          if (nameByCode.size === 0) return;
+          set((state) => ({
+            lines: state.lines.map((line) =>
+              line.AccountCode && !line.AccountName && nameByCode.has(line.AccountCode)
+                ? { ...line, AccountName: nameByCode.get(line.AccountCode) }
+                : line,
+            ),
+          }));
+        });
+      }
     },
     setAdditionalExpenses: (exp) => set({ additionalExpenses: exp }),
 

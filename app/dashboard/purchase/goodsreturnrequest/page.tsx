@@ -16,7 +16,6 @@ const today = new Date().toISOString().split("T")[0];
 
 export default function GoodsReturnRequestPage() {
   const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
-  // const { lines, DocTotal, TaxTotal, freight, discountPercent } = usePurchaseDocument();
 
   const [defaultValues] = useState<GoodsReturnRequestFormData>({
     CardCode: "",
@@ -33,7 +32,7 @@ export default function GoodsReturnRequestPage() {
   });
 
   const handleSubmit = async (data: GoodsReturnRequestFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments } = usePurchaseDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, reset: resetStore, attachments, documentMode } = usePurchaseDocument.getState();
     
     const newAttachments = attachments.filter(att => att.File);
     const existingAttachments = attachments.filter(att => !att.File);
@@ -61,8 +60,20 @@ export default function GoodsReturnRequestPage() {
     
     const payload = {
       ...data,
+      DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
       DocumentLines: lines.map((line) => {
-        const lineData: any = { ...line };
+        const lineData: any =
+          documentMode === "service"
+            ? {
+                AccountCode: line.AccountCode || "",
+                AccountName: line.AccountName || "",
+                ItemDescription: line.Description || "",
+                UnitPrice: Number(line.LineTotal) || 0,
+                LineTotal: Number(line.LineTotal) || 0,
+                DiscountPercent: Number(line.DiscountPercent) || 0,
+                VatGroup: line.TaxCode || "",
+              }
+            : { ...line };
 
         if (
           DocEntry &&
@@ -107,7 +118,10 @@ export default function GoodsReturnRequestPage() {
     try {
       const response = await postGoodsReturnRequest(payload);
    
-      if (response?.DocEntry) {
+      if (response?.IsDraft) {
+        toast.success("Goods Return Request submitted for approval.");
+        return response;
+      } else if (response?.DocEntry) {
         toast.success(`Goods Return Request #${response.DocNum} created successfully!`);
         return response;
       } else {

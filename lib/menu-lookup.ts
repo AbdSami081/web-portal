@@ -3,6 +3,7 @@ import { MenuItem, SERVER_MENUS } from "./menu-data";
 export interface ObjectMenuInfo {
   title: string;
   url: string;
+  group?: string;
 }
 
 function buildObjectMenuMap(
@@ -51,14 +52,56 @@ function buildObjectMenuUrlsMap(
   return map;
 }
 
-// Several DocumentType values are reused across unrelated document types (e.g. GoodIssue
-// and IssueForProduction both use object code 60), so a single objectCode can legitimately
-// map to more than one page — this variant keeps all of them instead of collapsing to one.
 const OBJECT_MENU_URLS_MAP = buildObjectMenuUrlsMap(SERVER_MENUS);
 
-export function getMenuInfoByObjectCode(objectType: string | number): ObjectMenuInfo | undefined {
+export interface ObjectTypeDisambiguationHint {
+  cardType?: string | null;
+  isProductionLinked?: boolean | null;
+}
+
+const AMBIGUOUS_CODE_RESOLVERS: Record<number, (hint: ObjectTypeDisambiguationHint) => string | undefined> = {
+  204: (hint) => {
+    if (hint.cardType === "cCustomer" || hint.cardType === "C") return "/dashboard/sales/dp_request";
+    if (hint.cardType === "cSupplier" || hint.cardType === "S") return "/dashboard/purchase/apdownpaymentinvoice";
+    return undefined;
+  },
+  60: (hint) => {
+    if (hint.isProductionLinked === true) return "/dashboard/production/issue-for-production";
+    if (hint.isProductionLinked === false) return "/dashboard/inventory/Good_Issue";
+    return undefined;
+  },
+};
+
+function buildUrlToMenuMap(
+  items: MenuItem[],
+  map: Map<string, ObjectMenuInfo> = new Map(),
+  groupTitle?: string
+): Map<string, ObjectMenuInfo> {
+  for (const item of items) {
+    if (item.url) map.set(item.url, { title: item.title, url: item.url, group: groupTitle });
+    if (item.items?.length) buildUrlToMenuMap(item.items, map, groupTitle ?? item.title);
+  }
+  return map;
+}
+
+const URL_TO_MENU_MAP = buildUrlToMenuMap(SERVER_MENUS);
+
+export function getMenuInfoByObjectCode(
+  objectType: string | number,
+  hint?: ObjectTypeDisambiguationHint
+): ObjectMenuInfo | undefined {
   const code = normalizeObjectCode(objectType);
   if (Number.isNaN(code)) return undefined;
+
+  const resolver = AMBIGUOUS_CODE_RESOLVERS[code];
+  if (resolver && hint) {
+    const url = resolver(hint);
+    if (url) {
+      const matched = URL_TO_MENU_MAP.get(url);
+      if (matched) return matched;
+    }
+  }
+
   return OBJECT_MENU_MAP.get(code);
 }
 
@@ -68,13 +111,46 @@ export function getMenuUrlsByObjectCode(objectType: string | number): string[] {
   return (OBJECT_MENU_URLS_MAP.get(code) || []).map((m) => m.url);
 }
 
-export function getDraftModuleUrl(objectType: string | number): string | null {
+const DRAFT_MODULE_URLS_BY_GROUP: Record<string, string> = {
+  Sales: "/dashboard/sales/draft",
+  Purchasing: "/dashboard/purchase/draft",
+  Inventory: "/dashboard/inventory/draft",
+  Production: "/dashboard/production/draft",
+};
+
+function buildObjectCodeGroupsMap(): Map<number, string[]> {
+  const map = new Map<number, string[]>();
+  for (const group of SERVER_MENUS) {
+    if (!group.items?.length) continue;
+    for (const leaf of group.items) {
+      if (leaf.objectCode === undefined || leaf.objectCode === null) continue;
+      const code = Number(leaf.objectCode);
+      if (Number.isNaN(code)) continue;
+      const existing = map.get(code) || [];
+      if (!existing.includes(group.title)) existing.push(group.title);
+      map.set(code, existing);
+    }
+  }
+  return map;
+}
+
+const OBJECT_CODE_GROUPS_MAP = buildObjectCodeGroupsMap();
+
+export function getDraftModuleUrl(objectType: string | number, hint?: ObjectTypeDisambiguationHint): string | null {
   const code = normalizeObjectCode(objectType);
-  if ([13, 14, 15, 16, 17, 23, 203, 204, 234000031].includes(code)) return "/dashboard/sales/draft";
-  if ([18, 19, 20, 21, 22, 54, 1470000113, 234000032, 540000006].includes(code)) return "/dashboard/purchase/draft";
-  if ([67, 1250000001].includes(code)) return "/dashboard/inventory/draft";
-  if ([202, 59, 60].includes(code)) return "/dashboard/production/draft";
-  return null;
+  if (Number.isNaN(code)) return null;
+
+  const groups = OBJECT_CODE_GROUPS_MAP.get(code) || [];
+  if (groups.length === 0) return null;
+
+  let groupTitle = groups[0];
+  if (groups.length > 1 && hint) {
+    const resolvedUrl = AMBIGUOUS_CODE_RESOLVERS[code]?.(hint);
+    const resolvedGroup = resolvedUrl ? URL_TO_MENU_MAP.get(resolvedUrl)?.group : undefined;
+    if (resolvedGroup) groupTitle = resolvedGroup;
+  }
+
+  return DRAFT_MODULE_URLS_BY_GROUP[groupTitle] ?? null;
 }
 
 export function buildDocumentUrl(
@@ -86,10 +162,11 @@ export function buildDocumentUrl(
     isDraft: boolean;
     approvalRequestCode?: number;
     approvalStatus?: string;
+    disambiguationHint?: ObjectTypeDisambiguationHint;
   }
 ): string {
   if (opts.isDraft && opts.draftEntry) {
-    const draftModuleUrl = getDraftModuleUrl(opts.objectType);
+    const draftModuleUrl = getDraftModuleUrl(opts.objectType, opts.disambiguationHint);
     if (draftModuleUrl) {
       const params = new URLSearchParams();
       params.set("draftEntry", opts.draftEntry);

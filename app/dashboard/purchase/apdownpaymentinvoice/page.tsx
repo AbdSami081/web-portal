@@ -40,6 +40,7 @@ export default function APDownPaymentInvoicePage() {
       reset: resetStore,
       attachments,
       discountPercent,
+      documentMode,
     } = usePurchaseDocument.getState();
 
     const newAttachments = attachments.filter((att) => att.File);
@@ -77,10 +78,22 @@ export default function APDownPaymentInvoicePage() {
     const { discountPercent: _dp, ...headerData } = data as Record<string, any>;
     const payload = {
       ...headerData,
+      DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
       DownPaymentType: "dptInvoice",
       DownPaymentPercentage: Number(discountPercent) || 0,
       DocumentLines: lines.map((line) => {
-        const lineData: any = { ...line };
+        const lineData: any =
+          documentMode === "service"
+            ? {
+                AccountCode: line.AccountCode || "",
+                AccountName: line.AccountName || "",
+                ItemDescription: line.Description || "",
+                UnitPrice: Number(line.LineTotal) || 0,
+                LineTotal: Number(line.LineTotal) || 0,
+                DiscountPercent: Number(line.DiscountPercent) || 0,
+                VatGroup: line.TaxCode || "",
+              }
+            : { ...line };
 
         if (
           DocEntry &&
@@ -132,7 +145,10 @@ export default function APDownPaymentInvoicePage() {
 
     try {
       const response = await postAPDownPaymentInvoice(payload);
-      if (response?.DocEntry) {
+      if (response?.IsDraft) {
+        toast.success("AP Down Payment Invoice submitted for approval.");
+        return response;
+      } else if (response?.DocEntry) {
         toast.success(
           `AP Down Payment Invoice #${response.DocNum} created successfully!`,
         );

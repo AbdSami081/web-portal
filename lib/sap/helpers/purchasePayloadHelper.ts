@@ -11,6 +11,7 @@ interface BuildPurchasePayloadOptions {
   freight?: number;
   rounding?: number;
   additionalExpenses?: Array<{ ExpenseCode: number; LineTotal: number; VatGroup?: string; TaxCode?: string }>;
+  documentMode?: "items" | "service";
 }
 
 export interface BuildPurchasePatchPayloadOptions {
@@ -21,6 +22,7 @@ export interface BuildPurchasePatchPayloadOptions {
   rounding?: number;
   additionalExpenses?: Array<{ ExpenseCode: number; LineTotal: number; VatGroup?: string; TaxCode?: string }>;
   includeLines?: boolean;
+  documentMode?: "items" | "service";
 }
 
 function withBaseLineNumber<T extends object>(entries: T[] | undefined, lineIndex: number): T[] | undefined {
@@ -66,6 +68,7 @@ export function buildPurchaseDocumentPayload({
   freight = 0,
   rounding = 0,
   additionalExpenses = [],
+  documentMode,
 }: BuildPurchasePayloadOptions) {
   const hasCopyFrom =
     docEntry &&
@@ -95,19 +98,31 @@ export function buildPurchaseDocumentPayload({
       const branchId = resolveBranchId(data.BPL_IDAssignedToInvoice ?? data.BPLId);
       return branchId === undefined ? {} : { BPL_IDAssignedToInvoice: branchId, BPLId: branchId };
     })(),
+    DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
     DiscountPercent: discountPercent || 0,
     Freight: freight || 0,
     Rounding: rounding || 0,
     DocumentLines: lines.map((line, index) => {
-      const baseFields: Record<string, unknown> = {
-        ItemCode: line.ItemCode,
-        Quantity: Number(line.Quantity) || 0,
-        UnitPrice: Number(line.Price) || 0,
-        DiscountPercent: Number(line.DiscountPercent) || 0,
-        VatGroup: line.TaxCode || "",
-        WarehouseCode: line.WarehouseCode || "",
-        UoMCode: line.UoMCode || "",
-      };
+      const baseFields: Record<string, unknown> =
+        documentMode === "service"
+          ? {
+              AccountCode: line.AccountCode || "",
+              AccountName: line.AccountName || "",
+              ItemDescription: line.Description || "",
+              UnitPrice: Number(line.LineTotal) || 0,
+              LineTotal: Number(line.LineTotal) || 0,
+              DiscountPercent: Number(line.DiscountPercent) || 0,
+              VatGroup: line.TaxCode || "",
+            }
+          : {
+              ItemCode: line.ItemCode,
+              Quantity: Number(line.Quantity) || 0,
+              UnitPrice: Number(line.Price) || 0,
+              DiscountPercent: Number(line.DiscountPercent) || 0,
+              VatGroup: line.TaxCode || "",
+              WarehouseCode: line.WarehouseCode || "",
+              UoMCode: line.UoMCode || "",
+            };
 
       if (hasCopyFrom) {
         baseFields.BaseType = lastLoadedDocType;
@@ -120,7 +135,7 @@ export function buildPurchaseDocumentPayload({
       }
 
       if (line.RequiredDate) {
-        baseFields.RequriedDate = line.RequiredDate;
+        baseFields.RequiredDate = line.RequiredDate;
       }
 
       const lineExpenses = mapLineExpenses(line);
@@ -153,10 +168,12 @@ export function buildPurchaseDocumentPatchPayload({
   rounding = 0,
   additionalExpenses = [],
   includeLines = true,
+  documentMode,
 }: BuildPurchasePatchPayloadOptions) {
   const isPurchaseRequest = !!data.Requester;
 
   return {
+    DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
     Comments: data.Comments,
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
@@ -164,11 +181,6 @@ export function buildPurchaseDocumentPatchPayload({
     ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
     ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
     ...(data.SendNotification && { SendNotification: data.SendNotification }),
-    // includeLines:false means SAP has this document's transactional data (lines,
-    // discount, freight, rounding, additional expenses) locked post-add — e.g. Goods
-    // Return / GRPO reject an unchanged Rounding/Freight/DiscountPercent resend with
-    // "Field cannot be updated (ODBC -1029)". Only header remarks/dates/attachments
-    // are safe to patch for those document types.
     ...(includeLines && {
       DiscountPercent: discountPercent || 0,
       Freight: freight || 0,
@@ -176,15 +188,26 @@ export function buildPurchaseDocumentPatchPayload({
     }),
     ...(includeLines && lines.length > 0 && {
       DocumentLines: lines.map((line, index) => {
-        const baseFields: Record<string, unknown> = {
-          ItemCode: line.ItemCode,
-          Quantity: Number(line.Quantity) || 0,
-          UnitPrice: Number(line.Price) || 0,
-          DiscountPercent: Number(line.DiscountPercent) || 0,
-          VatGroup: line.TaxCode || "",
-          WarehouseCode: line.WarehouseCode || "",
-          UoMCode: line.UoMCode || "",
-        };
+        const baseFields: Record<string, unknown> =
+          documentMode === "service"
+            ? {
+                AccountCode: line.AccountCode || "",
+                AccountName: line.AccountName || "",
+                ItemDescription: line.Description || "",
+                UnitPrice: Number(line.LineTotal) || 0,
+                LineTotal: Number(line.LineTotal) || 0,
+                DiscountPercent: Number(line.DiscountPercent) || 0,
+                VatGroup: line.TaxCode || "",
+              }
+            : {
+                ItemCode: line.ItemCode,
+                Quantity: Number(line.Quantity) || 0,
+                UnitPrice: Number(line.Price) || 0,
+                DiscountPercent: Number(line.DiscountPercent) || 0,
+                VatGroup: line.TaxCode || "",
+                WarehouseCode: line.WarehouseCode || "",
+                UoMCode: line.UoMCode || "",
+              };
 
         if (line.LineNum !== undefined && line.LineNum >= 0) {
           baseFields.LineNum = line.LineNum;

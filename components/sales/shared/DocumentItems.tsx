@@ -21,7 +21,6 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { Plus, FileText, Search } from "lucide-react";
-// import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import {
   Tooltip,
   TooltipContent,
@@ -53,6 +52,7 @@ export function DocumentItems() {
   const {
     lines,
     addLine,
+    clearLines,
     customer,
 
     attachments,
@@ -66,9 +66,6 @@ export function DocumentItems() {
   const [activeTab, setActiveTab] = useState("content");
 
   const [fatherCardModalOpen, setFatherCardModalOpen] = useState(false);
-  // const [documentMode, setDocumentMode] = useState<"items" | "service">(
-  //   "items",
-  // );
 
   const documentMode = useSalesDocument(
   (state) => state.documentMode
@@ -108,58 +105,6 @@ const setDocumentMode = useSalesDocument(
   useEffect(() => {
     loadDocumentEssentials("O");
   }, [loadDocumentEssentials]);
-
-  //  const handleOnSelectItems = (
-  //   items: Item[]
-  // ) => {
-  //   items.forEach((item) => {
-  //     const price =
-  //       getCustomerPrice(
-  //         item.Prices || []
-  //       );
-
-  //     const targetTaxCode = item.VatGourpSa || item.VatGroupSa || "";
-
-  //     const selectedTax =
-  //       freightsWithCharges.find(
-  //         (t) =>
-  //           t.Code === targetTaxCode
-  //       );
-
-  //     const taxRate = Number(
-  //       selectedTax?.Rate || 0
-  //     );
-
-  //     const defaultWhsLine =
-  //       item.DefaultWhse || firstWhs;
-
-  //     const qtyInWhs = item.QtyInWhs || [];
-  //     const whRecord = qtyInWhs.find(
-  //       (w: any) => (w.WarehouseCode || w.warehouseCode) === defaultWhsLine
-  //     );
-  //     const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
-
-  //     const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
-  //     addLine({
-  //       ItemCode: item.ItemCode,
-  //       ItemName: item.ItemName || item.ItemDescription || "",
-  //       Quantity: 1,
-  //       OnHand: initialOnHand,
-  //       Price: price,
-  //       TaxCode: targetTaxCode,
-  //       TaxRate: taxRate,
-  //       WarehouseCode: defaultWhsLine,
-  //       BPLid: resolveBranchForWarehouse(defaultWhsLine, warehouses),
-  //       UoMCode: uomVal,
-  //       MeasureUnit: item.MeasureUnit || getUoMName(uomVal) || "",
-  //       ManSerNum: item.ManSerNum,
-  //       ManBtchNum: item.ManBtchNum,
-  //       QtyInWhs: qtyInWhs,
-  //     });
-  //   });
-  // };
-
-
 
  const handleOnSelectItems = (items: Item[]) => {
   if (documentMode === "service") {
@@ -246,7 +191,6 @@ const setDocumentMode = useSalesDocument(
     return;
   }
 
-  // Existing Item Mode
   items.forEach((item: Item) => {
     const price = getCustomerPrice(item.Prices || []);
 
@@ -276,7 +220,6 @@ const setDocumentMode = useSalesDocument(
       ? whRecord.Qty ?? whRecord.qty ?? 0
       : 0;
 
-    
    const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
 
     addLine({
@@ -315,8 +258,7 @@ const setDocumentMode = useSalesDocument(
 
   setDialogOpen(false);
 };
- 
- 
+
   const handleRowContextMenu = (e: React.MouseEvent, line: any) => {
     e.preventDefault();
 
@@ -624,9 +566,17 @@ const setDocumentMode = useSalesDocument(
 
           <Select
             value={documentMode}
-            onValueChange={(value) =>
-              setDocumentMode(value as "items" | "service")
-            }
+            disabled={isEditMode}
+            onValueChange={(value) => {
+              const nextMode = value as "items" | "service";
+              // Item-shaped and service-shaped lines can't coexist in one document -
+              // switching type mid-document would otherwise leave stale rows rendered
+              // under the wrong columns (e.g. an AccountCode row shown as an ItemCode row).
+              if (nextMode !== documentMode && lines.length > 0) {
+                clearLines();
+              }
+              setDocumentMode(nextMode);
+            }}
           >
             <SelectTrigger className="w-48 h-9">
               <SelectValue placeholder="Select type" />

@@ -171,7 +171,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   });
 
   const { handleSubmit, reset, watch, setValue, formState: { isSubmitting, isDirty, errors } } = methods;
-  const { reset: lineReset, lines, requester, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, loadedDraftData, fieldAccess } = usePurchaseDocument(
+  const { reset: lineReset, lines, requester, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, loadedDraftData, fieldAccess, documentMode } = usePurchaseDocument(
     useShallow(state => ({
       reset: state.reset,
       lines: state.lines,
@@ -183,6 +183,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
       udfs: state.udfs,
       loadedDraftData: state.loadedDraftData,
       fieldAccess: state.fieldAccess,
+      documentMode: state.documentMode,
     }))
   );
 
@@ -563,11 +564,11 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             const state = usePurchaseDocument.getState();
             const currentUserId = user?.sapUserId;
 
-            if (linesHaveInvalidQuantity(state.lines)) {
+            if (linesHaveInvalidQuantity(state.lines) && documentMode === "items") {
               toast.info("One or more items have a quantity of 0 or less. Please set a valid quantity before submitting.");
               return;
             }
-            if (linesHaveInvalidPrice(state.lines)) {
+            if (linesHaveInvalidPrice(state.lines) && documentMode === "items") {
               toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
               return;
             }

@@ -4,6 +4,8 @@ import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
 import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AppLabel } from "@/components/Custom/AppLabel";
 import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
 import { Trash2, Plus, FileText } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -31,12 +33,15 @@ export function PurchaseItems() {
   const {
     lines,
     addLine,
+    clearLines,
     requester,
     attachments,
     addAttachment,
     removeAttachment,
     updateAttachment,
     fieldAccess,
+    documentMode,
+    setDocumentMode,
   } = usePurchaseDocument();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
@@ -64,6 +69,52 @@ export function PurchaseItems() {
     const isPurchaseRequest = config.type === DocumentType.PurchaseRequests;
     const needsRequiredDate = isPurchaseRequest || config.type === DocumentType.PurchaseQuotation;
     const lineRequiredDate = needsRequiredDate ? new Date().toISOString().split("T")[0] : "";
+
+    if (documentMode === "service") {
+      items.forEach((service: any) => {
+        const accountCode = service.Code || service.VisCode || service.AccountCode || service.ItemCode || "";
+        const accountName = service.Name || service.AccountName || service.ItemName || "";
+        const description = service.Description || service.ItemDescription || service.Name || service.ItemName || "";
+
+        const targetTaxCode = service.VatGroupPu || service.VatGourpPu || service.TaxCode || "";
+        const selectedTax = freightsWithCharges.find((t) => t.Code === targetTaxCode);
+        const taxRate = Number(service.TaxRate || selectedTax?.Rate || 0);
+
+        addLine({
+          ItemCode: accountCode,
+          AccountCode: accountCode,
+          AccountName: accountName,
+          Description: description,
+
+          Quantity: 0,
+          OnHand: 0,
+
+          Price: 0,
+          DiscountPercent: Number(service.DiscountPercent || service.Discount || 0),
+
+          TaxCode: targetTaxCode,
+          TaxRate: taxRate,
+          TaxAmount: 0,
+          LineTotal: 0,
+
+          Freight1Type: "",
+          Freight1LCAmount: 0,
+          Freight1TaxGroup: "",
+
+          Freight2Type: "",
+          Freight2LCAmount: 0,
+          Freight2TaxGroup: "",
+
+          Freight3Type: "",
+          Freight3LCAmount: 0,
+          Freight3TaxGroup: "",
+          ...(needsRequiredDate && { RequiredDate: lineRequiredDate }),
+        });
+      });
+
+      setDialogOpen(false);
+      return;
+    }
 
     items.forEach((item) => {
       const price = getCustomerPrice(item.Prices || []);
@@ -160,8 +211,29 @@ export function PurchaseItems() {
     return fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
+  const serviceColumns = [
+    { key: "actions", title: "Actions", width: 80 },
+    { key: "AccountCode", title: "G/L Account", width: 200 },
+    { key: "AccountName", title: "G/L Account Name", width: 200 },
+    { key: "Description", title: "Description", width: 300 },
+    { key: "DiscountPercent", title: "Disc %", width: 120 },
+    { key: "TaxCode", title: "Tax Code", width: 140 },
+    { key: "LineTotal", title: "Line Total", width: 180 },
+    { key: "TaxAmount", title: "Tax Amount (LC)", width: 180 },
+    { key: "Freight1Type", title: "Freight 1 Type", width: 180 },
+    { key: "Freight1LCAmount", title: "Freight 1 (LC)", width: 180 },
+    { key: "Freight2Type", title: "Freight 2 Type", width: 180 },
+    { key: "Freight2LCAmount", title: "Freight 2 (LC)", width: 180 },
+    { key: "Freight3Type", title: "Freight 3 Type", width: 180 },
+    { key: "Freight3LCAmount", title: "Freight 3 (LC)", width: 180 },
+  ].filter((col) => {
+    if (col.key === "actions") return true;
+    return fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
+  });
+
   const lineUdfs = useLineUDFs(config.type);
   const columnsWithUdf = [...columns, ...lineUdfColumns(lineUdfs, fieldAccess)];
+  const serviceColumnsWithUdf = [...serviceColumns, ...lineUdfColumns(lineUdfs, fieldAccess)];
 
   const isFinancialPurchaseDoc = isPostedPurchaseDocType(config.type);
 
@@ -195,6 +267,30 @@ export function PurchaseItems() {
             )}
           </TabsTrigger>
         </TabsList>
+
+        <div className="flex items-center gap-3 mb-4">
+          <AppLabel className="text-sm font-semibold">Type</AppLabel>
+          <Select
+            value={documentMode}
+            disabled={isEditMode}
+            onValueChange={(value) => {
+              const nextMode = value as "items" | "service";
+              if (nextMode !== documentMode && lines.length > 0) {
+                clearLines();
+              }
+              setDocumentMode(nextMode);
+            }}
+          >
+            <SelectTrigger className="w-48 h-9">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="items">Items</SelectItem>
+              <SelectItem value="service">Service</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <TabsContent
           value="content"
           className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto"
@@ -220,6 +316,39 @@ export function PurchaseItems() {
                             }
                             return;
                           }
+
+                          if (documentMode === "service") {
+                            const needsRequiredDate = config.type === DocumentType.PurchaseRequests || config.type === DocumentType.PurchaseQuotation;
+                            addLine({
+                              ItemCode: "",
+                              AccountCode: "",
+                              AccountName: "",
+                              ItemName: "",
+                              Description: "",
+                              OnHand: 0,
+                              Quantity: 1,
+                              UnitPrice: 0,
+                              DiscountPercent: 0,
+                              TaxCode: "",
+                              TaxRate: 0,
+                              TaxTotal: 0,
+                              TaxAmount: 0,
+                              LineTotal: 0,
+                              PriceAfterVAT: 0,
+                              GrossTotal: 0,
+                              CostingCode: "",
+                              CostingCode2: "",
+                              CostingCode3: "",
+                              CostingCode4: "",
+                              CostingCode5: "",
+                              ProjectCode: "",
+                              TaxOnly: false,
+                              Price: 0,
+                              ...(needsRequiredDate && { RequiredDate: new Date().toISOString().split("T")[0] }),
+                            });
+                            return;
+                          }
+
                           setDialogOpen(true);
                         }}
                         className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
@@ -231,7 +360,7 @@ export function PurchaseItems() {
                       side="right"
                       className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
                     >
-                      Add Item
+                      {documentMode === "service" ? "Add Service" : "Add Item"}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -242,12 +371,12 @@ export function PurchaseItems() {
                 className={`w-full overflow-x-auto pb-2 ${isTableDisabled ? "opacity-80" : ""}`}
               >
                 <ResizableTable
-                  columns={columnsWithUdf}
+                  columns={documentMode === "items" ? columnsWithUdf : serviceColumnsWithUdf}
                   data={lines}
-                  emptyMessage="No items added yet."
+                  emptyMessage={documentMode === "items" ? "No items added yet." : "No services added yet."}
                   onRowContextMenu={handleRowContextMenu}
                   renderRow={(line, idx) => (
-                    <PurchaseItemRow index={idx} line={line} />
+                    <PurchaseItemRow index={idx} line={line} documentMode={documentMode} />
                   )}
                   rowClassName={(line) => hasInvalidPrice(line) ? "bg-blue-50 hover:bg-blue-100" : ""}
                 />
@@ -309,6 +438,7 @@ export function PurchaseItems() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
+        type={documentMode === "items" ? "item" : "service"}
       />
       {selectedLineForModal && (
         <SerialNumberSelectionDialog
