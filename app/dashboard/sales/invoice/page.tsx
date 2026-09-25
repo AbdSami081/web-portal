@@ -38,7 +38,7 @@ export default function InvoicePage() {
     DocumentLines: [],
   };
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses, salesPersonCode } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.ARInvoice) {
       const payload = buildSalesDocumentPatchPayload({
@@ -47,6 +47,7 @@ export default function InvoicePage() {
         discountPercent,
         freight,
         additionalExpenses,
+        salesPersonCode,
         includeLines: false,
         targetDocType: DocumentType.ARInvoice,
       });
@@ -82,6 +83,7 @@ export default function InvoicePage() {
       discountPercent,
       freight,
       additionalExpenses,
+      salesPersonCode,
     });
 
     try {

@@ -31,6 +31,7 @@ interface SalesDocumentStore {
   DocTotal: number;
   TotalFreight: number;
   DocumentStatus: string;
+  salesPersonCode: number | null;
   additionalExpenses: {
     ExpenseCode: number;
     LineTotal: number;
@@ -66,6 +67,7 @@ setFieldAccess: (fields: string[]) => void;
   setIsDownPayment: (v: boolean) => void;
   setDiscountSum: (s: number) => void;
   setCurrency: (c: DocCurrency) => void;
+  setSalesPersonCode: (code: number | null) => void;
 
   setDocTotal: (dt: number) => void;
 
@@ -124,6 +126,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     DocTotal: 0,
     TotalFreight: 0,
     DocumentStatus: "bost_Open",
+    salesPersonCode: null,
     DocEntry: 0,
     DocNum: 0,
     lastLoadedDocType: null,
@@ -168,6 +171,7 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
       get().calculateTotals();
     },
     setCurrency: (c) => set({ currency: c }),
+    setSalesPersonCode: (code) => set({ salesPersonCode: code }),
     setDocTotal: (dt) => set({ DocTotal: parseSafe(dt) }),
     setTaxTotal: (tt) => set({ TaxTotal: parseSafe(tt) }),
 
@@ -336,6 +340,7 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
         DocEntry: 0,
         DocNum: 0,
         DocumentStatus: "bost_Open",
+        salesPersonCode: null,
         docType: DocumentType.Quotation,
         lastLoadedDocType: null,
         currency: "USD",
@@ -448,6 +453,11 @@ setFieldAccess: (fields) => set({ fieldAccess: fields }),
         DocEntry: isCopy ? 0 : parseSafe(doc.DocEntry),
         DocNum: isCopy ? 0 : parseSafe(doc.DocNum),
         DocumentStatus: doc.DocumentStatus || doc.DocStatus || "bost_Open",
+        salesPersonCode: isCopy
+          ? null
+          : (doc.SalesPersonCode !== undefined && doc.SalesPersonCode !== null && Number(doc.SalesPersonCode) !== -1
+              ? Number(doc.SalesPersonCode)
+              : null),
         lastLoadedDocType: type || null,
         DocTotal: parseSafe(doc.DocTotal || doc.docTotal),
         TaxTotal: parseSafe(doc.TaxTotal || doc.taxTotal),

@@ -23,6 +23,7 @@ interface IOPRDDocumentStore {
   journalMemo: string;
   docDate: string;
   docStatus: string;
+  salesPersonCode: number | null;
   isCopyingTo: boolean;
   udfs: Record<string, any>;
   loadedDraftData: any | null;
@@ -43,6 +44,7 @@ interface IOPRDDocumentStore {
   setComments: (v: string) => void;
   setJournalMemo: (v: string) => void;
   setDocDate: (v: string) => void;
+  setSalesPersonCode: (code: number | null) => void;
   setIsCopyingTo: (v: boolean) => void;
   setPriceList: (priceList: string) => void;
   setSeries: (series: string) => void;
@@ -95,6 +97,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     series: "",
     postingDate: today(),
     docStatus: "",
+    salesPersonCode: null,
     isCopyingTo: false,
     attachments: [],
     udfs: {},
@@ -105,6 +108,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     fieldAccess: [],
 
     setFieldAccess: (fields) => set({ fieldAccess: fields }),
+    setSalesPersonCode: (code) => set({ salesPersonCode: code }),
     setLoadedDraftData: (data) => set({ loadedDraftData: data }),
     setSerialModalOpen: (open) => set({ serialModalOpen: open }),
     setBatchModalOpen: (open) => set({ batchModalOpen: open }),
@@ -267,6 +271,11 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         journalMemo: isCopy ? "" : (doc.JournalMemo || doc.JrnlMemo || ""),
         docDate: isCopy ? today() : (doc.TaxDate ? doc.TaxDate.split("T")[0] : today()),
         docStatus: isCopy ? "" : (doc.DocumentStatus || ""),
+        salesPersonCode: isCopy
+          ? null
+          : (doc.SalesPersonCode !== undefined && doc.SalesPersonCode !== null && Number(doc.SalesPersonCode) !== -1
+              ? Number(doc.SalesPersonCode)
+              : null),
         attachments: isCopy ? [] : attachments,
         udfs: udfValues,
         customer: doc.CardCode
@@ -303,6 +312,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
         journalMemo: "",
         docDate: today(),
         docStatus: "",
+        salesPersonCode: null,
         isCopyingTo: false,
         attachments: [],
         udfs: {},

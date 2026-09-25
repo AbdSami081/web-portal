@@ -40,7 +40,7 @@ export default function NewQuotationPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses } = useSalesDocument.getState();
+    const { lines, freight, discountPercent, DocEntry, lastLoadedDocType, attachments, additionalExpenses, salesPersonCode } = useSalesDocument.getState();
 
     if (lines.length === 0) {
       toast.error("Please add at least one item.");
@@ -54,6 +54,7 @@ export default function NewQuotationPage() {
         discountPercent,
         freight,
         additionalExpenses,
+        salesPersonCode,
       });
       try {
         await patchQuotation(Number(DocEntry), patchPayload);
@@ -86,6 +87,7 @@ export default function NewQuotationPage() {
       TaxDate: data.TaxDate,
       Comments: data.Comments,
       DiscountPercent: discountPercent || 0,
+      ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
       DocumentLines: lines.map((line, index) => {
         const baseFields: any = {
           ItemCode: line.ItemCode,

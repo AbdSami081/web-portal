@@ -2,6 +2,7 @@
 import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
@@ -10,6 +11,7 @@ import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useFmsContext } from "@/hooks/useFMS";
 import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
+import { useSalesPersonsStore } from "@/stores/useSalesPersonsStore";
 
 export default function DocumentFooter() {
   const { watch, register, setValue } = useFormContext();
@@ -28,7 +30,11 @@ export default function DocumentFooter() {
     TotalFreight = 0,
     discSum = 0,
     fieldAccess,
+    salesPersonCode,
+    setSalesPersonCode,
   } = useSalesDocument();
+
+  const salesPersons = useSalesPersonsStore((s) => s.salesPersons);
 
   const isFieldEnabled = (fieldName: string) => {
     return getFieldSettings(config.type, "headerFieds", fieldName).enable !== false;
@@ -55,6 +61,31 @@ export default function DocumentFooter() {
 
       <div className="grid grid-cols-2 gap-20">
         <div>
+          {isFieldVisible("SalesPersonCode") && (
+            <div className="mb-4" data-fms-field="SalesPersonCode">
+              <AppLabel htmlFor="SalesPersonCode">Sales Employee</AppLabel>
+              <Select
+                value={salesPersonCode !== null && salesPersonCode !== undefined ? String(salesPersonCode) : ""}
+                onValueChange={(val) => setSalesPersonCode(val === "" ? null : Number(val))}
+                disabled={isFooterDisabled || !isFieldEnabled("SalesPersonCode")}
+              >
+                <SelectTrigger id="SalesPersonCode" className="w-full max-w-95 mt-2">
+                  <SelectValue placeholder="Select sales employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Sales Employee</SelectLabel>
+                    {salesPersons.map((p) => (
+                      <SelectItem key={p.SalesEmployeeCode} value={String(p.SalesEmployeeCode)}>
+                        {p.SalesEmployeeName}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="flex items-center gap-1">
             <AppLabel htmlFor="Comments">Remarks</AppLabel>
             <FmsFieldButton field="Comments" />

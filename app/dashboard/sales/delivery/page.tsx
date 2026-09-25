@@ -39,7 +39,7 @@ export default function DeliveryPage() {
   };
 
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses, salesPersonCode } = useSalesDocument.getState();
     
     const payload = buildSalesDocumentPayload({
       data,
@@ -50,6 +50,7 @@ export default function DeliveryPage() {
       discountPercent,
       freight,
       additionalExpenses,
+      salesPersonCode,
     });
 
 
@@ -60,6 +61,7 @@ export default function DeliveryPage() {
         discountPercent,
         freight,
         additionalExpenses,
+        salesPersonCode,
         includeLines: false,
       });
 

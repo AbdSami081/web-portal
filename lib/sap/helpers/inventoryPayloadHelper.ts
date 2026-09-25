@@ -9,6 +9,7 @@ interface BuildInventoryPayloadOptions {
   lastLoadedDocType?: number | null;
   fromWarehouse?: string;
   toWarehouse?: string;
+  salesPersonCode?: number | null;
 }
 
 function getValidLines(lines: InventoryDocumentLine[]) {
@@ -89,6 +90,7 @@ export function buildInventoryTransferRequestPayload({
   lines,
   fromWarehouse,
   toWarehouse,
+  salesPersonCode,
 }: BuildInventoryPayloadOptions) {
   return withDefaultBPLId({
     CardCode: data.CardCode || "",
@@ -96,6 +98,7 @@ export function buildInventoryTransferRequestPayload({
     ToWarehouse: toWarehouse || "",
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
+    ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
     StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, false),
   }, data.BPL_IDAssignedToInvoice);
 }
@@ -105,10 +108,12 @@ export function buildInventoryTransferRequestPatchPayload({
   lines,
   fromWarehouse,
   toWarehouse,
-}: Pick<BuildInventoryPayloadOptions, "data" | "lines" | "fromWarehouse" | "toWarehouse">) {
+  salesPersonCode,
+}: Pick<BuildInventoryPayloadOptions, "data" | "lines" | "fromWarehouse" | "toWarehouse" | "salesPersonCode">) {
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
+    ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
     StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, true),
   };
 }
@@ -118,6 +123,7 @@ export function buildInventoryTransferPayload({
   lines,
   fromWarehouse,
   toWarehouse,
+  salesPersonCode,
 }: BuildInventoryPayloadOptions) {
   return withDefaultBPLId({
     CardCode: data.CardCode || "",
@@ -125,13 +131,15 @@ export function buildInventoryTransferPayload({
     ToWarehouse: toWarehouse || "",
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
+    ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
     StockTransferLines: buildDocumentLines(lines, fromWarehouse, toWarehouse, false),
   }, data.BPL_IDAssignedToInvoice);
 }
 
 export function buildInventoryTransferPatchPayload({
   data,
-}: Pick<BuildInventoryPayloadOptions, "data" | "lines" | "fromWarehouse" | "toWarehouse">) {
+  salesPersonCode,
+}: Pick<BuildInventoryPayloadOptions, "data" | "lines" | "fromWarehouse" | "toWarehouse" | "salesPersonCode">) {
   // Inventory Transfer posts real stock movement on Add; SAP rejects a resent (even
   // unchanged) line Quantity on an already-added document with "Incorrect 'Qty
   // (Inventory UoM)' in line ..." (confirmed live on Delivery, same underlying SAP
@@ -140,6 +148,7 @@ export function buildInventoryTransferPatchPayload({
   return {
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
+    ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
   };
 }
 
