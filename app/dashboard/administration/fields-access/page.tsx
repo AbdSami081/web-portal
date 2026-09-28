@@ -791,7 +791,6 @@ const handleSave = async () => {
                                     value={item.title}
                                     onSelect={() => {
                                       setSelectedDocument(docType);
-                                      setSelectedFields([]);
                                       setHasChanges(false);
                                       setIsDocPickerOpen(false);
                                     }}

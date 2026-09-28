@@ -547,6 +547,8 @@ if (isService) {
       <Input
         className="h-8 w-full text-left bg-neutral-100"
         value={draftLine.AccountCode || ""}
+        disabled
+        readOnly
       />
       <Button
         type="button"
@@ -555,8 +557,6 @@ if (isService) {
         className="h-8 w-8 shrink-0"
         
   onClick={() => setGlAccountModalOpen(true)}
-  //onClick={() => {alert("G/L Account selection modal is not implemented yet.")}}
-      
       >
         <Search className="h-4 w-4" />
       </Button>
@@ -1210,11 +1210,6 @@ if (isService) {
     </>
   );
 }
-  /*
-   * -------------------------------------------------------
-   * ITEM MODE
-   * -------------------------------------------------------
-   */
 
   return (
     <>

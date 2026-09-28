@@ -569,9 +569,6 @@ const setDocumentMode = useSalesDocument(
             disabled={isEditMode}
             onValueChange={(value) => {
               const nextMode = value as "items" | "service";
-              // Item-shaped and service-shaped lines can't coexist in one document -
-              // switching type mid-document would otherwise leave stale rows rendered
-              // under the wrong columns (e.g. an AccountCode row shown as an ItemCode row).
               if (nextMode !== documentMode && lines.length > 0) {
                 clearLines();
               }

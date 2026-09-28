@@ -228,7 +228,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setMessages((prev) => [msg, ...prev]);
       setUnreadCount((c) => c + 1);
 
-      // Sync pending approvals in background when new alerts arrive
       void refreshPendingApprovals(true);
 
       toast.info(`New SAP Alert: ${msg.Subject}`, {

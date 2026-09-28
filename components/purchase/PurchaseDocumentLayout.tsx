@@ -582,10 +582,6 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               return;
             }
 
-            // Validate serial/batch allocation up front, regardless of which submit path
-            // (fresh document, rejected-draft resubmit, approved-draft resubmit) is taken
-            // below — otherwise a resubmit branch could skip this and reach SAP with an
-            // unallocated line.
             const isSerialBatchPurchaseDoc = [
               DocumentType.GoodsReceiptPO,
               DocumentType.APInvoice,
@@ -932,18 +928,12 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
               const finalData = {
                 ...(pendingFinalData as any),
-                // Approval remarks are submitted separately in SAP's approval request,
-                // NOT written onto the document's Comments field.
                 Comments: (pendingFinalData as any).Comments || "",
               } as T;
 
               const result = await onSubmit(finalData);
               setPendingFinalData(null);
 
-              // SAP auto-drafts the document and auto-creates the approval request when
-              // an approval procedure applies (POST ApprovalRequests isn't supported) -
-              // that request starts with no Remarks until we PATCH it with what the user
-              // just typed in this modal.
               if (result && (result as any).IsDraft && (result as any).DocEntry) {
                 const tpl = approvalTemplates[0];
                 const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
@@ -952,9 +942,6 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                     await submitApprovalRequest(0, {
                       TemplateCode: tpl?.Code,
                       ObjectEntry: Number((result as any).DocEntry),
-                      // Same as pendingReApproval above: ObjectEntry is the DRAFT's own
-                      // entry, so ObjectType must be "112" ("Documents - Drafts"), not
-                      // the document's specific type.
                       ObjectType: DRAFT_OBJECT_TYPES[0],
                       IsDraft: "Y",
                       OriginatorID: user?.sapUserId,

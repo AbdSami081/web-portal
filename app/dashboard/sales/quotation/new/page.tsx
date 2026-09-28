@@ -115,7 +115,6 @@ export default function NewQuotationPage() {
           baseFields.BaseEntry = DocEntry;
           baseFields.BaseLine = line.LineNum;
         }
-        // Line-level freight
         const lineExpenses: any[] = [];
         if (line.Freight1Type && Number(line.Freight1LCAmount) > 0) {
           lineExpenses.push({ ExpenseCode: Number(line.Freight1Type), LineTotal: Number(line.Freight1LCAmount), VatGroup: line.Freight1TaxGroup || "" });
@@ -142,8 +141,6 @@ export default function NewQuotationPage() {
     try {
       const documentData = await postQuotation(payload);
       if (!documentData?.DocEntry && !documentData?.IsDraft) throw new Error("Failed to create quotation");
-      // When an approval process applies, SAP creates a DRAFT and the approval request
-      // natively - the document is not final yet, so skip attachment upload/loading.
       if (attachments.length > 0 && !documentData?.IsDraft) {
         const attachmentResult = await uploadAndPatchAttachments(
           attachments,

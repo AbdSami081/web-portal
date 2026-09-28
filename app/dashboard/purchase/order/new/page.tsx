@@ -73,7 +73,6 @@ export default function NewPurchaseOrderPage() {
         documentMode,
       });
 
-      // Add attachments to payload
       if (processedAttachments.length > 0) {
         (payload as any).Attachments2_Lines = processedAttachments.map((att) => ({
           FileExtension: att.FileName.split('.').pop(),
@@ -107,7 +106,6 @@ export default function NewPurchaseOrderPage() {
       documentMode,
     });
 
-    // Add attachments to payload
     if (processedAttachments.length > 0) {
       (payload as any).Attachments2_Lines = processedAttachments.map((att) => ({
         FileExtension: att.FileName.split('.').pop(),
