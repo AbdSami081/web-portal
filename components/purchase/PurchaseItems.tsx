@@ -271,7 +271,7 @@ export function PurchaseItems() {
         <div className="flex items-center gap-3 mb-4">
           <AppLabel className="text-sm font-semibold">Type</AppLabel>
           <Select
-            value={documentMode}
+            value={documentMode || "items"}
             disabled={isEditMode}
             onValueChange={(value) => {
               const nextMode = value as "items" | "service";
@@ -371,9 +371,9 @@ export function PurchaseItems() {
                 className={`w-full overflow-x-auto pb-2 ${isTableDisabled ? "opacity-80" : ""}`}
               >
                 <ResizableTable
-                  columns={documentMode === "items" ? columnsWithUdf : serviceColumnsWithUdf}
+                  columns={documentMode === "service" ? serviceColumnsWithUdf : columnsWithUdf}
                   data={lines}
-                  emptyMessage={documentMode === "items" ? "No items added yet." : "No services added yet."}
+                  emptyMessage={documentMode === "service" ? "No services added yet." : "No items added yet."}
                   onRowContextMenu={handleRowContextMenu}
                   renderRow={(line, idx) => (
                     <PurchaseItemRow index={idx} line={line} documentMode={documentMode} />
@@ -438,7 +438,7 @@ export function PurchaseItems() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
-        type={documentMode === "items" ? "item" : "service"}
+        type={documentMode === "service" ? "service" : "item"}
       />
       {selectedLineForModal && (
         <SerialNumberSelectionDialog

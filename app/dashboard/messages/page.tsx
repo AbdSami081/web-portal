@@ -405,7 +405,6 @@ export default function MessagesOverviewPage() {
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
-        {/* Left Side: Tabs + Table List */}
         <Card className="lg:col-span-7 flex flex-col min-h-0 bg-white border-slate-200 shadow-sm rounded-xl overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <div className="px-4 pt-4 border-b border-slate-100 flex items-center justify-between">
@@ -659,7 +658,6 @@ export default function MessagesOverviewPage() {
           {activeTab === "approvals" ? (
             selectedApproval ? (
               <div className="flex-1 flex flex-col min-h-0">
-                {/* Approval Detail Header */}
                 <div className="p-5 border-b border-slate-100 bg-amber-50/30 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <h2 className="text-base font-black text-slate-900 leading-tight">
@@ -700,7 +698,6 @@ export default function MessagesOverviewPage() {
                   </div>
                 </div>
 
-                {/* Remarks */}
                 <ScrollArea className="max-h-[45vh] p-5">
                   <div className="space-y-4">
                     <div>
@@ -779,7 +776,6 @@ export default function MessagesOverviewPage() {
                   </div>
                 </ScrollArea>
 
-                {/* Approve Action */}
                 <div className="p-4 border-t border-slate-100 bg-slate-50/30">
                   <Button
                     className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 rounded-lg transition-colors shadow-sm"
@@ -845,14 +841,12 @@ export default function MessagesOverviewPage() {
                 </div>
               </div>
 
-              {/* Message Body */}
               <ScrollArea className="flex-1 p-5">
                 <div className="space-y-6">
                   <div className="text-sm leading-relaxed text-slate-700 font-medium whitespace-pre-wrap">
                     {selectedMessage.Text || selectedMessage.ApprovalRemarks}
                   </div>
 
-                  {/* Linked Document */}
                   {documentLink && (
                     <div className="space-y-3 pt-4 border-t border-slate-100">
                       <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
@@ -913,7 +907,6 @@ export default function MessagesOverviewPage() {
         </Card>
       </div>
 
-      {/* Approve Confirmation Dialog */}
       <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

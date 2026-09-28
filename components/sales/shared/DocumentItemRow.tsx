@@ -69,7 +69,6 @@ export function DocumentLineRow({
   const chartOfAccountsLoading = useChartOfAccountsStore((state) => state.isLoading);
   const loadMoreChartOfAccounts = useChartOfAccountsStore((state) => state.loadMoreChartOfAccounts);
 
-console.log("chartOfAccounts", chartOfAccounts);
   const isService = documentMode === "service";
 
   const isFinancialDoc = isPostedSalesDocType(config.type);
@@ -429,12 +428,7 @@ useEffect(() => {
         f3.taxAmount.toFixed(2)
       ),
 
-      TaxAmount: taxTotal,
-      TaxTotal: taxTotal,
-
       GrossTotal: grossTotal,
-
-      LineTotal: serviceAmount,
     };
 
     setDraftLine(updatedLine);
@@ -482,14 +476,6 @@ useEffect(() => {
 
     Freight3TaxRate: f3.rate,
     Freight3TaxLCAmount: f3.taxAmount,
-
-    TaxAmount: Number(
-      totalTax.toFixed(2)
-    ),
-
-    LineTotal: Number(
-      (discounted + totalTax).toFixed(2)
-    ),
   };
 
   updateLine(
@@ -564,7 +550,6 @@ if (isService) {
     </div>
   </td>
 )}
-      {/* G/L NAME */}
       {isFieldVisible("AccountName") && (
         <td className="py-2 px-2">
           <Input
@@ -576,7 +561,6 @@ if (isService) {
         </td>
       )}
 
-      {/* DESCRIPTION */}
      {isFieldVisible("Description") && (
   <td className="py-2 px-2">
     <Input
@@ -733,54 +717,6 @@ if (isService) {
         </td>
       )}
 
-      {/* TAX CODE */}
-      {/* {isFieldVisible("TaxCode") && (
-        <td className="py-2 px-2">
-          <div className="flex items-center gap-1">
-            <Select
-              value={draftLine.TaxCode || ""}
-              disabled={!isCellEditable("TaxCode")}
-              onValueChange={(val) =>
-                patchLine({
-                  TaxCode: val,
-                })
-              }
-            >
-              <SelectTrigger className="h-6 w-full border rounded px-2 text-xs">
-                <SelectValue placeholder="Select Tax" />
-              </SelectTrigger>
-
-              <SelectContent>
-                {freightsWithCharges?.map((grp: any) => {
-                  const code =
-                    grp.Code || grp.code;
-
-                  const name =
-                    grp.Name || grp.name;
-
-                  return (
-                    <SelectItem
-                      key={code}
-                      value={code}
-                      className="text-xs"
-                    >
-                      {code} - {name || code}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-
-            <LineCellFms
-              field="TaxCode"
-              line={draftLine}
-              onPatch={patchLine}
-              disabled={!isCellEditable("TaxCode")}
-            />
-          </div>
-        </td>
-      )} */}
-            {/* FREIGHT 1 TYPE */}
       {isFieldVisible(
         "Freight1Type"
       ) && (
@@ -853,7 +789,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 1 AMOUNT */}
       {isFieldVisible(
         "Freight1LCAmount"
       ) && (
@@ -894,7 +829,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 2 TYPE */}
       {isFieldVisible(
         "Freight2Type"
       ) && (
@@ -967,7 +901,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 2 AMOUNT */}
       {isFieldVisible(
         "Freight2LCAmount"
       ) && (
@@ -1008,7 +941,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 3 TYPE */}
       {isFieldVisible(
         "Freight3Type"
       ) && (
@@ -1081,7 +1013,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 3 AMOUNT */}
       {isFieldVisible(
         "Freight3LCAmount"
       ) && (
@@ -1122,7 +1053,6 @@ if (isService) {
         </td>
       )}
 
-      {/* UDFS / FBR FIELDS */}
       <LineUDFCells
         docType={config.type}
         line={draftLine}
@@ -1156,30 +1086,6 @@ if (isService) {
         }}
       />
       
-{/* <GenericModal
-  open={glAccountModalOpen}
-  onClose={() => setGlAccountModalOpen(false)}
-  data={glAccountData}
-  onSelect={(value) => {
-  const selectedAccount = glAccountData.find(
-    (account) => account.Code === value
-  );
-
-  if (!selectedAccount) return;
-
-  patchLine({
-    AccountCode: selectedAccount.Code,
-    AccountName: selectedAccount.Name,
-    Description: selectedAccount.Name,
-    ItemCode: selectedAccount.Code,
-    ItemName: selectedAccount.Name,
-  });
-
-  setGlAccountModalOpen(false);
-}}
-  columns={glAccountColumns}
-  title="Select G/L Account"
-/> */}
 <GenericModal
   open={glAccountModalOpen}
   onClose={() => setGlAccountModalOpen(false)}
@@ -1213,7 +1119,6 @@ if (isService) {
 
   return (
     <>
-      {/* ACTIONS */}
       <td className="py-2 px-2 border-r border-neutral-100/10 text-center">
         <Button
           type="button"
@@ -1243,7 +1148,6 @@ if (isService) {
         </Button>
       </td>
 
-      {/* ITEM CODE */}
       {isFieldVisible(
         "ItemCode"
       ) && (
@@ -1254,7 +1158,6 @@ if (isService) {
         </td>
       )}
 
-      {/* ITEM NAME */}
       {isFieldVisible(
         "ItemName"
       ) && (
@@ -1265,7 +1168,6 @@ if (isService) {
         </td>
       )}
 
-      {/* QUANTITY */}
       {isFieldVisible(
         "Quantity"
       ) && (
@@ -1335,7 +1237,6 @@ if (isService) {
         </td>
       )}
 
-      {/* ON HAND */}
       {isFieldVisible(
         "OnHand"
       ) && (
@@ -1354,7 +1255,6 @@ if (isService) {
         </td>
       )}
 
-      {/* PRICE */}
       {isFieldVisible(
         "Price"
       ) && (
@@ -1424,7 +1324,6 @@ if (isService) {
         </td>
       )}
 
-      {/* DISCOUNT */}
       {isFieldVisible(
         "DiscountPercent"
       ) && (
@@ -1481,7 +1380,6 @@ if (isService) {
         </td>
       )}
 
-      {/* TAX CODE */}
       {isFieldVisible(
         "TaxCode"
       ) && (
@@ -1548,7 +1446,6 @@ if (isService) {
         </td>
       )}
 
-      {/* TAX AMOUNT */}
       {isFieldVisible(
         "TaxAmount"
       ) && (
@@ -1575,7 +1472,6 @@ if (isService) {
         </td>
       )}
 
-      {/* WAREHOUSE */}
       {isFieldVisible(
         "WarehouseCode"
       ) && (
@@ -1624,7 +1520,6 @@ if (isService) {
         </td>
       )}
 
-      {/* BRANCH */}
       {multiBranchEnabled &&
         isFieldVisible(
           "BPLid"
@@ -1642,7 +1537,6 @@ if (isService) {
           </td>
         )}
 
-      {/* UOM CODE */}
      {isFieldVisible(
         "UoMCode"
       ) && (
@@ -1695,7 +1589,6 @@ if (isService) {
         </td>
       )}
 
-      {/* UOM NAME */}
        {isFieldVisible(
         "UoMName"
       ) && (
@@ -1719,7 +1612,6 @@ if (isService) {
         </td>
       )} 
 
-      {/* LINE TOTAL */}
       {isFieldVisible(
         "LineTotal"
       ) && (
@@ -1736,7 +1628,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 1 TYPE */}
       {isFieldVisible(
         "Freight1Type"
       ) && (
@@ -1809,7 +1700,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 1 AMOUNT */}
       {isFieldVisible(
         "Freight1LCAmount"
       ) && (
@@ -1850,7 +1740,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 2 TYPE */}
       {isFieldVisible(
         "Freight2Type"
       ) && (
@@ -1923,7 +1812,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 2 AMOUNT */}
       {isFieldVisible(
         "Freight2LCAmount"
       ) && (
@@ -1964,7 +1852,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 3 TYPE */}
       {isFieldVisible(
         "Freight3Type"
       ) && (
@@ -2037,7 +1924,6 @@ if (isService) {
         </td>
       )}
 
-      {/* FREIGHT 3 AMOUNT */}
       {isFieldVisible(
         "Freight3LCAmount"
       ) && (
@@ -2078,7 +1964,6 @@ if (isService) {
         </td>
       )}
 
-      {/* UDFs */}
       <LineUDFCells
         docType={config.type}
         line={draftLine}
@@ -2122,7 +2007,6 @@ if (isService) {
         }}
       />
 
-      {/* WAREHOUSE DIALOG */}
       <WarehouseSelectorDialog
         open={whDialogOpen}
         onClose={() =>
@@ -2177,7 +2061,6 @@ if (isService) {
         }
       />
 
-      {/* UOM DIALOG */}
       <UoMSelectorDialog
         open={uomDialogOpen}
         onClose={() =>
@@ -2194,7 +2077,6 @@ if (isService) {
         }}
       />
 
-      {/* COGS MODAL */}
       <GenericModal
         open={cogsModalOpen}
         onClose={() =>

@@ -454,7 +454,9 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
           Quantity: quantity,
           Price: unitPrice,
           TaxAmount: Number((itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
-          LineTotal: Number((lineAmountAfterDiscount + lineFreightSubtotal + itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
+          ...(documentMode === "service"
+            ? {}
+            : { LineTotal: Number((lineAmountAfterDiscount + lineFreightSubtotal + itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0 }),
         };
       });
 

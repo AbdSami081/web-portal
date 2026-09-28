@@ -345,15 +345,19 @@ export const useSalesDocument = create<SalesDocumentStore>()(
           Price: unitPrice,
           TaxAmount:
             Number((itemTaxAmount + lineFreightTaxTotal).toFixed(2)) || 0,
-          LineTotal:
-            Number(
-              (
-                lineAmountAfterDiscount +
-                lineFreightSubtotal +
-                itemTaxAmount +
-                lineFreightTaxTotal
-              ).toFixed(2),
-            ) || 0,
+          ...(get().documentMode === "service"
+            ? {}
+            : {
+                LineTotal:
+                  Number(
+                    (
+                      lineAmountAfterDiscount +
+                      lineFreightSubtotal +
+                      itemTaxAmount +
+                      lineFreightTaxTotal
+                    ).toFixed(2),
+                  ) || 0,
+              }),
         };
       });
 

@@ -560,12 +560,11 @@ const setDocumentMode = useSalesDocument(
           )}
         </TabsList>
 
-        {/* // */}
         <div className="flex items-center gap-3 mb-4">
           <AppLabel className="text-sm font-semibold">Type</AppLabel>
 
           <Select
-            value={documentMode}
+            value={documentMode || "items"}
             disabled={isEditMode}
             onValueChange={(value) => {
               const nextMode = value as "items" | "service";
@@ -590,169 +589,7 @@ const setDocumentMode = useSalesDocument(
           value="content"
           className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto"
         >
-          {/* <div className="relative overflow-visible">
-            {!isLineUpdateBlocked && !isTableDisabled && (
-              <div className="absolute -top-6 left-2 z-50">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        size="icon"
-                        onClick={() => {
-                          if (
-                            !selectedCardCode
-                          ) {
-                            const field =
-                              document.getElementById(
-                                "card-code-field"
-                              );
-
-                            if (field) {
-                              field.classList.add(
-                                "animate-glow-red-blink"
-                              );
-
-                              setTimeout(() => {
-                                field.classList.remove(
-                                  "animate-glow-red-blink"
-                                );
-                              }, 3000);
-                            }
-
-                            return;
-                          }
-
-                          setDialogOpen(
-                            true
-                          );
-                        }}
-                        className="h-9 w-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white"
-                      >
-                        <Plus className="h-5 w-5 stroke-[2.5px]" />
-                      </Button>
-                    </TooltipTrigger>
-
-                    <TooltipContent
-                      side="right"
-                      className="bg-emerald-600 text-white border-emerald-500 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.6)] animate-in fade-in-0 zoom-in-95 duration-300"
-                    >
-                      Add Item
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )}
-
-            <div className="relative border rounded overflow-x-auto">
-              <div
-                className={`w-full overflow-x-auto pb-2 ${
-                  isTableDisabled
-                    ? "opacity-80"
-                    : ""
-                }`}
-              >
-                <ResizableTable
-                  columns={columnsWithUdf}
-                  data={lines}
-                  emptyMessage="No items added yet."
-                  onRowContextMenu={(
-                    e,
-                    line
-                  ) =>
-                    handleRowContextMenu(
-                      e,
-                      line
-                    )
-                  }
-                  renderRow={(
-                    line,
-                    idx
-                  ) => (
-                    <DocumentLineRow
-                      index={idx}
-                      line={line}
-                    />
-                  )}
-                  rowClassName={(line) => hasInvalidPrice(line) ? "bg-blue-50 hover:bg-blue-100" : ""}
-                />
-
-                {contextMenu && (
-                  <div
-                    className="fixed z-50 bg-white border border-neutral-200/80 shadow-lg rounded-lg w-72 p-1"
-                    style={{
-                      top: contextMenu.y,
-                      left:
-                        contextMenu.x,
-                    }}
-                    onMouseLeave={() =>
-                      setContextMenu(
-                        null
-                      )
-                    }
-                  >
-                    <button
-                      className="cursor-pointer w-full text-left px-3 py-2 hover:bg-neutral-100 rounded text-sm font-semibold flex items-center gap-2 text-neutral-800"
-                      onClick={() => {
-                        const isBatch =
-                          String(
-                            contextMenu
-                              .line
-                              .ManBtchNum
-                          ).toLowerCase() ===
-                            "y" ||
-                          String(
-                            contextMenu
-                              .line
-                              .ManBtchNum
-                          ).toLowerCase() ===
-                            "tyes";
-
-                        setSelectedLineForModal(
-                          contextMenu.line
-                        );
-
-                        if (isBatch) {
-                          setBatchModalOpen(
-                            true
-                          );
-                        } else {
-                          setSerialModalOpen(
-                            true
-                          );
-                        }
-
-                        setContextMenu(
-                          null
-                        );
-                      }}
-                    >
-                      <FileText className="h-4 w-4" />
-
-                      <span>
-                        {String(
-                          contextMenu
-                            .line
-                            .ManBtchNum
-                        ).toLowerCase() ===
-                          "y" ||
-                        String(
-                          contextMenu
-                            .line
-                            .ManBtchNum
-                        ).toLowerCase() ===
-                          "tyes"
-                          ? "Batch Number Transactions Report"
-                          : "Serial Number Transactions Report"}
-                      </span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div> */}
-
-          {documentMode === "items" ? (
+          {documentMode !== "service" ? (
             <div className="relative overflow-visible">
               {!isLineUpdateBlocked && !isTableDisabled && (
                 <div className="absolute -top-6 left-2 z-50">
@@ -1094,7 +931,7 @@ const setDocumentMode = useSalesDocument(
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
-        type={documentMode === "items" ? "item" : "service"}
+        type={documentMode === "service" ? "service" : "item"}
 
       />
 

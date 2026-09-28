@@ -144,23 +144,13 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
         Freight2TaxLCAmount: Number(f2.taxAmount.toFixed(2)),
         Freight3TaxRate: f3.rate,
         Freight3TaxLCAmount: Number(f3.taxAmount.toFixed(2)),
-        TaxAmount: taxTotal,
-        TaxTotal: taxTotal,
         GrossTotal: grossTotal,
-        LineTotal: serviceAmount,
       };
 
       setDraftLine(updatedLine);
       updateLineByIndex(index, updatedLine);
       return;
     }
-
-    const quantity = Number(lineData.Quantity) || 0;
-    const price = Number(lineData.Price) || 0;
-    const subtotal = quantity * price;
-    const discounted = subtotal * (1 - discount / 100);
-    const itemTax = (discounted * itemTaxRate) / 100;
-    const totalTax = itemTax + freightTax;
 
     const updatedLine = {
       ...lineData,
@@ -171,8 +161,6 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
       Freight2TaxLCAmount: f2.taxAmount,
       Freight3TaxRate: f3.rate,
       Freight3TaxLCAmount: f3.taxAmount,
-      TaxAmount: Number(totalTax.toFixed(2)),
-      LineTotal: Number((discounted + totalTax).toFixed(2)),
     };
 
     updateLineByIndex(index, updatedLine);
