@@ -25,6 +25,8 @@ import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
+import { fetchItemByCode } from "@/lib/sap/helpers/itemCacheHelper";
 
 export function PurchaseItems() {
   const { watch } = useFormContext();
@@ -241,6 +243,144 @@ export function PurchaseItems() {
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
   const isLineUpdateBlocked = isFinancialPurchaseDoc && isEditMode;
 
+
+  const handleExcelPaste = async (e: React.ClipboardEvent) => {
+    if (!requester?.CardCode) {
+      e.preventDefault();
+      toast.error("Please select a customer first.");
+      return;
+    }
+  
+    const text = e.clipboardData.getData("text");
+  
+    if (!text || (!text.includes("\t") && !text.includes("\n"))) {
+      return;
+    }
+  
+    e.preventDefault();
+  
+    const rows = text
+      .trim()
+      .split(/\r?\n/)
+      .map((row) => row.split("\t"));
+  
+    let addedCount = 0;
+    const notFoundItems: string[] = [];
+  
+    for (const columns of rows) {
+      const itemCode = columns[0]?.trim();
+  
+      if (!itemCode) continue;
+  
+      const quantity = Number(columns[1]?.trim()) || 1;
+      const price = Number(columns[2]?.trim()) || 0;
+      const discountPercent = Number(columns[3]?.trim()) || 0;
+      const warehouseCode = columns[4]?.trim() || "";
+  
+      try {
+        const item = await fetchItemByCode(itemCode);
+  
+        if (!item) {
+          notFoundItems.push(itemCode);
+          continue;
+        }
+  
+        // --------------------------------
+        // Existing item-line logic
+        // --------------------------------
+  
+        const targetTaxCode =
+          item.VatGourpSa ||
+          item.VatGroupSa ||
+          "";
+  
+        const selectedTax = freightsWithCharges.find(
+          (t) => t.Code === targetTaxCode
+        );
+  
+        const taxRate = Number(selectedTax?.Rate || 0);
+  
+        const defaultWhsLine =
+          warehouseCode ||
+          item.DefaultWhse ||
+          firstWhs;
+  
+        const qtyInWhs = item.QtyInWhs || [];
+  
+        const whRecord = qtyInWhs.find(
+          (w: any) =>
+            (w.WarehouseCode || w.warehouseCode) ===
+            defaultWhsLine
+        );
+  
+        const initialOnHand = whRecord
+          ? whRecord.Qty ?? whRecord.qty ?? 0
+          : 0;
+  
+        const uomVal =
+          resolveUoMFromCandidates(
+            // uoms,
+            item.UoM,
+            item.InventoryUOM,
+            item.UoMCode,
+            item.UoMGroupEntry,
+            item.UnitsOfMeasurment
+          ) ||
+          item.UoM ||
+          "";
+  
+        addLine({
+          ItemCode: item.ItemCode,
+          ItemName:
+            item.ItemName ||
+            item.ItemDescription ||
+            "",
+          Quantity: quantity,
+          OnHand: initialOnHand,
+          Price:
+            price ||
+            getCustomerPrice(item.Prices || []),
+          DiscountPercent: discountPercent,
+          TaxCode: targetTaxCode,
+          TaxRate: taxRate,
+          WarehouseCode: defaultWhsLine,
+          BPLid: resolveBranchForWarehouse(
+            defaultWhsLine,
+            warehouses
+          ),
+          UoMCode: uomVal,
+          // MeasureUnit:
+          //   item.MeasureUnit ||
+          //   getUoMName(uomVal) ||
+          //   "",
+          ManSerNum: item.ManSerNum,
+          ManBtchNum: item.ManBtchNum,
+          QtyInWhs: qtyInWhs,
+        });
+  
+        addedCount++;
+  
+      } catch (error) {
+        console.error(`Error adding item ${itemCode}:`, error);
+  
+        // Error ko toast na karo, sirf list mein rakho
+        notFoundItems.push(itemCode);
+      }
+    }
+  
+    // Success message
+    if (addedCount > 0) {
+      toast.success(`${addedCount} item(s) added successfully.`);
+    }
+  
+    // Sirf ONE error message
+    if (notFoundItems.length > 0) {
+      toast.error(
+        `${notFoundItems.length} item(s) not found: ${notFoundItems.join(", ")}`
+      );
+    }
+  };
+
   return (
     <div className="grid w-full relative pt-2 overflow-visible">
       <Tabs
@@ -366,7 +506,7 @@ export function PurchaseItems() {
                 </TooltipProvider>
               </div>
             )}
-            <div className="relative border rounded overflow-x-auto">
+                <div className="relative border rounded overflow-x-auto"  onPaste={handleExcelPaste}>
               <div
                 className={`w-full overflow-x-auto pb-2 ${isTableDisabled ? "opacity-80" : ""}`}
               >
