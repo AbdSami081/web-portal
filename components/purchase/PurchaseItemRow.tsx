@@ -23,6 +23,7 @@ import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { useChartOfAccountsStore } from "@/stores/useChartOfAccountsStore";
+import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService"; 
 
 interface Props {
   index: number;
@@ -84,6 +85,9 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
   const [cogsData, setCogsData] = useState<Record[]>([]);
   const { multiBranchEnabled } = useApprovalSettings();
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+const [projects, setProjects] = useState<any[]>([]);
+const [projectsLoading, setProjectsLoading] = useState(false);
 
   useEffect(() => {
     setDraftLine(line);
@@ -98,7 +102,22 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
       }
     }
   }, [isService, line.WarehouseCode, line.BPLid, warehouses, index]);
+const loadProjects = async () => {
+  try {
+    setProjectsLoading(true);
 
+   
+
+   const response = await getBusinessPartnerProjects();
+
+setProjects(response);
+  } catch (error) {
+    console.error("Failed to load projects:", error);
+    setProjects([]);
+  } finally {
+    setProjectsLoading(false);
+  }
+};
   useEffect(() => {
     calculateAndUpdate(draftLine);
   }, [
@@ -502,7 +521,45 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           <span className="block text-left truncate">{draftLine.ItemName}</span>
         </td>
       )}
+      {isFieldVisible("FreeText") && (
+        <td className="w-[120px]">
+          <Input
+            className="h-6 w-full text-left"
+            value={draftLine.FreeText || ""}
+            onChange={(e) => {
+              setDraftLine({ ...draftLine, FreeText: e.target.value });
+            }}
+            disabled={!isFieldEnabled("FreeText")}
+          />
+        </td>
+      )}
 
+          {isFieldVisible("Project") && (
+  <td className="w-[120px]">
+    <div className="flex items-center gap-1">
+      <Input
+        className="h-6 w-full bg-gray-100 text-left text-xs"
+        value={draftLine.Project || ""}
+        disabled
+        readOnly
+      />
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6"
+        onClick={() => {
+          loadProjects();
+          setProjectModalOpen(true);
+        }}
+        disabled={!isFieldEnabled("Project")}
+      >
+        <Search className="h-4 w-4" />
+      </Button>
+    </div>
+  </td>
+)}
       {isFieldVisible("Quantity") && (
         <td className="w-[90px]">
           <Input
@@ -892,7 +949,37 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
         }}
       />
+<GenericModal
+  open={projectModalOpen}
+  onClose={() => setProjectModalOpen(false)}
+  data={projects}
+  onSelect={(value) => {
+    const selectedProject = projects.find(
+      (project: any) =>
+        project.Code === value ||
+        project.code === value
+    );
 
+    if (!selectedProject) return;
+
+    patchLine({
+      Project:
+        selectedProject.Code ||
+        selectedProject.code ||
+        value,
+    });
+
+    setProjectModalOpen(false);
+  }}
+  columns={[
+    { key: "Code", label: "Project Code" },
+    { key: "Name", label: "Project Name" },
+  ]}
+  title="Select Project"
+  getSelectValue={(item: any) =>
+    item.Code || item.code
+  }
+/>
       <GenericModal
         open={cogsModalOpen}
         onClose={() => setCogsModalOpen(false)}

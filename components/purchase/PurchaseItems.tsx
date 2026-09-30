@@ -45,6 +45,7 @@ export function PurchaseItems() {
     documentMode,
     setDocumentMode,
   } = usePurchaseDocument();
+  // console.log(requester, "requester in purchase items");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
   const config = usePurchaseDocConfig();
@@ -191,6 +192,8 @@ export function PurchaseItems() {
     { key: "actions", title: "Actions", width: 80 },
     { key: "ItemCode", title: "Item Code", width: 180 },
     { key: "ItemName", title: "Item Description", width: 300 },
+    { key: "FreeText", title: "Free Text", width: 300 },
+    { key: "Project", title: "Project", width: 180 },
     { key: "Quantity", title: "Qty", width: 100 },
     { key: "OnHand", title: "Qty In Whs", width: 100 },
     { key: "Price", title: "Price", width: 120 },
@@ -245,9 +248,9 @@ export function PurchaseItems() {
 
 
   const handleExcelPaste = async (e: React.ClipboardEvent) => {
-    if (!requester?.CardCode) {
+    if (!requester?.CardCode && config.type !== DocumentType.PurchaseRequests) {
       e.preventDefault();
-      toast.error("Please select a customer first.");
+      toast.error("Please select a Vendor/Requester first.");
       return;
     }
   
