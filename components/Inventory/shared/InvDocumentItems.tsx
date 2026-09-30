@@ -22,20 +22,50 @@ import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog"
 import { toast } from "sonner";
 import { linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
+import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
+import { fetchItemByCode } from "@/lib/sap/helpers/itemCacheHelper";
 
 export function InvDocumentItems() {
   const { watch } = useFormContext();
+  // const {
+  //   lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment,
+  //   serialModalOpen, setSerialModalOpen, batchModalOpen, setBatchModalOpen, selectedLineForModal, setSelectedLineForModal,
+  //   fieldAccess,
+  // } = useInventoryDocument();
   const {
-    lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment,
-    serialModalOpen, setSerialModalOpen, batchModalOpen, setBatchModalOpen, selectedLineForModal, setSelectedLineForModal,
-    fieldAccess,
-  } = useInventoryDocument();
+  lines,
+  addLine,
+  warehouses,
+  fromWarehouse,
+  toWarehouse,
+  // requester,
+  // fetchItemByCode,
+  attachments,
+  addAttachment,
+  removeAttachment,
+  updateAttachment,
+  serialModalOpen,
+  setSerialModalOpen,
+  batchModalOpen,
+  setBatchModalOpen,
+  selectedLineForModal,
+  setSelectedLineForModal,
+  customer,
+  // fetchItemByCode,
+  fieldAccess,
+} = useInventoryDocument();
   const config = useInvDocConfig();
   const isGoodIssue = config.type === DocumentType.GoodIssue;
   const { multiBranchEnabled } = useApprovalSettings();
   const uoms = useUoMStore((state) => state.uoms);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
+  const freightsWithCharges = useMasterDataStore(
+  (state) => state.freightsWithCharges
+);
+
+const firstWhs = warehouses[0]?.WhsCode || "";
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -77,7 +107,142 @@ export function InvDocumentItems() {
   const isLineLockedDocType = config.type === DocumentType.InvTransfer || config.type === DocumentType.GoodIssue;
   const docEntry = watch("DocEntry");
   const isEditMode = isLineLockedDocType && Boolean(docEntry && Number(docEntry) > 0);
-
+  const handleExcelPaste = async (e: React.ClipboardEvent) => {
+    if (!customer?.CardCode && config.type !== DocumentType.GoodIssue) {
+      e.preventDefault();
+      toast.error("Please select a customer first.");
+      return;
+    }
+  
+    const text = e.clipboardData.getData("text");
+  
+    if (!text || (!text.includes("\t") && !text.includes("\n"))) {
+      return;
+    }
+  
+    e.preventDefault();
+  
+    const rows = text
+      .trim()
+      .split(/\r?\n/)
+      .map((row) => row.split("\t"));
+  
+    let addedCount = 0;
+    const notFoundItems: string[] = [];
+  
+    for (const columns of rows) {
+      const itemCode = columns[0]?.trim();
+  
+      if (!itemCode) continue;
+  
+      const quantity = Number(columns[1]?.trim()) || 1;
+      const price = Number(columns[2]?.trim()) || 0;
+      const discountPercent = Number(columns[3]?.trim()) || 0;
+      const warehouseCode = columns[4]?.trim() || "";
+  
+      try {
+        const item = await fetchItemByCode(itemCode);
+  
+        if (!item) {
+          notFoundItems.push(itemCode);
+          continue;
+        }
+  
+        // --------------------------------
+        // Existing item-line logic
+        // --------------------------------
+  
+        const targetTaxCode =
+          item.VatGourpSa ||
+          item.VatGroupSa ||
+          "";
+  
+        const selectedTax = freightsWithCharges.find(
+          (t) => t.Code === targetTaxCode
+        );
+  
+        const taxRate = Number(selectedTax?.Rate || 0);
+  
+        const defaultWhsLine =
+          warehouseCode ||
+          item.DefaultWhse ||
+          firstWhs;
+  
+        const qtyInWhs = item.QtyInWhs || [];
+  
+        const whRecord = qtyInWhs.find(
+          (w: any) =>
+            (w.WarehouseCode || w.warehouseCode) ===
+            defaultWhsLine
+        );
+  
+        const initialOnHand = whRecord
+          ? whRecord.Qty ?? whRecord.qty ?? 0
+          : 0;
+  
+        const uomVal =
+          resolveUoMFromCandidates(
+            // uoms,
+            item.UoM,
+            item.InventoryUOM,
+            item.UoMCode,
+            item.UoMGroupEntry,
+            item.UnitsOfMeasurment
+          ) ||
+          item.UoM ||
+          "";
+  
+        addLine({
+          ItemCode: item.ItemCode,
+          Dscription:
+            item.ItemName ||
+            item.ItemDescription ||
+            "",
+          Quantity: quantity,
+          OnHand: initialOnHand,
+          // Price:
+          //   price ||
+          //   getCustomerPrice(item.Prices || []),
+          // DiscountPercent: discountPercent,
+          // TaxCode: targetTaxCode,
+          // TaxRate: taxRate,
+          // WarehouseCode: defaultWhsLine,
+          BPLid: resolveBranchForWarehouse(
+            defaultWhsLine,
+            warehouses
+          ),
+          UoMCode: uomVal,
+          // MeasureUnit:
+          //   item.MeasureUnit ||
+          //   getUoMName(uomVal) ||
+          //   "",
+          ManSerNum: item.ManSerNum,
+          ManBtchNum: item.ManBtchNum,
+          QtyInWhs: qtyInWhs,
+        });
+  
+        addedCount++;
+  
+      } catch (error) {
+        console.error(`Error adding item ${itemCode}:`, error);
+  
+        // Error ko toast na karo, sirf list mein rakho
+        notFoundItems.push(itemCode);
+      }
+    }
+  
+    // Success message
+    if (addedCount > 0) {
+      toast.success(`${addedCount} item(s) added successfully.`);
+    }
+  
+    // Sirf ONE error message
+    if (notFoundItems.length > 0) {
+      toast.error(
+        `${notFoundItems.length} item(s) not found: ${notFoundItems.join(", ")}`
+      );
+    }
+  };
   const columns = (isGoodIssue
     ? [
         { key: "actions",   title: "Actions",     width: 80  },
@@ -213,7 +378,7 @@ export function InvDocumentItems() {
                 </TooltipProvider>
               )}
             </div>
-            <div className="relative border rounded overflow-hidden max-w-full min-w-0">
+            <div className="relative border rounded overflow-hidden max-w-full min-w-0" onPaste={handleExcelPaste}>
               <div className="overflow-x-auto pb-2 max-w-full min-w-0">
                 <ResizableTable
                   columns={columnsWithUdf}
