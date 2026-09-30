@@ -51,6 +51,7 @@ import { HeaderActionPortal } from "@/components/header-portal";
 import { HeaderModalAction } from "@/components/header-modal-action";
 import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
 import HeaderActions from "@/components/Custom/HeaderAction";
+import { useDocumentRights } from "@/hooks/useDocumentRights";
 
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { useShallow } from "zustand/react/shallow";
@@ -90,6 +91,8 @@ import { UDFLayout } from "../shared/UDFSheet";
 import { GenericModal } from "@/modals/GenericModal";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
+import { CreateSerialDialog } from "@/modals/CreateSerialDialog";
+import { CreateBatchDialog } from "@/modals/CreateBatchDialog";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
@@ -216,6 +219,8 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [isLoadingCopyTo, setIsLoadingCopyTo] = useState(false);
   const [serialModalOpen, setSerialModalOpen] = useState(false);
+  const [createBatchModalOpen, setCreateBatchModalOpen] = useState(false);
+  const [createSerialModalOpen, setCreateSerialModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<T | null>(null);
   const lastDefaultValuesRef = React.useRef<string | null>(null);
 
@@ -453,6 +458,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   };
 
   const config = React.useMemo(() => getDocumentConfig(docType, pathname), [docType, pathname]);
+  const { allowedActions, menuId } = useDocumentRights(docType);
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
   React.useEffect(() => {
@@ -587,16 +593,25 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               DocumentType.APInvoice,
               DocumentType.APCreditMemo,
             ].includes(docType);
+            const isGrpo = docType === DocumentType.GoodsReceiptPO;
 
             if (isSerialBatchPurchaseDoc && linesNeedSerialAllocation(state.lines)) {
               setPendingData(data as unknown as T);
-              setSerialModalOpen(true);
+              if (isGrpo) {
+                setCreateSerialModalOpen(true);
+              } else {
+                setSerialModalOpen(true);
+              }
               return;
             }
 
             if (isSerialBatchPurchaseDoc && linesNeedBatchAllocation(state.lines)) {
               setPendingData(data as unknown as T);
-              setBatchModalOpen(true);
+              if (isGrpo) {
+                setCreateBatchModalOpen(true);
+              } else {
+                setBatchModalOpen(true);
+              }
               return;
             }
 
@@ -675,6 +690,8 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               reset={reset}
               defaultValues={defaultValues}
               resetStore={ResetForm}
+              allowedActions={allowedActions}
+              menuId={menuId ?? undefined}
             />
           </HeaderActionPortal>
 
@@ -719,6 +736,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 docType={relMapStore.docType || (config.type as number)}
                 docEntry={relMapStore.docEntry || Number(DocEntry)}
                 docNum={relMapStore.docNum || (watch as any)("DocNum")}
+                menuId={relMapStore.menuId}
                 onClose={relMapStore.closeMap}
               />
             ) : (
@@ -905,6 +923,51 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               }
 
               setBatchModalOpen(false);
+              setPendingData(null);
+            }}
+            lines={usePurchaseDocument.getState().lines}
+          />
+
+          <CreateSerialDialog
+            open={createSerialModalOpen}
+            onClose={() => {
+              setCreateSerialModalOpen(false);
+              setPendingData(null);
+            }}
+            onConfirm={async (selections) => {
+              const state = usePurchaseDocument.getState();
+
+              Object.entries(selections.serials).forEach(([itemCode, serials]) => {
+                state.setLineSerials(itemCode, serials);
+              });
+
+              const updatedLines = usePurchaseDocument.getState().lines;
+              setCreateSerialModalOpen(false);
+
+              if (linesNeedBatchAllocation(updatedLines)) {
+                setCreateBatchModalOpen(true);
+                return;
+              }
+
+              setPendingData(null);
+            }}
+            lines={usePurchaseDocument.getState().lines}
+          />
+
+          <CreateBatchDialog
+            open={createBatchModalOpen}
+            onClose={() => {
+              setCreateBatchModalOpen(false);
+              setPendingData(null);
+            }}
+            onConfirm={async (selections) => {
+              const state = usePurchaseDocument.getState();
+
+              Object.entries(selections.batches).forEach(([itemCode, batches]) => {
+                state.setLineBatches(itemCode, batches);
+              });
+
+              setCreateBatchModalOpen(false);
               setPendingData(null);
             }}
             lines={usePurchaseDocument.getState().lines}

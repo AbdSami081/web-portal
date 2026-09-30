@@ -35,6 +35,6 @@ export const purchaseRequestSchema = z.object({
   Comments: z.string().optional(),
   OwnerCode: z.number().optional(),
   DocStatus: z.string().optional(),
-});
+}).loose();
 
 export type PurchaseRequestFormData = z.infer<typeof purchaseRequestSchema>;

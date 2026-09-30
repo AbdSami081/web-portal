@@ -5,7 +5,8 @@ interface RelationshipMapStore {
   docType: number;
   docEntry: number;
   docNum?: number | string;
-  openMap: (docType: number, docEntry: number, docNum?: number | string) => void;
+  menuId?: string;
+  openMap: (docType: number, docEntry: number, docNum?: number | string, menuId?: string) => void;
   closeMap: () => void;
 }
 
@@ -14,8 +15,9 @@ export const useRelationshipMapStore = create<RelationshipMapStore>((set) => ({
   docType: 0,
   docEntry: 0,
   docNum: undefined,
-  openMap: (docType, docEntry, docNum) =>
-    set({ isOpen: true, docType, docEntry, docNum }),
+  menuId: undefined,
+  openMap: (docType, docEntry, docNum, menuId) =>
+    set({ isOpen: true, docType, docEntry, docNum, menuId }),
   closeMap: () =>
-    set({ isOpen: false, docType: 0, docEntry: 0, docNum: undefined }),
+    set({ isOpen: false, docType: 0, docEntry: 0, docNum: undefined, menuId: undefined }),
 }));

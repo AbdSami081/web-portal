@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -12,6 +13,7 @@ import {
 import { useUDFStore } from "@/stores/useUDFStore";
 import { FmsFieldButton } from "@/components/Custom/FmsFieldButton";
 import { useFmsContext } from "@/hooks/useFMS";
+import { toDateInputValue, toTimeInputValue } from "@/components/shared/UDFSheet";
 
 /**
  * Inline FMS icon for a single line-table column cell. Renders nothing unless a
@@ -120,12 +122,21 @@ export function LineUDFCells({
         const key = `U_${u.Name}`;
         const value = line?.[key] ?? "";
         const hasValidValues = (u.ValidValuesMD?.length ?? 0) > 0;
+        const isCheckbox = u.SubType === "st_Checkbox";
+        const isTime = u.Type === "db_Date" && u.SubType === "st_Time";
+        const isDate = u.Type === "db_Date" && !isTime;
         const isNumeric = u.Type === "db_Numeric" || u.Type === "db_Float";
 
         return (
           <td key={u.FieldID ?? key} className={tdClassName}>
             <div className="flex items-center gap-1">
-              {hasValidValues ? (
+              {isCheckbox ? (
+                <Checkbox
+                  checked={value === "Y" || value === "tYES" || value === true}
+                  disabled={disabled}
+                  onCheckedChange={(checked) => onPatch({ [key]: checked ? "Y" : "N" })}
+                />
+              ) : hasValidValues ? (
                 <Select
                   value={String(value || "")}
                   onValueChange={(v) => onPatch({ [key]: v })}
@@ -142,6 +153,22 @@ export function LineUDFCells({
                     ))}
                   </SelectContent>
                 </Select>
+              ) : isTime ? (
+                <Input
+                  className="h-6 w-full text-xs"
+                  type="time"
+                  value={toTimeInputValue(value)}
+                  disabled={disabled}
+                  onChange={(e) => onPatch({ [key]: e.target.value })}
+                />
+              ) : isDate ? (
+                <Input
+                  className="h-6 w-full text-xs"
+                  type="date"
+                  value={toDateInputValue(value)}
+                  disabled={disabled}
+                  onChange={(e) => onPatch({ [key]: e.target.value })}
+                />
               ) : (
                 <Input
                   className="h-6 w-full text-xs"

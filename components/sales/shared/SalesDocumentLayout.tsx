@@ -24,6 +24,7 @@ import { UDFLayout } from "@/components/shared/UDFSheet";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import HeaderActions from "@/components/Custom/HeaderAction";
+import { useDocumentRights } from "@/hooks/useDocumentRights";
 
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
@@ -80,6 +81,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
 }: SalesDocumentLayoutProps<T>) {
 
   const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
+  const { allowedActions, menuId } = useDocumentRights(docType);
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
@@ -658,6 +660,8 @@ const documentMode = useSalesDocument(
               reset={reset}
               defaultValues={defaultValues}
               resetStore={handleNewDocumentClick}
+              allowedActions={allowedActions}
+              menuId={menuId ?? undefined}
             />
           </HeaderActionPortal>
 
@@ -701,6 +705,7 @@ const documentMode = useSalesDocument(
                 docType={relMapStore.docType || docType}
                 docEntry={relMapStore.docEntry || DocEntry}
                 docNum={relMapStore.docNum || (watch as any)("DocNum")}
+                menuId={relMapStore.menuId}
                 onClose={relMapStore.closeMap}
               />
             ) : (

@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/context/authContext";
 import { useNotifications } from "@/context/NotificationContext";
+import { useGlobalRights } from "@/hooks/useDocumentRights";
 import { SERVER_MENUS } from "@/lib/menu-data"
 
 const ICON_MAP: Record<string, any> = {
@@ -35,6 +36,7 @@ const ICON_MAP: Record<string, any> = {
 const HeaderNav = () => {
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
+  const { allowedActions: globalAllowedActions } = useGlobalRights();
   const [search, setSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,26 +135,28 @@ const HeaderNav = () => {
 
             {/* Action buttons — immediately right of search */}
             <div className="flex items-center gap-1 shrink-0">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" asChild className="relative h-9 w-9 text-slate-600 hover:text-slate-950 rounded-lg hover:bg-slate-100 transition-colors">
-                      <Link href="/dashboard/messages">
-                        <Bell className="h-5 w-5" />
-                        {unreadCount > 0 && (
-                          <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                          </span>
-                        )}
-                      </Link>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Messages & Alerts</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {globalAllowedActions.includes("Bell") && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" asChild className="relative h-9 w-9 text-slate-600 hover:text-slate-950 rounded-lg hover:bg-slate-100 transition-colors">
+                        <Link href="/dashboard/messages">
+                          <Bell className="h-5 w-5" />
+                          {unreadCount > 0 && (
+                            <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                            </span>
+                          )}
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Messages & Alerts</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
 
               <div id="header-action-container" className="flex gap-1" />
             </div>

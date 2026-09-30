@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
   ChevronsUpDown,
@@ -19,7 +19,9 @@ import {
 import {
   getAllFields,
   assignUserFields,
+  syncFieldsConfig,
 } from "@/api+/sap/administration/administrationService";
+import { getFieldCatalog } from "@/lib/config/fieldManifest";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -312,6 +314,32 @@ export default function FieldAccessManagement() {
       ) ?? []
   );
 }, [filteredMenus]);
+
+  /*
+   * Sync @WP_FIELDS_CFG once when this page opens — for every document that
+   * has a field catalog, not just the one the admin happens to click on.
+   * New fields default to enabled for everyone (see SyncFieldsConfigAsync);
+   * admins remove access for specific users from here afterwards as usual.
+   */
+  const hasSyncedFieldsRef = useRef(false);
+  useEffect(() => {
+    if (hasSyncedFieldsRef.current || documents.length === 0) return;
+    hasSyncedFieldsRef.current = true;
+
+    const syncAll = async () => {
+      for (const item of documents) {
+        const catalog = getFieldCatalog(item.url, item.objectCode);
+        if (!catalog) continue;
+        const docType = resolveFieldAuthDocType(item);
+        const fields = [
+          ...catalog.header.map((f) => ({ fieldName: f.key, fieldTitle: f.title, fieldType: "H" as const })),
+          ...catalog.line.map((f) => ({ fieldName: f.key, fieldTitle: f.title, fieldType: "L" as const })),
+        ];
+        await syncFieldsConfig(docType, fields);
+      }
+    };
+    syncAll();
+  }, [documents]);
 
 
   const selectedDocumentTitle = useMemo(() => {

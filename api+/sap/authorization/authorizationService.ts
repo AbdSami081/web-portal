@@ -78,3 +78,51 @@ export const getModules = async (companyDB: string): Promise<WebPortalConfigEntr
   );
   return response.data ?? [];
 };
+
+export const DOCUMENT_SPECIAL_RIGHTS_ACTIONS = [
+  "Print",
+  "FMS",
+  "FieldInspector",
+  "RelationshipMap",
+  "CloseDocument",
+] as const;
+
+export type DocumentSpecialRightAction = (typeof DOCUMENT_SPECIAL_RIGHTS_ACTIONS)[number];
+
+export const getMyDocumentRights = async (menuId: string): Promise<string[]> => {
+  try {
+    const response = await apiClient.get<{ success: boolean; data: string[] }>(
+      `api/Authorization/MyDocumentRights`,
+      { params: { menuId }, timeout: 10000 }
+    );
+    return response.data.data ?? [];
+  } catch (error) {
+    console.error("Failed to fetch document rights:", error);
+    return [];
+  }
+};
+
+export const getDocumentRights = async (
+  menuId: string,
+  userId: string
+): Promise<string[]> => {
+  const response = await apiClient.get<{ success: boolean; data: string[] }>(
+    `api/Authorization/DocumentRights`,
+    { params: { menuId, userId }, timeout: 10000 }
+  );
+  return response.data.data ?? [];
+};
+
+export const saveDocumentRights = async (
+  menuId: string,
+  docType: number | string | undefined,
+  userId: string,
+  actions: string[]
+): Promise<void> => {
+  await apiClient.post("api/Authorization/DocumentRights/save", {
+    menuId,
+    docType: docType != null ? String(docType) : "",
+    userId,
+    actions,
+  });
+};

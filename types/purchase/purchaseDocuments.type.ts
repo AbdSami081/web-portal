@@ -54,6 +54,28 @@ export interface BasePurchaseDocument {
   }[];
 }
 
+export interface PurchaseBatchNumber {
+  BatchNumber: string;
+  Quantity: number;
+  ExpiryDate?: string;
+  ManufacturingDate?: string;
+  AddmisionDate?: string;
+  Notes?: string;
+}
+
+export interface PurchaseSerialNumber {
+  InternalSerialNumber: string;
+  ManufacturerSerialNumber?: string;
+  Quantity?: number;
+  ExpiryDate?: string;
+  ManufactureDate?: string;
+  ReceptionDate?: string;
+  WarrantyStart?: string;
+  WarrantyEnd?: string;
+  Location?: string;
+  Notes?: string;
+}
+
 export interface PurchaseDocumentLine {
   LineNum?: number;
   ItemCode: string;
@@ -61,8 +83,8 @@ export interface PurchaseDocumentLine {
   ItemDescription?: string;
   ManSerNum?: string;
   ManBtchNum?: string;
-  SerialNumbers?: { InternalSerialNumber: string }[];
-  BatchNumbers?: { BatchNumber: string; Quantity: number }[];
+  SerialNumbers?: PurchaseSerialNumber[];
+  BatchNumbers?: PurchaseBatchNumber[];
   Quantity: number;
   Price: number;
   OnHand: number;

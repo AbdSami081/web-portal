@@ -74,6 +74,31 @@ export const getAllFields = async (
 
 
 
+// Reconcile @WP_FIELDS_CFG for one docType against the frontend's own field
+// catalog (lib/config/fieldManifest.ts) — insert rows for new fields, hard-
+// delete rows for fields no longer rendered anywhere. Called automatically
+// whenever the Field Access admin screen opens a document, so this table
+// never needs a hand-run SQL script again.
+export const syncFieldsConfig = async (
+  docType: string,
+  fields: { fieldName: string; fieldTitle: string; fieldType: "H" | "L" }[]
+): Promise<{ inserted: number; deleted: number }> => {
+  try {
+    const res = await apiClient.post("api/Master/SyncFieldsConfig", {
+      DocType: docType,
+      Fields: fields.map((f) => ({
+        FieldName: f.fieldName,
+        FieldTitle: f.fieldTitle,
+        FieldType: f.fieldType,
+      })),
+    });
+    return { inserted: res.data?.Inserted ?? 0, deleted: res.data?.Deleted ?? 0 };
+  } catch (error) {
+    console.error("Failed to sync fields config:", error);
+    return { inserted: 0, deleted: 0 };
+  }
+};
+
 // Assign selected fields to user
 export const assignUserFields = async (
   userCode: string,

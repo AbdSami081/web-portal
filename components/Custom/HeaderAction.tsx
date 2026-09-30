@@ -29,6 +29,8 @@ interface Props {
   reset: (values: any) => void;
   defaultValues: any;
   resetStore: () => void;
+  allowedActions?: string[];
+  menuId?: string;
 }
 
 const HeaderActions: React.FC<Props> = ({
@@ -38,7 +40,10 @@ const HeaderActions: React.FC<Props> = ({
   reset,
   defaultValues,
   resetStore,
+  allowedActions,
+  menuId,
 }) => {
+  const canUse = (action: string) => (allowedActions ?? []).includes(action);
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -56,12 +61,12 @@ const HeaderActions: React.FC<Props> = ({
       if (e.altKey && e.shiftKey && e.key === "F2") {
         e.preventDefault();
         e.stopPropagation();
-        setFmsModalOpen(true);
+        if (canUse("FMS")) setFmsModalOpen(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [allowedActions]);
 
   const handleNewDocument = () => {
     clearDocNavParams();
@@ -83,6 +88,7 @@ const HeaderActions: React.FC<Props> = ({
   };
 
   const handlePrintClick = () => {
+    if (!canUse("Print")) return;
     if (!DocEntry || DocEntry === 0) {
       toast.warning("Please open or save a document before printing.");
       return;
@@ -112,24 +118,26 @@ const HeaderActions: React.FC<Props> = ({
           </Tooltip>
 
           {/* Print / Layout Selector */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handlePrintClick}
-                disabled={!DocEntry || DocEntry === 0}
-                className="h-8 w-8 border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all disabled:opacity-40"
-              >
-                <Printer className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Print Layout</TooltipContent>
-          </Tooltip>
+          {canUse("Print") && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handlePrintClick}
+                  disabled={!DocEntry || DocEntry === 0}
+                  className="h-8 w-8 border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all disabled:opacity-40"
+                >
+                  <Printer className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Print Layout</TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Relationship Map */}
-          {!isProduction && (
+          {!isProduction && canUse("RelationshipMap") && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -137,10 +145,11 @@ const HeaderActions: React.FC<Props> = ({
                   variant="outline"
                   size="icon"
                   onClick={() => {
+                    if (!canUse("RelationshipMap")) return;
                     if (isRelMapOpen) {
                       closeMap();
                     } else {
-                      openMap(objectCode, DocEntry);
+                      openMap(objectCode, DocEntry, undefined, menuId);
                     }
                   }}
                   disabled={!DocEntry || DocEntry === 0}
@@ -160,36 +169,46 @@ const HeaderActions: React.FC<Props> = ({
           )}
 
           {/* FMS / User-Defined Values Setup */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => setFmsModalOpen(true)}
-                className="h-8 w-8 border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all"
-              >
-                <SearchCode className="w-4 h-4 text-slate-600 hover:text-blue-600" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">FMS Setup (Alt+Shift+F2)</TooltipContent>
-          </Tooltip>
+          {canUse("FMS") && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    if (!canUse("FMS")) return;
+                    setFmsModalOpen(true);
+                  }}
+                  className="h-8 w-8 border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all"
+                >
+                  <SearchCode className="w-4 h-4 text-slate-600 hover:text-blue-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">FMS Setup (Alt+Shift+F2)</TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Field name inspector toggle */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => window.dispatchEvent(new CustomEvent("fms:toggle-inspector"))}
-                className="h-8 w-8 border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all"
-              >
-                <TextCursorInput className="w-4 h-4 text-slate-600 hover:text-blue-600" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Inspect field names (Alt+Shift+I)</TooltipContent>
-          </Tooltip>
+          {canUse("FieldInspector") && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    if (!canUse("FieldInspector")) return;
+                    window.dispatchEvent(new CustomEvent("fms:toggle-inspector"));
+                  }}
+                  className="h-8 w-8 border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all"
+                >
+                  <TextCursorInput className="w-4 h-4 text-slate-600 hover:text-blue-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Inspect field names (Alt+Shift+I)</TooltipContent>
+            </Tooltip>
+          )}
 
         </div>
       </TooltipProvider>

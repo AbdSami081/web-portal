@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useUoMStore } from "@/stores/useUoMStore";
@@ -42,6 +43,47 @@ import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+
+// Field access catalog for this document's line table — kept next to the
+// `columns`/`serviceColumns` arrays below so the two never drift apart.
+// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+export const SALES_LINE_FIELDS: FieldCatalogEntry[] = [
+  { key: "ItemCode", title: "Item Code" },
+  { key: "ItemName", title: "Item Description" },
+  { key: "Quantity", title: "Qty" },
+  { key: "OnHand", title: "Qty In Whs" },
+  { key: "Price", title: "Price" },
+  { key: "DiscountPercent", title: "Disc %" },
+  { key: "TaxCode", title: "Tax Code" },
+  { key: "TaxAmount", title: "Tax Amount (LC)" },
+  { key: "WarehouseCode", title: "Whs" },
+  { key: "BPLid", title: "Branch" },
+  { key: "UoMCode", title: "UoM Code" },
+  { key: "UoMName", title: "UoM Name" },
+  { key: "LineTotal", title: "Line Total" },
+  { key: "Freight1Type", title: "Freight 1 Type" },
+  { key: "Freight1LCAmount", title: "Freight 1 (LC)" },
+  { key: "Freight2Type", title: "Freight 2 Type" },
+  { key: "Freight2LCAmount", title: "Freight 2 (LC)" },
+  { key: "Freight3Type", title: "Freight 3 Type" },
+  { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
+];
+
+export const SALES_SERVICE_LINE_FIELDS: FieldCatalogEntry[] = [
+  { key: "AccountCode", title: "G/L Account" },
+  { key: "AccountName", title: "G/L Account Name" },
+  { key: "Description", title: "Description" },
+  { key: "DiscountPercent", title: "Disc %" },
+  { key: "TaxCode", title: "Tax Code" },
+  { key: "LineTotal", title: "Line Total" },
+  { key: "TaxAmount", title: "Tax Amount (LC)" },
+  { key: "Freight1Type", title: "Freight 1 Type" },
+  { key: "Freight1LCAmount", title: "Freight 1 (LC)" },
+  { key: "Freight2Type", title: "Freight 2 Type" },
+  { key: "Freight2LCAmount", title: "Freight 2 (LC)" },
+  { key: "Freight3Type", title: "Freight 3 Type" },
+  { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
+];
 
 export function DocumentItems() {
   const { watch, setValue, register } = useFormContext();

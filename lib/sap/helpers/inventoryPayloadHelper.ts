@@ -1,6 +1,7 @@
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { InventoryTransferLine } from "@/api+/sap/inventory/inventoryService";
 import { withDefaultBPLId } from "./documentPayloadHelper";
+import { pickLineUdfs } from "./lineUdfHelper";
 
 interface BuildInventoryPayloadOptions {
   data: any;
@@ -81,6 +82,8 @@ function buildDocumentLines(
     const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
     if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
+    Object.assign(baseFields, pickLineUdfs(line));
+
     return baseFields as InventoryTransferLine;
   });
 }
@@ -93,6 +96,7 @@ export function buildInventoryTransferRequestPayload({
   salesPersonCode,
 }: BuildInventoryPayloadOptions) {
   return withDefaultBPLId({
+    ...pickLineUdfs(data),
     CardCode: data.CardCode || "",
     FromWarehouse: fromWarehouse || "",
     ToWarehouse: toWarehouse || "",
@@ -111,6 +115,7 @@ export function buildInventoryTransferRequestPatchPayload({
   salesPersonCode,
 }: Pick<BuildInventoryPayloadOptions, "data" | "lines" | "fromWarehouse" | "toWarehouse" | "salesPersonCode">) {
   return {
+    ...pickLineUdfs(data),
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
     ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
@@ -126,6 +131,7 @@ export function buildInventoryTransferPayload({
   salesPersonCode,
 }: BuildInventoryPayloadOptions) {
   return withDefaultBPLId({
+    ...pickLineUdfs(data),
     CardCode: data.CardCode || "",
     FromWarehouse: fromWarehouse || "",
     ToWarehouse: toWarehouse || "",
@@ -146,6 +152,7 @@ export function buildInventoryTransferPatchPayload({
   // rule). Omitting StockTransferLines leaves existing lines untouched — only header
   // remarks are safe to patch once this document is posted.
   return {
+    ...pickLineUdfs(data),
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
     ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
@@ -191,6 +198,8 @@ function buildGoodIssueLines(
     const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
     if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
+    Object.assign(baseFields, pickLineUdfs(line));
+
     return baseFields as InventoryTransferLine;
   });
 }
@@ -200,6 +209,7 @@ export function buildGoodIssuePayload({
   lines,
 }: BuildGoodIssuePayloadOptions) {
   return withDefaultBPLId({
+    ...pickLineUdfs(data),
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
     DocumentLines: buildGoodIssueLines(lines, false),
@@ -212,6 +222,7 @@ export function buildGoodIssuePatchPayload({
   // Same reasoning as buildInventoryTransferPatchPayload: Good Issue posts real stock
   // movement on Add, so line Quantity is locked post-add. Omit DocumentLines entirely.
   return {
+    ...pickLineUdfs(data),
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
   };

@@ -18,10 +18,29 @@ import { Warehouse } from "@/types/warehouse/warehouse";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { getGoodIssue, getGoodIssueList, getInventoryTransfer, getInventoryTransferRequest, closeInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
+import { useDocumentRights } from "@/hooks/useDocumentRights";
 import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { GenericModal } from "@/modals/GenericModal";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { DocumentType } from "@/types/master/DocumentType";
+import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
+
+// Field access catalogs for this document's header — kept next to the
+// hasFieldAccess("...") calls below so the two never drift apart.
+// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+export const INVENTORY_GOOD_ISSUE_HEADER_FIELDS: FieldCatalogEntry[] = [
+  { key: "BPL_IDAssignedToInvoice", title: "Branch" },
+  { key: "DocDate", title: "Posting Date" },
+];
+
+export const INVENTORY_TRANSFER_HEADER_FIELDS: FieldCatalogEntry[] = [
+  { key: "CardCode", title: "Customer/Vendor Code" },
+  { key: "CardName", title: "Customer/Vendor Name" },
+  { key: "BPL_IDAssignedToInvoice", title: "Branch" },
+  { key: "FromWarehouse", title: "From Warehouse" },
+  { key: "ToWarehouse", title: "To Warehouse" },
+  { key: "DocDate", title: "Posting Date" },
+];
 import { useUDFStore } from "@/stores/useUDFStore";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { getSapErrorMessage } from "@/lib/errorHelper";
@@ -95,6 +114,7 @@ export function InvDocumentHeader() {
     value: string;
   }>({ open: false, type: null, value: "" });
 
+  const { allowedActions } = useDocumentRights(config.type);
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const isLoadedDocument = !!DocEntry && DocEntry > 0;
@@ -128,6 +148,11 @@ export function InvDocumentHeader() {
 
   const handleCloseDocument = async (entry: number) => {
     if (isClosing) return;
+    if (!allowedActions.includes("CloseDocument")) {
+      toast.error("You don't have rights to close document. Contact Portal Administration.");
+      setCloseModalOpen(false);
+      return;
+    }
     setIsClosing(true);
     setValue("DocStatus", "bost_Close");
     try {

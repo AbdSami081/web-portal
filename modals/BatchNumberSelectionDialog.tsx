@@ -91,12 +91,17 @@ export function BatchNumberSelectionDialog({ open, onClose, onConfirm, lines, in
 
         if (itemCode && batchNum) {
           if (!grouped[itemCode]) grouped[itemCode] = [];
-          grouped[itemCode].push({
-            ItemCode: itemCode,
-            BatchNumber: batchNum,
-            WhseCode: String(b.WhseCode || b.WhsCode),
-            Quantity: isNaN(qty) ? 0 : qty,
-          });
+          const existing = grouped[itemCode].find((entry) => entry.BatchNumber === batchNum);
+          if (existing) {
+            existing.Quantity += isNaN(qty) ? 0 : qty;
+          } else {
+            grouped[itemCode].push({
+              ItemCode: itemCode,
+              BatchNumber: batchNum,
+              WhseCode: String(b.WhseCode || b.WhsCode),
+              Quantity: isNaN(qty) ? 0 : qty,
+            });
+          }
         }
       });
 

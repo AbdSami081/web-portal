@@ -16,7 +16,7 @@ const vendorDocBase = z.object({
   Comments: z.string().optional(),
   DocNum: z.number().optional(),
   DocEntry: z.number().optional(),
-});
+}).loose();
 
 export const purchaseQuotationSchema = vendorDocBase.extend({
   RequiredDate: z.string().optional(),

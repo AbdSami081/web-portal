@@ -25,6 +25,7 @@ import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import HeaderActions from "@/components/Custom/HeaderAction";
+import { useDocumentRights } from "@/hooks/useDocumentRights";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
@@ -71,6 +72,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
 }: PRDDocumentLayoutProps<T>) {
 
   const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
+  const { allowedActions } = useDocumentRights(docType);
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -385,6 +387,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
               reset={reset}
               defaultValues={defaultValues}
               resetStore={ResetForm}
+              allowedActions={allowedActions}
             />
           </HeaderActionPortal>
 

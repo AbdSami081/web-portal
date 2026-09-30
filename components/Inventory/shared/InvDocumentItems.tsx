@@ -22,6 +22,48 @@ import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog"
 import { toast } from "sonner";
 import { linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
+
+// Field access catalogs for this document's line table — kept next to the
+// `columns` array below so the two never drift apart. Inventory's line
+// fields differ per doc type (unlike Purchase/Sales, which share one array),
+// so each doc type gets its own list here.
+// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+export const INVENTORY_GOOD_ISSUE_LINE_FIELDS: FieldCatalogEntry[] = [
+  { key: "ItemCode", title: "Item" },
+  { key: "Dscription", title: "Description" },
+  { key: "WhsCode", title: "Warehouse" },
+  { key: "BPLid", title: "Branch" },
+  { key: "Quantity", title: "Quantity" },
+  { key: "OnHand", title: "Qty In Whs" },
+  { key: "UoMCode", title: "UoM Code" },
+  { key: "UoMName", title: "UoM Name" },
+];
+
+export const INVENTORY_TRANSFER_LINE_FIELDS: FieldCatalogEntry[] = [
+  { key: "ItemCode", title: "Item" },
+  { key: "Dscription", title: "Description" },
+  { key: "FromWhsCode", title: "From Whs" },
+  { key: "WhsCode", title: "To Whs" },
+  { key: "BPLid", title: "Branch" },
+  { key: "Quantity", title: "Quantity" },
+  { key: "OnHand", title: "Qty In Whs" },
+  { key: "UoMCode", title: "UoM Code" },
+  { key: "UoMName", title: "UoM Name" },
+];
+
+export const INVENTORY_TRANSFER_REQUEST_LINE_FIELDS: FieldCatalogEntry[] = [
+  { key: "ItemCode", title: "Item" },
+  { key: "Dscription", title: "Description" },
+  { key: "FromWhsCode", title: "From Whs" },
+  { key: "WhsCode", title: "To Whs" },
+  { key: "BPLid", title: "Branch" },
+  { key: "Quantity", title: "Quantity" },
+  { key: "OnHand", title: "Qty In Whs" },
+  { key: "OpenQty", title: "Open Qty" },
+  { key: "UoMCode", title: "UoM Code" },
+  { key: "UoMName", title: "UoM Name" },
+];
 
 export function InvDocumentItems() {
   const { watch } = useFormContext();
@@ -32,6 +74,7 @@ export function InvDocumentItems() {
   } = useInventoryDocument();
   const config = useInvDocConfig();
   const isGoodIssue = config.type === DocumentType.GoodIssue;
+  const isTransferRequest = config.type === DocumentType.InvTransferReq;
   const { multiBranchEnabled } = useApprovalSettings();
   const uoms = useUoMStore((state) => state.uoms);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -99,6 +142,7 @@ export function InvDocumentItems() {
         { key: "BPLid",     title: "Branch",       width: 90  },
         { key: "Quantity",  title: "Quantity",     width: 140 },
         { key: "OnHand",    title: "Qty In Whs",   width: 120 },
+        ...(isTransferRequest ? [{ key: "OpenQty", title: "Open Qty", width: 120 }] : []),
         { key: "UoMCode",   title: "UoM Code",     width: 140 },
         { key: "UoMName",   title: "UoM Name",     width: 140 },
       ]
@@ -107,7 +151,7 @@ export function InvDocumentItems() {
   const lineUdfs = useLineUDFs(config.type);
   const columnsWithUdf = useMemo(
     () => [...columns, ...lineUdfColumns(lineUdfs, fieldAccess)],
-    [isGoodIssue, lineUdfs, multiBranchEnabled, fieldAccess]
+    [isGoodIssue, isTransferRequest, lineUdfs, multiBranchEnabled, fieldAccess]
   );
 
   const handleOnSelectItems = (items: Item[]) => {

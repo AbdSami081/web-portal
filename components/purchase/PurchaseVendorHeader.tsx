@@ -17,9 +17,22 @@ import {
   getGoodsReturnRequestDocument,
   getAPDownPaymentRequestDocument,
   getAPDownPaymentInvoiceDocument,
+  closePurchaseOrder,
+  closePurchaseQuotation,
+  closePurchaseRequest,
+  closePurchaseDeliveryNote,
+  closePurchaseInvoice,
+  closePurchaseReturn,
+  closePurchaseCreditNote,
+  closePurchaseDownPayment,
+  closeGoodsReturnRequest,
+  closeReservePurchaseInvoice,
 } from "@/api+/sap/purchase/purchaseService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
+import { ConfirmationModal } from "@/modals/ConfirmationModal";
+import { useDocumentRights } from "@/hooks/useDocumentRights";
+import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 import {
   Select,
   SelectContent,
@@ -97,6 +110,23 @@ const getResourceName = (type: number, pathname = "") => {
   }
 };
 
+// Field access catalog for this document's header — kept next to the
+// hasFieldAccess("...") calls below so the two never drift apart.
+// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+export const PURCHASE_HEADER_FIELDS: FieldCatalogEntry[] = [
+  { key: "Requester", title: "Requester" },
+  { key: "CardCode", title: "Vendor Code" },
+  { key: "CardName", title: "Vendor Name" },
+  { key: "RequesterName", title: "Requester Name" },
+  { key: "BPL_IDAssignedToInvoice", title: "Branch" },
+  { key: "SendNotification", title: "Send Notification" },
+  { key: "RequesterEmail", title: "Requester Email" },
+  { key: "DocDate", title: "Posting Date" },
+  { key: "DocDueDate", title: "Due Date" },
+  { key: "TaxDate", title: "Tax Date" },
+  { key: "RequiredDate", title: "Required Date" },
+];
+
 export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const pathname = usePathname();
   const docNav = useDocNavParams();
@@ -120,6 +150,47 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const docNum = watch("DocNum");
   const isLoadedDocument = docEntry && Number(docEntry) > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
+
+  const { allowedActions } = useDocumentRights(config.type);
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const closeDocumentByType = (type: number, entry: number) => {
+    switch (type) {
+      case DocumentType.PurchaseOrder: return closePurchaseOrder(entry);
+      case DocumentType.PurchaseQuotation: return closePurchaseQuotation(entry);
+      case DocumentType.PurchaseRequests: return closePurchaseRequest(entry);
+      case DocumentType.GoodsReceiptPO: return closePurchaseDeliveryNote(entry);
+      case DocumentType.APInvoice: return closePurchaseInvoice(entry);
+      case DocumentType.GoodsReturn: return closePurchaseReturn(entry);
+      case DocumentType.APCreditMemo: return closePurchaseCreditNote(entry);
+      case DocumentType.APDownPaymentInvoice: return closePurchaseDownPayment(entry);
+      case DocumentType.GoodsReturnRequest: return closeGoodsReturnRequest(entry);
+      case DocumentType.APReserveInvoice: return closeReservePurchaseInvoice(entry);
+      default: return Promise.reject(new Error("Close is not supported for this document type"));
+    }
+  };
+
+  const handleCloseDocument = async (entry: number) => {
+    if (isClosing) return;
+    if (!allowedActions.includes("CloseDocument")) {
+      toast.error("You don't have rights to close document. Contact Portal Administration.");
+      setCloseModalOpen(false);
+      return;
+    }
+    setIsClosing(true);
+    setValue("DocStatus", "bost_Close");
+    try {
+      await closeDocumentByType(config.type as number, entry);
+      toast.success("Document closed successfully");
+    } catch (error: any) {
+      setValue("DocStatus", "bost_Open");
+      toast.error(error?.response?.data?.error || error?.response?.data?.message || "Failed to close document");
+    } finally {
+      setIsClosing(false);
+      setCloseModalOpen(false);
+    }
+  };
 
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
   const { multiBranchEnabled } = useApprovalSettings();
@@ -576,8 +647,14 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
             <AppLabel className="w-28 shrink-0 text-right">Status</AppLabel>
             <Select
               value={watchedStatus}
-              onValueChange={(val) => setValue("DocStatus", val)}
-              disabled={true}
+              onValueChange={(val) => {
+                if (val === "bost_Close") {
+                  setCloseModalOpen(true);
+                  return;
+                }
+                setValue("DocStatus", val);
+              }}
+              disabled={isHeaderDisabled || !isLoadedDocument}
             >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Select status" />
@@ -675,6 +752,21 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
             debouncedFetchDocumentsList(value);
           }}
           searchValue={listSearch}
+        />
+
+        <ConfirmationModal
+          open={closeModalOpen}
+          onOpenChange={setCloseModalOpen}
+          title="Close Document"
+          description={`Are you sure you want to close this ${config.title}? Once closed, it cannot be edited.`}
+          cancelText="No"
+          confirmText="Yes"
+          onConfirm={() => {
+            if (docEntry) {
+              handleCloseDocument(Number(docEntry));
+            }
+          }}
+          onCancel={() => setCloseModalOpen(false)}
         />
       </div>
     </div>

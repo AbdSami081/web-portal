@@ -24,7 +24,7 @@ const draftSchema = z.object({
   DueDate: z.string().optional(),
   Comments: z.string().optional(),
   DocumentLines: z.array(z.any()).optional(),
-});
+}).loose();
 
 type DraftFormData = z.infer<typeof draftSchema>;
 

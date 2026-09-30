@@ -28,7 +28,7 @@ const draftSchema = z.object({
   DocEntry: z.any().optional(),
   DocNum: z.any().optional(),
   BPL_IDAssignedToInvoice: z.number().optional(),
-});
+}).loose();
 
 type DraftFormData = z.infer<typeof draftSchema>;
 

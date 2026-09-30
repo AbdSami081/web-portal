@@ -28,6 +28,7 @@ interface RelationshipMapViewProps {
   docType: number;
   docEntry: number;
   docNum?: number | string;
+  menuId?: string;
   onClose: () => void;
 }
 
@@ -42,6 +43,7 @@ export function RelationshipMapView({
   docType,
   docEntry,
   docNum,
+  menuId,
   onClose,
 }: RelationshipMapViewProps) {
   const [data, setData] = useState<RelationshipMapResponseDto | null>(null);
@@ -59,7 +61,7 @@ export function RelationshipMapView({
   useEffect(() => {
     if (docType > 0 && docEntry > 0) {
       setIsLoading(true);
-      getRelationshipMap(docType, docEntry)
+      getRelationshipMap(docType, docEntry, menuId)
         .then((res) => {
           setData(res);
           setZoom(1);
@@ -74,7 +76,7 @@ export function RelationshipMapView({
     } else {
       setData(null);
     }
-  }, [docType, docEntry]);
+  }, [docType, docEntry, menuId]);
 
   // Layout calculations
   const CARD_WIDTH = 185;

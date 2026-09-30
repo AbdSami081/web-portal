@@ -1,6 +1,7 @@
 import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
 import { QuotationFormData } from "@/lib/schemas/quotationSchema";
 import { DocumentType } from "@/types/master/DocumentType";
+import { pickLineUdfs } from "./lineUdfHelper";
 
 interface BuildSalesPayloadOptions {
   data: QuotationFormData;
@@ -69,6 +70,7 @@ export function buildSalesDocumentPayload({
     lastLoadedDocType !== targetDocType;
 
   return {
+    ...pickLineUdfs(data),
     CardCode: data.CardCode,
     CardName: data.CardName,
       DocType:
@@ -138,6 +140,8 @@ const baseFields: Record<string, unknown> =
       const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
       if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
+      Object.assign(baseFields, pickLineUdfs(line));
+
       return baseFields;
     }),
     ...(additionalExpenses.length > 0 && {
@@ -173,6 +177,7 @@ export function buildSalesDocumentPatchPayload({
   "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses" | "downPaymentType" | "salesPersonCode"
 > & { includeLines?: boolean; targetDocType?: DocumentType; documentMode?: "items" | "service" }) {
   return {
+    ...pickLineUdfs(data),
       DocType:
     documentMode === "service"
       ? "dDocument_Service"

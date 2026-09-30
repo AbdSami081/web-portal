@@ -33,6 +33,6 @@ export const quotationSchema = z.object({
   BPL_IDAssignedToInvoice: z.coerce.number().nullish(),
   FatherType: z.string().nullish(),
   FatherCard: z.string().nullish(),
-});
+}).loose();
 
 export type QuotationFormData = z.infer<typeof quotationSchema>;

@@ -51,6 +51,22 @@ interface UDF {
 }
 const udfLayoutOwner = { current: null as symbol | null };
 
+export function toDateInputValue(value: unknown): string {
+  if (!value) return "";
+  return String(value).split("T")[0];
+}
+
+export function toTimeInputValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "";
+  const str = String(value);
+  if (str.includes("T")) return str.split("T")[1]?.slice(0, 5) ?? "";
+  if (/^\d{1,4}$/.test(str)) {
+    const padded = str.padStart(4, "0");
+    return `${padded.slice(0, 2)}:${padded.slice(2)}`;
+  }
+  return str.slice(0, 5);
+}
+
 export function UDFLayout<T extends FieldValues>({
   docType,
   values,
@@ -163,6 +179,46 @@ export function UDFLayout<T extends FieldValues>({
                   ))}
                 </SelectContent>
               </Select>
+            )}
+          />
+        </div>
+      );
+    }
+
+    if (udf.Type === "db_Date" && udf.SubType === "st_Time") {
+      return (
+        <div className="grid gap-2">
+          <FieldLabel htmlFor={fieldName} text={udf.Description} />
+          <Controller
+            control={control}
+            name={fieldName as any}
+            render={({ field }) => (
+              <Input
+                id={fieldName}
+                type="time"
+                value={toTimeInputValue(field.value)}
+                onChange={(e) => field.onChange(e.target.value)}
+              />
+            )}
+          />
+        </div>
+      );
+    }
+
+    if (udf.Type === "db_Date") {
+      return (
+        <div className="grid gap-2">
+          <FieldLabel htmlFor={fieldName} text={udf.Description} />
+          <Controller
+            control={control}
+            name={fieldName as any}
+            render={({ field }) => (
+              <Input
+                id={fieldName}
+                type="date"
+                value={toDateInputValue(field.value)}
+                onChange={(e) => field.onChange(e.target.value)}
+              />
             )}
           />
         </div>

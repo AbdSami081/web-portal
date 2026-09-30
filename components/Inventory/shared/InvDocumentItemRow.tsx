@@ -17,6 +17,7 @@ import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { useInvDocConfig } from "./InvDocumentLayout";
+import { DocumentType } from "@/types/master/DocumentType";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
@@ -273,6 +274,20 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           type="number"
           step="any"
           value={draftLine.OnHand ?? 0}
+          disabled
+          readOnly
+        />
+      </td>
+      )}
+
+      {/* Open Qty (Transfer Request only) */}
+      {invConfig.type === DocumentType.InvTransferReq && isFieldVisible("OpenQty") && (
+      <td className="py-2 px-4">
+        <Input
+          className="h-6 w-full text-right bg-slate-50 cursor-not-allowed"
+          type="number"
+          step="any"
+          value={draftLine.RemainingOpenQuantity ?? 0}
           disabled
           readOnly
         />

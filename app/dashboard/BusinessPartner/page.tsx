@@ -52,6 +52,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { HeaderActionPortal } from "@/components/header-portal";
 import HeaderActions from "@/components/Custom/HeaderAction";
+import { useDocumentRights } from "@/hooks/useDocumentRights";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
 import { UDFLayout } from "@/components/shared/UDFSheet";
@@ -94,6 +95,7 @@ const EMPTY_FORM = {
 };
 
 export default function BPMasterDataPage() {
+  const { allowedActions } = useDocumentRights(DocumentType.BusinessPartner);
   const [documentsList, setDocumentsList] = useState<BusinessPartner[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [skip, setSkip] = useState(0);
@@ -634,6 +636,7 @@ export default function BPMasterDataPage() {
           reset={() => handleClearLock()}
           defaultValues={EMPTY_FORM}
           resetStore={() => {}}
+          allowedActions={allowedActions}
         />
       </HeaderActionPortal>
 

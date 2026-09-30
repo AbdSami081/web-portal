@@ -2,6 +2,7 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import apiClient from "@/lib/apiClient";
 import { DocumentType } from "@/types/master/DocumentType";
 import { withDefaultBPLId } from "@/lib/sap/helpers/documentPayloadHelper";
+import { pickLineUdfs } from "@/lib/sap/helpers/lineUdfHelper";
 
 export const getBOMList = async (isMultiBom: boolean = false, search: string = "", skip: number = 0, top: number = 100): Promise<any[]> => {
   const res = await apiClient.get(`api/Production/GetBOMForProduction?isMultiBom=${isMultiBom}&search=${search}&skip=${skip}&top=${top}`);
@@ -103,6 +104,7 @@ const mapProductionOrderLine = (line: any, data: any, includeLineNumber = false)
     ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
     Warehouse: line.Warehouse || data.Warehouse,
     ItemType: line.ItemType,
+    ...pickLineUdfs(line),
   };
 
   if (includeLineNumber && line.LineNumber !== undefined && line.LineNumber !== null) {
@@ -119,6 +121,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
     // Its branch is implicit from the Warehouse selected, unlike Issue/Receipt for
     // Production below (InventoryGenExits/InventoryGenEntries), which do support it.
     const payload: any = {
+      ...pickLineUdfs(data),
       ItemNo: data.ItemNo,
       Remarks: data.Remarks || data.Comments,
       ProductionOrderStatus: data.ProductionOrderStatus || "boposPlanned",
@@ -143,12 +146,12 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
       payload.PickRemarks = data.PickRmrk || "Created via Web Portal";
       payload.ProductionOrderLines = lines.map(line => mapProductionOrderLine(line, data));
 
-      console.log(payload);            
       return await postProductionOrder(payload);
     }
   } else if (docType === DocumentType.IssueForProduction || docType === DocumentType.ReceiptFromProduction) {
     const isUpdate = !!(data.DocEntry && data.DocEntry > 0);
     const payload: any = {
+      ...pickLineUdfs(data),
       Comments: data.Comments || data.Remarks,
       JournalMemo: data.JournalMemo,
       BPL_IDAssignedToInvoice: data.BPL_IDAssignedToInvoice,
@@ -164,6 +167,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
           BaseType: line.OrderNumber ? 202 : undefined,
           BaseEntry: line.OrderNumber,
           BaseLine: (line.OrderNumber && line.LineNumber === -1) ? undefined : line.LineNumber,
+          ...pickLineUdfs(line),
         })),
       }),
     };

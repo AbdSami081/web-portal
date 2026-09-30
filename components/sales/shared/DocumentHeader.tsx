@@ -10,6 +10,20 @@ import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { toast } from "sonner";
+import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
+
+// Field access catalog for this document's header — kept next to the
+// hasFieldAccess("...") calls below so the two never drift apart.
+// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+export const SALES_HEADER_FIELDS: FieldCatalogEntry[] = [
+  { key: "CardCode", title: "Customer Code" },
+  { key: "CardName", title: "Customer Name" },
+  { key: "BPLid", title: "Branch" },
+  { key: "DocStatus", title: "Status" },
+  { key: "DocDate", title: "Posting Date" },
+  { key: "DocDueDate", title: "Due Date" },
+  { key: "TaxDate", title: "Tax Date" },
+];
 import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument, getDraftDocument, closeQuotation, closeSalesOrder, closeDeliveryNote, closeARInvoice, closeSalesReturn, getSalesReturnRequestDocument, getSalesCreditMemoDocument, getARDownPaymentRequestDocument, getARDownPaymentInvoiceDocument } from "@/api+/sap/sales/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
@@ -25,6 +39,7 @@ import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 import { findDraftByNumber } from "@/api+/sap/draft/draftService";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { useDocumentRights } from "@/hooks/useDocumentRights";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -89,8 +104,15 @@ export function DocumentHeader() {
     }
   };
 
+  const { allowedActions } = useDocumentRights(config.type);
+
   const handleCloseDocument = async (entry: number) => {
     if (isClosing) return;
+    if (!allowedActions.includes("CloseDocument")) {
+      toast.error("You don't have rights to close document. Contact Portal Administration.");
+      setCloseModalOpen(false);
+      return;
+    }
     setIsClosing(true);
     setValue("DocStatus", "bost_Close");
     try {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/context/authContext";
 import { SERVER_MENUS, MenuItem } from "@/lib/menu-data";
 import { 
@@ -18,7 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
   Loader2, Save, Users, Shield, Database, 
@@ -50,6 +49,22 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { DocumentSpecialRightsModal } from "@/modals/DocumentSpecialRightsModal";
+import { GLOBAL_RIGHTS_MENU_ID } from "@/hooks/useDocumentRights";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Settings2, ChevronsUpDown, Bell } from "lucide-react";
 
 interface DatabaseConfig {
   CompanyName: string;
@@ -105,6 +120,10 @@ export default function AuthorizationPage() {
 
   const [portalConfig, setPortalConfig] = useState<WebPortalConfigEntry[]>([]);
   const [loadingConfig, setLoadingConfig] = useState(false);
+
+  const [specialRightsTarget, setSpecialRightsTarget] = useState<{ menuId: string; documentType?: number; title: string } | null>(null);
+  const [showGlobalRightsModal, setShowGlobalRightsModal] = useState(false);
+  const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
 
   const sourceUser = useMemo(() => {
     return users.find(u => u.empId === selectedUser);
@@ -371,75 +390,80 @@ export default function AuthorizationPage() {
     "Settings": Settings
   };
 
-  const renderPermissionNode = (
+  const renderTableRows = (
     rootMenu: AuthMenuItem,
     node: AuthMenuItem,
     depth = 0,
     ancestorKeys: string[] = []
-  ) => {
+  ): React.ReactNode[] => {
     const nodeKey = getPermissionKey(rootMenu.id, node.id);
     const checked = isNodeChecked(rootMenu.id, node, selectedPermissions);
     const hasChildren = !!node.items?.length;
-    const baseIndent = depth * 18;
     const Icon = depth === 0
       ? (ICON_MAP[rootMenu.iconName || ""] || LayoutDashboard)
       : ChevronRight;
 
-    return (
-      <div key={nodeKey} className="space-y-1">
-        <div
-          className={cn(
-            "flex items-center justify-between p-2.5 px-3 rounded-lg group transition-colors cursor-pointer border border-transparent",
-            depth === 0
-              ? "border-slate-100 bg-white shadow-sm hover:bg-slate-50"
-              : checked
-                ? "bg-white border-slate-100 shadow-sm"
-                : "hover:bg-slate-50"
-          )}
-          style={{ marginLeft: depth > 0 ? baseIndent : 0 }}
-        >
+    const rows: React.ReactNode[] = [
+      <tr key={nodeKey} className={cn("border-b border-slate-100 last:border-0", depth === 0 ? "bg-slate-50/60" : "hover:bg-slate-50/60")}>
+        <td className="py-2.5 pr-3" style={{ paddingLeft: 16 + depth * 24 }}>
           <div className="flex items-center gap-2 min-w-0">
             <div className={cn(
-              "w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
+              "w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0",
               checked ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
             )}>
-              <Icon className="w-4 h-4" />
+              <Icon className="w-3.5 h-3.5" />
             </div>
             <span className={cn(
-              "text-sm font-bold truncate",
+              "text-sm truncate",
+              depth === 0 ? "font-black text-slate-900" : "font-semibold",
               checked ? "text-slate-900" : "text-slate-500"
             )}>
               {node.title}
             </span>
-            {depth > 0 && hasChildren && (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                Parent
-              </span>
-            )}
           </div>
-
+        </td>
+        <td className="py-2.5 px-3 text-center w-20">
           <Checkbox
             className="h-4 w-4 border-slate-400 data-[state=checked]:bg-slate-900 border-2 rounded transition-colors"
             checked={checked}
             onCheckedChange={() =>
               handlePermissionToggle(rootMenu.id, node, ancestorKeys)
             }
-            onClick={(e) => e.stopPropagation()}
           />
-        </div>
+        </td>
+        <td className="py-2.5 px-3 text-center w-44">
+          {!hasChildren && node.objectCode !== undefined && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!selectedUser}
+              className="h-7 px-2.5 text-[11px] font-bold border-slate-200 text-slate-600 hover:bg-slate-100"
+              onClick={() =>
+                setSpecialRightsTarget({
+                  menuId: node.id,
+                  documentType: node.objectCode !== undefined ? Number(node.objectCode) : undefined,
+                  title: node.title,
+                })
+              }
+            >
+              <Settings2 className="w-3 h-3 mr-1.5" />
+              Special Rights
+            </Button>
+          )}
+        </td>
+      </tr>,
+    ];
 
-        {hasChildren && (
-          <div className="grid grid-cols-1 gap-1.5">
-            {node.items!.map((child) =>
-              renderPermissionNode(rootMenu, child as AuthMenuItem, depth + 1, [
-                ...ancestorKeys,
-                nodeKey,
-              ])
-            )}
-          </div>
-        )}
-      </div>
-    );
+    if (hasChildren) {
+      node.items!.forEach((child) => {
+        rows.push(
+          ...renderTableRows(rootMenu, child as AuthMenuItem, depth + 1, [...ancestorKeys, nodeKey])
+        );
+      });
+    }
+
+    return rows;
   };
 
   const hasAdminAccess = useMemo(() => {
@@ -510,8 +534,8 @@ export default function AuthorizationPage() {
               </div>
             )}
             
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setSelectedUser("")}
               disabled={!selectedUser}
@@ -520,8 +544,19 @@ export default function AuthorizationPage() {
               Clear
             </Button>
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowGlobalRightsModal(true)}
+              disabled={!selectedUser}
+              className="h-9 px-4 text-xs font-bold border-amber-200 bg-amber-50/50 hover:bg-amber-100 text-amber-700 shadow-sm disabled:opacity-50"
+            >
+              <Bell className="mr-2 h-4 w-4 text-amber-600" />
+              Global Rights
+            </Button>
+
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => {
                 setSelectedCopyUsers([]);
@@ -534,7 +569,7 @@ export default function AuthorizationPage() {
               <Copy className="mr-2 h-4 w-4 text-blue-600" />
               Copy Authorization
             </Button>
-            
+
             <Button 
               onClick={handleSave} 
               disabled={saving || !selectedUser || !selectedCompany}
@@ -548,102 +583,78 @@ export default function AuthorizationPage() {
       </header>
 
       <main className="flex-1 container mx-auto p-4 md:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[580px]">
-              <div className="p-4 border-b border-slate-100 space-y-3">
-                <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" /> Employee List
-                    </label>
-                    <Badge variant="secondary" className="bg-slate-100 text-slate-600 text-[10px] py-0 px-2 font-bold">{filteredUsers.length}</Badge>
-                </div>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input 
-                      placeholder="Find users..." 
-                      className="pl-9 h-10 border-slate-200 bg-slate-50/50 shadow-none text-sm font-medium focus-visible:ring-slate-900"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      disabled={!selectedCompany}
-                    />
-                </div>
-              </div>
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 shrink-0">
+              <Users className="w-3.5 h-3.5" /> Select User
+            </label>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                {loadingUsers ? (
-                    <div className="space-y-4 p-2 pt-4">
-                        {[1,2,3,4,5,6,7,8].map(i => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded bg-slate-100 animate-pulse" />
-                                <div className="flex-1 space-y-2">
-                                    <div className="h-2.5 bg-slate-100 rounded w-2/3 animate-pulse" />
-                                    <div className="h-1.5 bg-slate-50 rounded w-1/3 animate-pulse" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : users.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-10">
-                        <Users className="w-8 h-8 mb-2" />
-                        <p className="text-xs font-bold">No users available.</p>
-                    </div>
-                ) : (
-                  <div className="space-y-1">
-                    {filteredUsers.map((u) => {
-                      const isSelected = selectedUser === u.empId;
-                      return (
-                        <button 
-                          key={u.empId} 
-                          onClick={() => handleUserSelect(u.empId)}
-                          className={cn(
-                            "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3 group px-4",
-                            isSelected 
-                              ? "bg-blue-50/80 border-blue-200 text-slate-900 shadow-sm" 
-                              : "bg-transparent border-transparent text-slate-600 hover:bg-slate-100/70"
-                          )}
+            <Popover open={isUserPickerOpen} onOpenChange={setIsUserPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  disabled={!selectedCompany || loadingUsers}
+                  className="w-full sm:w-80 justify-between h-10 border-slate-200 bg-slate-50/50 text-sm font-medium"
+                >
+                  {sourceUser ? (
+                    <span className="flex items-center gap-2 truncate">
+                      <span className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {sourceUser.fullName.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="truncate">{sourceUser.fullName}</span>
+                      <span className="text-slate-400 text-xs">(ID: {sourceUser.empId})</span>
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">{loadingUsers ? "Loading users..." : "Choose a user..."}</span>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search users..." value={searchQuery} onValueChange={setSearchQuery} />
+                  <CommandList>
+                    <CommandEmpty className="py-4 text-center text-xs text-slate-400">No users found.</CommandEmpty>
+                    <CommandGroup>
+                      {filteredUsers.map((u) => (
+                        <CommandItem
+                          key={u.empId}
+                          value={u.empId}
+                          onSelect={() => {
+                            handleUserSelect(u.empId);
+                            setIsUserPickerOpen(false);
+                          }}
+                          className="flex items-center gap-2"
                         >
-                          <div className={cn(
-                            "w-8 h-8 rounded flex items-center justify-center text-[10px] font-black shrink-0",
-                            isSelected ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "bg-slate-100 group-hover:bg-slate-200"
-                          )}>
-                             {u.fullName.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 overflow-hidden">
-                              <p className="text-sm font-bold truncate leading-tight">{u.fullName}</p>
-                              <p className={cn(
-                                  "text-[10px] font-medium tracking-tight mt-0.5",
-                                  isSelected ? "text-blue-500" : "text-slate-400"
-                              )}>ID: {u.empId}</p>
-                          </div>
-                          {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+                          <span className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-[10px] font-black shrink-0">
+                            {u.fullName.charAt(0).toUpperCase()}
+                          </span>
+                          <span className="flex-1 truncate text-sm font-medium">{u.fullName}</span>
+                          <span className="text-[10px] text-slate-400">ID: {u.empId}</span>
+                          {selectedUser === u.empId && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            {selectedUser && (
+              <span className="text-[10px] font-bold text-green-600 px-2 py-1 bg-green-50 border border-green-100 rounded-full">Editing Mode</span>
+            )}
           </div>
 
-          {/* RIGHT: Detail Panel */}
-          <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
-            <div className="bg-slate-50/50 border-b border-slate-100 p-4 flex items-center justify-between">
-                <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                        <Shield className="w-3.5 h-3.5" /> Permissions Hierarchy
-                    </label>
-                    <h2 className="text-sm font-bold text-slate-700">Assign Module Visibility</h2>
-                </div>
-                {selectedUser && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-green-600 px-2 py-0.5 bg-green-50 border border-green-100 rounded-full">Editing Mode</span>
-                    </div>
-                )}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
+            <div className="bg-slate-50/50 border-b border-slate-100 p-4">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                <Shield className="w-3.5 h-3.5" /> Permissions Hierarchy
+              </label>
+              <h2 className="text-sm font-bold text-slate-700">Assign Module Visibility &amp; Special Rights</h2>
             </div>
 
-            <div className="flex-1 p-6 relative">
+            <div className="flex-1 relative overflow-auto custom-scrollbar">
               {(loadingAccess || loadingConfig) && (
                 <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex items-center justify-center p-12">
                    <div className="flex flex-col items-center gap-3">
@@ -674,46 +685,18 @@ export default function AuthorizationPage() {
                     </p>
                 </div>
               ) : (
-                <div className="columns-1 md:columns-2 gap-12 space-y-10 opacity-100 transition-opacity duration-300">
-                  {filteredMenus.map((menu) => (
-                    <div key={menu.id} className="break-inside-avoid space-y-4">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                        <div className="flex items-center gap-2.5">
-                          {(() => {
-                            const MenuIcon = ICON_MAP[menu.iconName || ""] || LayoutDashboard;
-                            return (
-                              <div className={cn(
-                                "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
-                                selectedPermissions[menu.id] ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
-                              )}>
-                                <MenuIcon className="w-4 h-4" />
-                              </div>
-                            );
-                          })()}
-                          <span className={cn(
-                            "text-sm font-bold",
-                            isNodeChecked(menu.id, menu as AuthMenuItem, selectedPermissions) ? "text-slate-900" : "text-slate-500"
-                          )}>
-                            {menu.title}
-                          </span>
-                        </div>
-                        <Checkbox 
-                          className="h-5 w-5 border-slate-400 data-[state=checked]:bg-slate-900 border-2 rounded transition-colors"
-                          checked={isNodeChecked(menu.id, menu as AuthMenuItem, selectedPermissions)}
-                          onCheckedChange={() => handlePermissionToggle(menu.id, menu as AuthMenuItem)}
-                        />
-                      </div>
-
-                      {menu.items && menu.items.length > 0 && (
-                        <div className="grid grid-cols-1 gap-1.5">
-                          {menu.items.map((item) =>
-                            renderPermissionNode(menu as AuthMenuItem, item as AuthMenuItem, 1, [menu.id])
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-slate-50 z-[1]">
+                    <tr className="border-b border-slate-200">
+                      <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Module / Document</th>
+                      <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center w-20">Access</th>
+                      <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center w-44">Special Rights</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMenus.flatMap((menu) => renderTableRows(menu as AuthMenuItem, menu as AuthMenuItem, 0))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>
@@ -874,6 +857,28 @@ export default function AuthorizationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {specialRightsTarget && selectedUser && (
+        <DocumentSpecialRightsModal
+          open={!!specialRightsTarget}
+          onClose={() => setSpecialRightsTarget(null)}
+          menuId={specialRightsTarget.menuId}
+          documentType={specialRightsTarget.documentType}
+          documentTitle={specialRightsTarget.title}
+          user={{ empId: selectedUser, fullName: sourceUser?.fullName || selectedUser }}
+        />
+      )}
+
+      {showGlobalRightsModal && selectedUser && (
+        <DocumentSpecialRightsModal
+          open={showGlobalRightsModal}
+          onClose={() => setShowGlobalRightsModal(false)}
+          menuId={GLOBAL_RIGHTS_MENU_ID}
+          documentTitle="Bell / Notifications"
+          user={{ empId: selectedUser, fullName: sourceUser?.fullName || selectedUser }}
+          actions={["Bell"]}
+        />
+      )}
     </div>
   );
 }

@@ -18,6 +18,10 @@ import { PurchaseItemRow } from "./PurchaseItemRow";
 import { DocumentType } from "@/types/master/DocumentType";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
+import { CreateBatchDialog } from "@/modals/CreateBatchDialog";
+import { CreateSerialDialog } from "@/modals/CreateSerialDialog";
+import { BatchTransactionsReportModal } from "@/modals/BatchTransactionsReportModal";
+import { SerialTransactionsReportModal } from "@/modals/SerialTransactionsReportModal";
 import { ResizableTable } from "../Custom/ResizableTable";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { isPostedPurchaseDocType } from "@/lib/sap/helpers/postedDocumentHelper";
@@ -25,10 +29,52 @@ import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
+
+// Field access catalog for this document's line table — kept next to the
+// `columns`/`serviceColumns` arrays below so the two never drift apart.
+// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+export const PURCHASE_LINE_FIELDS: FieldCatalogEntry[] = [
+  { key: "ItemCode", title: "Item Code" },
+  { key: "ItemName", title: "Item Description" },
+  { key: "Quantity", title: "Qty" },
+  { key: "OnHand", title: "Qty In Whs" },
+  { key: "Price", title: "Price" },
+  { key: "DiscountPercent", title: "Disc %" },
+  { key: "TaxCode", title: "Tax Code" },
+  { key: "TaxAmount", title: "Tax Amount (LC)" },
+  { key: "WarehouseCode", title: "Whs" },
+  { key: "BPLid", title: "Branch" },
+  { key: "UoMCode", title: "UoM" },
+  { key: "LineTotal", title: "Line Total" },
+  { key: "Freight1Type", title: "Freight 1 Type" },
+  { key: "Freight1LCAmount", title: "Freight 1 (LC)" },
+  { key: "Freight2Type", title: "Freight 2 Type" },
+  { key: "Freight2LCAmount", title: "Freight 2 (LC)" },
+  { key: "Freight3Type", title: "Freight 3 Type" },
+  { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
+];
+
+export const PURCHASE_SERVICE_LINE_FIELDS: FieldCatalogEntry[] = [
+  { key: "AccountCode", title: "G/L Account" },
+  { key: "AccountName", title: "G/L Account Name" },
+  { key: "Description", title: "Description" },
+  { key: "DiscountPercent", title: "Disc %" },
+  { key: "TaxCode", title: "Tax Code" },
+  { key: "LineTotal", title: "Line Total" },
+  { key: "TaxAmount", title: "Tax Amount (LC)" },
+  { key: "Freight1Type", title: "Freight 1 Type" },
+  { key: "Freight1LCAmount", title: "Freight 1 (LC)" },
+  { key: "Freight2Type", title: "Freight 2 Type" },
+  { key: "Freight2LCAmount", title: "Freight 2 (LC)" },
+  { key: "Freight3Type", title: "Freight 3 Type" },
+  { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
+];
 
 export function PurchaseItems() {
   const { watch } = useFormContext();
   const selectedCardCode = watch("CardCode");
+  const cardName = watch("CardName");
   const docStatus = watch("DocStatus");
   const {
     lines,
@@ -60,6 +106,10 @@ export function PurchaseItems() {
   const [selectedLineForModal, setSelectedLineForModal] = useState<any | null>(null);
   const [serialModalOpen, setSerialModalOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [createSerialModalOpen, setCreateSerialModalOpen] = useState(false);
+  const [createBatchModalOpen, setCreateBatchModalOpen] = useState(false);
+  const [batchReportModalOpen, setBatchReportModalOpen] = useState(false);
+  const [serialReportModalOpen, setSerialReportModalOpen] = useState(false);
 
   useEffect(() => {
     loadMasterData("S", "I");
@@ -238,6 +288,8 @@ export function PurchaseItems() {
   const isFinancialPurchaseDoc = isPostedPurchaseDocType(config.type);
 
   const docEntry = watch("DocEntry");
+  const docNum = watch("DocNum");
+  const docDate = watch("DocDate");
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
   const isLineUpdateBlocked = isFinancialPurchaseDoc && isEditMode;
 
@@ -393,11 +445,28 @@ export function PurchaseItems() {
                       className="cursor-pointer w-full text-left px-3 py-2 hover:bg-neutral-100 active:bg-neutral-200 rounded text-sm font-semibold flex items-center gap-2 text-neutral-800 transition-colors"
                       onClick={() => {
                         const isBatch = String(contextMenu.line.ManBtchNum).toLowerCase() === 'y' || String(contextMenu.line.ManBtchNum).toLowerCase() === 'tyes';
+                        const isGrpo = config.type === DocumentType.GoodsReceiptPO;
                         setSelectedLineForModal(contextMenu.line);
-                        if (isBatch) {
-                          setBatchModalOpen(true);
+                        if (isGrpo) {
+                          if (isEditMode) {
+                            if (isBatch) {
+                              setBatchReportModalOpen(true);
+                            } else {
+                              setSerialReportModalOpen(true);
+                            }
+                          } else {
+                            if (isBatch) {
+                              setCreateBatchModalOpen(true);
+                            } else {
+                              setCreateSerialModalOpen(true);
+                            }
+                          }
                         } else {
-                          setSerialModalOpen(true);
+                          if (isBatch) {
+                            setBatchModalOpen(true);
+                          } else {
+                            setSerialModalOpen(true);
+                          }
                         }
                         setContextMenu(null);
                       }}
@@ -481,6 +550,70 @@ export function PurchaseItems() {
           initialItemCode={selectedLineForModal.ItemCode}
         />
       )}
+
+      {selectedLineForModal && (
+        <CreateSerialDialog
+          open={createSerialModalOpen}
+          onClose={() => {
+            setCreateSerialModalOpen(false);
+            setSelectedLineForModal(null);
+          }}
+          onConfirm={(selections) => {
+            const state = usePurchaseDocument.getState();
+            Object.entries(selections.serials).forEach(([itemCode, serials]) => {
+              state.setLineSerials(itemCode, serials);
+            });
+            toast.success("Serial numbers created successfully");
+          }}
+          lines={lines}
+          initialItemCode={selectedLineForModal.ItemCode}
+        />
+      )}
+
+      {selectedLineForModal && (
+        <CreateBatchDialog
+          open={createBatchModalOpen}
+          onClose={() => {
+            setCreateBatchModalOpen(false);
+            setSelectedLineForModal(null);
+          }}
+          onConfirm={(selections) => {
+            const state = usePurchaseDocument.getState();
+            Object.entries(selections.batches).forEach(([itemCode, batches]) => {
+              state.setLineBatches(itemCode, batches);
+            });
+            toast.success("Batch numbers created successfully");
+          }}
+          lines={lines}
+          initialItemCode={selectedLineForModal.ItemCode}
+        />
+      )}
+
+      <BatchTransactionsReportModal
+        open={batchReportModalOpen}
+        onClose={() => {
+          setBatchReportModalOpen(false);
+          setSelectedLineForModal(null);
+        }}
+        line={selectedLineForModal}
+        docNum={docNum}
+        docDate={docDate}
+        cardName={cardName}
+        direction="In"
+      />
+
+      <SerialTransactionsReportModal
+        open={serialReportModalOpen}
+        onClose={() => {
+          setSerialReportModalOpen(false);
+          setSelectedLineForModal(null);
+        }}
+        line={selectedLineForModal}
+        docNum={docNum}
+        docDate={docDate}
+        cardName={cardName}
+        direction="In"
+      />
     </div>
   );
 }

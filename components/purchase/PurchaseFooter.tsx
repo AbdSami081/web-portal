@@ -7,6 +7,19 @@ import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 import { useFmsContext } from "@/hooks/useFMS";
 import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
 import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
+import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
+
+// Field access catalog for this document's footer/totals — folded into the
+// header ("H") bucket in @WP_FIELDS_CFG, matching the existing convention.
+// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+export const PURCHASE_FOOTER_FIELDS: FieldCatalogEntry[] = [
+  { key: "TotalBeforeDiscount", title: "Total Before Discount" },
+  { key: "DiscountPercent", title: "Discount %" },
+  { key: "TotalFreight", title: "Freight" },
+  { key: "Rounding", title: "Rounding" },
+  { key: "TaxTotal", title: "Tax Total" },
+  { key: "DocTotal", title: "Document Total" },
+];
 
 export function PurchaseFooter() {
   const { watch, register, setValue } = useFormContext();

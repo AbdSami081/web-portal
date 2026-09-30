@@ -22,6 +22,7 @@ import { DocumentType, DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import HeaderActions from "@/components/Custom/HeaderAction";
+import { useDocumentRights } from "@/hooks/useDocumentRights";
 import { useAuth } from "@/context/authContext";
 import { getAllFields } from "@/api+/sap/administration/administrationService";
 import { resolveFieldAuthDocType, findMenuItemByPath, isRouteAllowed } from "@/lib/menu-data";
@@ -115,6 +116,7 @@ export function InvDocumentLayout<T extends FieldValues>({
 }: InvDocumentLayoutProps<T>) {
 
   const config = useMemo(() => getDocumentConfig(docType), [docType]);
+  const { allowedActions, menuId } = useDocumentRights(docType);
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -641,6 +643,8 @@ export function InvDocumentLayout<T extends FieldValues>({
               reset={reset}
               defaultValues={defaultValues}
               resetStore={resetStore}
+              allowedActions={allowedActions}
+              menuId={menuId ?? undefined}
             />
           </HeaderActionPortal>
 
@@ -684,6 +688,7 @@ export function InvDocumentLayout<T extends FieldValues>({
                 docType={relMapStore.docType || (config.type as number)}
                 docEntry={relMapStore.docEntry || Number(DocEntry)}
                 docNum={relMapStore.docNum || (methods.watch as any)("DocNum")}
+                menuId={relMapStore.menuId}
                 onClose={relMapStore.closeMap}
               />
             ) : (

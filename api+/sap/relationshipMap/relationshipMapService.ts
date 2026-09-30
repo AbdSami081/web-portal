@@ -39,10 +39,12 @@ export interface RelationshipMapResponseDto {
 
 export const getRelationshipMap = async (
   docType: number,
-  docEntry: number
+  docEntry: number,
+  menuId?: string
 ): Promise<RelationshipMapResponseDto> => {
+  const menuIdParam = menuId ? `&menuId=${encodeURIComponent(menuId)}` : "";
   const res = await apiClient.get<RelationshipMapResponseDto>(
-    `api/RelationshipMap?docType=${docType}&docEntry=${docEntry}`
+    `api/RelationshipMap?docType=${docType}&docEntry=${docEntry}${menuIdParam}`
   );
   return res.data;
 };

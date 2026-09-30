@@ -42,6 +42,6 @@ export const productionSchema = z.object({
     StartDate: z.string().optional(),
     BPL_IDAssignedToInvoice: z.number().nullable().optional(),
     DocumentLines: z.array(productionLineSchema).optional(),
-});
+}).loose();
 
 export type ProductionFormData = z.infer<typeof productionSchema>;

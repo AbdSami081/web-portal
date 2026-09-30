@@ -5,6 +5,26 @@ import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
+import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
+
+// Field access catalog for this document's header — kept next to the
+// hasFieldAccess("...") calls below so the two never drift apart.
+// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+export const PRODUCTION_HEADER_FIELDS: FieldCatalogEntry[] = [
+  { key: "Ref2", title: "Reference" },
+  { key: "TaxDate", title: "Posting Date" },
+  { key: "ProductionOrderType", title: "Type" },
+  { key: "ItemNo", title: "Product No." },
+  { key: "ProductDescription", title: "Product Description" },
+  { key: "ProductionOrderStatus", title: "Status" },
+  { key: "PlannedQuantity", title: "Planned Quantity" },
+  { key: "Warehouse", title: "Warehouse" },
+  { key: "Priority", title: "Priority" },
+  { key: "CreationDate", title: "Order Date" },
+  { key: "StartDate", title: "Start Date" },
+  { key: "DueDate", title: "Due Date" },
+  { key: "BPL_IDAssignedToInvoice", title: "Branch" },
+];
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
@@ -28,6 +48,7 @@ import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { List } from "lucide-react";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { useDocumentRights } from "@/hooks/useDocumentRights";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 
@@ -105,6 +126,7 @@ export function PRDDocumentHeader() {
   const docEntryForBranch = watch("DocEntry") || watch("AbsoluteEntry");
   const { allowMultiBom: allowMultiBomConfig } = useAuthStore();
   const config = usePRDDocConfig();
+  const { allowedActions } = useDocumentRights(config.type);
   const docType = config.type;
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
   const watchedPlannedQty = watch("PlannedQuantity");
@@ -705,7 +727,13 @@ export function PRDDocumentHeader() {
               defaultValue="boposPlanned"
               render={({ field }) => (
                 <Select
-                  onValueChange={field.onChange}
+                  onValueChange={(val) => {
+                    if (val === "boposClosed" && !allowedActions.includes("CloseDocument")) {
+                      toast.error("You don't have rights to close document. Contact Portal Administration.");
+                      return;
+                    }
+                    field.onChange(val);
+                  }}
                   value={field.value || "boposPlanned"}
                   disabled={initialStatus === "boposClosed"}
                 >

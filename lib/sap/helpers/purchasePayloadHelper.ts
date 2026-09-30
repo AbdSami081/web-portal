@@ -1,5 +1,6 @@
 import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
 import { resolveBranchId } from "./documentPayloadHelper";
+import { pickLineUdfs } from "./lineUdfHelper";
 
 interface BuildPurchasePayloadOptions {
   data: any;
@@ -79,6 +80,7 @@ export function buildPurchaseDocumentPayload({
   const isPurchaseRequest = !!data.Requester;
 
   return {
+    ...pickLineUdfs(data),
     ...(!isPurchaseRequest && {
       CardCode: data.CardCode,
       CardName: data.CardName,
@@ -148,6 +150,8 @@ export function buildPurchaseDocumentPayload({
       const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
       if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
+      Object.assign(baseFields, pickLineUdfs(line));
+
       return baseFields;
     }),
     ...(additionalExpenses.length > 0 && {
@@ -173,6 +177,7 @@ export function buildPurchaseDocumentPatchPayload({
   const isPurchaseRequest = !!data.Requester;
 
   return {
+    ...pickLineUdfs(data),
     DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
     Comments: data.Comments,
     ...(data.DocDate && { DocDate: data.DocDate }),
