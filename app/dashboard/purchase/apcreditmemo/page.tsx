@@ -11,7 +11,6 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { patchApCreditMemo, postApCreditMemo, } from "@/api+/sap/purchase/purchaseService";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 
 const today = new Date().toISOString().split("T")[0];
@@ -144,7 +143,6 @@ export default function APCreditMemoPage() {
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={Number(DocumentType.APCreditMemo)} />
         <PurchaseItems />
-          <UDFLayout docType={DocumentType.APCreditMemo} allowedFields={fieldAccess} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

@@ -8,7 +8,6 @@ import { z } from "zod";
 import { PRDDocumentHeader } from "@/components/production/shared/PRDDocumentHeader";
 import { PRDDocumentItems } from "@/components/production/shared/PRDDocumentItems";
 import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { PRDDocumentLayout } from "@/components/production/shared/PRDDocumentLayout";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { DocumentType } from "@/types/master/DocumentType";
@@ -51,7 +50,6 @@ export default function ProductionDraftPage() {
   });
 
   const { loadFromDocument } = useIFPRDDocument();
-  const fieldAccess = useIFPRDDocument((s) => s.fieldAccess);
   const loadedDraftIdRef = React.useRef<number | null>(null);
 
   useEffect(() => {
@@ -166,7 +164,6 @@ export default function ProductionDraftPage() {
     >
       <PRDDocumentHeader />
       <PRDDocumentItems />
-      <UDFLayout docType={targetDocType} allowedFields={fieldAccess} />
       <PRDDocumentFooter />
     </PRDDocumentLayout>
   );

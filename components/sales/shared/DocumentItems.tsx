@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
+import { fetchItemsByCodesBulk } from "@/lib/sap/helpers/itemCacheHelper";
+import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useUoMStore } from "@/stores/useUoMStore";
@@ -94,6 +96,7 @@ export function DocumentItems() {
   const {
     lines,
     addLine,
+    addLines,
     clearLines,
     customer,
 
@@ -300,6 +303,108 @@ const setDocumentMode = useSalesDocument(
 
   setDialogOpen(false);
 };
+
+  // Paste tab-separated rows copied from Excel straight into the line table:
+  // ItemCode <tab> Quantity <tab> Price <tab> DiscountPercent <tab> WarehouseCode.
+  // Reuses the same item-line construction as handleOnSelectItems so pasted
+  // lines come out identical to manually-added ones (tax, branch, UoM, etc.).
+  const handleExcelPaste = async (e: React.ClipboardEvent) => {
+    if (documentMode === "service") return;
+    if (!customer?.CardCode) {
+      e.preventDefault();
+      toast.error("Please select a customer first.");
+      return;
+    }
+
+    const text = e.clipboardData.getData("text");
+    if (!text || (!text.includes("\t") && !text.includes("\n"))) return;
+
+    e.preventDefault();
+
+    let rawRows = text.trim().split(/\r?\n/).map((row) => row.split("\t"));
+    if (rawRows.length > MAX_EXCEL_PASTE_ROWS) {
+      toast.error(
+        `Pasted ${rawRows.length} rows — only the first ${MAX_EXCEL_PASTE_ROWS} were processed. Paste the rest separately.`
+      );
+      rawRows = rawRows.slice(0, MAX_EXCEL_PASTE_ROWS);
+    }
+
+    const parsedRows = rawRows
+      .map((cols) => ({
+        itemCode: cols[0]?.trim() || "",
+        quantity: Number(cols[1]?.trim()) || 1,
+        pastedPrice: Number(cols[2]?.trim()) || 0,
+        discountPercent: Number(cols[3]?.trim()) || 0,
+        pastedWarehouse: cols[4]?.trim() || "",
+      }))
+      .filter((r) => r.itemCode);
+
+    if (parsedRows.length === 0) return;
+
+    // Bulk-fetch all item codes in chunked requests (not one request per
+    // row), then commit every resulting line in a single store update —
+    // keeps this responsive for pastes from a handful of rows up to tens of
+    // thousands.
+    const toastId = toast.loading(`Looking up ${parsedRows.length} item(s)...`);
+    const itemsByCode = await fetchItemsByCodesBulk(
+      parsedRows.map((r) => r.itemCode),
+      (done, total) => toast.loading(`Looking up items... ${done}/${total}`, { id: toastId })
+    );
+
+    const newLines: typeof lines = [];
+    const notFoundItems: string[] = [];
+
+    for (const row of parsedRows) {
+      const item = itemsByCode.get(row.itemCode);
+      if (!item) {
+        notFoundItems.push(row.itemCode);
+        continue;
+      }
+
+      const price = row.pastedPrice || getCustomerPrice(item.Prices || []);
+      const targetTaxCode = item.VatGourpSa || item.VatGroupSa || "";
+      const selectedTax = freightsWithCharges.find((t) => t.Code === targetTaxCode);
+      const taxRate = Number(selectedTax?.Rate || 0);
+      const defaultWhsLine = row.pastedWarehouse || item.DefaultWhse || firstWhs;
+      const qtyInWhs = item.QtyInWhs || [];
+      const whRecord = qtyInWhs.find(
+        (w: any) => (w.WarehouseCode || w.warehouseCode) === defaultWhsLine
+      );
+      const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
+      const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
+
+      newLines.push({
+        ItemCode: item.ItemCode,
+        ItemName: item.ItemName || item.ItemDescription || "",
+        Quantity: row.quantity,
+        OnHand: initialOnHand,
+        Price: price,
+        DiscountPercent: row.discountPercent,
+        TaxCode: targetTaxCode,
+        TaxRate: taxRate,
+        WarehouseCode: defaultWhsLine,
+        BPLid: resolveBranchForWarehouse(defaultWhsLine, warehouses),
+        UoMCode: uomVal,
+        MeasureUnit: item.MeasureUnit || getUoMName(uomVal) || "",
+        ManSerNum: item.ManSerNum,
+        ManBtchNum: item.ManBtchNum,
+        QtyInWhs: qtyInWhs,
+      } as (typeof lines)[number]);
+    }
+
+    if (newLines.length > 0) {
+      addLines(newLines);
+    }
+
+    toast.dismiss(toastId);
+    if (newLines.length > 0) {
+      toast.success(`${newLines.length} item(s) added successfully.`);
+    }
+    if (notFoundItems.length > 0) {
+      const preview = notFoundItems.slice(0, 20).join(", ");
+      toast.error(`${notFoundItems.length} item(s) not found: ${preview}${notFoundItems.length > 20 ? "…" : ""}`);
+    }
+  };
 
   const handleRowContextMenu = (e: React.MouseEvent, line: any) => {
     e.preventDefault();
@@ -678,7 +783,7 @@ const setDocumentMode = useSalesDocument(
                 </div>
               )}
 
-              <div className="relative border rounded overflow-x-auto">
+              <div className="relative border rounded overflow-x-auto" onPaste={handleExcelPaste}>
                 <div
                   className={`w-full overflow-x-auto pb-2 ${
                     isTableDisabled ? "opacity-80" : ""

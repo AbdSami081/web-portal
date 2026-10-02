@@ -564,7 +564,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
      <FmsProvider value={fms}>
       <FormProvider {...methods}>
         <FmsKeyboardBridge />
-        <FieldNameInspector />
+        <FieldNameInspector allowedActions={allowedActions} />
         <form
           onSubmit={handleSubmit(async (data) => {
             const state = usePurchaseDocument.getState();

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Kbd } from "@/components/ui/kbd";
-import { Search, Sheet, Keyboard, SearchCode, Code2 } from "lucide-react";
+import { Search, Sheet, Keyboard, SearchCode, Code2, FilePlus2, ClipboardPaste } from "lucide-react";
 
 export const KeyboardShortcutsContent: React.FC = () => {
   const shortcuts = [
@@ -33,6 +33,20 @@ export const KeyboardShortcutsContent: React.FC = () => {
       description: "Toggle or open User Defined Fields (UDF) panel for the current document.",
       icon: Sheet,
       color: "from-emerald-500/10 to-teal-500/10 text-emerald-600 border-emerald-100",
+    },
+    {
+      keys: ["Alt", "Shift", "A"],
+      action: "New Document",
+      description: "Clear the current document and start a new one, from anywhere in the form.",
+      icon: FilePlus2,
+      color: "from-amber-500/10 to-orange-500/10 text-amber-600 border-amber-100",
+    },
+    {
+      keys: ["Ctrl", "V"],
+      action: "Paste Lines from Excel",
+      description: "Paste tab-separated rows (Item Code, Quantity, Price, Discount %, Warehouse) directly into the line items table to bulk-add them.",
+      icon: ClipboardPaste,
+      color: "from-sky-500/10 to-cyan-500/10 text-sky-600 border-sky-100",
     },
   ];
 

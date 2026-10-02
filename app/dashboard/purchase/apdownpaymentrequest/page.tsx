@@ -8,7 +8,6 @@ import { PurchaseDocumentLayout } from "@/components/purchase/PurchaseDocumentLa
 import { PurchaseFooter } from "@/components/purchase/PurchaseFooter";
 import { PurchaseItems } from "@/components/purchase/PurchaseItems";
 import { PurchaseVendorHeader } from "@/components/purchase/PurchaseVendorHeader";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import {
   APDownPaymentRequestFormData,
@@ -20,7 +19,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 export default function APDownPaymentRequestPage() {
-  const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
   const today = new Date().toISOString().split("T")[0];
   const [defaultValues] = useState<APDownPaymentRequestFormData>({
     CardName: "",
@@ -173,7 +171,6 @@ export default function APDownPaymentRequestPage() {
         <div className="flex flex-col gap-6">
           <PurchaseVendorHeader docType={DocumentType.APDownPaymentRequest} />
           <PurchaseItems />
-          <UDFLayout docType={DocumentType.APDownPaymentRequest} allowedFields={fieldAccess} />
           <PurchaseFooter />
         </div>
       </PurchaseDocumentLayout>

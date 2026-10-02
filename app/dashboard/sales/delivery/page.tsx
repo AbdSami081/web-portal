@@ -14,7 +14,6 @@ import { postDelivery, patchDeliveryNote } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 
@@ -129,7 +128,6 @@ export default function DeliveryPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.Delivery} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

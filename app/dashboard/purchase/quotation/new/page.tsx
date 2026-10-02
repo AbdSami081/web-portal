@@ -12,7 +12,6 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { patchPurchaseQuotation, postPurchaseQuotation } from "@/api+/sap/purchase/purchaseService";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 
 const today = new Date().toISOString().split("T")[0];
@@ -149,7 +148,6 @@ export default function NewPurchaseQuotationPage() {
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={PurchaseDocumentType.PurchaseQuotation} />
         <PurchaseItems />
-        <UDFLayout docType={DocumentType.PurchaseQuotation} allowedFields={fieldAccess} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

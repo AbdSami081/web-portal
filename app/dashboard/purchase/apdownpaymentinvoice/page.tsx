@@ -8,7 +8,6 @@ import { PurchaseDocumentLayout } from "@/components/purchase/PurchaseDocumentLa
 import { PurchaseFooter } from "@/components/purchase/PurchaseFooter";
 import { PurchaseItems } from "@/components/purchase/PurchaseItems";
 import { PurchaseVendorHeader } from "@/components/purchase/PurchaseVendorHeader";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import {
   APDownPaymentInoviceFormData,
@@ -177,8 +176,7 @@ export default function APDownPaymentInvoicePage() {
         <div className="flex flex-col gap-6">
           <PurchaseVendorHeader docType={DocumentType.APDownPaymentInvoice} />
           <PurchaseItems />
-          <UDFLayout docType={DocumentType.APDownPaymentInvoice} allowedFields={fieldAccess} />
-          <PurchaseFooter />
+            <PurchaseFooter />
         </div>
       </PurchaseDocumentLayout>
     </>

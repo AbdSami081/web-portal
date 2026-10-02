@@ -617,8 +617,6 @@ export default function BPMasterDataPage() {
   const isFormValid =
     formData.CardCode.trim() !== "" && formData.CardName.trim() !== "" && formData.CardType.trim() !== "";
 
-  // Whether the currently selected Series forces the Card Code to be system-generated
-  // (i.e. it is not a "Manual" series), used to lock the Card Code input.
   const selectedSeries = customerSeries.find(
     (item) => String(item.Series) === String(formData.Series)
   );
@@ -627,7 +625,7 @@ export default function BPMasterDataPage() {
   return (
    <FormProvider {...methods}>
     <div className="min-h-screen bg-[#fafafa]">
-      <FieldNameInspector />
+      <FieldNameInspector allowedActions={allowedActions} />
       <UDFLayout docType={DocumentType.BusinessPartner} values={bpUdfValues} allowedFields={fieldAccess} />
       <HeaderActionPortal>
         <HeaderActions

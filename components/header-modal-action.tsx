@@ -58,8 +58,8 @@ export const HeaderModalAction: React.FC<HeaderModalActionProps> = ({
         </Tooltip>
       </TooltipProvider>
 
-      <DialogContent className="sm:max-w-[425px] overflow-hidden rounded-xl border border-slate-100 bg-white/95 backdrop-blur-xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-        <DialogHeader className="space-y-1.5">
+      <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-hidden rounded-xl border border-slate-100 bg-white/95 backdrop-blur-xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+        <DialogHeader className="space-y-1.5 shrink-0">
           <DialogTitle className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
             {modalTitle}
           </DialogTitle>
@@ -69,7 +69,7 @@ export const HeaderModalAction: React.FC<HeaderModalActionProps> = ({
             </DialogDescription>
           )}
         </DialogHeader>
-        <div className="mt-2">
+        <div className="mt-2 overflow-y-auto pr-1">
           {children}
         </div>
       </DialogContent>

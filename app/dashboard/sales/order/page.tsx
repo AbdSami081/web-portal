@@ -14,7 +14,6 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { postSalesOrder, patchSalesOrder } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 
@@ -128,7 +127,6 @@ export default function OrderPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.Order} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

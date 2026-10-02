@@ -140,6 +140,11 @@ export function buildPurchaseDocumentPayload({
         baseFields.RequiredDate = line.RequiredDate;
       }
 
+      if (documentMode !== "service") {
+        if (line.FreeText) baseFields.FreeText = line.FreeText;
+        if (line.Project) baseFields.ProjectCode = line.Project;
+      }
+
       const lineExpenses = mapLineExpenses(line);
       if (lineExpenses.length > 0) {
         baseFields.DocumentLineAdditionalExpenses = lineExpenses;
@@ -218,6 +223,11 @@ export function buildPurchaseDocumentPatchPayload({
           baseFields.LineNum = line.LineNum;
         }
 
+        if (documentMode !== "service") {
+          if (line.FreeText) baseFields.FreeText = line.FreeText;
+          if (line.Project) baseFields.ProjectCode = line.Project;
+        }
+
         const lineExpenses = mapLineExpenses(line);
         if (lineExpenses.length > 0) {
           baseFields.DocumentLineAdditionalExpenses = lineExpenses;
@@ -227,6 +237,8 @@ export function buildPurchaseDocumentPatchPayload({
         if (serialNumbers) baseFields.SerialNumbers = serialNumbers;
         const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
         if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
+
+        Object.assign(baseFields, pickLineUdfs(line));
 
         return baseFields;
       }),

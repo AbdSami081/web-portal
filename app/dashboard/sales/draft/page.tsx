@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { DocumentHeader } from "@/components/sales/shared/DocumentHeader";
 import { DocumentItems } from "@/components/sales/shared/DocumentItems";
 import DocumentFooter from "@/components/sales/shared/DocumentFooter";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { SalesDocumentLayout } from "@/components/sales/shared/SalesDocumentLayout";
 import { quotationSchema, QuotationFormData } from "@/lib/schemas/quotationSchema";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
@@ -23,7 +22,6 @@ export default function SalesDraftPage() {
   const docNav = resolveDocNavParams(searchParams, pathname);
   const draftEntryStr = docNav.draftEntry ?? null;
   const docTypeParam = docNav.docType ?? null;
-  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
 
   const [isLoading, setIsLoading] = useState(true);
   const [targetDocType, setTargetDocType] = useState<DocumentType>(() => {
@@ -163,7 +161,6 @@ export default function SalesDraftPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={targetDocType} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

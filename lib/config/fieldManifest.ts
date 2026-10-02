@@ -57,19 +57,6 @@ const INVENTORY_TRANSFER_REQUEST_CATALOG: DocFieldCatalog = {
   line: INVENTORY_TRANSFER_REQUEST_LINE_FIELDS,
 };
 
-/**
- * Resolve the field catalog for a Field Access admin-screen node.
- *
- * `url` disambiguates domain: several SAP object codes collide across
- * domains (e.g. 204, 60, 1470000113 each mean a different document
- * depending on module), so the numeric code alone isn't a safe lookup key.
- * The menu node's own route prefix (already on hand wherever this is
- * called from) resolves that unambiguously without needing a new lookup.
- *
- * Returns null when no catalog is defined yet for this node — callers MUST
- * treat null as "do not sync": syncing an empty/undefined catalog would
- * hard-delete every existing @WP_FIELDS_CFG row for that doc type.
- */
 export function getFieldCatalog(
   url: string,
   objectCode: number | string | undefined

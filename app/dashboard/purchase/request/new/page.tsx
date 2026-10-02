@@ -12,7 +12,6 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { patchPurchaseRequest, postPurchaseRequest } from "@/api+/sap/purchase/purchaseService";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 
 import { useAuth } from "@/context/authContext";
@@ -162,7 +161,6 @@ export default function PurchaseRequestPage() {
       <div className="flex flex-col gap-6">
         <PurchaseVendorHeader docType={PurchaseDocumentType.PurchaseRequests} />
         <PurchaseItems />
-        <UDFLayout docType={DocumentType.PurchaseRequests} allowedFields={fieldAccess} />
         <PurchaseFooter />
       </div>
     </PurchaseDocumentLayout>

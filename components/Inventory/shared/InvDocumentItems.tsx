@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
+import { fetchItemsByCodesBulk } from "@/lib/sap/helpers/itemCacheHelper";
+import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
 
 // Field access catalogs for this document's line table — kept next to the
 // `columns` array below so the two never drift apart. Inventory's line
@@ -68,7 +70,7 @@ export const INVENTORY_TRANSFER_REQUEST_LINE_FIELDS: FieldCatalogEntry[] = [
 export function InvDocumentItems() {
   const { watch } = useFormContext();
   const {
-    lines, addLine, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment,
+    lines, addLine, addLines, warehouses, fromWarehouse, toWarehouse, attachments, addAttachment, removeAttachment, updateAttachment,
     serialModalOpen, setSerialModalOpen, batchModalOpen, setBatchModalOpen, selectedLineForModal, setSelectedLineForModal,
     fieldAccess,
   } = useInventoryDocument();
@@ -213,6 +215,110 @@ export function InvDocumentItems() {
     });
   };
 
+  // Paste tab-separated rows copied from Excel straight into the line table:
+  // ItemCode <tab> Quantity <tab> (Price/Discount are ignored here — this
+  // document has no pricing lines) <tab> <tab> WarehouseCode. Reuses the same
+  // item-line construction as handleOnSelectItems so pasted lines come out
+  // identical to manually-added ones.
+  const handleExcelPaste = async (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData("text");
+    if (!text || (!text.includes("\t") && !text.includes("\n"))) return;
+
+    e.preventDefault();
+
+    const firstWhs = warehouses.length > 0 ? warehouses[0].WhsCode : "";
+
+    let rawRows = text.trim().split(/\r?\n/).map((row) => row.split("\t"));
+    if (rawRows.length > MAX_EXCEL_PASTE_ROWS) {
+      toast.error(
+        `Pasted ${rawRows.length} rows — only the first ${MAX_EXCEL_PASTE_ROWS} were processed. Paste the rest separately.`
+      );
+      rawRows = rawRows.slice(0, MAX_EXCEL_PASTE_ROWS);
+    }
+
+    const parsedRows = rawRows
+      .map((cols) => ({
+        itemCode: cols[0]?.trim() || "",
+        quantity: Number(cols[1]?.trim()) || 1,
+        pastedWarehouse: cols[4]?.trim() || "",
+      }))
+      .filter((r) => r.itemCode);
+
+    if (parsedRows.length === 0) return;
+
+    // Bulk-fetch all item codes in chunked requests (not one request per
+    // row), then commit every resulting line in a single store update —
+    // keeps this responsive for pastes from a handful of rows up to tens of
+    // thousands.
+    const toastId = toast.loading(`Looking up ${parsedRows.length} item(s)...`);
+    const itemsByCode = await fetchItemsByCodesBulk(
+      parsedRows.map((r) => r.itemCode),
+      (done, total) => toast.loading(`Looking up items... ${done}/${total}`, { id: toastId })
+    );
+
+    const newLines: typeof lines = [];
+    const notFoundItems: string[] = [];
+
+    for (const row of parsedRows) {
+      const item = itemsByCode.get(row.itemCode);
+      if (!item) {
+        notFoundItems.push(row.itemCode);
+        continue;
+      }
+
+      const defaultWhsLine = row.pastedWarehouse || item.DefaultWhse || firstWhs;
+      const uomCode = resolveUoMFromCandidates(
+        uoms,
+        item.UoM,
+        item.InventoryUOM,
+        item.UoMCode,
+        item.UoMGroupEntry,
+        item.UnitsOfMeasurment
+      );
+      const qtyInWhs: any[] = item.QtyInWhs || [];
+      const fromWhs = fromWarehouse || defaultWhsLine;
+      const whsCode = isGoodIssue ? (toWarehouse || defaultWhsLine) : (fromWarehouse || defaultWhsLine);
+      const whRecord = qtyInWhs.find((w: any) => (w.WarehouseCode || w.warehouseCode) === whsCode);
+      const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
+      const branchId = warehouses.find((w: any) => w.WhsCode === whsCode)?.BPLid;
+      const price = item.Prices?.[0]?.PriceAmount || 0.0;
+
+      newLines.push({
+        ItemCode: item.ItemCode,
+        Dscription: item.ItemName || item.ItemDescription || "",
+        ...(isGoodIssue ? {} : { FromWhsCode: fromWhs }),
+        FromBinLoc: "",
+        ToBinLoc: "",
+        FisrtBin: "",
+        WhsCode: whsCode,
+        BPLid: branchId,
+        Quantity: row.quantity,
+        OnHand: initialOnHand,
+        ItemCost: price,
+        LineTotal: row.quantity * price,
+        UoMCode: uomCode,
+        unitMsr: uomCode,
+        MeasureUnit: item.MeasureUnit || getUoMName(uomCode) || "",
+        QtyInWhs: qtyInWhs,
+        ManSerNum: item.ManSerNum,
+        ManBtchNum: item.ManBtchNum,
+      } as (typeof lines)[number]);
+    }
+
+    if (newLines.length > 0) {
+      addLines(newLines);
+    }
+
+    toast.dismiss(toastId);
+    if (newLines.length > 0) {
+      toast.success(`${newLines.length} item(s) added successfully.`);
+    }
+    if (notFoundItems.length > 0) {
+      const preview = notFoundItems.slice(0, 20).join(", ");
+      toast.error(`${notFoundItems.length} item(s) not found: ${preview}${notFoundItems.length > 20 ? "…" : ""}`);
+    }
+  };
+
   return (
     <div className="grid w-full min-w-0 relative pt-2 overflow-visible">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0 pt-1 overflow-visible">
@@ -257,7 +363,7 @@ export function InvDocumentItems() {
                 </TooltipProvider>
               )}
             </div>
-            <div className="relative border rounded overflow-hidden max-w-full min-w-0">
+            <div className="relative border rounded overflow-hidden max-w-full min-w-0" onPaste={handleExcelPaste}>
               <div className="overflow-x-auto pb-2 max-w-full min-w-0">
                 <ResizableTable
                   columns={columnsWithUdf}

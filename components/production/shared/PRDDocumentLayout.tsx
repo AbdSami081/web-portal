@@ -303,7 +303,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
      <FmsProvider value={fms}>
       <FormProvider {...methods}>
         <FmsKeyboardBridge />
-        <FieldNameInspector />
+        <FieldNameInspector allowedActions={allowedActions} />
 
         <form
           onSubmit={async (e) => {

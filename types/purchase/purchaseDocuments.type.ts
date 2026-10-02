@@ -81,6 +81,8 @@ export interface PurchaseDocumentLine {
   ItemCode: string;
   ItemName?: string;
   ItemDescription?: string;
+  FreeText?: string;
+  Project?: string;
   ManSerNum?: string;
   ManBtchNum?: string;
   SerialNumbers?: PurchaseSerialNumber[];

@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+interface Props {
+  // Special Rights for this document — the keyboard shortcut must respect
+  // the same "FieldInspector" permission the toolbar button already checks,
+  // otherwise a user denied the right can still open it from the keyboard.
+  allowedActions?: string[];
+}
+
 /**
  * Field inspector: while ON, hover ANY field on the document — enabled, disabled,
  * native input, custom dropdown, footer total, grid cell — and a floating chip
@@ -10,9 +17,18 @@ import { useEffect, useState } from "react";
  * Toggle: the toolbar "Inspect fields" button, or Alt+Shift+I, or Ctrl+Shift+F.
  * Esc turns it off. (Ctrl+Shift+I is the browser DevTools shortcut, not us.)
  */
-export function FieldNameInspector() {
+export function FieldNameInspector({ allowedActions = [] }: Props) {
   const [active, setActive] = useState(false);
   const [tip, setTip] = useState<{ x: number; y: number; text: string; sub?: string } | null>(null);
+  const canUse = allowedActions.includes("FieldInspector");
+
+  // Revoked mid-use (rights changed while it happened to be open) — close it.
+  useEffect(() => {
+    if (!canUse && active) {
+      setActive(false);
+      setTip(null);
+    }
+  }, [canUse, active]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -21,6 +37,7 @@ export function FieldNameInspector() {
         (e.ctrlKey && e.shiftKey && (e.code === "KeyF" || e.key === "F" || e.key === "f"));
       if (toggle) {
         e.preventDefault();
+        if (!canUse) return;
         setActive((a) => !a);
         setTip(null);
       } else if (e.key === "Escape") {
@@ -29,6 +46,7 @@ export function FieldNameInspector() {
       }
     };
     const onToggleEvent = () => {
+      if (!canUse) return;
       setActive((a) => !a);
       setTip(null);
     };
@@ -38,7 +56,7 @@ export function FieldNameInspector() {
       window.removeEventListener("keydown", onKey, true);
       window.removeEventListener("fms:toggle-inspector", onToggleEvent as EventListener);
     };
-  }, []);
+  }, [canUse]);
 
   useEffect(() => {
     if (!active) return;

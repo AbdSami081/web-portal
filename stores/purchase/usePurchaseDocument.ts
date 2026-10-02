@@ -88,6 +88,7 @@ interface PurchaseDocumentStore {
   setLineSerials: (itemCode: string, serials: { InternalSerialNumber: string }[]) => void;
   setLineBatches: (itemCode: string, batches: { BatchNumber: string; Quantity: number }[]) => void;
   addLine: (line: PurchaseDocumentLine) => void;
+  addLines: (lines: PurchaseDocumentLine[]) => void;
   updateLine: (itemCode: string, updated: Partial<PurchaseDocumentLine>) => void;
   updateLineByIndex: (index: number, updated: Partial<PurchaseDocumentLine>) => void;
   removeLine: (itemCode: string) => void;
@@ -181,6 +182,35 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         get().calculateTotals();
       }
     },
+    // Bulk variant of addLine — merges all new lines into state in a single
+    // set() + single calculateTotals() call, so pasting thousands of rows
+    // doesn't re-copy the whole lines array (and recompute totals) once per
+    // row. Same ItemCode-merge semantics as addLine, just batched.
+    addLines: (newLines) => {
+      set((state) => {
+        const lines = [...state.lines];
+        const indexByItemCode = new Map<string, number>();
+        lines.forEach((l, idx) => indexByItemCode.set(l.ItemCode, idx));
+
+        for (const line of newLines) {
+          const existingIdx = indexByItemCode.get(line.ItemCode);
+          if (existingIdx !== undefined) {
+            const existing = lines[existingIdx];
+            lines[existingIdx] = {
+              ...existing,
+              Quantity: (Number(existing.Quantity) || 0) + (Number(line.Quantity) || 1),
+              Price: line.Price !== undefined ? line.Price : existing.Price,
+            };
+          } else {
+            lines.push(line);
+            indexByItemCode.set(line.ItemCode, lines.length - 1);
+          }
+        }
+
+        return { lines };
+      });
+      get().calculateTotals();
+    },
     updateLine: (itemCode: string, updated: Partial<PurchaseDocumentLine>) => {
       set((state) => {
         const newLines = [...state.lines];
@@ -261,6 +291,8 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
           AccountCode: line.AccountCode || "",
           AccountName: line.AccountName || "",
           Description: line.Description || line.ItemDescription || "",
+          FreeText: line.FreeText || "",
+          Project: line.ProjectCode || line.Project || "",
           Quantity: qty,
           Price: price,
           DiscountPercent: discount,

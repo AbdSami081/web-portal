@@ -14,14 +14,12 @@ import { postARInvoice, patchARInvoice } from "@/api+/sap/sales/salesService";
 import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useState } from "react";
 
 export default function InvoicePage() {
   const router = useRouter();
-  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
   //  const [documentMode, setDocumentMode] = useState<"items" | "service">(
   //     "items",
   //   );
@@ -139,7 +137,6 @@ export default function InvoicePage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.ARInvoice} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

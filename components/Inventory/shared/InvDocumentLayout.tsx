@@ -633,7 +633,7 @@ export function InvDocumentLayout<T extends FieldValues>({
      <FmsProvider value={fms}>
       <FormProvider {...methods}>
         <FmsKeyboardBridge />
-        <FieldNameInspector />
+        <FieldNameInspector allowedActions={allowedActions} />
         <form onSubmit={handleSubmit(onSubmitValid, onSubmitInvalid)} className="flex flex-col min-h-screen bg-background overflow-x-hidden">
 
           <HeaderActionPortal>

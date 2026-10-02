@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { FilePlus2, Keyboard, Loader2, Printer, GitFork, SearchCode, TextCursorInput } from "lucide-react";
@@ -86,6 +86,17 @@ const HeaderActions: React.FC<Props> = ({
     } as any);
     resetStore();
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.shiftKey && e.code === "KeyA") {
+        e.preventDefault();
+        handleNewDocument();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleNewDocument]);
 
   const handlePrintClick = () => {
     if (!canUse("Print")) return;

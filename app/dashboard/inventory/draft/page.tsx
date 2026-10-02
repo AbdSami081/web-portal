@@ -8,7 +8,6 @@ import { z } from "zod";
 import { InvDocumentHeader } from "@/components/Inventory/shared/InvDocumentHeader";
 import { InvDocumentItems } from "@/components/Inventory/shared/InvDocumentItems";
 import InvDocumentFooter from "@/components/Inventory/shared/InvDocumentFooter";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { InvDocumentLayout } from "@/components/Inventory/shared/InvDocumentLayout";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { DocumentType } from "@/types/master/DocumentType";
@@ -58,7 +57,6 @@ export default function InventoryDraftPage() {
   });
 
   const { loadFromDocument } = useInventoryDocument();
-  const fieldAccess = useInventoryDocument((s) => s.fieldAccess);
 
   useEffect(() => {
     const draftId = Number((draftEntryStr ?? "").toString().trim().split(/\s+/)[0]);
@@ -172,7 +170,6 @@ export default function InventoryDraftPage() {
     >
       <InvDocumentHeader />
       <InvDocumentItems />
-      <UDFLayout docType={targetDocType} allowedFields={fieldAccess} />
       <InvDocumentFooter />
     </InvDocumentLayout>
   );

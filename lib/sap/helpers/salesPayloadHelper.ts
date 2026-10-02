@@ -237,6 +237,8 @@ const baseFields: Record<string, unknown> =
         const batchNumbers = withBaseLineNumber(line.BatchNumbers, index);
         if (batchNumbers) baseFields.BatchNumbers = batchNumbers;
 
+        Object.assign(baseFields, pickLineUdfs(line));
+
         return baseFields;
       }),
     }),

@@ -12,10 +12,8 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 
 export default function ARDownPaymentRequestPage() {
-  const fieldAccess = useSalesDocument((s) => s.fieldAccess);
   const defaultValues: QuotationFormData = {
     CardCode: "",
     CardName: "",
@@ -125,7 +123,6 @@ console.log(payload);
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.DownPaymentRequest} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

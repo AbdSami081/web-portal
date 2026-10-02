@@ -12,7 +12,6 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 
 export default function ReturnRequestPage() {
   const fieldAccess = useSalesDocument((s) => s.fieldAccess);
@@ -123,7 +122,6 @@ export default function ReturnRequestPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.ReturnRequest} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

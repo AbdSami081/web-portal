@@ -8,7 +8,6 @@ import { z } from "zod";
 import { PurchaseVendorHeader } from "@/components/purchase/PurchaseVendorHeader";
 import { PurchaseItems } from "@/components/purchase/PurchaseItems";
 import { PurchaseFooter } from "@/components/purchase/PurchaseFooter";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { PurchaseDocumentLayout } from "@/components/purchase/PurchaseDocumentLayout";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { DocumentType } from "@/types/master/DocumentType";
@@ -169,7 +168,6 @@ export default function PurchaseDraftPage() {
     >
       <PurchaseVendorHeader docType={targetDocType} />
       <PurchaseItems />
-      <UDFLayout docType={targetDocType} allowedFields={fieldAccess} />
       <PurchaseFooter />
     </PurchaseDocumentLayout>
   );

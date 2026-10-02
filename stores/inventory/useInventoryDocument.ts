@@ -50,6 +50,7 @@ interface IOPRDDocumentStore {
   setSeries: (series: string) => void;
   setPostingDate: (postingDate: string) => void;
   addLine: (line: InventoryDocumentLine) => void;
+  addLines: (lines: InventoryDocumentLine[]) => void;
   removeLine: (index: number) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
   setLineSerials: (itemCode: string, serials: any[]) => void;
@@ -133,6 +134,30 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
       } else {
         set((s) => ({ lines: [...s.lines, line] }));
       }
+    },
+
+    // Bulk variant of addLine — merges all new lines into state in a single
+    // set() call, so pasting thousands of rows doesn't re-copy the whole
+    // lines array once per row. Same ItemCode-merge semantics as addLine.
+    addLines: (newLines) => {
+      set((s) => {
+        const lines = [...s.lines];
+        const indexByItemCode = new Map<string, number>();
+        lines.forEach((l, idx) => indexByItemCode.set(l.ItemCode, idx));
+
+        for (const line of newLines) {
+          const existingIdx = indexByItemCode.get(line.ItemCode);
+          if (existingIdx !== undefined) {
+            const existing = lines[existingIdx];
+            lines[existingIdx] = { ...existing, Quantity: existing.Quantity + line.Quantity };
+          } else {
+            lines.push(line);
+            indexByItemCode.set(line.ItemCode, lines.length - 1);
+          }
+        }
+
+        return { lines };
+      });
     },
 
     removeLine: (index: number) =>

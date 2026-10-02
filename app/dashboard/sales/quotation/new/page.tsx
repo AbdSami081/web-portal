@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { ReactJsxRuntime } from "next/dist/server/route-modules/app-page/vendored/rsc/entrypoints";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 import { buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useEffect } from "react";
@@ -20,7 +19,6 @@ import { getAllFields } from "@/api+/sap/administration/administrationService";
 
 export default function NewQuotationPage() {
   const loadFromDocument = useSalesDocument((state) => state.loadFromDocument);
-  const fieldAccess = useSalesDocument((state) => state.fieldAccess);
 
   const defaultValues: QuotationFormData = {
     CardCode: "",
@@ -176,7 +174,6 @@ export default function NewQuotationPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.Quotation} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

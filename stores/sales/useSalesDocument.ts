@@ -78,6 +78,7 @@ interface SalesDocumentStore {
   setDocTotal: (dt: number) => void;
 
   addLine: (line: SalesDocumentLine) => void;
+  addLines: (lines: SalesDocumentLine[]) => void;
   updateLine: (itemCode: string, updated: Partial<SalesDocumentLine>) => void;
   setLineSerials: (
     itemCode: string,
@@ -215,6 +216,37 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         set((s) => ({ lines: [...s.lines, line] }), false, "addLine");
         get().calculateTotals();
       }
+    },
+
+    // Bulk variant of addLine — merges all new lines into state in a single
+    // set() + single calculateTotals() call, so pasting thousands of rows
+    // doesn't re-copy the whole lines array (and recompute totals) once per
+    // row. Same ItemCode-merge semantics as addLine, just batched.
+    addLines: (newLines) => {
+      set((s) => {
+        const lines = [...s.lines];
+        const indexByItemCode = new Map<string, number>();
+        lines.forEach((l, idx) => indexByItemCode.set(l.ItemCode, idx));
+
+        for (const line of newLines) {
+          const existingIdx = indexByItemCode.get(line.ItemCode);
+          if (existingIdx !== undefined) {
+            const existing = lines[existingIdx];
+            lines[existingIdx] = {
+              ...existing,
+              Quantity: existing.Quantity + line.Quantity,
+              LineTotal: existing.Quantity * line.Price,
+              Price: line.Price,
+            };
+          } else {
+            lines.push(line);
+            indexByItemCode.set(line.ItemCode, lines.length - 1);
+          }
+        }
+
+        return { lines };
+      }, false, "addLines");
+      get().calculateTotals();
     },
 
     updateLine: (itemCode, updated) => {

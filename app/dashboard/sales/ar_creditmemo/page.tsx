@@ -12,7 +12,6 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 
 export default function ARCreditMemoPage() {
   const fieldAccess = useSalesDocument((s) => s.fieldAccess);
@@ -124,7 +123,6 @@ export default function ARCreditMemoPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.CreditMemo} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

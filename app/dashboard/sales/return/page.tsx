@@ -16,7 +16,6 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
-import { UDFLayout } from "@/components/shared/UDFSheet";
 
 export default function ReturnPage() {
   const router = useRouter();
@@ -130,7 +129,6 @@ export default function ReturnPage() {
     >
       <DocumentHeader />
       <DocumentItems />
-      <UDFLayout docType={DocumentType.SalesReturn} allowedFields={fieldAccess} />
       <DocumentFooter />
     </SalesDocumentLayout>
   );

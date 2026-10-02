@@ -49,3 +49,17 @@ export const getItemsList = async (search = "", skip = 0, top = 10): Promise<Ite
 
   return Array.isArray(data) ? data : [];
 };
+
+// Bulk item lookup — one request for many item codes, used by Excel-paste
+// style bulk imports instead of one search request per code.
+export const getItemsByCodes = async (itemCodes: string[]): Promise<Item[]> => {
+  if (itemCodes.length === 0) return [];
+
+  const res = await apiClient.post<Item[]>(
+    "api/Master/GetItemsByCodes",
+    { ItemCodes: itemCodes },
+    { timeout: 30000 }
+  );
+
+  return Array.isArray(res.data) ? res.data : [];
+};

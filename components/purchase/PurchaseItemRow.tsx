@@ -22,6 +22,7 @@ import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService";
 import { useChartOfAccountsStore } from "@/stores/useChartOfAccountsStore";
 
 interface Props {
@@ -84,6 +85,22 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
   const [cogsData, setCogsData] = useState<Record[]>([]);
   const { multiBranchEnabled } = useApprovalSettings();
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  const loadProjects = async () => {
+    try {
+      setProjectsLoading(true);
+      const response = await getBusinessPartnerProjects();
+      setProjects(response);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
+      setProjects([]);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
 
   useEffect(() => {
     setDraftLine(line);
@@ -503,6 +520,44 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
         </td>
       )}
 
+      {isFieldVisible("FreeText") && (
+        <td className="w-[220px]">
+          <Input
+            className="h-6 w-full text-left"
+            value={draftLine.FreeText || ""}
+            onChange={(e) => setDraftLine({ ...draftLine, FreeText: e.target.value })}
+            onBlur={() => patchLine({ FreeText: draftLine.FreeText })}
+            disabled={!isFieldEnabled("FreeText")}
+          />
+        </td>
+      )}
+
+      {isFieldVisible("Project") && (
+        <td className="w-[140px]">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full bg-gray-100 text-left text-xs"
+              value={draftLine.Project || ""}
+              disabled
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => {
+                loadProjects();
+                setProjectModalOpen(true);
+              }}
+              disabled={!isFieldEnabled("Project")}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </td>
+      )}
+
       {isFieldVisible("Quantity") && (
         <td className="w-[90px]">
           <Input
@@ -907,6 +962,29 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
         ]}
         title="Select Distribution Rule"
         getSelectValue={(item) => item.Code}
+      />
+
+      <GenericModal
+        open={projectModalOpen}
+        onClose={() => setProjectModalOpen(false)}
+        data={projects}
+        onSelect={(value) => {
+          const selectedProject = projects.find(
+            (project: any) => project.Code === value || project.code === value
+          );
+          if (!selectedProject) return;
+
+          patchLine({
+            Project: selectedProject.Code || selectedProject.code || value,
+          });
+          setProjectModalOpen(false);
+        }}
+        columns={[
+          { key: "Code", label: "Project Code" },
+          { key: "Name", label: "Project Name" },
+        ]}
+        title="Select Project"
+        getSelectValue={(item: any) => item.Code || item.code}
       />
     </>
   );
