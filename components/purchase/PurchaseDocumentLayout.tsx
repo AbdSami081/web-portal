@@ -467,15 +467,20 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
   const setFieldAccess = usePurchaseDocument((state) => state.setFieldAccess);
   React.useEffect(() => {
+    let cancelled = false;
     const loadAccess = async () => {
       if (!user?.empId) return;
       const menuItem = findMenuItemByPath(pathname);
       const fieldAuthDocType = menuItem ? resolveFieldAuthDocType(menuItem) : String(docType);
       const fields = await getAllFields(user.empId, fieldAuthDocType);
+      if (cancelled) return;
       setFieldAccess(fields.filter((x: any) => x.Enabled === "Y").map((x: any) => x.U_FieldName));
     };
     loadAccess();
-  }, [user?.empId, pathname]);
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.empId, pathname, docType]);
 
   React.useEffect(() => {
     usePurchaseDocument.getState().setIsDownPayment(!!config.isDownPayment);

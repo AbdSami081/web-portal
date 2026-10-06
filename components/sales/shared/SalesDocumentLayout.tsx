@@ -223,6 +223,7 @@ const setFieldAccess = useSalesDocument(
 const fieldAccess = useSalesDocument((state) => state.fieldAccess);
 
 useEffect(() => {
+  let cancelled = false;
   const loadAccess = async () => {
     if (!user?.empId) return;
 
@@ -234,6 +235,8 @@ useEffect(() => {
       fieldAuthDocType
     );
 
+    if (cancelled) return;
+
     const allowed = fields
       .filter((x: any) => x.Enabled === "Y")
       .map((x: any) => x.U_FieldName);
@@ -242,7 +245,10 @@ useEffect(() => {
   };
 
   loadAccess();
-}, [user?.empId, pathname]);
+  return () => {
+    cancelled = true;
+  };
+}, [user?.empId, pathname, docType]);
 
 
 
