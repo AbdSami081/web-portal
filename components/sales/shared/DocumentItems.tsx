@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 import { fetchItemsByCodesBulk } from "@/lib/sap/helpers/itemCacheHelper";
 import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
+import { BulkResultModal, type BulkResultRow } from "@/components/shared/BulkResultModal";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useUoMStore } from "@/stores/useUoMStore";
@@ -146,6 +147,8 @@ const setDocumentMode = useSalesDocument(
   const [serialModalOpen, setSerialModalOpen] = useState(false);
 
   const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [excelPasteResultOpen, setExcelPasteResultOpen] = useState(false);
+  const [excelPasteResultRows, setExcelPasteResultRows] = useState<BulkResultRow[]>([]);
 
   useEffect(() => {
     loadDocumentEssentials("O");
@@ -352,12 +355,12 @@ const setDocumentMode = useSalesDocument(
     );
 
     const newLines: typeof lines = [];
-    const notFoundItems: string[] = [];
+    const resultRows: BulkResultRow[] = [];
 
     for (const row of parsedRows) {
       const item = itemsByCode.get(row.itemCode);
       if (!item) {
-        notFoundItems.push(row.itemCode);
+        resultRows.push({ label: row.itemCode, status: "error", detail: "Item not found" });
         continue;
       }
 
@@ -390,6 +393,7 @@ const setDocumentMode = useSalesDocument(
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,
       } as (typeof lines)[number]);
+      resultRows.push({ label: `${item.ItemCode} — qty ${row.quantity}`, status: "success", detail: "Added" });
     }
 
     if (newLines.length > 0) {
@@ -397,13 +401,8 @@ const setDocumentMode = useSalesDocument(
     }
 
     toast.dismiss(toastId);
-    if (newLines.length > 0) {
-      toast.success(`${newLines.length} item(s) added successfully.`);
-    }
-    if (notFoundItems.length > 0) {
-      const preview = notFoundItems.slice(0, 20).join(", ");
-      toast.error(`${notFoundItems.length} item(s) not found: ${preview}${notFoundItems.length > 20 ? "…" : ""}`);
-    }
+    setExcelPasteResultRows(resultRows);
+    setExcelPasteResultOpen(true);
   };
 
   const handleRowContextMenu = (e: React.MouseEvent, line: any) => {
@@ -1080,6 +1079,12 @@ const setDocumentMode = useSalesDocument(
         onSelectItems={handleOnSelectItems}
         type={documentMode === "service" ? "service" : "item"}
 
+      />
+      <BulkResultModal
+        open={excelPasteResultOpen}
+        onClose={() => setExcelPasteResultOpen(false)}
+        title="Excel Paste Results"
+        rows={excelPasteResultRows}
       />
 
       {selectedLineForModal && (

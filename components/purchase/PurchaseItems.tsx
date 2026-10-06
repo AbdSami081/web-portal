@@ -31,6 +31,7 @@ import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { fetchItemsByCodesBulk } from "@/lib/sap/helpers/itemCacheHelper";
 import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
+import { BulkResultModal, type BulkResultRow } from "@/components/shared/BulkResultModal";
 import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 
 export const PURCHASE_LINE_FIELDS: FieldCatalogEntry[] = [
@@ -112,6 +113,8 @@ export function PurchaseItems() {
   const [createBatchModalOpen, setCreateBatchModalOpen] = useState(false);
   const [batchReportModalOpen, setBatchReportModalOpen] = useState(false);
   const [serialReportModalOpen, setSerialReportModalOpen] = useState(false);
+  const [excelPasteResultOpen, setExcelPasteResultOpen] = useState(false);
+  const [excelPasteResultRows, setExcelPasteResultRows] = useState<BulkResultRow[]>([]);
 
   useEffect(() => {
     loadMasterData("S", "I");
@@ -259,12 +262,12 @@ export function PurchaseItems() {
     );
 
     const newLines: typeof lines = [];
-    const notFoundItems: string[] = [];
+    const resultRows: BulkResultRow[] = [];
 
     for (const row of parsedRows) {
       const item = itemsByCode.get(row.itemCode);
       if (!item) {
-        notFoundItems.push(row.itemCode);
+        resultRows.push({ label: row.itemCode, status: "error", detail: "Item not found" });
         continue;
       }
 
@@ -296,6 +299,7 @@ export function PurchaseItems() {
         QtyInWhs: qtyInWhs,
         ...(needsRequiredDate && { RequiredDate: lineRequiredDate }),
       } as (typeof lines)[number]);
+      resultRows.push({ label: `${item.ItemCode} — qty ${row.quantity}`, status: "success", detail: "Added" });
     }
 
     if (newLines.length > 0) {
@@ -303,15 +307,8 @@ export function PurchaseItems() {
     }
 
     toast.dismiss(toastId);
-    if (newLines.length > 0) {
-      toast.success(`${newLines.length} item(s) added successfully.`);
-    }
-    if (notFoundItems.length > 0) {
-      const preview = notFoundItems.slice(0, 20).join(", ");
-      toast.error(
-        `${notFoundItems.length} item(s) not found: ${preview}${notFoundItems.length > 20 ? "…" : ""}`
-      );
-    }
+    setExcelPasteResultRows(resultRows);
+    setExcelPasteResultOpen(true);
   };
 
   const handleRowContextMenu = (
@@ -619,6 +616,12 @@ export function PurchaseItems() {
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
         type={documentMode === "service" ? "service" : "item"}
+      />
+      <BulkResultModal
+        open={excelPasteResultOpen}
+        onClose={() => setExcelPasteResultOpen(false)}
+        title="Excel Paste Results"
+        rows={excelPasteResultRows}
       />
       {selectedLineForModal && (
         <SerialNumberSelectionDialog

@@ -29,6 +29,7 @@ import { DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { buildDocumentUrl, getMenuInfoByObjectCode, normalizeObjectCode } from "@/lib/menu-lookup";
 import { stageDocNavParams } from "@/lib/docNavParams";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { useGlobalRights } from "@/hooks/useDocumentRights";
 
 import { ApprovalRemarksEntry, PendingApproval } from "@/context/NotificationContext";
 
@@ -60,15 +61,17 @@ export default function MessagesOverviewPage() {
   const [approveDecision, setApproveDecision] = useState<"approve" | "reject">("approve");
   const router = useRouter();
   const { canUpdateApprovedDocument } = useApprovalSettings();
+  const { allowedActions: globalAllowedActions } = useGlobalRights();
+  const canSeeApprovals = globalAllowedActions.includes("Bell");
 
   const sortedMessages = useMemo(() => {
     return [...messages].sort((a, b) => {
+      const codeA = Number(a.MessageCode || 0);
+      const codeB = Number(b.MessageCode || 0);
+      if (codeB !== codeA) return codeB - codeA;
       const timeA = a.ApprovalCreationDate ? new Date(a.ApprovalCreationDate).getTime() : 0;
       const timeB = b.ApprovalCreationDate ? new Date(b.ApprovalCreationDate).getTime() : 0;
-      if (timeB !== timeA) return timeB - timeA;
-      const codeA = Number(a.MessageCode || a.ApprovalRequestCode || 0);
-      const codeB = Number(b.MessageCode || b.ApprovalRequestCode || 0);
-      return codeB - codeA;
+      return timeB - timeA;
     });
   }, [messages]);
 
@@ -92,6 +95,12 @@ export default function MessagesOverviewPage() {
   useEffect(() => {
     clearUnread();
   }, [clearUnread]);
+
+  useEffect(() => {
+    if (!canSeeApprovals && activeTab === "approvals") {
+      setActiveTab("inbox");
+    }
+  }, [canSeeApprovals, activeTab]);
 
   useEffect(() => {
     if (sortedMessages.length > 0 && !selectedMessage) {
@@ -420,17 +429,19 @@ export default function MessagesOverviewPage() {
                     </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger
-                  value="approvals"
-                  className="rounded-md font-bold text-[10px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
-                >
-                  Pending Approvals
-                  {pendingApprovalsTotalCount > 0 && (
-                    <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full px-1.5 py-0.5 font-bold">
-                      {pendingApprovalsTotalCount}
-                    </span>
-                  )}
-                </TabsTrigger>
+                {canSeeApprovals && (
+                  <TabsTrigger
+                    value="approvals"
+                    className="rounded-md font-bold text-[10px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
+                  >
+                    Pending Approvals
+                    {pendingApprovalsTotalCount > 0 && (
+                      <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full px-1.5 py-0.5 font-bold">
+                        {pendingApprovalsTotalCount}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
@@ -557,6 +568,7 @@ export default function MessagesOverviewPage() {
               )}
             </TabsContent>
 
+            {canSeeApprovals && (
             <TabsContent value="approvals" className="flex-1 flex flex-col min-h-0 m-0 border-0 outline-none">
               {isLoadingApprovals && pendingApprovals.length === 0 ? (
                 <div className="p-4 space-y-3">
@@ -651,6 +663,7 @@ export default function MessagesOverviewPage() {
                 </>
               )}
             </TabsContent>
+            )}
           </Tabs>
         </Card>
 
