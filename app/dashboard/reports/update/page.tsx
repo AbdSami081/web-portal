@@ -276,9 +276,10 @@ export default function ReportManagementPage() {
                   <SelectContent className="bg-white border-zinc-200 text-zinc-900">
                     {Array.isArray(modules) && modules.map((m, index) => {
                       const value = String(m.objectCode || m.code || m.Code || "");
+                      if (!value) return null; // Radix Select.Item requires a non-empty value
                       const label = String(m.name || m.title || m.Name || "Unnamed Module");
                       return (
-                        <SelectItem key={value || index} value={value}>
+                        <SelectItem key={`${value}-${index}`} value={value}>
                           {label}
                         </SelectItem>
                       );
@@ -441,9 +442,10 @@ export default function ReportManagementPage() {
                         <SelectContent className="bg-white border-zinc-200 text-zinc-900">
                           {Array.isArray(modules) && modules.map((m, index) => {
                             const value = String(m.objectCode || m.code || m.Code || "");
+                            if (!value) return null; // Radix Select.Item requires a non-empty value
                             const label = String(m.name || m.title || m.Name || "Unnamed Module");
                             return (
-                              <SelectItem key={value || index} value={value} className="text-xs">
+                              <SelectItem key={`${value}-${index}`} value={value} className="text-xs">
                                 {label}
                               </SelectItem>
                             );
