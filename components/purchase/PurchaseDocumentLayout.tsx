@@ -18,7 +18,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import { FilePlus2, Loader2, Keyboard } from "lucide-react";
+import { ButtonGroup } from "@/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { FilePlus2, Loader2, Keyboard, ChevronDown } from "lucide-react";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
@@ -114,6 +121,10 @@ export const usePurchaseDocConfig = () => {
   if (!context) throw new Error("usePurchaseDocConfig must be used within PurchaseDocumentLayout");
   return context;
 };
+
+export type FetchDocumentHandler = (docNum: string) => void | Promise<void>;
+const HeaderFetchContext = createContext<React.MutableRefObject<FetchDocumentHandler | null> | null>(null);
+export const useHeaderFetchRef = () => useContext(HeaderFetchContext);
 
 interface PurchaseDocumentLayoutProps<T extends FieldValues> {
   schema: z.ZodType<T>;
@@ -223,6 +234,9 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const [createSerialModalOpen, setCreateSerialModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<T | null>(null);
   const lastDefaultValuesRef = React.useRef<string | null>(null);
+  const headerFetchRef = React.useRef<FetchDocumentHandler | null>(null);
+  const submitModeRef = React.useRef<"default" | "view">("default");
+  const formRef = React.useRef<HTMLFormElement>(null);
 
   const [fmsSelectionOpen, setFmsSelectionOpen] = useState(false);
   const [fmsSelectionData, setFmsSelectionData] = useState<{
@@ -267,6 +281,29 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const finishAndReset = () => {
     ResetForm();
     clearDocNavParams(router, pathname);
+  };
+
+  const finishSubmit = async (
+    data: T,
+    result?: void | { DocEntry?: number; DocNum?: number; IsDraft?: boolean | string; [key: string]: any }
+  ) => {
+    const mode = submitModeRef.current;
+    submitModeRef.current = "default";
+    if (mode === "view") {
+      const wasEditMode = Number((data as any).DocEntry) > 0;
+      const docNumForView = wasEditMode
+        ? (data as any).DocNum
+        : (result && !(result as any).IsDraft ? (result as any).DocNum : undefined);
+      if (docNumForView && headerFetchRef.current) {
+        try {
+          await headerFetchRef.current(String(docNumForView));
+          return;
+        } catch (err) {
+          console.error("Submit & View: failed to reload document, falling back to reset", err);
+        }
+      }
+    }
+    finishAndReset();
   };
 
   useEffect(() => {
@@ -571,6 +608,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
         <FmsKeyboardBridge />
         <FieldNameInspector allowedActions={allowedActions} />
         <form
+          ref={formRef}
           onSubmit={handleSubmit(async (data) => {
             const state = usePurchaseDocument.getState();
             const currentUserId = user?.sapUserId;
@@ -644,8 +682,8 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 : !(await validateDraftChanged(Number(docNav.draftEntry), state.lines, currentHeader));
               if (confirmedUnchanged) {
                 try {
-                  await onSubmit(data as unknown as T);
-                  finishAndReset();
+                  const result = await onSubmit(data as unknown as T);
+                  await finishSubmit(data as unknown as T, result);
                   return;
                 } catch (err: any) {
                   const msg = err?.response?.data?.Message || err?.message || "";
@@ -680,8 +718,8 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             }
 
             try {
-              await onSubmit(data as unknown as T);
-              finishAndReset();
+              const result = await onSubmit(data as unknown as T);
+              await finishSubmit(data as unknown as T, result);
             } catch (error) {
               console.error("Submit Error:", error);
             }
@@ -745,7 +783,9 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 onClose={relMapStore.closeMap}
               />
             ) : (
-              children
+              <HeaderFetchContext.Provider value={headerFetchRef}>
+                {children}
+              </HeaderFetchContext.Provider>
             )}
           </div>
 
@@ -850,13 +890,40 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                   </SelectContent>
                 </Select>
 
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting || isLoadingDocument || (isEditMode && normalizedStatus === "Close")}
-                  className="min-w-[100px]"
-                >
-                  {getSubmitButtonText()}
-                </Button>
+                <ButtonGroup>
+                  <Button
+                    type="submit"
+                    onClick={() => {
+                      submitModeRef.current = "default";
+                    }}
+                    disabled={isSubmitting || isLoadingDocument || (isEditMode && normalizedStatus === "Close")}
+                    className="min-w-[100px]"
+                  >
+                    {getSubmitButtonText()}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        disabled={isSubmitting || isLoadingDocument || (isEditMode && normalizedStatus === "Close")}
+                        className="px-2"
+                        aria-label="More submit options"
+                      >
+                        <ChevronDown className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          submitModeRef.current = "view";
+                          formRef.current?.requestSubmit();
+                        }}
+                      >
+                        {isEditMode ? "Update & View" : "Submit & View"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </ButtonGroup>
               </div>
             </div>
           )}
@@ -988,6 +1055,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 setPendingReApproval(null);
                 setPendingFinalData(null);
                 setApprovalModalOpen(false);
+                submitModeRef.current = "default";
                 finishAndReset();
                 return;
               }
@@ -1024,6 +1092,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                 }
               }
 
+              submitModeRef.current = "default";
               finishAndReset();
             }}
           />

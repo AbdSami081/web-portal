@@ -7,7 +7,7 @@ import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
-import { useSalesDocConfig } from "./SalesDocumentLayout";
+import { useSalesDocConfig, useHeaderFetchRef } from "./SalesDocumentLayout";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { toast } from "sonner";
 import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
@@ -409,6 +409,9 @@ const hasFieldAccess = (fieldName: string) =>
     setIsLoading(false);
   }
 };
+
+  const headerFetchRef = useHeaderFetchRef();
+  if (headerFetchRef) headerFetchRef.current = fetchDocument;
 
   const handleManualSearch = () => {
     const val = searchInputRef.current?.value || searchValue;

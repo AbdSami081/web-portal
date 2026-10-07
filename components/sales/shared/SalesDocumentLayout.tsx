@@ -4,6 +4,13 @@ import { FieldValues, FormProvider, useForm, DefaultValues } from "react-hook-fo
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { DocumentConfig, getDocumentConfig } from "@/lib/config/sales/documentConfig";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +19,7 @@ import { resolveDocNavParams, clearDocNavParams } from "@/lib/docNavParams";
 import { toast } from "sonner";
 import { GenericModal } from "@/modals/GenericModal";
 import { getQuotationByBP, getSalesOrderByBP, getSalesDeliveryByBP, getQuotationDocument, getSalesOrderDocument, getSalesDeliveryDocument, getARInvoiceByBP, getSalesReturnRequestByBP, getARInvoiceDocument, getSalesReturnRequestDocument } from "@/api+/sap/sales/salesService";
-import { FilePlus2, Loader2, Keyboard, Circle } from "lucide-react";
+import { FilePlus2, Loader2, Keyboard, Circle, ChevronDown } from "lucide-react";
 import { HeaderActionPortal } from "@/components/header-portal";
 import { HeaderModalAction } from "@/components/header-modal-action";
 import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
@@ -58,6 +65,10 @@ export const useSalesDocConfig = () => {
   if (!context) throw new Error("useSalesDocConfig must be used within SalesDocumentLayout");
   return context;
 };
+
+export type FetchDocumentHandler = (docNum: string) => void | Promise<void>;
+const HeaderFetchContext = createContext<React.MutableRefObject<FetchDocumentHandler | null> | null>(null);
+export const useHeaderFetchRef = () => useContext(HeaderFetchContext);
 
 
 interface SalesDocumentLayoutProps<T extends FieldValues> {
@@ -346,6 +357,9 @@ useEffect(() => {
   };
 
   const lastDefaultValuesRef = React.useRef<string | null>(null);
+  const headerFetchRef = React.useRef<FetchDocumentHandler | null>(null);
+  const submitModeRef = React.useRef<"default" | "view">("default");
+  const formRef = React.useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     const state = useSalesDocument.getState();
@@ -406,6 +420,29 @@ useEffect(() => {
   const finishAndReset = () => {
     ResetForm();
     clearDocNavParams(router, pathname);
+  };
+
+  const finishSubmit = async (
+    data: T,
+    result?: void | { DocEntry?: number; DocNum?: number; IsDraft?: boolean | string; [key: string]: any }
+  ) => {
+    const mode = submitModeRef.current;
+    submitModeRef.current = "default";
+    if (mode === "view") {
+      const wasEditMode = Number((data as any).DocEntry) > 0;
+      const docNumForView = wasEditMode
+        ? (data as any).DocNum
+        : (result && !(result as any).IsDraft ? (result as any).DocNum : undefined);
+      if (docNumForView && headerFetchRef.current) {
+        try {
+          await headerFetchRef.current(String(docNumForView));
+          return;
+        } catch (err) {
+          console.error("Submit & View: failed to reload document, falling back to reset", err);
+        }
+      }
+    }
+    finishAndReset();
   };
 
   const handleNewDocumentClick = () => {
@@ -537,6 +574,7 @@ const documentMode = useSalesDocument(
         <FmsKeyboardBridge />
         <FieldNameInspector allowedActions={allowedActions} />
         <form
+          ref={formRef}
           onSubmit={handleSubmit(async (data) => {
 
           const state = useSalesDocument.getState();
@@ -610,8 +648,8 @@ const documentMode = useSalesDocument(
             console.log("[SQ submit] approved-draft branch", { approvedChanged, confirmedUnchanged });
             if (confirmedUnchanged) {
               try {
-                await onSubmit(finalData);
-                finishAndReset();
+                const result = await onSubmit(finalData);
+                await finishSubmit(finalData, result);
                 setBadgeState(null);
                 return;
               } catch (err: any) {
@@ -650,8 +688,8 @@ const documentMode = useSalesDocument(
           }
 
           try {
-            await onSubmit(finalData);
-            finishAndReset();
+            const result = await onSubmit(finalData);
+            await finishSubmit(finalData, result);
           } catch (error) {
             console.error("Submit Error:", error);
           }
@@ -715,7 +753,9 @@ const documentMode = useSalesDocument(
                 onClose={relMapStore.closeMap}
               />
             ) : (
-              children
+              <HeaderFetchContext.Provider value={headerFetchRef}>
+                {children}
+              </HeaderFetchContext.Provider>
             )}
           </div>
 
@@ -814,13 +854,40 @@ const documentMode = useSalesDocument(
                   </SelectContent>
                 </Select>
 
-                <Button
-                  type="submit" 
-                  disabled={isSubmitting || isLoadingDocument || (isEditMode && normalizedStatus === "Close")}
-                  className="min-w-[100px]"
-                >
-                  {getSubmitButtonText()}
-                </Button>
+                <ButtonGroup>
+                  <Button
+                    type="submit"
+                    onClick={() => {
+                      submitModeRef.current = "default";
+                    }}
+                    disabled={isSubmitting || isLoadingDocument || (isEditMode && normalizedStatus === "Close")}
+                    className="min-w-[100px]"
+                  >
+                    {getSubmitButtonText()}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        disabled={isSubmitting || isLoadingDocument || (isEditMode && normalizedStatus === "Close")}
+                        className="px-2"
+                        aria-label="More submit options"
+                      >
+                        <ChevronDown className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          submitModeRef.current = "view";
+                          formRef.current?.requestSubmit();
+                        }}
+                      >
+                        {isEditMode ? "Update & View" : "Submit & View"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </ButtonGroup>
               </div>
             </div>
           )}
@@ -909,6 +976,7 @@ const documentMode = useSalesDocument(
                 setPendingReApproval(null);
                 setPendingFinalData(null);
                 setApprovalModalOpen(false);
+                submitModeRef.current = "default";
                 finishAndReset();
                 setBadgeState(null);
                 return;
@@ -946,6 +1014,7 @@ const documentMode = useSalesDocument(
                 }
               }
 
+              submitModeRef.current = "default";
               finishAndReset();
               setBadgeState(null);
             }}

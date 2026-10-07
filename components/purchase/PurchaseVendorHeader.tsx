@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BusinessPartner } from "@/types/purchase/businessPartner.type";
-import { usePurchaseDocConfig } from "../purchase/PurchaseDocumentLayout";
+import { usePurchaseDocConfig, useHeaderFetchRef } from "../purchase/PurchaseDocumentLayout";
 import { toast } from "sonner";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { DocumentType } from "@/types/master/DocumentType";
@@ -426,6 +426,9 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
       setIsLoading(false);
     }
   };
+
+  const headerFetchRef = useHeaderFetchRef();
+  if (headerFetchRef) headerFetchRef.current = fetchDocument;
 
   const getDateLabel = (type: number) => {
     if (isPurchaseRequest) return "Valid Until";
