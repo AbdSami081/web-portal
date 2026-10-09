@@ -2,6 +2,7 @@ import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { InventoryTransferLine } from "@/api+/sap/inventory/inventoryService";
 import { withDefaultBPLId } from "./documentPayloadHelper";
 import { pickLineUdfs } from "./lineUdfHelper";
+import { sanitizeItemCode } from "./sanitizeItemCode";
 
 interface BuildInventoryPayloadOptions {
   data: any;
@@ -51,7 +52,7 @@ function buildDocumentLines(
 ): InventoryTransferLine[] {
   return getValidLines(lines).map((line, index) => {
     const baseFields: Record<string, any> = {
-      ItemCode: line.ItemCode,
+      ItemCode: sanitizeItemCode(line.ItemCode),
       Quantity: Number(line.Quantity) || 0,
       WarehouseCode: line.WhsCode || toWarehouse || "",
       FromWarehouseCode: line.FromWhsCode || fromWarehouse || "",
@@ -171,7 +172,7 @@ function buildGoodIssueLines(
 ): InventoryTransferLine[] {
   return getValidLines(lines).map((line, index) => {
     const baseFields: Record<string, any> = {
-      ItemCode: line.ItemCode,
+      ItemCode: sanitizeItemCode(line.ItemCode),
       Quantity: Number(line.Quantity) || 0,
       // Good Issue uses a single line-level warehouse only (no From/To).
       WarehouseCode: line.WhsCode || "",

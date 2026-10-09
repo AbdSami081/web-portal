@@ -131,32 +131,6 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         </td>
       )}
 
-      {config.itemColumns.project && isProjectVisible && (
-        <td className="py-2 px-4">
-          <div className="flex items-center gap-1">
-            <Input
-              className="h-7 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-xs"
-              value={draftLine.Project || ""}
-              disabled
-              readOnly
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              onClick={() => {
-                loadProjects();
-                setProjectModalOpen(true);
-              }}
-              disabled={initialStatus === "boposClosed" || !isProjectEnabled}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        </td>
-      )}
-
       {config.itemColumns.baseQty && fieldAccess.includes("BaseQuantity") && (
         <td className="py-2 px-4 text-center">
           <Input
@@ -351,6 +325,32 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               <SelectItem value="im_Backflush">Backflush</SelectItem>
             </SelectContent>
           </Select>
+        </td>
+      )}
+
+      {config.itemColumns.project && isProjectVisible && (
+        <td className="py-2 px-4">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-7 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-xs"
+              value={draftLine.Project || ""}
+              disabled
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={() => {
+                loadProjects();
+                setProjectModalOpen(true);
+              }}
+              disabled={initialStatus === "boposClosed" || !isProjectEnabled}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </td>
       )}
 

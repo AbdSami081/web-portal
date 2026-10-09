@@ -3,6 +3,7 @@ import apiClient from "@/lib/apiClient";
 import { DocumentType } from "@/types/master/DocumentType";
 import { withDefaultBPLId } from "@/lib/sap/helpers/documentPayloadHelper";
 import { pickLineUdfs } from "@/lib/sap/helpers/lineUdfHelper";
+import { sanitizeItemCode } from "@/lib/sap/helpers/sanitizeItemCode";
 
 export const getBOMList = async (isMultiBom: boolean = false, search: string = "", skip: number = 0, top: number = 100): Promise<any[]> => {
   const res = await apiClient.get(`api/Production/GetBOMForProduction?isMultiBom=${isMultiBom}&search=${search}&skip=${skip}&top=${top}`);
@@ -11,9 +12,6 @@ export const getBOMList = async (isMultiBom: boolean = false, search: string = "
 };
 
 export const postProductionOrder = async (data: any): Promise<any> => {
-  // No withDefaultBPLId here: SAP's ProductionOrders object has no BPL_IDAssignedToInvoice
-  // property at all (confirmed live — "Property 'BPL_IDAssignedToInvoice' of 'ProductionOrder'
-  // is invalid"), unlike every other document type. Its branch is implicit from the Warehouse.
   const res = await apiClient.post(`api/Production/Production`, data);
   return res.data;
 };
@@ -97,7 +95,7 @@ const mapAttachment = (att: any) => {
 
 const mapProductionOrderLine = (line: any, data: any, includeLineNumber = false) => {
   const linePayload: any = {
-    ItemNo: line.ItemNo,
+    ItemNo: sanitizeItemCode(line.ItemNo),
     BaseQuantity: line.BaseQuantity ?? 0,
     PlannedQuantity: line.PlannedQuantity ?? 0,
     IssuedQuantity: line.IssuedQuantity ?? 0,
@@ -169,7 +167,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
         DocumentLines: lines.map(line => ({
           Quantity: line.PlannedQuantity,
           WarehouseCode: line.Warehouse,
-          ItemCode: line.OrderNumber ? undefined : (line.ItemNo || line.ItemCode),
+          ItemCode: line.OrderNumber ? undefined : sanitizeItemCode(line.ItemNo || line.ItemCode),
           BaseType: line.OrderNumber ? 202 : undefined,
           BaseEntry: line.OrderNumber,
           BaseLine: (line.OrderNumber && line.LineNumber === -1) ? undefined : line.LineNumber,

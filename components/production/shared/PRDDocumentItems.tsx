@@ -82,13 +82,6 @@ export function PRDDocumentItems() {
       title: "Item Description",
       width: 260,
     },
-    config.itemColumns.project &&
-      fieldAccess.includes("Project") &&
-      getFieldSettings(config.type, "linesFieds", "Project").visible !== false && {
-        key: "Project",
-        title: "Project",
-        width: 140,
-      },
     config.itemColumns.baseQty && fieldAccess.includes("BaseQuantity") && {
       key: "BaseQuantity",
       title: "Base Qty",
@@ -139,6 +132,13 @@ export function PRDDocumentItems() {
       title: "Issue Method",
       width: 170,
     },
+    config.itemColumns.project &&
+      fieldAccess.includes("Project") &&
+      getFieldSettings(config.type, "linesFieds", "Project").visible !== false && {
+        key: "Project",
+        title: "Project",
+        width: 140,
+      },
   ].filter(Boolean) as {
     key: string;
     title: string;

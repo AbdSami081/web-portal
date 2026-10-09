@@ -2,6 +2,7 @@ import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
 import { resolveBranchId } from "./documentPayloadHelper";
 import { pickLineUdfs } from "./lineUdfHelper";
 import { applyDistributionFields } from "./distributionHelper";
+import { sanitizeItemCode } from "./sanitizeItemCode";
 
 interface BuildPurchasePayloadOptions {
   data: any;
@@ -118,7 +119,7 @@ export function buildPurchaseDocumentPayload({
               VatGroup: line.TaxCode || "",
             }
           : {
-              ItemCode: line.ItemCode,
+              ItemCode: sanitizeItemCode(line.ItemCode),
               Quantity: Number(line.Quantity) || 0,
               UnitPrice: Number(line.Price) || 0,
               DiscountPercent: Number(line.DiscountPercent) || 0,
@@ -212,7 +213,7 @@ export function buildPurchaseDocumentPatchPayload({
                 VatGroup: line.TaxCode || "",
               }
             : {
-                ItemCode: line.ItemCode,
+                ItemCode: sanitizeItemCode(line.ItemCode),
                 Quantity: Number(line.Quantity) || 0,
                 UnitPrice: Number(line.Price) || 0,
                 DiscountPercent: Number(line.DiscountPercent) || 0,

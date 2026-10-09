@@ -1167,44 +1167,6 @@ if (isService) {
         </td>
       )}
 
-      {isFieldVisible("FreeText") && (
-        <td className="w-[220px]">
-          <Input
-            className="h-6 w-full text-left"
-            value={draftLine.FreeText || ""}
-            onChange={(e) => setDraftLine({ ...draftLine, FreeText: e.target.value })}
-            onBlur={() => patchLine({ FreeText: draftLine.FreeText })}
-            disabled={!isCellEditable("FreeText")}
-          />
-        </td>
-      )}
-
-      {isFieldVisible("Project") && (
-        <td className="w-[140px]">
-          <div className="flex items-center gap-1">
-            <Input
-              className="h-6 w-full bg-gray-100 text-left text-xs"
-              value={draftLine.Project || ""}
-              disabled
-              readOnly
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => {
-                loadProjects();
-                setProjectModalOpen(true);
-              }}
-              disabled={!isCellEditable("Project")}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        </td>
-      )}
-
       {isFieldVisible(
         "Quantity"
       ) && (
@@ -1662,6 +1624,44 @@ if (isService) {
             disabled
             readOnly
           />
+        </td>
+      )}
+
+      {isFieldVisible("FreeText") && (
+        <td className="w-[220px]">
+          <Input
+            className="h-6 w-full text-left"
+            value={draftLine.FreeText || ""}
+            onChange={(e) => setDraftLine({ ...draftLine, FreeText: e.target.value })}
+            onBlur={() => patchLine({ FreeText: draftLine.FreeText })}
+            disabled={!isCellEditable("FreeText")}
+          />
+        </td>
+      )}
+
+      {isFieldVisible("Project") && (
+        <td className="w-[140px]">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full bg-gray-100 text-left text-xs"
+              value={draftLine.Project || ""}
+              disabled
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => {
+                loadProjects();
+                setProjectModalOpen(true);
+              }}
+              disabled={!isCellEditable("Project")}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </td>
       )}
 

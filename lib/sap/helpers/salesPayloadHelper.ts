@@ -3,6 +3,7 @@ import { QuotationFormData } from "@/lib/schemas/quotationSchema";
 import { DocumentType } from "@/types/master/DocumentType";
 import { pickLineUdfs } from "./lineUdfHelper";
 import { applyDistributionFields } from "./distributionHelper";
+import { sanitizeItemCode } from "./sanitizeItemCode";
 
 interface BuildSalesPayloadOptions {
   data: QuotationFormData;
@@ -113,7 +114,7 @@ const baseFields: Record<string, unknown> =
         VatGroup: line.TaxCode || "",
       }
     : {
-        ItemCode: line.ItemCode || "",
+        ItemCode: sanitizeItemCode(line.ItemCode),
         Quantity: Number(line.Quantity) || 0,
         UnitPrice: Number(line.Price) || 0,
         DiscountPercent: Number(line.DiscountPercent) || 0,
@@ -221,7 +222,7 @@ const baseFields: Record<string, unknown> =
         VatGroup: line.TaxCode || "",
       }
     : {
-        ItemCode: line.ItemCode || "",
+        ItemCode: sanitizeItemCode(line.ItemCode),
         Quantity: Number(line.Quantity) || 0,
         UnitPrice: Number(line.Price) || 0,
         DiscountPercent: Number(line.DiscountPercent) || 0,

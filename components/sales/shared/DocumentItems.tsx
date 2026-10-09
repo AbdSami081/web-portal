@@ -421,18 +421,6 @@ const setDocumentMode = useSalesDocument(
     },
 
     {
-      key: "FreeText",
-      title: "Free Text",
-      width: 220,
-    },
-
-    {
-      key: "Project",
-      title: "Project",
-      width: 140,
-    },
-
-    {
       key: "Quantity",
       title: "Qty",
       width: 100,
@@ -444,7 +432,7 @@ const setDocumentMode = useSalesDocument(
     },
     {
       key: "Price",
-      title: "Price",
+      title: "Unit Price",
       width: 120,
     },
 
@@ -494,6 +482,18 @@ const setDocumentMode = useSalesDocument(
       key: "LineTotal",
       title: "Line Total",
       width: 180,
+    },
+
+    {
+      key: "FreeText",
+      title: "Free Text",
+      width: 220,
+    },
+
+    {
+      key: "Project",
+      title: "Project",
+      width: 140,
     },
 
     {

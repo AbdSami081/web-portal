@@ -87,19 +87,18 @@ export function InvDocumentItems() {
         { key: "actions",   title: "Actions",     width: 80  },
         { key: "ItemCode",  title: "Item",        width: 180 },
         { key: "Dscription",title: "Description", width: 300 },
-        { key: "Project",   title: "Project",     width: 140 },
         { key: "WhsCode",   title: "Warehouse",   width: 180 },
         { key: "BPLid",     title: "Branch",      width: 90  },
         { key: "Quantity",  title: "Quantity",    width: 140 },
         { key: "OnHand",    title: "Qty In Whs",  width: 120 },
         { key: "UoMCode",   title: "UoM Code",    width: 140 },
         { key: "UoMName",   title: "UoM Name",    width: 140 },
+        { key: "Project",   title: "Project",     width: 140 },
       ]
     : [
         { key: "actions",   title: "Actions",      width: 80  },
         { key: "ItemCode",  title: "Item",         width: 180 },
         { key: "Dscription",title: "Description",  width: 300 },
-        { key: "Project",   title: "Project",      width: 140 },
         { key: "FromWhsCode",title: "From Whs",     width: 180 },
         { key: "WhsCode",   title: "To Whs",       width: 180 },
         { key: "BPLid",     title: "Branch",       width: 90  },
@@ -108,6 +107,7 @@ export function InvDocumentItems() {
         ...(isTransferRequest ? [{ key: "OpenQty", title: "Open Qty", width: 120 }] : []),
         { key: "UoMCode",   title: "UoM Code",     width: 140 },
         { key: "UoMName",   title: "UoM Name",     width: 140 },
+        { key: "Project",   title: "Project",      width: 140 },
       ]
   ).filter((col) => (multiBranchEnabled || col.key !== "BPLid") && (col.key === "actions" || (fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false)));
 

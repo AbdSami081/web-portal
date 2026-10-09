@@ -57,6 +57,7 @@ export function ItemSelectorDialog({
   const top = 20;
 
   const hasFetchedRef = useRef(false);
+  const selectedItemsRef = useRef<Map<string, Item>>(new Map());
 
   const normalizeResource = (resource: any): Item => ({
     ...resource,
@@ -221,6 +222,7 @@ export function ItemSelectorDialog({
   const handleSelectorTypeChange = (value: SelectorType) => {
     setSelectorType(value);
     setSelectedCodes([]);
+    selectedItemsRef.current.clear();
     setSearch("");
     setItems([]);
     setPage(1);
@@ -230,12 +232,9 @@ export function ItemSelectorDialog({
   };
 
   const handleConfirm = () => {
-    const selectedItems =
-      items.filter((item) =>
-        selectedCodes.includes(
-          item.ItemCode
-        )
-      );
+    const selectedItems = selectedCodes
+      .map((code) => selectedItemsRef.current.get(code))
+      .filter((item): item is Item => Boolean(item));
 
     setSubmitting(true);
 
@@ -252,6 +251,7 @@ export function ItemSelectorDialog({
 
   const handleClose = () => {
     setSelectedCodes([]);
+    selectedItemsRef.current.clear();
     setSearch("");
     setItems([]);
     setPage(1);
@@ -279,6 +279,8 @@ export function ItemSelectorDialog({
       newSelectedCodes = [
         itemCode,
       ];
+      selectedItemsRef.current.clear();
+      selectedItemsRef.current.set(itemCode, items[idx]);
     }
 
     /**
@@ -298,16 +300,9 @@ export function ItemSelectorDialog({
         idx
       );
 
-      const rangeItems =
-        items
-          .slice(
-            start,
-            end + 1
-          )
-          .map(
-            (item) =>
-              item.ItemCode
-          );
+      const rangeSlice = items.slice(start, end + 1);
+      const rangeItems = rangeSlice.map((item) => item.ItemCode);
+      rangeSlice.forEach((item) => selectedItemsRef.current.set(item.ItemCode, item));
 
       newSelectedCodes =
         Array.from(
@@ -332,10 +327,12 @@ export function ItemSelectorDialog({
             (code) =>
               code !== itemCode
           );
+        selectedItemsRef.current.delete(itemCode);
       } else {
         newSelectedCodes.push(
           itemCode
         );
+        selectedItemsRef.current.set(itemCode, items[idx]);
       }
 
       setLastSelectedIndex(idx);

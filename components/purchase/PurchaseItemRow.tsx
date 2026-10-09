@@ -519,44 +519,6 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
         </td>
       )}
 
-      {isFieldVisible("FreeText") && (
-        <td className="w-[220px]">
-          <Input
-            className="h-6 w-full text-left"
-            value={draftLine.FreeText || ""}
-            onChange={(e) => setDraftLine({ ...draftLine, FreeText: e.target.value })}
-            onBlur={() => patchLine({ FreeText: draftLine.FreeText })}
-            disabled={!isFieldEnabled("FreeText")}
-          />
-        </td>
-      )}
-
-      {isFieldVisible("Project") && (
-        <td className="w-[140px]">
-          <div className="flex items-center gap-1">
-            <Input
-              className="h-6 w-full bg-gray-100 text-left text-xs"
-              value={draftLine.Project || ""}
-              disabled
-              readOnly
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => {
-                loadProjects();
-                setProjectModalOpen(true);
-              }}
-              disabled={!isFieldEnabled("Project")}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        </td>
-      )}
-
       {isFieldVisible("Quantity") && (
         <td className="w-[90px]">
           <Input
@@ -739,6 +701,44 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
             disabled
             readOnly
           />
+        </td>
+      )}
+
+      {isFieldVisible("FreeText") && (
+        <td className="w-[220px]">
+          <Input
+            className="h-6 w-full text-left"
+            value={draftLine.FreeText || ""}
+            onChange={(e) => setDraftLine({ ...draftLine, FreeText: e.target.value })}
+            onBlur={() => patchLine({ FreeText: draftLine.FreeText })}
+            disabled={!isFieldEnabled("FreeText")}
+          />
+        </td>
+      )}
+
+      {isFieldVisible("Project") && (
+        <td className="w-[140px]">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full bg-gray-100 text-left text-xs"
+              value={draftLine.Project || ""}
+              disabled
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => {
+                loadProjects();
+                setProjectModalOpen(true);
+              }}
+              disabled={!isFieldEnabled("Project")}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </td>
       )}
 

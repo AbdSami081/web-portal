@@ -194,32 +194,6 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       </td>
       )}
 
-      {isProjectVisible && (
-        <td className="py-2 px-4">
-          <div className="flex items-center gap-1 w-full">
-            <Input
-              className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
-              value={draftLine.Project || ""}
-              disabled
-              readOnly
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0"
-              onClick={() => {
-                loadProjects();
-                setProjectModalOpen(true);
-              }}
-              disabled={isRowLocked || !isProjectEnabled}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        </td>
-      )}
-
       {/* From Warehouse */}
       {!isGoodIssue && isFieldVisible("FromWhsCode") && (
         <td className="py-2 px-4">
@@ -379,6 +353,32 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           readOnly
         />
       </td>
+      )}
+
+      {isProjectVisible && (
+        <td className="py-2 px-4">
+          <div className="flex items-center gap-1 w-full">
+            <Input
+              className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
+              value={draftLine.Project || ""}
+              disabled
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={() => {
+                loadProjects();
+                setProjectModalOpen(true);
+              }}
+              disabled={isRowLocked || !isProjectEnabled}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </td>
       )}
 
       <LineUDFCells

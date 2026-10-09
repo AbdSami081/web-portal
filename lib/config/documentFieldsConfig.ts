@@ -43,11 +43,9 @@ export const PURCHASE_DOWNPAYMENT_FOOTER_FIELDS: FieldDef[] = withTitle(
 export const PURCHASE_LINE_FIELDS: FieldDef[] = [
   { key: "ItemCode", title: "Item Code", enabled: true },
   { key: "ItemName", title: "Item Description", enabled: true },
-  { key: "FreeText", title: "Free Text", enabled: true },
-  { key: "Project", title: "Project", enabled: true },
   { key: "Quantity", title: "Qty", enabled: true },
   { key: "OnHand", title: "Qty In Whs", enabled: true },
-  { key: "Price", title: "Price", enabled: true },
+  { key: "Price", title: "Unit Price", enabled: true },
   { key: "DiscountPercent", title: "Disc %", enabled: true },
   { key: "TaxCode", title: "Tax Code", enabled: true },
   { key: "TaxAmount", title: "Tax Amount (LC)", enabled: true },
@@ -55,6 +53,8 @@ export const PURCHASE_LINE_FIELDS: FieldDef[] = [
   { key: "BPLid", title: "Branch", enabled: true },
   { key: "UoMCode", title: "UoM", enabled: true },
   { key: "LineTotal", title: "Line Total", enabled: true },
+  { key: "FreeText", title: "Free Text", enabled: true },
+  { key: "Project", title: "Project", enabled: true },
   { key: "Freight1Type", title: "Freight 1 Type", enabled: true },
   { key: "Freight1LCAmount", title: "Freight 1 (LC)", enabled: true },
   { key: "Freight2Type", title: "Freight 2 Type", enabled: true },
@@ -110,11 +110,9 @@ export const SALES_DOWNPAYMENT_FOOTER_FIELDS: FieldDef[] = withTitle(
 export const SALES_LINE_FIELDS: FieldDef[] = [
   { key: "ItemCode", title: "Item Code", enabled: true },
   { key: "ItemName", title: "Item Description", enabled: true },
-  { key: "FreeText", title: "Free Text", enabled: true },
-  { key: "Project", title: "Project", enabled: true },
   { key: "Quantity", title: "Qty", enabled: true },
   { key: "OnHand", title: "Qty In Whs", enabled: true },
-  { key: "Price", title: "Price", enabled: true },
+  { key: "Price", title: "Unit Price", enabled: true },
   { key: "DiscountPercent", title: "Disc %", enabled: true },
   { key: "TaxCode", title: "Tax Code", enabled: true },
   { key: "TaxAmount", title: "Tax Amount (LC)", enabled: true },
@@ -123,6 +121,8 @@ export const SALES_LINE_FIELDS: FieldDef[] = [
   { key: "UoMCode", title: "UoM Code", enabled: true },
   { key: "UoMName", title: "UoM Name", enabled: true },
   { key: "LineTotal", title: "Line Total", enabled: true },
+  { key: "FreeText", title: "Free Text", enabled: true },
+  { key: "Project", title: "Project", enabled: true },
   { key: "Freight1Type", title: "Freight 1 Type", enabled: true },
   { key: "Freight1LCAmount", title: "Freight 1 (LC)", enabled: true },
   { key: "Freight2Type", title: "Freight 2 Type", enabled: true },
@@ -165,19 +165,18 @@ export const INVENTORY_TRANSFER_HEADER_FIELDS: FieldDef[] = [
 export const INVENTORY_GOOD_ISSUE_LINE_FIELDS: FieldDef[] = [
   { key: "ItemCode", title: "Item", enabled: true },
   { key: "Dscription", title: "Description", enabled: true },
-  { key: "Project", title: "Project", enabled: true },
   { key: "WhsCode", title: "Warehouse", enabled: true },
   { key: "BPLid", title: "Branch", enabled: true },
   { key: "Quantity", title: "Quantity", enabled: true },
   { key: "OnHand", title: "Qty In Whs", enabled: true },
   { key: "UoMCode", title: "UoM Code", enabled: true },
   { key: "UoMName", title: "UoM Name", enabled: true },
+  { key: "Project", title: "Project", enabled: true },
 ];
 
 export const INVENTORY_TRANSFER_LINE_FIELDS: FieldDef[] = [
   { key: "ItemCode", title: "Item", enabled: true },
   { key: "Dscription", title: "Description", enabled: true },
-  { key: "Project", title: "Project", enabled: true },
   { key: "FromWhsCode", title: "From Whs", enabled: true },
   { key: "WhsCode", title: "To Whs", enabled: true },
   { key: "BPLid", title: "Branch", enabled: true },
@@ -185,12 +184,12 @@ export const INVENTORY_TRANSFER_LINE_FIELDS: FieldDef[] = [
   { key: "OnHand", title: "Qty In Whs", enabled: true },
   { key: "UoMCode", title: "UoM Code", enabled: true },
   { key: "UoMName", title: "UoM Name", enabled: true },
+  { key: "Project", title: "Project", enabled: true },
 ];
 
 export const INVENTORY_TRANSFER_REQUEST_LINE_FIELDS: FieldDef[] = [
   { key: "ItemCode", title: "Item", enabled: true },
   { key: "Dscription", title: "Description", enabled: true },
-  { key: "Project", title: "Project", enabled: true },
   { key: "FromWhsCode", title: "From Whs", enabled: true },
   { key: "WhsCode", title: "To Whs", enabled: true },
   { key: "BPLid", title: "Branch", enabled: true },
@@ -199,6 +198,7 @@ export const INVENTORY_TRANSFER_REQUEST_LINE_FIELDS: FieldDef[] = [
   { key: "OpenQty", title: "Open Qty", enabled: true },
   { key: "UoMCode", title: "UoM Code", enabled: true },
   { key: "UoMName", title: "UoM Name", enabled: true },
+  { key: "Project", title: "Project", enabled: true },
 ];
 
 export const INVENTORY_FOOTER_FIELDS: FieldDef[] = [
@@ -229,7 +229,6 @@ export const PRODUCTION_LINE_FIELDS: FieldDef[] = [
   { key: "ItemType", title: "Type", enabled: true },
   { key: "ItemNo", title: "Item No.", enabled: true },
   { key: "ItemName", title: "Item Description", enabled: true },
-  { key: "Project", title: "Project", enabled: true },
   { key: "BaseQuantity", title: "Base Qty", enabled: true },
   { key: "BaseRatio", title: "Base Ratio", enabled: true },
   { key: "PlannedQuantity", title: "Planned Qty", enabled: true },
@@ -239,6 +238,7 @@ export const PRODUCTION_LINE_FIELDS: FieldDef[] = [
   { key: "MeasureUnit", title: "UoM Name", enabled: true },
   { key: "Warehouse", title: "Warehouse", enabled: true },
   { key: "ProductionOrderIssueType", title: "Issue Method", enabled: true },
+  { key: "Project", title: "Project", enabled: true },
 ];
 
 export const PRODUCTION_FOOTER_FIELDS: FieldDef[] = [
