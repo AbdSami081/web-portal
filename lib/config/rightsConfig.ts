@@ -15,6 +15,7 @@ export const DOCUMENT_SPECIAL_RIGHTS: RightDef[] = [
 export const GLOBAL_RIGHTS: RightDef[] = [
   { action: "Bell", label: "Approval Rights", enabled: true },
   { action: "ShowBPBalances", label: "Show BP Balances", enabled: true },
+  { action: "ZeroPriceDocument", label: "Save Document with Zero Price", enabled: true },
 ];
 
 export const ACTION_LABELS: Record<string, string> = Object.fromEntries(

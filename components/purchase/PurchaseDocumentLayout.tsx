@@ -59,7 +59,7 @@ import { HeaderActionPortal } from "@/components/header-portal";
 import { HeaderModalAction } from "@/components/header-modal-action";
 import { KeyboardShortcutsContent } from "@/components/keyboard-shortcuts-content";
 import HeaderActions from "@/components/Custom/HeaderAction";
-import { useDocumentRights } from "@/hooks/useDocumentRights";
+import { useDocumentRights, useGlobalRights } from "@/hooks/useDocumentRights";
 
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { useShallow } from "zustand/react/shallow";
@@ -497,6 +497,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
 
   const config = React.useMemo(() => getDocumentConfig(docType, pathname), [docType, pathname]);
   const { allowedActions, menuId } = useDocumentRights(docType);
+  const { allowedActions: globalAllowedActions } = useGlobalRights();
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
   React.useEffect(() => {
@@ -618,8 +619,12 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               toast.info("One or more items have a quantity of 0 or less. Please set a valid quantity before submitting.");
               return;
             }
-            if (linesHaveInvalidPrice(state.lines) && documentMode === "items") {
-              toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
+            if (
+              linesHaveInvalidPrice(state.lines) &&
+              documentMode === "items" &&
+              !globalAllowedActions.includes("ZeroPriceDocument")
+            ) {
+              toast.error("You don't have rights to save document with zero price.");
               return;
             }
             if (isBranchMissing((data as any).BPL_IDAssignedToInvoice)) {

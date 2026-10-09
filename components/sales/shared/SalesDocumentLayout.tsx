@@ -32,7 +32,7 @@ import { UDFLayout } from "@/components/shared/UDFSheet";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import HeaderActions from "@/components/Custom/HeaderAction";
-import { useDocumentRights } from "@/hooks/useDocumentRights";
+import { useDocumentRights, useGlobalRights } from "@/hooks/useDocumentRights";
 
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
@@ -94,6 +94,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
 
   const config = React.useMemo(() => getDocumentConfig(docType), [docType]);
   const { allowedActions, menuId } = useDocumentRights(docType);
+  const { allowedActions: globalAllowedActions } = useGlobalRights();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
@@ -596,8 +597,12 @@ const documentMode = useSalesDocument(
             toast.info("One or more items have a quantity of 0 or less. Please set a valid quantity before submitting.");
             return;
           }
-          if (linesHaveInvalidPrice(state.lines) && documentMode == "items") {
-            toast.error("One or more items have a price of 0 or less. Please set a valid price before submitting.");
+          if (
+            linesHaveInvalidPrice(state.lines) &&
+            documentMode == "items" &&
+            !globalAllowedActions.includes("ZeroPriceDocument")
+          ) {
+            toast.error("You don't have rights to save document with zero price.");
             return;
           }
           if (isBranchMissing((data as any).BPL_IDAssignedToInvoice)) {
