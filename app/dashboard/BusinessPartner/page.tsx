@@ -698,6 +698,7 @@ export default function BPMasterDataPage() {
           ]}
         />
 
+
         <GenericModal
           title="Select Indicator"
           open={openIndicator}
@@ -726,7 +727,7 @@ export default function BPMasterDataPage() {
           onSelect={(value) => {
             const selected = projects.find((item) => item.Code === value);
             if (selected) {
-              handleChange("Project", selected.Code);
+              handleChange("Project", selected.Name);
             }
             setOpenProject(false);
           }}
@@ -761,7 +762,7 @@ export default function BPMasterDataPage() {
         />
 
         <GenericModal
-          title="Select Company"
+          title="Select Business Type "
           open={openCompany}
           onClose={() => setOpenCompany(false)}
           data={companies}
@@ -769,7 +770,7 @@ export default function BPMasterDataPage() {
           onSelect={(value) => {
             const selected = companies.find((item) => item.Code === value);
             if (selected) {
-              handleChange("Company", selected.Code);
+              handleChange("Company", selected.Name);
             }
             setOpenCompany(false);
           }}
