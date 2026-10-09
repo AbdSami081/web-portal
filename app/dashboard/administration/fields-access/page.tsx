@@ -315,12 +315,7 @@ export default function FieldAccessManagement() {
   );
 }, [filteredMenus]);
 
-  /*
-   * Sync @WP_FIELDS_CFG once when this page opens — for every document that
-   * has a field catalog, not just the one the admin happens to click on.
-   * New fields default to enabled for everyone (see SyncFieldsConfigAsync);
-   * admins remove access for specific users from here afterwards as usual.
-   */
+
   const hasSyncedFieldsRef = useRef(false);
   useEffect(() => {
     if (hasSyncedFieldsRef.current || documents.length === 0) return;

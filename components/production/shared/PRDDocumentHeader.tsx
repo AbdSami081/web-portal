@@ -5,26 +5,6 @@ import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
-import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
-
-// Field access catalog for this document's header — kept next to the
-// hasFieldAccess("...") calls below so the two never drift apart.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
-export const PRODUCTION_HEADER_FIELDS: FieldCatalogEntry[] = [
-  { key: "Ref2", title: "Reference" },
-  { key: "TaxDate", title: "Posting Date" },
-  { key: "ProductionOrderType", title: "Type" },
-  { key: "ItemNo", title: "Product No." },
-  { key: "ProductDescription", title: "Product Description" },
-  { key: "ProductionOrderStatus", title: "Status" },
-  { key: "PlannedQuantity", title: "Planned Quantity" },
-  { key: "Warehouse", title: "Warehouse" },
-  { key: "Priority", title: "Priority" },
-  { key: "CreationDate", title: "Order Date" },
-  { key: "StartDate", title: "Start Date" },
-  { key: "DueDate", title: "Due Date" },
-  { key: "BPL_IDAssignedToInvoice", title: "Branch" },
-];
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
@@ -51,6 +31,7 @@ import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { useDocumentRights } from "@/hooks/useDocumentRights";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService";
 
 const FormattedHeaderInput = ({ value, onChange, onBlur, placeholder, className, id }: any) => {
   const [localValue, setLocalValue] = useState(value ? value.toString() : "");
@@ -116,8 +97,28 @@ export function PRDDocumentHeader() {
   const [loadedStatus, setLoadedStatus] = useState<string>("");
   const LIST_PAGE_SIZE = 20;
 
-  const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus, setBranch } = useIFPRDDocument();
+  const { loadFromDocument, warehouses, setWarehouses, loadFromBOM, recalculateFromHeader, reset: resetStore, selectedBOM, initialStatus, setBranch, setAllLinesProject } = useIFPRDDocument();
   const fieldAccess = useIFPRDDocument((s) => s.fieldAccess);
+  const linesCount = useIFPRDDocument((s) => s.lines.length);
+
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [showProjectConfirm, setShowProjectConfirm] = useState(false);
+  const [pendingProjectCode, setPendingProjectCode] = useState<string | null>(null);
+
+  const loadProjects = async () => {
+    try {
+      setProjectsLoading(true);
+      const response = await getBusinessPartnerProjects();
+      setProjects(response);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
+      setProjects([]);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
   const hasFieldAccess = (f: string) => fieldAccess.includes(f);
   const { loadWarehouses } = useMasterDataStore();
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
@@ -365,6 +366,7 @@ export function PRDDocumentHeader() {
           setValue("AbsoluteEntry", documentData.AbsoluteEntry, { shouldDirty: true });
           setValue("DocNum", documentData.DocumentNumber, { shouldDirty: true });
           setValue("ItemNo", documentData.ItemNo, { shouldDirty: true });
+          setValue("Project", documentData.Project || documentData.ProjectCode || "", { shouldDirty: true });
           setValue("ProductDescription", documentData.ProductDescription, { shouldDirty: true });
           setValue("PlannedQuantity", documentData.PlannedQuantity, { shouldDirty: true });
           setValue("Warehouse", documentData.Warehouse, { shouldDirty: true });
@@ -822,6 +824,34 @@ export function PRDDocumentHeader() {
           </div>
         )}
 
+        {config.headerFields.project && hasFieldAccess("HeaderProject") && (
+          <div className="flex items-center gap-2">
+            <AppLabel className="w-28 shrink-0">Project</AppLabel>
+            <div className="flex items-center gap-2 flex-1">
+              <Input
+                type="text"
+                className="h-8 flex-1 bg-gray-100 text-gray-500 cursor-not-allowed"
+                value={watch("Project") || ""}
+                disabled
+                readOnly
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 cursor-pointer"
+                onClick={() => {
+                  loadProjects();
+                  setProjectModalOpen(true);
+                }}
+                disabled={initialStatus === "boposClosed"}
+              >
+                {projectsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {config.headerFields.orderDate && hasFieldAccess("CreationDate") && (
           <div className="flex items-center gap-2">
             <AppLabel className="w-28 shrink-0">Order Date</AppLabel>
@@ -1014,6 +1044,47 @@ export function PRDDocumentHeader() {
         description={pendingType === "bopotSpecial" ? "Changing to Special will delete all current lines. Do you want to proceed?" : "Changing type will update all existing lines. Do you want to proceed?"}
         cancelText="No, keep lines"
         confirmText={pendingType === "bopotSpecial" ? "Yes, delete lines" : "Yes, update all"}
+      />
+
+      <GenericModal
+        open={projectModalOpen}
+        onClose={() => setProjectModalOpen(false)}
+        data={projects}
+        isLoading={projectsLoading}
+        onSelect={(value) => {
+          const selectedProject = projects.find(
+            (project: any) => project.Code === value || project.code === value
+          );
+          if (!selectedProject) return;
+
+          const projectCode = selectedProject.Code || selectedProject.code || value;
+          setValue("Project", projectCode, { shouldDirty: true });
+          setProjectModalOpen(false);
+
+          if (linesCount > 0) {
+            setPendingProjectCode(projectCode);
+            setShowProjectConfirm(true);
+          }
+        }}
+        columns={[
+          { key: "Code", label: "Project Code" },
+          { key: "Name", label: "Project Name" },
+        ]}
+        title="Select Project"
+        getSelectValue={(item: any) => item.Code || item.code}
+      />
+
+      <ConfirmationModal
+        open={showProjectConfirm}
+        onOpenChange={setShowProjectConfirm}
+        onConfirm={() => {
+          if (pendingProjectCode) setAllLinesProject(pendingProjectCode);
+          setShowProjectConfirm(false);
+        }}
+        title="Update Existing Lines?"
+        description="Do you want to update existing rows with this project code?"
+        cancelText="No"
+        confirmText="Yes"
       />
     </div>
   );

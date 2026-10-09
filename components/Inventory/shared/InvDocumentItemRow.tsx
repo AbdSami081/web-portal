@@ -21,6 +21,9 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
+import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService";
+import { GenericModal } from "@/modals/GenericModal";
 
 interface Props {
   index: number;
@@ -43,6 +46,26 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   const [isWhsModalOpen, setIsWhsModalOpen] = useState(false);
   const [whsMode, setWhsMode] = useState<"from" | "to">("from");
   const [uomDialogOpen, setUomDialogOpen] = useState(false);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  const loadProjects = async () => {
+    try {
+      setProjectsLoading(true);
+      const response = await getBusinessPartnerProjects();
+      setProjects(response);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
+      setProjects([]);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+
+  const isProjectVisible =
+    isFieldVisible("Project") && getFieldSettings(invConfig.type, "linesFieds", "Project").visible !== false;
+  const isProjectEnabled = getFieldSettings(invConfig.type, "linesFieds", "Project").enable !== false;
   const fetchedItemRef = useRef<string | null>(null);
   const bplBackfilledRef = useRef(false);
 
@@ -169,6 +192,32 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           disabled={isRowLocked}
         />
       </td>
+      )}
+
+      {isProjectVisible && (
+        <td className="py-2 px-4">
+          <div className="flex items-center gap-1 w-full">
+            <Input
+              className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
+              value={draftLine.Project || ""}
+              disabled
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={() => {
+                loadProjects();
+                setProjectModalOpen(true);
+              }}
+              disabled={isRowLocked || !isProjectEnabled}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </td>
       )}
 
       {/* From Warehouse */}
@@ -359,6 +408,30 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
         onSelect={(uom) => {
           patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
         }}
+      />
+
+      <GenericModal
+        open={projectModalOpen}
+        onClose={() => setProjectModalOpen(false)}
+        data={projects}
+        isLoading={projectsLoading}
+        onSelect={(value) => {
+          const selectedProject = projects.find(
+            (project: any) => project.Code === value || project.code === value
+          );
+          if (!selectedProject) return;
+
+          patchLine({
+            Project: selectedProject.Code || selectedProject.code || value,
+          });
+          setProjectModalOpen(false);
+        }}
+        columns={[
+          { key: "Code", label: "Project Code" },
+          { key: "Name", label: "Project Name" },
+        ]}
+        title="Select Project"
+        getSelectValue={(item: any) => item.Code || item.code}
       />
     </>
   );

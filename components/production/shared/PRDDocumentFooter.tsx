@@ -13,14 +13,6 @@ import { getReleasedProductionOrders, getDisassembleProductionOrders } from "@/a
 import { DocumentType } from "@/types/master/DocumentType";
 import { useFmsContext } from "@/hooks/useFMS";
 import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
-import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
-
-// Field access catalog for this document's footer — folded into the header
-// ("H") bucket in @WP_FIELDS_CFG, matching the existing convention.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
-export const PRODUCTION_FOOTER_FIELDS: FieldCatalogEntry[] = [
-  { key: "Comments", title: "Comments" },
-];
 
 export default function PRDDocumentFooter() {
   const { watch, register, setValue } = useFormContext();

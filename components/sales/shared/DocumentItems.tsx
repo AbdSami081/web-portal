@@ -28,7 +28,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 import { fetchItemsByCodesBulk } from "@/lib/sap/helpers/itemCacheHelper";
 import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
 import { BulkResultModal, type BulkResultRow } from "@/components/shared/BulkResultModal";
@@ -46,47 +45,8 @@ import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
-
-// Field access catalog for this document's line table — kept next to the
-// `columns`/`serviceColumns` arrays below so the two never drift apart.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
-export const SALES_LINE_FIELDS: FieldCatalogEntry[] = [
-  { key: "ItemCode", title: "Item Code" },
-  { key: "ItemName", title: "Item Description" },
-  { key: "Quantity", title: "Qty" },
-  { key: "OnHand", title: "Qty In Whs" },
-  { key: "Price", title: "Price" },
-  { key: "DiscountPercent", title: "Disc %" },
-  { key: "TaxCode", title: "Tax Code" },
-  { key: "TaxAmount", title: "Tax Amount (LC)" },
-  { key: "WarehouseCode", title: "Whs" },
-  { key: "BPLid", title: "Branch" },
-  { key: "UoMCode", title: "UoM Code" },
-  { key: "UoMName", title: "UoM Name" },
-  { key: "LineTotal", title: "Line Total" },
-  { key: "Freight1Type", title: "Freight 1 Type" },
-  { key: "Freight1LCAmount", title: "Freight 1 (LC)" },
-  { key: "Freight2Type", title: "Freight 2 Type" },
-  { key: "Freight2LCAmount", title: "Freight 2 (LC)" },
-  { key: "Freight3Type", title: "Freight 3 Type" },
-  { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
-];
-
-export const SALES_SERVICE_LINE_FIELDS: FieldCatalogEntry[] = [
-  { key: "AccountCode", title: "G/L Account" },
-  { key: "AccountName", title: "G/L Account Name" },
-  { key: "Description", title: "Description" },
-  { key: "DiscountPercent", title: "Disc %" },
-  { key: "TaxCode", title: "Tax Code" },
-  { key: "LineTotal", title: "Line Total" },
-  { key: "TaxAmount", title: "Tax Amount (LC)" },
-  { key: "Freight1Type", title: "Freight 1 Type" },
-  { key: "Freight1LCAmount", title: "Freight 1 (LC)" },
-  { key: "Freight2Type", title: "Freight 2 Type" },
-  { key: "Freight2LCAmount", title: "Freight 2 (LC)" },
-  { key: "Freight3Type", title: "Freight 3 Type" },
-  { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
-];
+import { costingCodeField, cogsCostingCodeField } from "@/lib/sap/helpers/distributionHelper";
+import { useActiveDimensions } from "@/hooks/useActiveDimensions";
 
 export function DocumentItems() {
   const { watch, setValue, register } = useFormContext();
@@ -440,6 +400,7 @@ const setDocumentMode = useSalesDocument(
 
   const fieldAccess = useSalesDocument((state) => state.fieldAccess);
   const { multiBranchEnabled } = useApprovalSettings();
+  const activeDimensions = useActiveDimensions();
   const columns = [
     {
       key: "actions",
@@ -457,6 +418,18 @@ const setDocumentMode = useSalesDocument(
       key: "ItemName",
       title: "Item Description",
       width: 300,
+    },
+
+    {
+      key: "FreeText",
+      title: "Free Text",
+      width: 220,
+    },
+
+    {
+      key: "Project",
+      title: "Project",
+      width: 140,
     },
 
     {
@@ -558,10 +531,14 @@ const setDocumentMode = useSalesDocument(
       title: "Freight 3 (LC)",
       width: 180,
     },
+    ...activeDimensions.flatMap((n) => [
+      { key: costingCodeField(n), title: n === 1 ? "Distribution Rule" : `Distribution Rule ${n}`, width: 180 },
+      { key: cogsCostingCodeField(n), title: n === 1 ? "COGS Distribution Rule" : `COGS Distribution Rule ${n}`, width: 180 },
+    ]),
   ].filter((col) => {
     if (col.key === "actions") return true;
     if (col.key === "BPLid" && !multiBranchEnabled) return false;
-    return fieldAccess.includes(col.key);
+    return fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
   const serviceColumns = [

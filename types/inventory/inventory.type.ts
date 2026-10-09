@@ -13,6 +13,7 @@ export interface BaseInventoryDocument {
 export interface InventoryDocumentLine {
     ItemCode: string;
     Dscription?: string;
+    Project?: string;
     FromWhsCode?: string;
     FromBinLoc?: string;
     WhsCode?: string;

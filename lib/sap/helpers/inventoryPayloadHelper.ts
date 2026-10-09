@@ -65,6 +65,7 @@ function buildDocumentLines(
       baseFields.UoMCode = line.UoMCode;
     }
 
+    if (line.Project) baseFields.ProjectCode = line.Project;
 
     if (isPatch) {
       // Existing lines carry their SAP LineNum - the backend sends
@@ -184,6 +185,7 @@ function buildGoodIssueLines(
       baseFields.UoMCode = line.UoMCode;
     }
 
+    if (line.Project) baseFields.ProjectCode = line.Project;
 
     if (isPatch) {
       if (line.LineNum !== undefined && line.LineNum !== null && Number(line.LineNum) >= 0) {

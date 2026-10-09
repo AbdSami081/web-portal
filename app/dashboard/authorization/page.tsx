@@ -50,7 +50,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { DocumentSpecialRightsModal } from "@/modals/DocumentSpecialRightsModal";
-import { GLOBAL_RIGHTS_MENU_ID } from "@/hooks/useDocumentRights";
 import {
   Command,
   CommandEmpty,
@@ -64,7 +63,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Settings2, ChevronsUpDown, Bell } from "lucide-react";
+import { Settings2, ChevronsUpDown } from "lucide-react";
 
 interface DatabaseConfig {
   CompanyName: string;
@@ -122,7 +121,6 @@ export default function AuthorizationPage() {
   const [loadingConfig, setLoadingConfig] = useState(false);
 
   const [specialRightsTarget, setSpecialRightsTarget] = useState<{ menuId: string; documentType?: number; title: string } | null>(null);
-  const [showGlobalRightsModal, setShowGlobalRightsModal] = useState(false);
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
 
   const sourceUser = useMemo(() => {
@@ -547,17 +545,6 @@ export default function AuthorizationPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowGlobalRightsModal(true)}
-              disabled={!selectedUser}
-              className="h-9 px-4 text-xs font-bold border-amber-200 bg-amber-50/50 hover:bg-amber-100 text-amber-700 shadow-sm disabled:opacity-50"
-            >
-              <Bell className="mr-2 h-4 w-4 text-amber-600" />
-              Global Rights
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
               onClick={() => {
                 setSelectedCopyUsers([]);
                 setCopySearchQuery("");
@@ -869,16 +856,6 @@ export default function AuthorizationPage() {
         />
       )}
 
-      {showGlobalRightsModal && selectedUser && (
-        <DocumentSpecialRightsModal
-          open={showGlobalRightsModal}
-          onClose={() => setShowGlobalRightsModal(false)}
-          menuId={GLOBAL_RIGHTS_MENU_ID}
-          documentTitle="Bell / Notifications"
-          user={{ empId: selectedUser, fullName: sourceUser?.fullName || selectedUser }}
-          actions={["Bell"]}
-        />
-      )}
     </div>
   );
 }

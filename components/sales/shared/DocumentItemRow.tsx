@@ -17,11 +17,9 @@ import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { UoMSelectorDialog } from "@/modals/UoMSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
 import { fetchItemByCode } from "@/lib/sap/helpers/itemCacheHelper";
-import {
-  distribtionLstOCRCO2,
-  distribtionLstOCRCO3,
-  distribtionLstOCRCO4,
-} from "@/app/data/cogsData";
+import { costingCodeField, cogsCostingCodeField } from "@/lib/sap/helpers/distributionHelper";
+import { getDistributionRulesCached, type DistributionRule } from "@/api+/sap/master-data/distribution/distributionService";
+import { useActiveDimensions } from "@/hooks/useActiveDimensions";
 import {
   calculateFreightTax,
   calculateLineTax,
@@ -44,15 +42,11 @@ import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { useChartOfAccountsStore } from "@/stores/useChartOfAccountsStore";
+import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService";
 interface Props {
   index: number;
   line: SalesDocumentLine;
   documentMode?: "items" | "service";
-}
-
-interface Record {
-  Code: string;
-  Name: string;
 }
 
 export function DocumentLineRow({
@@ -132,22 +126,34 @@ export function DocumentLineRow({
   const [uomDialogOpen, setUomDialogOpen] =
     useState(false);
 
-  const [cogsModalOpen, setCogsModalOpen] =
+  const [distModalOpen, setDistModalOpen] =
     useState(false);
     const [glAccountModalOpen, setGlAccountModalOpen] = useState(false);
 
-  const [
-    activeField,
-    setActiveField,
-  ] = useState<
-    "CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4"
-  >("CogsOcrCo2");
-
-  const [cogsData, setCogsData] =
-    useState<Record[]>([]);
+  const [activeDistField, setActiveDistField] = useState("");
+  const [distRuleOptions, setDistRuleOptions] = useState<DistributionRule[]>([]);
+  const [distRulesLoading, setDistRulesLoading] = useState(false);
+  const activeDimensions = useActiveDimensions();
 
   const { multiBranchEnabled } =
     useApprovalSettings();
+
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  const loadProjects = async () => {
+    try {
+      setProjectsLoading(true);
+      const response = await getBusinessPartnerProjects();
+      setProjects(response);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
+      setProjects([]);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
 
   const qtyGuard = usePositiveField(
     "Quantity",
@@ -484,23 +490,16 @@ useEffect(() => {
   );
 };
 
-  const openCogsModal = (
-    field:
-      | "CogsOcrCo2"
-      | "CogsOcrCo3"
-      | "CogsOcrCo4"
-  ) => {
-    setActiveField(field);
-
-    setCogsData(
-      field === "CogsOcrCo2"
-        ? distribtionLstOCRCO2
-        : field === "CogsOcrCo3"
-        ? distribtionLstOCRCO3
-        : distribtionLstOCRCO4
-    );
-
-    setCogsModalOpen(true);
+  const openDistModal = async (field: string, dimension: number) => {
+    setActiveDistField(field);
+    setDistModalOpen(true);
+    setDistRulesLoading(true);
+    try {
+      const rules = await getDistributionRulesCached(dimension);
+      setDistRuleOptions(rules);
+    } finally {
+      setDistRulesLoading(false);
+    }
   };
 
 if (isService) {
@@ -1165,6 +1164,44 @@ if (isService) {
           <span className="block text-left">
             {draftLine.ItemName}
           </span>
+        </td>
+      )}
+
+      {isFieldVisible("FreeText") && (
+        <td className="w-[220px]">
+          <Input
+            className="h-6 w-full text-left"
+            value={draftLine.FreeText || ""}
+            onChange={(e) => setDraftLine({ ...draftLine, FreeText: e.target.value })}
+            onBlur={() => patchLine({ FreeText: draftLine.FreeText })}
+            disabled={!isCellEditable("FreeText")}
+          />
+        </td>
+      )}
+
+      {isFieldVisible("Project") && (
+        <td className="w-[140px]">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full bg-gray-100 text-left text-xs"
+              value={draftLine.Project || ""}
+              disabled
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => {
+                loadProjects();
+                setProjectModalOpen(true);
+              }}
+              disabled={!isCellEditable("Project")}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </td>
       )}
 
@@ -1964,6 +2001,57 @@ if (isService) {
         </td>
       )}
 
+      {activeDimensions.flatMap((n) => {
+        const costingField = costingCodeField(n);
+        const cogsField = cogsCostingCodeField(n);
+        return [
+          isFieldVisible(costingField) && (
+            <td className="py-2 px-2 w-[160px]" key={costingField}>
+              <div className="flex items-center gap-1">
+                <Input
+                  className="h-6 w-full bg-gray-100 text-left text-xs"
+                  value={(draftLine as any)[costingField] || ""}
+                  disabled
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => openDistModal(costingField, n)}
+                  disabled={!isCellEditable(costingField)}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </td>
+          ),
+          isFieldVisible(cogsField) && (
+            <td className="py-2 px-2 w-[160px]" key={cogsField}>
+              <div className="flex items-center gap-1">
+                <Input
+                  className="h-6 w-full bg-gray-100 text-left text-xs"
+                  value={(draftLine as any)[cogsField] || ""}
+                  disabled
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => openDistModal(cogsField, n)}
+                  disabled={!isCellEditable(cogsField)}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </td>
+          ),
+        ];
+      })}
+
       <LineUDFCells
         docType={config.type}
         line={draftLine}
@@ -2078,23 +2166,23 @@ if (isService) {
       />
 
       <GenericModal
-        open={cogsModalOpen}
+        open={distModalOpen}
         onClose={() =>
-          setCogsModalOpen(
+          setDistModalOpen(
             false
           )
         }
         onSelect={(val) => {
-          setDraftLine({
-            ...draftLine,
-            [activeField]: val,
+          patchLine({
+            [activeDistField]: val,
           });
 
-          setCogsModalOpen(
+          setDistModalOpen(
             false
           );
         }}
-        data={cogsData}
+        data={distRuleOptions}
+        isLoading={distRulesLoading}
         columns={[
           {
             key: "Code",
@@ -2110,7 +2198,30 @@ if (isService) {
           item.Code
         }
       />
+
+      <GenericModal
+        open={projectModalOpen}
+        onClose={() => setProjectModalOpen(false)}
+        data={projects}
+        isLoading={projectsLoading}
+        onSelect={(value) => {
+          const selectedProject = projects.find(
+            (project: any) => project.Code === value || project.code === value
+          );
+          if (!selectedProject) return;
+
+          patchLine({
+            Project: selectedProject.Code || selectedProject.code || value,
+          });
+          setProjectModalOpen(false);
+        }}
+        columns={[
+          { key: "Code", label: "Project Code" },
+          { key: "Name", label: "Project Name" },
+        ]}
+        title="Select Project"
+        getSelectValue={(item: any) => item.Code || item.code}
+      />
     </>
   );
 }
- 

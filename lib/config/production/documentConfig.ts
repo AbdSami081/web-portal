@@ -20,11 +20,13 @@ export interface DocumentConfig {
     type?: boolean;
     status?: boolean;
     branch?: boolean;
+    project?: boolean;
   };
   itemColumns: {
     type?: boolean;
     itemCode?: boolean;
     itemDescription?: boolean;
+    project?: boolean;
     baseQty?: boolean;
     baseRatio?: boolean;
     plannedQty?: boolean;
@@ -58,6 +60,7 @@ export const IFPRDConfig: DocumentConfig = {
     type: true,
     itemCode: true,
     itemDescription: true,
+    project: true,
     plannedQty: true,
     issued: true,
     openQty: true,
@@ -87,6 +90,7 @@ export const ReceiptFPRDConfig: DocumentConfig = {
     type: true,
     itemCode: true,
     itemDescription: true,
+    project: true,
     plannedQty: true,
     uomCode: true,
     uomName: true,
@@ -118,10 +122,12 @@ export const PRDOrderConfig: DocumentConfig = {
     // Unlike Issue/Receipt for Production, SAP's ProductionOrders object has no
     // BPL_IDAssignedToInvoice property — branch is implicit from the Warehouse chosen.
     branch: false,
+    project: true,
   },
   itemColumns: {
     itemCode: true,
     itemDescription: true,
+    project: true,
     baseQty: true,
     baseRatio: true,
     plannedQty: true,

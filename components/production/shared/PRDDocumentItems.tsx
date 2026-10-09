@@ -16,26 +16,7 @@ import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
-import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
-
-// Field access catalog for this document's line table — kept next to the
-// `fieldAccess.includes("...")` checks below so the two never drift apart.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
-export const PRODUCTION_LINE_FIELDS: FieldCatalogEntry[] = [
-  { key: "OrderNumber", title: "Order Number" },
-  { key: "ItemType", title: "Type" },
-  { key: "ItemNo", title: "Item No." },
-  { key: "ItemName", title: "Item Description" },
-  { key: "BaseQuantity", title: "Base Qty" },
-  { key: "BaseRatio", title: "Base Ratio" },
-  { key: "PlannedQuantity", title: "Planned Qty" },
-  { key: "IssuedQuantity", title: "Issued Qty" },
-  { key: "AvailableQuantity", title: "Available Qty" },
-  { key: "UoMCode", title: "UoM Code" },
-  { key: "MeasureUnit", title: "UoM Name" },
-  { key: "Warehouse", title: "Warehouse" },
-  { key: "ProductionOrderIssueType", title: "Issue Method" },
-];
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 
 export function PRDDocumentItems() {
   const { watch } = useFormContext();
@@ -101,6 +82,13 @@ export function PRDDocumentItems() {
       title: "Item Description",
       width: 260,
     },
+    config.itemColumns.project &&
+      fieldAccess.includes("Project") &&
+      getFieldSettings(config.type, "linesFieds", "Project").visible !== false && {
+        key: "Project",
+        title: "Project",
+        width: 140,
+      },
     config.itemColumns.baseQty && fieldAccess.includes("BaseQuantity") && {
       key: "BaseQuantity",
       title: "Base Qty",

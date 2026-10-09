@@ -1,6 +1,7 @@
 import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
 import { resolveBranchId } from "./documentPayloadHelper";
 import { pickLineUdfs } from "./lineUdfHelper";
+import { applyDistributionFields } from "./distributionHelper";
 
 interface BuildPurchasePayloadOptions {
   data: any;
@@ -143,6 +144,7 @@ export function buildPurchaseDocumentPayload({
       if (documentMode !== "service") {
         if (line.FreeText) baseFields.FreeText = line.FreeText;
         if (line.Project) baseFields.ProjectCode = line.Project;
+        applyDistributionFields(line, baseFields);
       }
 
       const lineExpenses = mapLineExpenses(line);

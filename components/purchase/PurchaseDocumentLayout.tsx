@@ -37,6 +37,7 @@ import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/h
 import { linesHaveInvalidPrice, linesHaveInvalidQuantity } from "@/lib/sap/helpers/priceValidationHelper";
 import { isBranchMissing, isBranchInactive } from "@/lib/sap/helpers/branchValidationHelper";
 import { openLinesForCopyFrom } from "@/lib/sap/helpers/copyFromQuantity";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 
 import {
   Tooltip,
@@ -792,6 +793,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
           {!shouldHideSubmit && !relMapStore.isOpen && (
             <div className="border-t px-6 py-4 flex justify-end bg-white shadow-md gap-4 shrink-0">
               <div className="flex items-center gap-3">
+                {getFieldSettings(docType, "headerFieds", "CopyFrom").visible !== false && (
                 <Select
                   value={selectedCopyFrom}
                   disabled={!requester?.CardCode || copyFromOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom}
@@ -826,7 +828,9 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                )}
 
+                {getFieldSettings(docType, "headerFieds", "CopyTo").visible !== false && (
                 <Select
                   value={selectedCopyTo}
                   disabled={allowedCopyToOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom || isLoadingCopyTo}
@@ -889,6 +893,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                )}
 
                 <ButtonGroup>
                   <Button

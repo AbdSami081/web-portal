@@ -22,6 +22,7 @@ export interface BaseProductionDocument {
 export interface PRDDocumentLine {
     ItemNo: string;
     ItemName?: string;
+    Project?: string;
     PlannedQuantity: number;
     OriginalPlannedQuantity?: number;
     Warehouse?: string;

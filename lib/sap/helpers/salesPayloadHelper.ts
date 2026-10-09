@@ -2,6 +2,7 @@ import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
 import { QuotationFormData } from "@/lib/schemas/quotationSchema";
 import { DocumentType } from "@/types/master/DocumentType";
 import { pickLineUdfs } from "./lineUdfHelper";
+import { applyDistributionFields } from "./distributionHelper";
 
 interface BuildSalesPayloadOptions {
   data: QuotationFormData;
@@ -120,6 +121,11 @@ const baseFields: Record<string, unknown> =
         WarehouseCode: line.WarehouseCode || "",
         UoMCode: line.UoMCode || "",
       };
+      if (documentMode !== "service") {
+        if (line.FreeText) baseFields.FreeText = line.FreeText;
+        if (line.Project) baseFields.ProjectCode = line.Project;
+        applyDistributionFields(line, baseFields);
+      }
       if (hasCopyFrom) {
         baseFields.BaseType = lastLoadedDocType;
         baseFields.BaseEntry = docEntry;
@@ -223,6 +229,11 @@ const baseFields: Record<string, unknown> =
         WarehouseCode: line.WarehouseCode || "",
         UoMCode: line.UoMCode || "",
       };
+        if (documentMode !== "service") {
+          if (line.FreeText) baseFields.FreeText = line.FreeText;
+          if (line.Project) baseFields.ProjectCode = line.Project;
+          applyDistributionFields(line, baseFields);
+        }
         if (line.LineNum !== undefined && line.LineNum >= 0) {
           baseFields.LineNum = line.LineNum;
         }

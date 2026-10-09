@@ -79,15 +79,9 @@ export const getModules = async (companyDB: string): Promise<WebPortalConfigEntr
   return response.data ?? [];
 };
 
-export const DOCUMENT_SPECIAL_RIGHTS_ACTIONS = [
-  "Print",
-  "FMS",
-  "FieldInspector",
-  "RelationshipMap",
-  "CloseDocument",
-] as const;
-
-export type DocumentSpecialRightAction = (typeof DOCUMENT_SPECIAL_RIGHTS_ACTIONS)[number];
+export { DOCUMENT_SPECIAL_RIGHTS_ACTIONS, GLOBAL_RIGHTS_ACTIONS } from "@/lib/config/rightsConfig";
+export type DocumentSpecialRightAction = string;
+export type GlobalRightAction = string;
 
 export const getMyDocumentRights = async (menuId: string): Promise<string[]> => {
   try {

@@ -61,6 +61,8 @@ export interface SalesDocumentLine {
   Quantity: number;
   OnHand: number;
   Price: number;
+  FreeText?: string;
+  Project?: string;
   DiscountPercent?: number;
   WarehouseCode?: string;
   BPLid?: number;
@@ -91,6 +93,11 @@ export interface SalesDocumentLine {
   CostingCode3?: string;
   CostingCode4?: string;
   CostingCode5?: string;
+  COGSCostingCode?: string;
+  COGSCostingCode2?: string;
+  COGSCostingCode3?: string;
+  COGSCostingCode4?: string;
+  COGSCostingCode5?: string;
 
   ProjectCode?: string;
   TaxOnly?: boolean;
@@ -99,9 +106,6 @@ export interface SalesDocumentLine {
   TotalDoc?: number;
   PackageQuantity?: number;
   CountryOrg?: string;
-  CogsOcrCo2?: string;
-  CogsOcrCo3?: string;
-  CogsOcrCo4?: string;
   BlanketAgreementNo?: string;
   LinePoPrss?: boolean;
   U_LastPrice?: number;

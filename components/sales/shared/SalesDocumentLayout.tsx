@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DocumentType, DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
 import { DocumentHeader } from "./DocumentHeader";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialog";
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
@@ -762,6 +763,7 @@ const documentMode = useSalesDocument(
           {!shouldHideSubmit && !relMapStore.isOpen && (
             <div className="border-t px-6 py-4 flex justify-end bg-white shadow-md gap-4 shrink-0">
               <div className="flex items-center gap-3">
+                {getFieldSettings(docType, "headerFieds", "CopyFrom").visible !== false && (
                 <Select
                   value={selectedCopyFrom}
                   disabled={!customer?.CardCode || copyFromOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom}
@@ -795,7 +797,9 @@ const documentMode = useSalesDocument(
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                )}
 
+                {getFieldSettings(docType, "headerFieds", "CopyTo").visible !== false && (
                 <Select
                   value={selectedCopyTo}
                   disabled={allowedCopyToOptions.length === 0 || isLoadingDocument || isLoadingCopyFrom || isLoadingCopyTo}
@@ -853,6 +857,7 @@ const documentMode = useSalesDocument(
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                )}
 
                 <ButtonGroup>
                   <Button

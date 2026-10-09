@@ -32,7 +32,6 @@ import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorD
 import { GenericModal } from "@/modals/GenericModal";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { useDocumentRights } from "@/hooks/useDocumentRights";
-import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 import {
   Select,
   SelectContent,
@@ -109,23 +108,6 @@ const getResourceName = (type: number, pathname = "") => {
       return "";
   }
 };
-
-// Field access catalog for this document's header — kept next to the
-// hasFieldAccess("...") calls below so the two never drift apart.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
-export const PURCHASE_HEADER_FIELDS: FieldCatalogEntry[] = [
-  { key: "Requester", title: "Requester" },
-  { key: "CardCode", title: "Vendor Code" },
-  { key: "CardName", title: "Vendor Name" },
-  { key: "RequesterName", title: "Requester Name" },
-  { key: "BPL_IDAssignedToInvoice", title: "Branch" },
-  { key: "SendNotification", title: "Send Notification" },
-  { key: "RequesterEmail", title: "Requester Email" },
-  { key: "DocDate", title: "Posting Date" },
-  { key: "DocDueDate", title: "Due Date" },
-  { key: "TaxDate", title: "Tax Date" },
-  { key: "RequiredDate", title: "Required Date" },
-];
 
 export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const pathname = usePathname();

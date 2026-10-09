@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getCustomers } from "@/api+/sap/master-data/business-partners";
+import { useGlobalRights } from "@/hooks/useDocumentRights";
 
 interface Props {
   open: boolean;
@@ -26,6 +27,8 @@ export function BusinessPartnerSelectorDialog({
   onSelect,
   cardType = ""
 }: Props) {
+  const { allowedActions } = useGlobalRights();
+  const canShowBalance = allowedActions.includes("ShowBPBalances");
   const [items, setItems] = useState<BusinessPartner[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -104,22 +107,22 @@ export function BusinessPartnerSelectorDialog({
         </div>
 
         <ScrollArea className="h-80 border rounded">
-          <div className="grid grid-cols-3 gap-2 text-sm font-medium border-b px-4 py-2 bg-gray-100">
+          <div className={`grid ${canShowBalance ? "grid-cols-3" : "grid-cols-2"} gap-2 text-sm font-medium border-b px-4 py-2 bg-gray-100`}>
             <div>Code</div>
             <div>Name</div>
-            <div className="text-right">Balance</div>
+            {canShowBalance && <div className="text-right">Balance</div>}
           </div>
 
           <div className="divide-y">
             {items.map((bp) => (
               <button
                 key={bp.CardCode}
-                className="grid grid-cols-3 gap-2 px-4 py-2 hover:bg-gray-50 w-full text-left"
+                className={`grid ${canShowBalance ? "grid-cols-3" : "grid-cols-2"} gap-2 px-4 py-2 hover:bg-gray-50 w-full text-left`}
                 onClick={() => handleSelect(bp)}
               >
                 <div>{bp.CardCode}</div>
                 <div>{bp.CardName}</div>
-                <div className="text-right">{bp.Balance}</div>
+                {canShowBalance && <div className="text-right">{bp.Balance}</div>}
               </button>
             ))}
 

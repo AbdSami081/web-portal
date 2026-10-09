@@ -6,16 +6,6 @@ import { AppLabel } from "@/components/Custom/AppLabel";
 import { useFmsContext } from "@/hooks/useFMS";
 import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
 import { useSalesPersonsStore } from "@/stores/useSalesPersonsStore";
-import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
-
-// Field access catalog for this document's footer — folded into the header
-// ("H") bucket in @WP_FIELDS_CFG, matching the existing convention.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
-export const INVENTORY_FOOTER_FIELDS: FieldCatalogEntry[] = [
-  { key: "SalesPersonCode", title: "Sales Employee" },
-  { key: "JournalMemo", title: "Journal Memo" },
-  { key: "Comments", title: "Comments" },
-];
 
 export default function InvDocumentFooter() {
   const {

@@ -23,9 +23,9 @@ import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 
 import { useUDFStore } from "@/stores/useUDFStore";
 import { UDFLayout } from "@/components/shared/UDFSheet";
-import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useDocumentRights } from "@/hooks/useDocumentRights";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
@@ -443,7 +443,7 @@ export function PRDDocumentLayout<T extends FieldValues>({
                 >
                   <SelectTrigger
                     className="w-[180px] h-9 bg-black text-white hover:bg-zinc-800 focus:ring-0"
-                    disabled={isCopyingToInventory || !getFieldSettings(docType, "headerFieds", "CopyFrom").enable || docType !== DocumentType.ProductionOrder}
+                    disabled={isCopyingToInventory}
                   >
                     <div className="flex items-center gap-2">
                       {isCopyingToInventory && <Loader2 className="w-4 h-4 animate-spin text-white" />}

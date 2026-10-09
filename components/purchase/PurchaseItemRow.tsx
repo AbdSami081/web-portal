@@ -8,8 +8,10 @@ import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { UoMSelectorDialog } from "@/modals/UoMSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
-import { distribtionLstOCRCO2, distribtionLstOCRCO3, distribtionLstOCRCO4 } from "@/app/data/cogsData";
 import { calculateFreightTax, calculateLineTax } from "@/utils/taxCalculations";
+import { costingCodeField, cogsCostingCodeField } from "@/lib/sap/helpers/distributionHelper";
+import { getDistributionRulesCached, type DistributionRule } from "@/api+/sap/master-data/distribution/distributionService";
+import { useActiveDimensions } from "@/hooks/useActiveDimensions";
 import { PurchaseDocumentLine } from "@/types/purchase/purchaseDocuments.type";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
@@ -29,11 +31,6 @@ interface Props {
   index: number;
   line: PurchaseDocumentLine;
   documentMode?: "items" | "service";
-}
-
-interface Record {
-  Code: string;
-  Name: string;
 }
 
 const glAccountColumns = [
@@ -80,10 +77,12 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   const priceGuard = usePositiveField(isService ? "UnitPrice" : "Price", isService ? line.UnitPrice : line.Price);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
   const [uomDialogOpen, setUomDialogOpen] = useState(false);
-  const [cogsModalOpen, setCogsModalOpen] = useState(false);
+  const [distModalOpen, setDistModalOpen] = useState(false);
   const [glAccountModalOpen, setGlAccountModalOpen] = useState(false);
-  const [activeField, setActiveField] = useState<"CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4">("CogsOcrCo2");
-  const [cogsData, setCogsData] = useState<Record[]>([]);
+  const [activeDistField, setActiveDistField] = useState("");
+  const [distRuleOptions, setDistRuleOptions] = useState<DistributionRule[]>([]);
+  const [distRulesLoading, setDistRulesLoading] = useState(false);
+  const activeDimensions = useActiveDimensions();
   const { multiBranchEnabled } = useApprovalSettings();
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
@@ -183,16 +182,16 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
     updateLineByIndex(index, updatedLine);
   };
 
-  const openCogsModal = (field: "CogsOcrCo2" | "CogsOcrCo3" | "CogsOcrCo4") => {
-    setActiveField(field);
-    setCogsData(
-      field === "CogsOcrCo2"
-        ? distribtionLstOCRCO2
-        : field === "CogsOcrCo3"
-          ? distribtionLstOCRCO3
-          : distribtionLstOCRCO4
-    );
-    setCogsModalOpen(true);
+  const openDistModal = async (field: string, dimension: number) => {
+    setActiveDistField(field);
+    setDistModalOpen(true);
+    setDistRulesLoading(true);
+    try {
+      const rules = await getDistributionRulesCached(dimension);
+      setDistRuleOptions(rules);
+    } finally {
+      setDistRulesLoading(false);
+    }
   };
 
   if (isService) {
@@ -904,6 +903,57 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
         </td>
       )}
 
+      {activeDimensions.flatMap((n) => {
+        const costingField = costingCodeField(n);
+        const cogsField = cogsCostingCodeField(n);
+        return [
+          isFieldVisible(costingField) && (
+            <td className="w-[160px]" key={costingField}>
+              <div className="flex items-center gap-1">
+                <Input
+                  className="h-6 w-full bg-gray-100 text-left text-xs"
+                  value={(draftLine as any)[costingField] || ""}
+                  disabled
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => openDistModal(costingField, n)}
+                  disabled={!isFieldEnabled(costingField)}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </td>
+          ),
+          isFieldVisible(cogsField) && (
+            <td className="w-[160px]" key={cogsField}>
+              <div className="flex items-center gap-1">
+                <Input
+                  className="h-6 w-full bg-gray-100 text-left text-xs"
+                  value={(draftLine as any)[cogsField] || ""}
+                  disabled
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => openDistModal(cogsField, n)}
+                  disabled={!isFieldEnabled(cogsField)}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </td>
+          ),
+        ];
+      })}
+
       <LineUDFCells
         docType={config.type}
         line={draftLine}
@@ -949,13 +999,14 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
       />
 
       <GenericModal
-        open={cogsModalOpen}
-        onClose={() => setCogsModalOpen(false)}
+        open={distModalOpen}
+        onClose={() => setDistModalOpen(false)}
         onSelect={(val) => {
-          setDraftLine({ ...draftLine, [activeField]: val });
-          setCogsModalOpen(false);
+          patchLine({ [activeDistField]: val });
+          setDistModalOpen(false);
         }}
-        data={cogsData}
+        data={distRuleOptions}
+        isLoading={distRulesLoading}
         columns={[
           { key: "Code", label: "Code" },
           { key: "Name", label: "Name" },

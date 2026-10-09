@@ -32,46 +32,8 @@ import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { fetchItemsByCodesBulk } from "@/lib/sap/helpers/itemCacheHelper";
 import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
 import { BulkResultModal, type BulkResultRow } from "@/components/shared/BulkResultModal";
-import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
-
-export const PURCHASE_LINE_FIELDS: FieldCatalogEntry[] = [
-  { key: "ItemCode", title: "Item Code" },
-  { key: "ItemName", title: "Item Description" },
-  { key: "FreeText", title: "Free Text" },
-  { key: "Project", title: "Project" },
-  { key: "Quantity", title: "Qty" },
-  { key: "OnHand", title: "Qty In Whs" },
-  { key: "Price", title: "Price" },
-  { key: "DiscountPercent", title: "Disc %" },
-  { key: "TaxCode", title: "Tax Code" },
-  { key: "TaxAmount", title: "Tax Amount (LC)" },
-  { key: "WarehouseCode", title: "Whs" },
-  { key: "BPLid", title: "Branch" },
-  { key: "UoMCode", title: "UoM" },
-  { key: "LineTotal", title: "Line Total" },
-  { key: "Freight1Type", title: "Freight 1 Type" },
-  { key: "Freight1LCAmount", title: "Freight 1 (LC)" },
-  { key: "Freight2Type", title: "Freight 2 Type" },
-  { key: "Freight2LCAmount", title: "Freight 2 (LC)" },
-  { key: "Freight3Type", title: "Freight 3 Type" },
-  { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
-];
-
-export const PURCHASE_SERVICE_LINE_FIELDS: FieldCatalogEntry[] = [
-  { key: "AccountCode", title: "G/L Account" },
-  { key: "AccountName", title: "G/L Account Name" },
-  { key: "Description", title: "Description" },
-  { key: "DiscountPercent", title: "Disc %" },
-  { key: "TaxCode", title: "Tax Code" },
-  { key: "LineTotal", title: "Line Total" },
-  { key: "TaxAmount", title: "Tax Amount (LC)" },
-  { key: "Freight1Type", title: "Freight 1 Type" },
-  { key: "Freight1LCAmount", title: "Freight 1 (LC)" },
-  { key: "Freight2Type", title: "Freight 2 Type" },
-  { key: "Freight2LCAmount", title: "Freight 2 (LC)" },
-  { key: "Freight3Type", title: "Freight 3 Type" },
-  { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
-];
+import { costingCodeField, cogsCostingCodeField } from "@/lib/sap/helpers/distributionHelper";
+import { useActiveDimensions } from "@/hooks/useActiveDimensions";
 
 export function PurchaseItems() {
   const { watch } = useFormContext();
@@ -99,6 +61,7 @@ export function PurchaseItems() {
   const { multiBranchEnabled } = useApprovalSettings();
 
   const { freightsWithCharges, warehouses, loadMasterData, loadWarehouses } = useMasterDataStore();
+  const activeDimensions = useActiveDimensions();
   const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -363,6 +326,10 @@ export function PurchaseItems() {
     { key: "Freight2LCAmount", title: "Freight 2 (LC)", width: 180 },
     { key: "Freight3Type", title: "Freight 3 Type", width: 180 },
     { key: "Freight3LCAmount", title: "Freight 3 (LC)", width: 180 },
+    ...activeDimensions.flatMap((n) => [
+      { key: costingCodeField(n), title: n === 1 ? "Distribution Rule" : `Distribution Rule ${n}`, width: 180 },
+      { key: cogsCostingCodeField(n), title: n === 1 ? "COGS Distribution Rule" : `COGS Distribution Rule ${n}`, width: 180 },
+    ]),
   ].filter(col => {
     if (col.key === "actions") return true;
     if (col.key === "BPLid" && !multiBranchEnabled) return false;

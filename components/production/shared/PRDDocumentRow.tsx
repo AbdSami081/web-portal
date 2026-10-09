@@ -29,6 +29,8 @@ import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
+import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService";
 
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
@@ -43,6 +45,26 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
   const [uomDialogOpen, setUomDialogOpen] = useState(false);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  const loadProjects = async () => {
+    try {
+      setProjectsLoading(true);
+      const response = await getBusinessPartnerProjects();
+      setProjects(response);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
+      setProjects([]);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+
+  const isProjectVisible =
+    fieldAccess.includes("Project") && getFieldSettings(config.type, "linesFieds", "Project").visible !== false;
+  const isProjectEnabled = getFieldSettings(config.type, "linesFieds", "Project").enable !== false;
 
   useEffect(() => {
     setDraftLine(line);
@@ -106,6 +128,32 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
       {config.itemColumns.itemDescription && fieldAccess.includes("ItemName") && (
         <td className="py-2 px-4 min-w-0" title={line.ItemName}>
           <span className="block w-full truncate font-medium text-gray-700">{line.ItemName}</span>
+        </td>
+      )}
+
+      {config.itemColumns.project && isProjectVisible && (
+        <td className="py-2 px-4">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-7 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-xs"
+              value={draftLine.Project || ""}
+              disabled
+              readOnly
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={() => {
+                loadProjects();
+                setProjectModalOpen(true);
+              }}
+              disabled={initialStatus === "boposClosed" || !isProjectEnabled}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </td>
       )}
 
@@ -343,6 +391,30 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         onSelect={(uom) => {
           patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
         }}
+      />
+
+      <GenericModal
+        open={projectModalOpen}
+        onClose={() => setProjectModalOpen(false)}
+        data={projects}
+        isLoading={projectsLoading}
+        onSelect={(value) => {
+          const selectedProject = projects.find(
+            (project: any) => project.Code === value || project.code === value
+          );
+          if (!selectedProject) return;
+
+          patchLine({
+            Project: selectedProject.Code || selectedProject.code || value,
+          });
+          setProjectModalOpen(false);
+        }}
+        columns={[
+          { key: "Code", label: "Project Code" },
+          { key: "Name", label: "Project Name" },
+        ]}
+        title="Select Project"
+        getSelectValue={(item: any) => item.Code || item.code}
       />
     </>
   );

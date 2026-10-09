@@ -1,21 +1,25 @@
 import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 import { DocumentType } from "@/types/master/DocumentType";
-import { PURCHASE_LINE_FIELDS, PURCHASE_SERVICE_LINE_FIELDS } from "@/components/purchase/PurchaseItems";
-import { PURCHASE_HEADER_FIELDS } from "@/components/purchase/PurchaseVendorHeader";
-import { PURCHASE_FOOTER_FIELDS } from "@/components/purchase/PurchaseFooter";
-import { SALES_LINE_FIELDS, SALES_SERVICE_LINE_FIELDS } from "@/components/sales/shared/DocumentItems";
-import { SALES_HEADER_FIELDS } from "@/components/sales/shared/DocumentHeader";
-import { SALES_FOOTER_FIELDS } from "@/components/sales/shared/DocumentFooter";
 import {
+  PURCHASE_HEADER_FIELDS,
+  PURCHASE_FOOTER_FIELDS,
+  PURCHASE_LINE_FIELDS,
+  PURCHASE_SERVICE_LINE_FIELDS,
+  SALES_HEADER_FIELDS,
+  SALES_FOOTER_FIELDS,
+  SALES_LINE_FIELDS,
+  SALES_SERVICE_LINE_FIELDS,
+  INVENTORY_GOOD_ISSUE_HEADER_FIELDS,
+  INVENTORY_TRANSFER_HEADER_FIELDS,
   INVENTORY_GOOD_ISSUE_LINE_FIELDS,
   INVENTORY_TRANSFER_LINE_FIELDS,
   INVENTORY_TRANSFER_REQUEST_LINE_FIELDS,
-} from "@/components/Inventory/shared/InvDocumentItems";
-import { INVENTORY_GOOD_ISSUE_HEADER_FIELDS, INVENTORY_TRANSFER_HEADER_FIELDS } from "@/components/Inventory/shared/InvDocumentHeader";
-import { INVENTORY_FOOTER_FIELDS } from "@/components/Inventory/shared/InvDocumentFooter";
-import { PRODUCTION_LINE_FIELDS } from "@/components/production/shared/PRDDocumentItems";
-import { PRODUCTION_HEADER_FIELDS } from "@/components/production/shared/PRDDocumentHeader";
-import { PRODUCTION_FOOTER_FIELDS } from "@/components/production/shared/PRDDocumentFooter";
+  INVENTORY_FOOTER_FIELDS,
+  PRODUCTION_HEADER_FIELDS,
+  PRODUCTION_LINE_FIELDS,
+  PRODUCTION_FOOTER_FIELDS,
+  resolveFields,
+} from "./documentFieldsConfig";
 
 export interface DocFieldCatalog {
   header: FieldCatalogEntry[];
@@ -28,33 +32,33 @@ function dedupe(entries: FieldCatalogEntry[]): FieldCatalogEntry[] {
 }
 
 const PURCHASE_CATALOG: DocFieldCatalog = {
-  header: dedupe([...PURCHASE_HEADER_FIELDS, ...PURCHASE_FOOTER_FIELDS]),
-  line: dedupe([...PURCHASE_LINE_FIELDS, ...PURCHASE_SERVICE_LINE_FIELDS]),
+  header: dedupe(resolveFields([...PURCHASE_HEADER_FIELDS, ...PURCHASE_FOOTER_FIELDS])),
+  line: dedupe(resolveFields([...PURCHASE_LINE_FIELDS, ...PURCHASE_SERVICE_LINE_FIELDS])),
 };
 
 const SALES_CATALOG: DocFieldCatalog = {
-  header: dedupe([...SALES_HEADER_FIELDS, ...SALES_FOOTER_FIELDS]),
-  line: dedupe([...SALES_LINE_FIELDS, ...SALES_SERVICE_LINE_FIELDS]),
+  header: dedupe(resolveFields([...SALES_HEADER_FIELDS, ...SALES_FOOTER_FIELDS])),
+  line: dedupe(resolveFields([...SALES_LINE_FIELDS, ...SALES_SERVICE_LINE_FIELDS])),
 };
 
 const PRODUCTION_CATALOG: DocFieldCatalog = {
-  header: dedupe([...PRODUCTION_HEADER_FIELDS, ...PRODUCTION_FOOTER_FIELDS]),
-  line: PRODUCTION_LINE_FIELDS,
+  header: dedupe(resolveFields([...PRODUCTION_HEADER_FIELDS, ...PRODUCTION_FOOTER_FIELDS])),
+  line: resolveFields(PRODUCTION_LINE_FIELDS),
 };
 
 const INVENTORY_GOOD_ISSUE_CATALOG: DocFieldCatalog = {
-  header: dedupe([...INVENTORY_GOOD_ISSUE_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS]),
-  line: INVENTORY_GOOD_ISSUE_LINE_FIELDS,
+  header: dedupe(resolveFields([...INVENTORY_GOOD_ISSUE_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS])),
+  line: resolveFields(INVENTORY_GOOD_ISSUE_LINE_FIELDS),
 };
 
 const INVENTORY_TRANSFER_CATALOG: DocFieldCatalog = {
-  header: dedupe([...INVENTORY_TRANSFER_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS]),
-  line: INVENTORY_TRANSFER_LINE_FIELDS,
+  header: dedupe(resolveFields([...INVENTORY_TRANSFER_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS])),
+  line: resolveFields(INVENTORY_TRANSFER_LINE_FIELDS),
 };
 
 const INVENTORY_TRANSFER_REQUEST_CATALOG: DocFieldCatalog = {
-  header: dedupe([...INVENTORY_TRANSFER_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS]),
-  line: INVENTORY_TRANSFER_REQUEST_LINE_FIELDS,
+  header: dedupe(resolveFields([...INVENTORY_TRANSFER_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS])),
+  line: resolveFields(INVENTORY_TRANSFER_REQUEST_LINE_FIELDS),
 };
 
 export function getFieldCatalog(

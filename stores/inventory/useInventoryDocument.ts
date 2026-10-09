@@ -241,6 +241,7 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
           ...pickLineUdfs(line),
           ItemCode: line.ItemCode,
           Dscription: line.ItemDescription || line.Dscription || line.ItemName || "",
+          Project: line.ProjectCode || line.Project || "",
           FromWhsCode: fromWhs,
           WhsCode: toWhs,
           BPLid: line.BPLid ?? branchId,

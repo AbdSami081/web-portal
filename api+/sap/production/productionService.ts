@@ -104,6 +104,11 @@ const mapProductionOrderLine = (line: any, data: any, includeLineNumber = false)
     ProductionOrderIssueType: line.ProductionOrderIssueType || "im_Manual",
     Warehouse: line.Warehouse || data.Warehouse,
     ItemType: line.ItemType,
+    // Confirmed live: ProductionOrderLine rejects "ProjectCode" ("Property
+    // 'ProjectCode' of 'ProductionOrderLine' is invalid") — unlike Marketing
+    // Document/Journal Entry lines, this entity's dimension field is named
+    // "Project" (matches the DI API ProductionOrders.Lines.Project property).
+    ...(line.Project && { Project: line.Project }),
     ...pickLineUdfs(line),
   };
 
@@ -125,6 +130,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
       ItemNo: data.ItemNo,
       Remarks: data.Remarks || data.Comments,
       ProductionOrderStatus: data.ProductionOrderStatus || "boposPlanned",
+      ...(data.Project && { Project: data.Project }),
     };
 
     if (attachments.length > 0) {
@@ -167,6 +173,7 @@ export const saveProductionDocument = async (docType: DocumentType, data: any, l
           BaseType: line.OrderNumber ? 202 : undefined,
           BaseEntry: line.OrderNumber,
           BaseLine: (line.OrderNumber && line.LineNumber === -1) ? undefined : line.LineNumber,
+          ...(line.Project && { ProjectCode: line.Project }),
           ...pickLineUdfs(line),
         })),
       }),

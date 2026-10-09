@@ -345,6 +345,11 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "User Access Fields",
                 url: "/dashboard/administration/fields-access",
             },
+            {
+                id: "74cf2d00-c5ce-465b-a34c-1135422a5909",
+                title: "General Authorization",
+                url: "/dashboard/administration/general-authorization",
+            },
         ],
     },
 ];

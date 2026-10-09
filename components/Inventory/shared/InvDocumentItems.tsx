@@ -22,50 +22,9 @@ import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog"
 import { toast } from "sonner";
 import { linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
-import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 import { fetchItemsByCodesBulk } from "@/lib/sap/helpers/itemCacheHelper";
 import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
-
-// Field access catalogs for this document's line table — kept next to the
-// `columns` array below so the two never drift apart. Inventory's line
-// fields differ per doc type (unlike Purchase/Sales, which share one array),
-// so each doc type gets its own list here.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
-export const INVENTORY_GOOD_ISSUE_LINE_FIELDS: FieldCatalogEntry[] = [
-  { key: "ItemCode", title: "Item" },
-  { key: "Dscription", title: "Description" },
-  { key: "WhsCode", title: "Warehouse" },
-  { key: "BPLid", title: "Branch" },
-  { key: "Quantity", title: "Quantity" },
-  { key: "OnHand", title: "Qty In Whs" },
-  { key: "UoMCode", title: "UoM Code" },
-  { key: "UoMName", title: "UoM Name" },
-];
-
-export const INVENTORY_TRANSFER_LINE_FIELDS: FieldCatalogEntry[] = [
-  { key: "ItemCode", title: "Item" },
-  { key: "Dscription", title: "Description" },
-  { key: "FromWhsCode", title: "From Whs" },
-  { key: "WhsCode", title: "To Whs" },
-  { key: "BPLid", title: "Branch" },
-  { key: "Quantity", title: "Quantity" },
-  { key: "OnHand", title: "Qty In Whs" },
-  { key: "UoMCode", title: "UoM Code" },
-  { key: "UoMName", title: "UoM Name" },
-];
-
-export const INVENTORY_TRANSFER_REQUEST_LINE_FIELDS: FieldCatalogEntry[] = [
-  { key: "ItemCode", title: "Item" },
-  { key: "Dscription", title: "Description" },
-  { key: "FromWhsCode", title: "From Whs" },
-  { key: "WhsCode", title: "To Whs" },
-  { key: "BPLid", title: "Branch" },
-  { key: "Quantity", title: "Quantity" },
-  { key: "OnHand", title: "Qty In Whs" },
-  { key: "OpenQty", title: "Open Qty" },
-  { key: "UoMCode", title: "UoM Code" },
-  { key: "UoMName", title: "UoM Name" },
-];
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 
 export function InvDocumentItems() {
   const { watch } = useFormContext();
@@ -128,6 +87,7 @@ export function InvDocumentItems() {
         { key: "actions",   title: "Actions",     width: 80  },
         { key: "ItemCode",  title: "Item",        width: 180 },
         { key: "Dscription",title: "Description", width: 300 },
+        { key: "Project",   title: "Project",     width: 140 },
         { key: "WhsCode",   title: "Warehouse",   width: 180 },
         { key: "BPLid",     title: "Branch",      width: 90  },
         { key: "Quantity",  title: "Quantity",    width: 140 },
@@ -139,6 +99,7 @@ export function InvDocumentItems() {
         { key: "actions",   title: "Actions",      width: 80  },
         { key: "ItemCode",  title: "Item",         width: 180 },
         { key: "Dscription",title: "Description",  width: 300 },
+        { key: "Project",   title: "Project",      width: 140 },
         { key: "FromWhsCode",title: "From Whs",     width: 180 },
         { key: "WhsCode",   title: "To Whs",       width: 180 },
         { key: "BPLid",     title: "Branch",       width: 90  },
@@ -148,7 +109,7 @@ export function InvDocumentItems() {
         { key: "UoMCode",   title: "UoM Code",     width: 140 },
         { key: "UoMName",   title: "UoM Name",     width: 140 },
       ]
-  ).filter((col) => (multiBranchEnabled || col.key !== "BPLid") && (col.key === "actions" || fieldAccess.includes(col.key)));
+  ).filter((col) => (multiBranchEnabled || col.key !== "BPLid") && (col.key === "actions" || (fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false)));
 
   const lineUdfs = useLineUDFs(config.type);
   const columnsWithUdf = useMemo(

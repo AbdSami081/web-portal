@@ -23,24 +23,6 @@ import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { GenericModal } from "@/modals/GenericModal";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { DocumentType } from "@/types/master/DocumentType";
-import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
-
-// Field access catalogs for this document's header — kept next to the
-// hasFieldAccess("...") calls below so the two never drift apart.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
-export const INVENTORY_GOOD_ISSUE_HEADER_FIELDS: FieldCatalogEntry[] = [
-  { key: "BPL_IDAssignedToInvoice", title: "Branch" },
-  { key: "DocDate", title: "Posting Date" },
-];
-
-export const INVENTORY_TRANSFER_HEADER_FIELDS: FieldCatalogEntry[] = [
-  { key: "CardCode", title: "Customer/Vendor Code" },
-  { key: "CardName", title: "Customer/Vendor Name" },
-  { key: "BPL_IDAssignedToInvoice", title: "Branch" },
-  { key: "FromWarehouse", title: "From Warehouse" },
-  { key: "ToWarehouse", title: "To Warehouse" },
-  { key: "DocDate", title: "Posting Date" },
-];
 import { useUDFStore } from "@/stores/useUDFStore";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { getSapErrorMessage } from "@/lib/errorHelper";

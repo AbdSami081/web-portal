@@ -48,6 +48,7 @@ interface IFPRDDocumentStore {
   loadFromBOM: (bom: any, plannedQty: number) => void;
   reset: (docType?: DocumentType) => void;
   recalculateFromHeader: (headerPlannedQty: number) => void;
+  setAllLinesProject: (project: string) => void;
 }
 
 export const useIFPRDDocument = create<IFPRDDocumentStore>()(
@@ -129,6 +130,9 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
         mappedLines = [{
           ItemNo: doc.ItemNo || doc.ItemCode || "",
           ItemName: doc.ProductDescription || doc.ItemName || "",
+          // ProductionOrders/ProductionOrderLines use "Project" (not "ProjectCode" —
+          // confirmed live); DocumentLines (Issue/Receipt) use "ProjectCode" instead.
+          Project: doc.Project || doc.ProjectCode || "",
           PlannedQuantity: (doc.PlannedQuantity || 0) - (doc.CompletedQuantity || 0),
           Warehouse: doc.Warehouse || doc.WarehouseCode || "",
           ItemType: "pit_Item",
@@ -150,6 +154,8 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
             ...pickLineUdfs(line),
             ItemNo: line.ItemNo || line.ItemCode,
             ItemName: line.ItemName || line.ItemDescription,
+            // ProductionOrderLines uses "Project"; DocumentLines (Issue/Receipt) uses "ProjectCode".
+            Project: line.Project || line.ProjectCode || "",
             PlannedQuantity: line.PlannedQuantity || line.Quantity,
             Warehouse: line.Warehouse || line.WarehouseCode,
             ItemType: line.ItemType,
@@ -305,6 +311,11 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
           ...line,
           PlannedQuantity: Number(line.BaseRatio || 0) * Number(headerPlannedQty || 0),
         })),
+      }));
+    },
+    setAllLinesProject: (project: string) => {
+      set((state) => ({
+        lines: state.lines.map((line) => ({ ...line, Project: project })),
       }));
     },
   }))
