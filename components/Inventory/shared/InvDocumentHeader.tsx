@@ -677,10 +677,10 @@ export function InvDocumentHeader() {
         onClose={() => setFromWhsModalOpen(false)}
         onSelect={(wh: Warehouse) => {
           setFromWarehouse(wh.WhsCode);
-          if (lines.length > 0) {
-            setSyncDialog({ open: true, type: "from", value: wh.WhsCode });
-          }
           setFromWhsModalOpen(false);
+          if (lines.length > 0) {
+            setTimeout(() => setSyncDialog({ open: true, type: "from", value: wh.WhsCode }), 200);
+          }
         }}
         data={warehouses}
         columns={[
@@ -696,10 +696,10 @@ export function InvDocumentHeader() {
         onClose={() => setToWhsModalOpen(false)}
         onSelect={(wh: Warehouse) => {
           setToWarehouse(wh.WhsCode);
-          if (lines.length > 0) {
-            setSyncDialog({ open: true, type: "to", value: wh.WhsCode });
-          }
           setToWhsModalOpen(false);
+          if (lines.length > 0) {
+            setTimeout(() => setSyncDialog({ open: true, type: "to", value: wh.WhsCode }), 200);
+          }
         }}
         data={warehouses}
         columns={[
