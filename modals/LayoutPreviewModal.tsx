@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, FileText, Loader2, Printer, Star } from "lucide-react";
-import { getLayouts, downloadReport, ReportData } from "@/api+/sap/reporting/reportingService";
+import { getLayouts, downloadReport, getReportParameters, ReportData } from "@/api+/sap/reporting/reportingService";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ReportParameterModal from "@/modals/ReportParameterModal";
@@ -138,11 +138,41 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
       return;
     }
 
-    const customParams = (selectedLayout.Parameters || []).filter(
+    let customParams = (selectedLayout.Parameters || []).filter(
       (p) => !isSystemParam(p.U_ParamName)
     );
 
     if (customParams.length > 0) {
+      const hasDropdown = customParams.some((p) => p.U_ComponentType === "Dropdown");
+      if (hasDropdown) {
+        setPrinting(true);
+        try {
+          const fullPath = `${selectedLayout.U_FilePath}\\${selectedLayout.U_ActualFileName}`;
+          const live = await getReportParameters(fullPath, user?.companyDB);
+          const liveByName = new Map(live.map((p) => [p.name.toLowerCase(), p]));
+          customParams = customParams.map((p) => {
+            if (p.U_ComponentType !== "Dropdown") return p;
+            const fresh = liveByName.get(p.U_ParamName.toLowerCase());
+            if (!fresh?.values?.length) return p;
+            return {
+              ...p,
+              U_ParamValues: fresh.values.map((v) => ({ Value: v.value, Description: v.description })),
+            };
+          });
+          const resolvedByName = new Map(customParams.map((p) => [p.U_ParamName, p]));
+          setSelectedLayout({
+            ...selectedLayout,
+            Parameters: (selectedLayout.Parameters || []).map(
+              (p) => resolvedByName.get(p.U_ParamName) || p
+            ),
+          });
+        } catch {
+          toast.error("Could not load current dropdown values");
+        } finally {
+          setPrinting(false);
+        }
+      }
+
       const initialValues: Record<string, any> = {};
       customParams.forEach((p) => {
         initialValues[p.U_ParamName] = "";
