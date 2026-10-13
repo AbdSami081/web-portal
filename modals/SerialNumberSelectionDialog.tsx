@@ -146,8 +146,11 @@ export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines, i
 
   const handleAutoSelect = () => {
     if (!currentItem) return;
-    const available = availableStock[currentItem.ItemCode] || [];
-    
+    const lineWarehouse = (currentItem as any).WarehouseCode || (currentItem as any).FromWhsCode || (currentItem as any).WhsCode || "";
+    const available = (availableStock[currentItem.ItemCode] || []).filter(
+      (s) => !lineWarehouse || s.WhseCode === lineWarehouse
+    );
+
     const currentSelected = selectedSerialsByItem[currentItem.ItemCode] || [];
     const needed = currentItem.Quantity - currentSelected.length;
     if (needed <= 0) return;
@@ -182,7 +185,15 @@ export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines, i
 
   const currentSelectedItems = (selectedSerialsByItem[currentItem?.ItemCode] || []).map(s => ({ id: s.InternalSerialNumber, qty: 1 }));
 
-  const filteredAvailable = (availableStock[currentItem?.ItemCode] || []).filter(s => {
+  const currentLineWarehouse =
+    (currentItem as any)?.WarehouseCode ||
+    "";
+
+  const warehouseStock = (availableStock[currentItem?.ItemCode] || []).filter(
+    (s) => !currentLineWarehouse || s.WhseCode === currentLineWarehouse
+  );
+
+  const filteredAvailable = warehouseStock.filter(s => {
     const id = s.Identifier.toLowerCase();
     const isAlreadySelected = currentSelectedItems.some(cs => cs.id === s.Identifier);
     return id.includes(search.toLowerCase()) && !isAlreadySelected;
@@ -346,7 +357,7 @@ export function SerialNumberSelectionDialog({ open, onClose, onConfirm, lines, i
           <div className="flex gap-8 items-center">
             <div className="flex items-center gap-3">
                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest whitespace-nowrap">Available:</span>
-               <span className="text-lg font-black text-neutral-900">{(availableStock[currentItem?.ItemCode] || []).length}</span>
+               <span className="text-lg font-black text-neutral-900">{warehouseStock.length}</span>
             </div>
           </div>
           <div className="flex gap-4">

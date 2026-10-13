@@ -1,10 +1,36 @@
 import apiClient, { reportingApiClient } from "@/lib/apiClient";
 import axios from "axios";
 
+export interface ReportParameterValue {
+  Value: string;
+  Description?: string;
+}
+
+// Shape of a parameter as PERSISTED by SAP_BUSINESS_ONE_WEB_API (the
+// @REPORTS_PARAMETERS UDT) and returned by GetReports/GetAuthorizedReports — used for
+// ReportData.Parameters below and by ReportParameterModal.tsx.
 export interface ReportParameter {
   U_ParamName: string;
   U_ComponentType: string;
   U_ParamType: string;
+  U_ParamValues?: ReportParameterValue[];
+}
+
+// Shape of a parameter as returned LIVE by CrystalReportingAPI's
+// GetReportParametersWithValues endpoint (lowercase keys — see
+// Models/ReportParameterInfo.cs in that project). Distinct from ReportParameter
+// above: this is what you get straight from Crystal, before it's been imported/
+// persisted into the UDT.
+export interface LiveReportParameterValue {
+  value: string;
+  description?: string;
+}
+
+export interface LiveReportParameter {
+  name: string;
+  type: string;
+  componentType: string;
+  values?: LiveReportParameterValue[];
 }
 
 export interface ReportData {
@@ -52,9 +78,19 @@ export interface ReportAccessPayload {
   reportCodes: string[];
 }
 
-export const getReportParameters = async (filePath: string) => {
+// Calls CrystalReportingAPI's GetReportParametersWithValues (not the plain
+// GetReportParameters, which returns a flat name->type dictionary with no room for
+// dropdown values). database is optional but needed for dynamic (query-based)
+// dropdowns to resolve — without it you still get names/types/static dropdowns.
+export const getReportParameters = async (
+  filePath: string,
+  database?: string
+): Promise<LiveReportParameter[]> => {
+  const params = new URLSearchParams({ filePath });
+  if (database) params.append("database", database);
+
   const response = await reportingApiClient.get(
-    `api/reports/GetReportParameters?filePath=${encodeURIComponent(filePath)}`
+    `api/reports/GetReportParametersWithValues?${params.toString()}`
   );
   return response.data;
 };

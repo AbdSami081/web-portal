@@ -14,7 +14,7 @@ import {
   X
 } from "lucide-react";
 import { useAuth } from "@/context/authContext";
-import { getAuthorizedReports, getReports, downloadReport, ReportData, ReportParameter } from "@/api+/sap/reporting/reportingService";
+import { getAuthorizedReports, getReports, downloadReport, getReportParameters, ReportData, ReportParameter } from "@/api+/sap/reporting/reportingService";
 import ReportViewer from "@/components/reporting/ReportViewer";
 import { cn } from "@/lib/utils";
 import ReportParameterModal from "@/modals/ReportParameterModal";
@@ -86,19 +86,46 @@ export default function ReportGeneratePage() {
 
   const handleGenerate = async (report: ReportData) => {
     if (!report.Code) return;
-    
+
     if (report.Parameters && report.Parameters.length > 0) {
-      setSelectedReport(report);
-      
+      let resolvedParams = report.Parameters;
+
+      const hasDropdown = report.Parameters.some(p => p.U_ComponentType === "Dropdown");
+      if (hasDropdown) {
+        setPrintingId(report.U_ReportCode!);
+        try {
+          const fullPath = `${report.U_FilePath}\\${report.U_ActualFileName}`;
+          const live = await getReportParameters(fullPath, user?.companyDB);
+          const liveByName = new Map(
+            live.map(p => [p.name.toLowerCase(), p])
+          );
+          resolvedParams = report.Parameters.map(p => {
+            if (p.U_ComponentType !== "Dropdown") return p;
+            const fresh = liveByName.get(p.U_ParamName.toLowerCase());
+            if (!fresh?.values?.length) return p;
+            return {
+              ...p,
+              U_ParamValues: fresh.values.map(v => ({ Value: v.value, Description: v.description })),
+            };
+          });
+        } catch (error) {
+          toast.error("Could not load current dropdown values");
+        } finally {
+          setPrintingId(null);
+        }
+      }
+
+      setSelectedReport({ ...report, Parameters: resolvedParams });
+
       const initialValues: Record<string, string> = {};
-      report.Parameters.forEach(p => {
+      resolvedParams.forEach(p => {
         initialValues[p.U_ParamName] = "";
       });
       setParamValues(initialValues);
       setShowParamModal(true);
       return;
     }
-    
+
     await generateReport(report, {});
   };
 

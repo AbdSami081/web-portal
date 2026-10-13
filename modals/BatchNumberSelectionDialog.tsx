@@ -247,10 +247,13 @@ export function BatchNumberSelectionDialog({ open, onClose, onConfirm, lines, in
     const currentSelected = selectedBatchesByItem[currentItem.ItemCode] || [];
     const currentTotalSelected = currentSelected.reduce((sum, b) => sum + b.Quantity, 0);
     let needed = currentItem.Quantity - currentTotalSelected;
-    
+
     if (needed <= 0) return;
 
-    const available = availableStock[currentItem.ItemCode] || [];
+    const lineWarehouse = (currentItem as any).WarehouseCode || (currentItem as any).FromWhsCode || (currentItem as any).WhsCode || "";
+    const available = (availableStock[currentItem.ItemCode] || []).filter(
+      (b) => !lineWarehouse || b.WhseCode === lineWarehouse
+    );
     let updatedSelected = [...currentSelected];
 
     for (const batch of available) {
@@ -299,9 +302,19 @@ export function BatchNumberSelectionDialog({ open, onClose, onConfirm, lines, in
   const currentSelectedItems = selectedBatchesByItem[currentItem?.ItemCode] || [];
   const currentTotalSelected = currentSelectedItems.reduce((sum, b) => sum + b.Quantity, 0);
 
-  const filteredAvailable = (availableStock[currentItem?.ItemCode] || []).filter(s => {
-    return s.BatchNumber.toLowerCase().includes(search.toLowerCase());
-  });
+  const currentLineWarehouse =
+    (currentItem as any)?.WarehouseCode ||
+    (currentItem as any)?.FromWhsCode ||
+    (currentItem as any)?.WhsCode ||
+    "";
+
+  const warehouseStock = (availableStock[currentItem?.ItemCode] || []).filter(
+    (s) => !currentLineWarehouse || s.WhseCode === currentLineWarehouse
+  );
+
+  const filteredAvailable = warehouseStock.filter(s =>
+    s.BatchNumber.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -486,7 +499,7 @@ export function BatchNumberSelectionDialog({ open, onClose, onConfirm, lines, in
             <div className="flex items-center gap-3">
                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest whitespace-nowrap">Available:</span>
                <span className="text-lg font-black text-neutral-900">
-                 {((availableStock[currentItem?.ItemCode] || []).reduce((sum, b) => sum + b.Quantity, 0)).toFixed(3)}
+                 {(warehouseStock.reduce((sum, b) => sum + b.Quantity, 0)).toFixed(3)}
                </span>
             </div>
           </div>

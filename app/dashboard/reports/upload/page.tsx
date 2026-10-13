@@ -187,15 +187,14 @@ export default function ReportsManagePage() {
       
       for (const item of Array.from(selectedItems)) {
         const cls = getClassification(item.name);
-        const paramsData = await getReportParameters(item.path);
-        const paramsArray = Object.entries(paramsData || {}).map(([name, type]) => {
-          const typeStr = String(type);
+        const paramsData = await getReportParameters(item.path, currentUser?.companyDB);
+        const paramsArray = (paramsData || []).map((p) => {
+          const hasValues = p.componentType === "Dropdown" && (p.values?.length ?? 0) > 0;
           return {
-            name,
-            type: typeStr,
-            // Auto-select the Date picker for date-kind parameters so date
-            // filters don't end up as plain text inputs.
-            componentType: /date/i.test(typeStr) ? "Date" : "Input",
+            name: p.name,
+            type: p.type,
+            componentType: hasValues ? "Dropdown" : /date/i.test(p.type || "") ? "Date" : "Input",
+            values: hasValues ? p.values : undefined,
           };
         });
         
@@ -544,8 +543,8 @@ export default function ReportsManagePage() {
 
                         <div className="space-y-2">
                           <Label className="text-[11px] font-bold text-slate-600 uppercase tracking-tight">Input Type</Label>
-                          <Select 
-                            value={paramConfigs[configKey]?.componentType || "Input"} 
+                          <Select
+                            value={paramConfigs[configKey]?.componentType || "Input"}
                             onValueChange={(val) => setParamConfigs(prev => ({
                               ...prev,
                               [configKey]: { ...prev[configKey], componentType: val }
@@ -557,6 +556,11 @@ export default function ReportsManagePage() {
                             <SelectContent>
                               <SelectItem value="Input" className="text-xs">Standard Input</SelectItem>
                               <SelectItem value="Date" className="text-xs">Date Picker</SelectItem>
+                              {param.values?.length > 0 && (
+                                <SelectItem value="Dropdown" className="text-xs">
+                                  Dropdown ({param.values.length} values)
+                                </SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>

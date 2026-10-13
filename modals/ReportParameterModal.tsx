@@ -10,6 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Printer, Settings2 } from "lucide-react";
 
 interface ReportParameterModalProps {
@@ -63,7 +70,28 @@ const ReportParameterModal = ({
                 </span>
               </Label>
 
-              {param.U_ComponentType === "Date" ? (
+              {param.U_ComponentType === "Dropdown" && param.U_ParamValues?.length > 0 ? (
+                <Select
+                  value={paramValues[param.U_ParamName] || ""}
+                  onValueChange={(value) =>
+                    setParamValues((prev) => ({
+                      ...prev,
+                      [param.U_ParamName]: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-10 text-sm border-slate-300 focus:ring-blue-500 focus:border-blue-500">
+                    <SelectValue placeholder={`Select ${param.U_ParamName}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {param.U_ParamValues.map((v: any, vIdx: number) => (
+                      <SelectItem key={vIdx} value={v.Value}>
+                        {v.Description || v.Value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : param.U_ComponentType === "Date" ? (
                 <Input
                   type="date"
                   value={paramValues[param.U_ParamName] || ""}
