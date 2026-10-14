@@ -160,13 +160,6 @@ export function DocumentLineRow({
     line.Quantity
   );
 
-  const priceGuard = usePositiveField(
-    isService ? "UnitPrice" : "Price",
-    isService
-      ? line.UnitPrice
-      : line.Price
-  );
-
   useLineFmsAuto(
     draftLine,
     (patch) => {
@@ -1279,33 +1272,10 @@ if (isService) {
                     e.target.value
                   );
 
-                priceGuard.track(
-                  val
-                );
-
                 setDraftLine({
                   ...draftLine,
                   Price: val,
                 });
-              }}
-              onBlur={(e) => {
-                const {
-                  ok,
-                  value,
-                } =
-                  priceGuard.resolve(
-                    e.target.value
-                  );
-
-                if (!ok) {
-                  setDraftLine(
-                    (prev) => ({
-                      ...prev,
-                      Price:
-                        value,
-                    })
-                  );
-                }
               }}
             />
 

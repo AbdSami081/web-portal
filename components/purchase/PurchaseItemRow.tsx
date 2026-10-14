@@ -74,7 +74,6 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   };
   useLineFmsAuto(draftLine, patchLine, isLineDisabled);
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
-  const priceGuard = usePositiveField(isService ? "UnitPrice" : "Price", isService ? line.UnitPrice : line.Price);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
   const [uomDialogOpen, setUomDialogOpen] = useState(false);
   const [distModalOpen, setDistModalOpen] = useState(false);
@@ -560,12 +559,7 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
             value={draftLine.Price}
             onChange={(e) => {
               const val = Number(e.target.value);
-              priceGuard.track(val);
               setDraftLine({ ...draftLine, Price: val });
-            }}
-            onBlur={(e) => {
-              const { ok, value } = priceGuard.resolve(e.target.value);
-              if (!ok) setDraftLine((prev) => ({ ...prev, Price: value }));
             }}
             disabled={!isFieldEnabled("Price")}
           />

@@ -624,7 +624,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               documentMode === "items" &&
               !globalAllowedActions.includes("ZeroPriceDocument")
             ) {
-              toast.error("You don't have rights to save document with zero price.");
+              toast.error("You don't have rights to save document with zero price. Contact your administrator.");
               return;
             }
             if (isBranchMissing((data as any).BPL_IDAssignedToInvoice)) {
