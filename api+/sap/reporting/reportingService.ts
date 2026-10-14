@@ -78,10 +78,9 @@ export interface ReportAccessPayload {
   reportCodes: string[];
 }
 
-// Calls CrystalReportingAPI's GetReportParametersWithValues (not the plain
-// GetReportParameters, which returns a flat name->type dictionary with no room for
-// dropdown values). database is optional but needed for dynamic (query-based)
-// dropdowns to resolve — without it you still get names/types/static dropdowns.
+export const isEmbeddedQueryParam = (paramName: string): boolean =>
+  /^@?\s*select\s+/i.test(paramName || "");
+
 export const getReportParameters = async (
   filePath: string,
   database?: string

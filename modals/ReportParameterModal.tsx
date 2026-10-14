@@ -59,9 +59,14 @@ const ReportParameterModal = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 bg-white space-y-5">
-          {selectedReport?.Parameters?.map((param: any, idx: number) => (
+          {selectedReport?.Parameters?.map((param: any, idx: number) => {
+            const validValues = (param.U_ParamValues || []).filter(
+              (v: any) => v?.Value !== undefined && v?.Value !== null && String(v.Value).trim() !== ""
+            );
+
+            return (
             <div key={idx} className="space-y-2">
-              
+
               <Label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                 {param.U_ParamName}
 
@@ -70,7 +75,7 @@ const ReportParameterModal = ({
                 </span>
               </Label>
 
-              {param.U_ComponentType === "Dropdown" && param.U_ParamValues?.length > 0 ? (
+              {param.U_ComponentType === "Dropdown" && validValues.length > 0 ? (
                 <Select
                   value={paramValues[param.U_ParamName] || ""}
                   onValueChange={(value) =>
@@ -84,7 +89,7 @@ const ReportParameterModal = ({
                     <SelectValue placeholder={`Select ${param.U_ParamName}`} />
                   </SelectTrigger>
                   <SelectContent>
-                    {param.U_ParamValues.map((v: any, vIdx: number) => (
+                    {validValues.map((v: any, vIdx: number) => (
                       <SelectItem key={vIdx} value={v.Value}>
                         {v.Description || v.Value}
                       </SelectItem>
@@ -122,7 +127,8 @@ const ReportParameterModal = ({
                 />
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <DialogFooter className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">

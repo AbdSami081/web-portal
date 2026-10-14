@@ -14,7 +14,7 @@ import {
   X
 } from "lucide-react";
 import { useAuth } from "@/context/authContext";
-import { getAuthorizedReports, getReports, downloadReport, getReportParameters, ReportData, ReportParameter } from "@/api+/sap/reporting/reportingService";
+import { getAuthorizedReports, getReports, downloadReport, getReportParameters, isEmbeddedQueryParam, ReportData, ReportParameter } from "@/api+/sap/reporting/reportingService";
 import ReportViewer from "@/components/reporting/ReportViewer";
 import { cn } from "@/lib/utils";
 import ReportParameterModal from "@/modals/ReportParameterModal";
@@ -90,7 +90,9 @@ export default function ReportGeneratePage() {
     if (report.Parameters && report.Parameters.length > 0) {
       let resolvedParams = report.Parameters;
 
-      const hasDropdown = report.Parameters.some(p => p.U_ComponentType === "Dropdown");
+      const hasDropdown = report.Parameters.some(
+        p => p.U_ComponentType === "Dropdown" || isEmbeddedQueryParam(p.U_ParamName)
+      );
       if (hasDropdown) {
         setPrintingId(report.U_ReportCode!);
         try {
@@ -100,11 +102,12 @@ export default function ReportGeneratePage() {
             live.map(p => [p.name.toLowerCase(), p])
           );
           resolvedParams = report.Parameters.map(p => {
-            if (p.U_ComponentType !== "Dropdown") return p;
+            if (p.U_ComponentType !== "Dropdown" && !isEmbeddedQueryParam(p.U_ParamName)) return p;
             const fresh = liveByName.get(p.U_ParamName.toLowerCase());
             if (!fresh?.values?.length) return p;
             return {
               ...p,
+              U_ComponentType: "Dropdown",
               U_ParamValues: fresh.values.map(v => ({ Value: v.value, Description: v.description })),
             };
           });

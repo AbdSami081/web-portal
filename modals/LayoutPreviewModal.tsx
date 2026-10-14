@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, FileText, Loader2, Printer, Star } from "lucide-react";
-import { getLayouts, downloadReport, getReportParameters, ReportData } from "@/api+/sap/reporting/reportingService";
+import { getLayouts, downloadReport, getReportParameters, isEmbeddedQueryParam, ReportData } from "@/api+/sap/reporting/reportingService";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ReportParameterModal from "@/modals/ReportParameterModal";
@@ -143,7 +143,9 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
     );
 
     if (customParams.length > 0) {
-      const hasDropdown = customParams.some((p) => p.U_ComponentType === "Dropdown");
+      const hasDropdown = customParams.some(
+        (p) => p.U_ComponentType === "Dropdown" || isEmbeddedQueryParam(p.U_ParamName)
+      );
       if (hasDropdown) {
         setPrinting(true);
         try {
@@ -151,11 +153,12 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
           const live = await getReportParameters(fullPath, user?.companyDB);
           const liveByName = new Map(live.map((p) => [p.name.toLowerCase(), p]));
           customParams = customParams.map((p) => {
-            if (p.U_ComponentType !== "Dropdown") return p;
+            if (p.U_ComponentType !== "Dropdown" && !isEmbeddedQueryParam(p.U_ParamName)) return p;
             const fresh = liveByName.get(p.U_ParamName.toLowerCase());
             if (!fresh?.values?.length) return p;
             return {
               ...p,
+              U_ComponentType: "Dropdown",
               U_ParamValues: fresh.values.map((v) => ({ Value: v.value, Description: v.description })),
             };
           });
