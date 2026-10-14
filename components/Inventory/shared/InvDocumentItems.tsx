@@ -127,7 +127,6 @@ export function InvDocumentItems() {
       const uomCode = resolveUoMFromCandidates(
         uoms,
         item.UoM,
-        item.InventoryUOM,
         item.UoMCode,
         item.UoMGroupEntry,
         item.UnitsOfMeasurment
@@ -231,7 +230,6 @@ export function InvDocumentItems() {
       const uomCode = resolveUoMFromCandidates(
         uoms,
         item.UoM,
-        item.InventoryUOM,
         item.UoMCode,
         item.UoMGroupEntry,
         item.UnitsOfMeasurment

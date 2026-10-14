@@ -228,7 +228,7 @@ const setDocumentMode = useSalesDocument(
       ? whRecord.Qty ?? whRecord.qty ?? 0
       : 0;
 
-   const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
+   const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
 
     addLine({
       ItemCode: item.ItemCode,
@@ -334,7 +334,7 @@ const setDocumentMode = useSalesDocument(
         (w: any) => (w.WarehouseCode || w.warehouseCode) === defaultWhsLine
       );
       const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
-      const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
+      const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
 
       newLines.push({
         ItemCode: item.ItemCode,

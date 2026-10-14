@@ -47,10 +47,10 @@ export function PRDDocumentItems() {
         IssuedQuantity: 0,
         UoMCode: isResource
           ? resolveUoMFromCandidates(uoms, item.UnitOfMeasure, item.UoM) || item.UnitOfMeasure || ""
-          : resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "",
+          : resolveUoMFromCandidates(uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "",
         MeasureUnit: item.MeasureUnit || (isResource
           ? getUoMName(resolveUoMFromCandidates(uoms, item.UnitOfMeasure, item.UoM) || item.UnitOfMeasure || "")
-          : getUoMName(resolveUoMFromCandidates(uoms, item.UoM, item.InventoryUOM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "")),
+          : getUoMName(resolveUoMFromCandidates(uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "")),
         ProductionOrderIssueType: isResource ? issueType : "im_Manual"
       });
     });
