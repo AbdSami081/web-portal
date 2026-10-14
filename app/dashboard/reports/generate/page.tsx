@@ -109,6 +109,7 @@ export default function ReportGeneratePage() {
               ...p,
               U_ComponentType: "Dropdown",
               U_ParamValues: fresh.values.map(v => ({ Value: v.value, Description: v.description })),
+              Searchable: fresh.searchable,
             };
           });
         } catch (error) {
@@ -340,6 +341,7 @@ export default function ReportGeneratePage() {
         open={showParamModal}
         onClose={closeParamModal}
         selectedReport={selectedReport}
+        database={user?.companyDB}
         paramValues={paramValues}
         setParamValues={setParamValues}
         generating={generating}

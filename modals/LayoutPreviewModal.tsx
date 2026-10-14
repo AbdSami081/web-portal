@@ -160,6 +160,7 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
               ...p,
               U_ComponentType: "Dropdown",
               U_ParamValues: fresh.values.map((v) => ({ Value: v.value, Description: v.description })),
+              Searchable: fresh.searchable,
             };
           });
           const resolvedByName = new Map(customParams.map((p) => [p.U_ParamName, p]));
@@ -384,6 +385,7 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
                 (p) => !isSystemParam(p.U_ParamName)
               ),
             }}
+            database={user?.companyDB}
             paramValues={paramValues}
             setParamValues={setParamValues}
             generating={printing}

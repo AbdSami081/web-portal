@@ -14,6 +14,11 @@ export interface ReportParameter {
   U_ComponentType: string;
   U_ParamType: string;
   U_ParamValues?: ReportParameterValue[];
+  // True when U_ParamValues is only a capped first page from CrystalReportService's
+  // SQL-literal resolver (a parameter named e.g. "@Select * From OITM") rather than a
+  // small, fixed, authored list — ReportParameterModal uses this to decide whether to
+  // offer search + "Next" (via searchParameterValues) instead of a plain closed list.
+  Searchable?: boolean;
 }
 
 // Shape of a parameter as returned LIVE by CrystalReportingAPI's
@@ -31,6 +36,14 @@ export interface LiveReportParameter {
   type: string;
   componentType: string;
   values?: LiveReportParameterValue[];
+  searchable?: boolean;
+}
+
+// One page of a searchable dropdown parameter's values (CrystalReportingAPI's
+// SearchParameterValues) — hasMore tells the modal whether to keep showing "Next".
+export interface ReportParameterSearchResult {
+  values: ReportParameterValue[];
+  hasMore: boolean;
 }
 
 export interface ReportData {
@@ -90,6 +103,33 @@ export const getReportParameters = async (
 
   const response = await reportingApiClient.get(
     `api/reports/GetReportParametersWithValues?${params.toString()}`
+  );
+  return response.data;
+};
+
+// Pages/searches a single Searchable dropdown parameter (CrystalReportingAPI's
+// SearchParameterValues) — paramName must be passed back exactly as returned by
+// getReportParameters/the persisted catalog so it still matches the "@Select Col
+// From Table" pattern server-side.
+export const searchParameterValues = async (
+  filePath: string,
+  paramName: string,
+  database: string | undefined,
+  search: string,
+  offset: number,
+  limit = 20
+): Promise<ReportParameterSearchResult> => {
+  const params = new URLSearchParams({
+    filePath,
+    paramName,
+    offset: String(offset),
+    limit: String(limit),
+  });
+  if (database) params.append("database", database);
+  if (search) params.append("search", search);
+
+  const response = await reportingApiClient.get(
+    `api/reports/SearchParameterValues?${params.toString()}`
   );
   return response.data;
 };
