@@ -6,7 +6,7 @@ export interface RightDef {
 
 export const DOCUMENT_SPECIAL_RIGHTS: RightDef[] = [
   { action: "Print", label: "Print", enabled: true },
-  { action: "FMS", label: "FMS", enabled: true },
+  { action: "FMS", label: "FMS", enabled: false },
   { action: "FieldInspector", label: "Field Inspector", enabled: true },
   { action: "RelationshipMap", label: "Relationship Map", enabled: true },
   { action: "CloseDocument", label: "Close Document", enabled: true },

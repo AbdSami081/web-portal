@@ -14,17 +14,26 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSelect: (uom: UoM) => void;
+  ugpEntry?: number;
 }
 
-export function UoMSelectorDialog({ open, onClose, onSelect }: Props) {
-  const { uoms, isLoading, loadUoMs } = useUoMStore();
+export function UoMSelectorDialog({ open, onClose, onSelect, ugpEntry }: Props) {
+  const { uoms, isLoading, loadUoMs, uomsByGroup, loadingGroups, loadUoMsByGroup } = useUoMStore();
   const [search, setSearch] = useState("");
 
+  const hasGroupFilter = ugpEntry !== undefined && ugpEntry > 0;
+
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    if (hasGroupFilter) {
+      loadUoMsByGroup(ugpEntry as number);
+    } else {
       loadUoMs();
     }
-  }, [open, loadUoMs]);
+  }, [open, hasGroupFilter, ugpEntry, loadUoMs, loadUoMsByGroup]);
+
+  const sourceUoMs = hasGroupFilter ? (uomsByGroup[ugpEntry as number] || []) : uoms;
+  const sourceLoading = hasGroupFilter ? !!loadingGroups[ugpEntry as number] : isLoading;
 
   const handleSelect = (uom: UoM) => {
     onSelect(uom);
@@ -38,10 +47,10 @@ export function UoMSelectorDialog({ open, onClose, onSelect }: Props) {
 
   const filteredUoMs = useMemo(() => {
     const term = search.toLowerCase();
-    return uoms.filter(
+    return sourceUoMs.filter(
       (u) => u.Code.toLowerCase().includes(term) || u.Name.toLowerCase().includes(term)
     );
-  }, [uoms, search]);
+  }, [sourceUoMs, search]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -67,7 +76,7 @@ export function UoMSelectorDialog({ open, onClose, onSelect }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {isLoading ? (
+              {sourceLoading ? (
                 <tr>
                   <td colSpan={2} className="p-4 text-center">Loading units...</td>
                 </tr>

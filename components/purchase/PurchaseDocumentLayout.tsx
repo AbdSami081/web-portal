@@ -421,6 +421,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   })();
 
   const COPY_TO_ROUTES: Partial<Record<DocumentType, string>> = {
+    [DocumentType.PurchaseQuotation]: "/dashboard/purchase/quotation/new",
     [DocumentType.PurchaseOrder]: "/dashboard/purchase/order/new",
     [DocumentType.GoodsReceiptPO]: "/dashboard/purchase/grpo/new",
     [DocumentType.APInvoice]: "/dashboard/purchase/invoice/new",
@@ -465,7 +466,11 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     if (copyType === DocumentType.PurchaseRequests.toString()) {
       setIsCopying(true);
       router.push("/dashboard/purchase/request/new");
-    } 
+    }
+    else if (copyType === DocumentType.PurchaseQuotation.toString()) {
+      setIsCopying(true);
+      router.push("/dashboard/purchase/quotation/new");
+    }
     else if (copyType === DocumentType.PurchaseOrder.toString()) {
       setIsCopying(true);
       router.push("/dashboard/purchase/order/new");
@@ -855,6 +860,11 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
+                      {allowedCopyToOptions.includes(DocumentType.PurchaseQuotation) && (
+                        <SelectItem value={DocumentType.PurchaseQuotation.toString()}>
+                          Purchase Quotation
+                        </SelectItem>
+                      )}
                       {allowedCopyToOptions.includes(DocumentType.PurchaseOrder) && (
                         <SelectItem value={DocumentType.PurchaseOrder.toString()}>
                           Purchase Order

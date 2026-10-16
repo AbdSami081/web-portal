@@ -10,7 +10,7 @@ import { Plus, FileText } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
-import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
+import { resolveUoMPreferModuleName } from "@/utils/inventoryUom";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
@@ -124,7 +124,8 @@ export function InvDocumentItems() {
       const price = item.Prices?.[0]?.PriceAmount || 0.0;
       const defaultWhsLine = item.DefaultWhse || firstWhs;
       const quantity = 1;
-      const uomCode = resolveUoMFromCandidates(
+      const uomCode = resolveUoMPreferModuleName(
+        item.CntUnitMsr,
         uoms,
         item.UoM,
         item.UoMCode,
@@ -156,6 +157,7 @@ export function InvDocumentItems() {
         ItemCost: price,
         LineTotal: quantity * price,
         UoMCode: uomCode,
+        UgpEntry: item.UgpEntry,
         unitMsr: uomCode,
         MeasureUnit: item.MeasureUnit || getUoMName(uomCode) || "",
         PlPaWght: 0,
@@ -227,7 +229,8 @@ export function InvDocumentItems() {
       }
 
       const defaultWhsLine = row.pastedWarehouse || item.DefaultWhse || firstWhs;
-      const uomCode = resolveUoMFromCandidates(
+      const uomCode = resolveUoMPreferModuleName(
+        item.CntUnitMsr,
         uoms,
         item.UoM,
         item.UoMCode,
@@ -256,6 +259,7 @@ export function InvDocumentItems() {
         ItemCost: price,
         LineTotal: row.quantity * price,
         UoMCode: uomCode,
+        UgpEntry: item.UgpEntry,
         unitMsr: uomCode,
         MeasureUnit: item.MeasureUnit || getUoMName(uomCode) || "",
         QtyInWhs: qtyInWhs,

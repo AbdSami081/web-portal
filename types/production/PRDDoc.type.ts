@@ -33,6 +33,7 @@ export interface PRDDocumentLine {
     IssuedQuantity?: number;
     OnHand?: number;
     UoMCode?: string;
+    UgpEntry?: number;
     MeasureUnit?: string;
     ProductionOrderIssueType?: "im_Manual" | "im_Backflush";
     OrderNumber?: number;

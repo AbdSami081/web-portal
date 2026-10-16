@@ -34,6 +34,8 @@ import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
 import { BulkResultModal, type BulkResultRow } from "@/components/shared/BulkResultModal";
 import { costingCodeField, cogsCostingCodeField } from "@/lib/sap/helpers/distributionHelper";
 import { useActiveDimensions } from "@/hooks/useActiveDimensions";
+import { useUoMStore } from "@/stores/useUoMStore";
+import { resolveUoMPreferModuleName } from "@/utils/inventoryUom";
 
 export function PurchaseItems() {
   const { watch } = useFormContext();
@@ -56,6 +58,7 @@ export function PurchaseItems() {
   } = usePurchaseDocument();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
+  const uoms = useUoMStore((state) => state.uoms);
   const config = usePurchaseDocConfig();
   const isTableDisabled = config.isDisabledTable(docStatus);
   const { multiBranchEnabled } = useApprovalSettings();
@@ -164,7 +167,8 @@ export function PurchaseItems() {
         TaxRate: taxRate,
         WarehouseCode: defaultWhsLine,
         BPLid: resolveBranchForWarehouse(defaultWhsLine, warehouses),
-        UoMCode: item.UoM || "",
+        UoMCode: resolveUoMPreferModuleName(item.BuyUnitMsr, uoms, item.UoM) || item.UoM || "",
+        UgpEntry: item.UgpEntry,
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,
@@ -256,7 +260,8 @@ export function PurchaseItems() {
         TaxRate: taxRate,
         WarehouseCode: defaultWhsLine,
         BPLid: resolveBranchForWarehouse(defaultWhsLine, warehouses),
-        UoMCode: item.UoM || "",
+        UoMCode: resolveUoMPreferModuleName(item.BuyUnitMsr, uoms, item.UoM) || item.UoM || "",
+        UgpEntry: item.UgpEntry,
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,

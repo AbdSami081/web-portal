@@ -60,6 +60,41 @@ const requestInterceptor = (config: any) => {
 
 const responseInterceptor = (response: any) => response;
 
+// Transparent retry for GET requests that fail because of a transient network
+// blip or server-side hiccup (timeout, dropped connection, 502/503/504) —
+// same reasoning as the manual retry added to the Authorization page's user/
+// module loads, generalized so every GET across the app gets it automatically
+// instead of needing to be hand-rolled per screen. Only GET is retried: a
+// failed POST/PUT/DELETE/PATCH might have actually succeeded server-side
+// before the response was lost, so blindly retrying those could double-submit
+// a document or double-save a change — not safe to automate.
+const RETRY_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 600;
+
+const isRetryableError = (error: any) => {
+    const method = (error.config?.method || "get").toLowerCase();
+    if (method !== "get") return false;
+
+    if (!error.response) return true; // network error, timeout, connection dropped
+    return error.response.status >= 500; // transient server-side failure
+};
+
+const createRetryInterceptor = (client: typeof apiClient) => async (error: any) => {
+    const config = error.config;
+    if (!config || !isRetryableError(error)) {
+        return Promise.reject(error);
+    }
+
+    const retryCount = (config.__retryCount || 0) + 1;
+    if (retryCount > RETRY_ATTEMPTS) {
+        return Promise.reject(error);
+    }
+
+    config.__retryCount = retryCount;
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * retryCount));
+    return client(config);
+};
+
 const errorInterceptor = (error: any) => {
     if (axios.isAxiosError(error)) {
         if (error.response) {
@@ -97,9 +132,11 @@ const errorInterceptor = (error: any) => {
 };
 
 apiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
+apiClient.interceptors.response.use(responseInterceptor, createRetryInterceptor(apiClient));
 apiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
 
 reportingApiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
+reportingApiClient.interceptors.response.use(responseInterceptor, createRetryInterceptor(reportingApiClient));
 reportingApiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
 
 export async function cachedGet<T>(

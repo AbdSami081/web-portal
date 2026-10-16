@@ -990,6 +990,7 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
         onSelect={(uom) => {
           patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
         }}
+        ugpEntry={draftLine.UgpEntry}
       />
 
       <GenericModal

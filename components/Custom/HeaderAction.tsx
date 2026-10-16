@@ -33,6 +33,13 @@ interface Props {
   menuId?: string;
 }
 
+// FMS Setup is not being shipped to clients yet (the feature + its backing
+// @WP_FMS_CFG UDT aren't ready across deployments) - keep it fully hidden
+// regardless of any per-user/per-document right, independent of canUse("FMS").
+// Flip this back on (and lib/config/rightsConfig.ts's FMS entry to
+// enabled: true) once it's actually ready to hand to clients.
+const FMS_FEATURE_ENABLED = false;
+
 const HeaderActions: React.FC<Props> = ({
   DocEntry,
   objectCode,
@@ -61,7 +68,7 @@ const HeaderActions: React.FC<Props> = ({
       if (e.altKey && e.shiftKey && e.key === "F2") {
         e.preventDefault();
         e.stopPropagation();
-        if (canUse("FMS")) setFmsModalOpen(true);
+        if (FMS_FEATURE_ENABLED && canUse("FMS")) setFmsModalOpen(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -180,7 +187,7 @@ const HeaderActions: React.FC<Props> = ({
           )}
 
           {/* FMS / User-Defined Values Setup */}
-          {canUse("FMS") && (
+          {FMS_FEATURE_ENABLED && canUse("FMS") && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -188,7 +195,7 @@ const HeaderActions: React.FC<Props> = ({
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                    if (!canUse("FMS")) return;
+                    if (!FMS_FEATURE_ENABLED || !canUse("FMS")) return;
                     setFmsModalOpen(true);
                   }}
                   className="h-8 w-8 border-slate-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-all"

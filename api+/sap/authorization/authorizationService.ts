@@ -23,16 +23,11 @@ export interface UserAccessSavePayload {
 }
 
 export const getUsers = async (companyDB: string): Promise<PortalUser[]> => {
-  try {
-    const response = await cachedGet<{ success: boolean; data: PortalUser[] }>(
-      `api/Authorization/users`,
-      { params: { companyDB }, timeout: 10000 }
-    );
-    return response.data ?? [];
-  } catch (error) {
-    console.error("Failed to fetch users from SAP API:", error);
-    return [];
-  }
+  const response = await cachedGet<{ success: boolean; data: PortalUser[] }>(
+    `api/Authorization/users`,
+    { params: { companyDB }, timeout: 10000 }
+  );
+  return response.data ?? [];
 };
 
 export const getUserAccess = async (

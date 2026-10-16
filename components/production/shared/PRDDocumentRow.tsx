@@ -391,6 +391,7 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
         onSelect={(uom) => {
           patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
         }}
+        ugpEntry={line.UgpEntry}
       />
 
       <GenericModal

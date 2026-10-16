@@ -67,6 +67,7 @@ export interface SalesDocumentLine {
   WarehouseCode?: string;
   BPLid?: number;
   UoMCode?: string;
+  UgpEntry?: number;
   MeasureUnit?: string;
   QtyInWhs?: any[];
   TaxCode?: string; // Added TaxCode

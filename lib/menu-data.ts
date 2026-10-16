@@ -120,7 +120,7 @@ export const SERVER_MENUS: MenuItem[] = [
     },
     {
         id: "b7cf9fca-1d1d-4ce5-8ae6-09a7bafd13ce",
-        title: "Purchasing",
+        title: "Purchase",
         url: "#",
         iconName: "ShoppingCart",
         isActive: true,

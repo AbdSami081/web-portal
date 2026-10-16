@@ -13,3 +13,22 @@ export async function getUOMs(): Promise<{ AbsEntry: number; Code: string; Name:
     return [];
   }
 }
+
+export async function getUOMsByGroup(
+  ugpEntry: number
+): Promise<{ AbsEntry: number; Code: string; Name: string }[]> {
+  try {
+    const data = await cachedGet<any>(
+      `api/Master/GetUnitOfMeasurementsByGroup?ugpEntry=${ugpEntry}`,
+      { timeout: 10000 }
+    );
+
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.value)) return data.value;
+
+    return [];
+  } catch (error) {
+    console.error("Failed to fetch UoMs by group:", error);
+    return [];
+  }
+}

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getUOMs } from "@/api+/sap/master-data/uom/index";
+import { getUOMs, getUOMsByGroup } from "@/api+/sap/master-data/uom/index";
 
 export interface UoM {
   AbsEntry: number;
@@ -12,7 +12,10 @@ interface UoMStore {
   isLoading: boolean;
   isLoaded: boolean;
   error: string | null;
+  uomsByGroup: Record<number, UoM[]>;
+  loadingGroups: Record<number, boolean>;
   loadUoMs: () => Promise<void>;
+  loadUoMsByGroup: (ugpEntry: number) => Promise<UoM[]>;
   getUoMName: (code: string | number | null | undefined) => string;
   reset: () => void;
 }
@@ -22,6 +25,8 @@ export const useUoMStore = create<UoMStore>((set, get) => ({
   isLoading: false,
   isLoaded: false,
   error: null,
+  uomsByGroup: {},
+  loadingGroups: {},
 
   loadUoMs: async () => {
     const state = get();
@@ -39,6 +44,29 @@ export const useUoMStore = create<UoMStore>((set, get) => ({
       const errorMsg = error?.message || "Failed to load UoMs";
       console.error("[UoM] Error loading UoM data:", errorMsg);
       set({ error: errorMsg, isLoading: false });
+    }
+  },
+
+  loadUoMsByGroup: async (ugpEntry: number) => {
+    const state = get();
+    if (state.uomsByGroup[ugpEntry]) {
+      return state.uomsByGroup[ugpEntry];
+    }
+    if (state.loadingGroups[ugpEntry]) {
+      return [];
+    }
+
+    set({ loadingGroups: { ...get().loadingGroups, [ugpEntry]: true } });
+    try {
+      const data = await getUOMsByGroup(ugpEntry);
+      set({
+        uomsByGroup: { ...get().uomsByGroup, [ugpEntry]: data },
+        loadingGroups: { ...get().loadingGroups, [ugpEntry]: false },
+      });
+      return data;
+    } catch (error: any) {
+      set({ loadingGroups: { ...get().loadingGroups, [ugpEntry]: false } });
+      return [];
     }
   },
 

@@ -39,7 +39,7 @@ import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialo
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import { ResizableTable } from "@/components/Custom/ResizableTable";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
-import { resolveUoMFromCandidates } from "@/utils/inventoryUom";
+import { resolveUoMPreferModuleName } from "@/utils/inventoryUom";
 import { isPostedSalesDocType } from "@/lib/sap/helpers/postedDocumentHelper";
 import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
@@ -228,7 +228,7 @@ const setDocumentMode = useSalesDocument(
       ? whRecord.Qty ?? whRecord.qty ?? 0
       : 0;
 
-   const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
+   const uomVal = resolveUoMPreferModuleName(item.SalUnitMsr, uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
 
     addLine({
       ItemCode: item.ItemCode,
@@ -252,6 +252,7 @@ const setDocumentMode = useSalesDocument(
       ),
 
       UoMCode: uomVal,
+      UgpEntry: item.UgpEntry,
 
       MeasureUnit:
         item.MeasureUnit ||
@@ -334,7 +335,7 @@ const setDocumentMode = useSalesDocument(
         (w: any) => (w.WarehouseCode || w.warehouseCode) === defaultWhsLine
       );
       const initialOnHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
-      const uomVal = resolveUoMFromCandidates(uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
+      const uomVal = resolveUoMPreferModuleName(item.SalUnitMsr, uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
 
       newLines.push({
         ItemCode: item.ItemCode,
@@ -348,6 +349,7 @@ const setDocumentMode = useSalesDocument(
         WarehouseCode: defaultWhsLine,
         BPLid: resolveBranchForWarehouse(defaultWhsLine, warehouses),
         UoMCode: uomVal,
+        UgpEntry: item.UgpEntry,
         MeasureUnit: item.MeasureUnit || getUoMName(uomVal) || "",
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,

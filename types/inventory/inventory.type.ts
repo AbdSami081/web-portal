@@ -24,6 +24,7 @@ export interface InventoryDocumentLine {
     OnHand?: number;
     ItemCost?: number;
     UoMCode?: string;
+    UgpEntry?: number;
     unitMsr?: string;
     MeasureUnit?: string;
     RemainingOpenQuantity?: number;

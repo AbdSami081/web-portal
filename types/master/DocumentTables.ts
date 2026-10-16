@@ -40,10 +40,6 @@ export function getMasterTable(docType: number): string {
   }
 }
 
-/**
- * The document's LINE table (e.g. RDR1 for a Sales Order) — used to load
- * line-level UDF definitions so they can be rendered as extra line columns.
- */
 export function getMasterLineTable(docType: number): string {
   switch (docType) {
     // Sales

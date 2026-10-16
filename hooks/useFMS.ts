@@ -22,12 +22,6 @@ interface UseFMSOptions {
   control: Control<any>;
   setValue: UseFormSetValue<any>;
   getValues: () => Record<string, any>;
-  /**
-   * Optional: the document's current lines. Used as a fallback line context when
-   * a header/UDF-scoped rule references line params (:LineTotal, :Quantity, …) —
-   * the FIRST line's values are supplied. Line-triggered rules always override
-   * this with their own row.
-   */
   getLines?: () => Record<string, any>[];
   onMultipleResults?: (
     rows: Record<string, unknown>[],
@@ -101,11 +95,6 @@ export function useFMS({
     });
   }, [watchedValues]); 
 
-  /**
-   * Run the FMS rule for `targetField`.
-   * - `extraContext` is merged on top of the header form values (use it to pass a line row).
-   * - `apply` overrides where the result goes; default writes to the RHF field.
-   */
   const runFmsForTarget = useCallback(
     async (
       targetField: string,
@@ -117,8 +106,6 @@ export function useFMS({
 
       const { getLines: gl, getValues: gv, setValue: sv, onMultipleResults: omr } = cbRef.current;
 
-      // Base = first line (so header/UDF rules can still read :LineTotal, :Quantity…),
-      // then header form values, then the explicit row context from a line trigger.
       const firstLine = gl?.()[0];
       const formContext = {
         ...(firstLine ? flattenFormContext(firstLine) : {}),
@@ -165,8 +152,6 @@ export function useFMS({
     [docConfigs, triggerFMS, runFmsForTarget]
   );
 }
-
-// ─── Context: expose hasFMS / triggerFMS to nested field components ────────────
 
 export interface FmsContextValue {
   fmsConfigs: FmsConfigDto[];

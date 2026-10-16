@@ -2133,6 +2133,7 @@ if (isService) {
               uom.Name,
           });
         }}
+        ugpEntry={draftLine.UgpEntry}
       />
 
       <GenericModal

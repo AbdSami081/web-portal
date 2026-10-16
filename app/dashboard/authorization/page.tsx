@@ -185,6 +185,9 @@ export default function AuthorizationPage() {
     );
   }, [users, searchQuery]);
   
+  // Transient network/server failures are now retried transparently by
+  // apiClient itself (lib/apiClient.ts) for every GET call app-wide, so this
+  // only needs to handle the final, already-retried failure.
   const loadPortalConfig = async () => {
     setLoadingConfig(true);
     try {
@@ -192,6 +195,7 @@ export default function AuthorizationPage() {
       setPortalConfig(data);
     } catch (error: any) {
       console.error("Failed to load portal config:", error);
+      toast.error("Failed to load modules: " + error.message);
       setPortalConfig([]);
     } finally {
       setLoadingConfig(false);
@@ -218,6 +222,9 @@ export default function AuthorizationPage() {
     }
   }, [selectedUser, selectedCompany]);
 
+  // Transient network/server failures are now retried transparently by
+  // apiClient itself (lib/apiClient.ts) for every GET call app-wide, so this
+  // only needs to handle the final, already-retried failure.
   const loadUsers = async () => {
     setLoadingUsers(true);
     try {
@@ -581,7 +588,7 @@ export default function AuthorizationPage() {
                 <Button
                   variant="outline"
                   role="combobox"
-                  disabled={!selectedCompany || loadingUsers}
+                  disabled={!selectedCompany}
                   className="w-full sm:w-80 justify-between h-10 border-slate-200 bg-slate-50/50 text-sm font-medium"
                 >
                   {sourceUser ? (
@@ -602,7 +609,25 @@ export default function AuthorizationPage() {
                 <Command>
                   <CommandInput placeholder="Search users..." value={searchQuery} onValueChange={setSearchQuery} />
                   <CommandList>
-                    <CommandEmpty className="py-4 text-center text-xs text-slate-400">No users found.</CommandEmpty>
+                    {loadingUsers ? (
+                      <div className="py-6 flex flex-col items-center gap-2 text-xs text-slate-400">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading users...
+                      </div>
+                    ) : (
+                      <CommandEmpty className="py-4 flex flex-col items-center gap-2 text-xs text-slate-400">
+                        <span>No users found.</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2.5 text-[11px] font-bold text-blue-600 hover:bg-blue-50"
+                          onClick={loadUsers}
+                        >
+                          Retry
+                        </Button>
+                      </CommandEmpty>
+                    )}
                     <CommandGroup>
                       {filteredUsers.map((u) => (
                         <CommandItem
@@ -670,6 +695,17 @@ export default function AuthorizationPage() {
                     <p className="text-xs mt-2 font-medium max-w-[320px] text-slate-500 leading-relaxed">
                       No active modules found.
                     </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={loadPortalConfig}
+                      disabled={loadingConfig}
+                      className="mt-4 h-8 px-4 text-xs font-bold border-slate-200"
+                    >
+                      {loadingConfig ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+                      Retry
+                    </Button>
                 </div>
               ) : (
                 <table className="w-full text-left border-collapse">

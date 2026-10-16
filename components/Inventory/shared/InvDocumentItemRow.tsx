@@ -408,6 +408,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
         onSelect={(uom) => {
           patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
         }}
+        ugpEntry={draftLine.UgpEntry}
       />
 
       <GenericModal

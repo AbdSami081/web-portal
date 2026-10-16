@@ -51,6 +51,7 @@ export function PRDDocumentItems() {
         MeasureUnit: item.MeasureUnit || (isResource
           ? getUoMName(resolveUoMFromCandidates(uoms, item.UnitOfMeasure, item.UoM) || item.UnitOfMeasure || "")
           : getUoMName(resolveUoMFromCandidates(uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "")),
+        UgpEntry: item.UgpEntry,
         ProductionOrderIssueType: isResource ? issueType : "im_Manual"
       });
     });

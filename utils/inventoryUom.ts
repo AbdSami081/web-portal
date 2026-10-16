@@ -60,3 +60,32 @@ export const resolveUoMFromCandidates = (
   }
   return "";
 };
+
+export const resolveUoMCodeByName = (
+  value: unknown,
+  uoms: UoMEntry[] = []
+): string => {
+  if (value === undefined || value === null) return "";
+
+  const raw = String(value).trim();
+  if (!raw) return "";
+
+  const rawLower = raw.toLowerCase();
+  const byName = uoms.find((u) => (u.Name || "").trim().toLowerCase() === rawLower);
+  if (byName) return byName.Code;
+
+  const byCode = uoms.find((u) => (u.Code || "").trim().toLowerCase() === rawLower);
+  if (byCode) return byCode.Code;
+
+  return "";
+};
+
+export const resolveUoMPreferModuleName = (
+  moduleUnitName: unknown,
+  uoms: UoMEntry[],
+  ...fallbackCandidates: unknown[]
+): string => {
+  const fromModuleName = resolveUoMCodeByName(moduleUnitName, uoms);
+  if (fromModuleName) return fromModuleName;
+  return resolveUoMFromCandidates(uoms, ...fallbackCandidates);
+};
