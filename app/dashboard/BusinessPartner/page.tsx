@@ -57,6 +57,7 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
 import { UDFLayout } from "@/components/shared/UDFSheet";
 import { useUDFStore } from "@/stores/useUDFStore";
+import axios from "axios";
 
 const EMPTY_FORM = {
   Series: "",
@@ -116,6 +117,8 @@ export default function BPMasterDataPage() {
   const [factoringIndicators, setFactoringIndicators] = useState<FactoringIndicator[]>([]);
 
   const [isSaving, setIsSaving] = useState(false);
+
+
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
@@ -200,6 +203,7 @@ export default function BPMasterDataPage() {
         if (isLoadMore) {
           setDocumentsList((prev) => [...prev, ...data]);
           setSkip(currentSkip);
+
         } else {
           setDocumentsList(data);
           setSkip(0);
@@ -230,11 +234,9 @@ export default function BPMasterDataPage() {
 
   useEffect(() => {
     if (open) {
-      // Keep whatever search text is already active (e.g. set by handleSearch)
-      // instead of always reloading the unfiltered list.
       fetchDocumentsList(false, listSearch || undefined);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [open, fetchDocumentsList]);
 
   useEffect(() => {
@@ -361,7 +363,7 @@ export default function BPMasterDataPage() {
     methods.reset({});
   };
 
-  // Builds a Card Code from a series' prefix + next-number + digit padding.
+  
   const generateCardCode = (series: CustomerSeries) => {
     const prefix = series.Prefix ?? "";
     const nextNumber = Number(series.NextNumber ?? 0);
@@ -406,87 +408,80 @@ export default function BPMasterDataPage() {
       return acc;
     }, {});
 
-    const payload = {
+    const getCompanyPrivateValue = (value: string): string => {
+      const raw = String(value ?? "").trim();
+
+      const foundType = companies.find(
+        (c) => String(c.Name) === raw || String(c.Code) === raw
+      );
+      const v = foundType ? String(foundType.Code) : raw;
+      const map: Record<string, string> = {
+        C: "cCompany", cCompany: "cCompany", Company: "cCompany",
+        I: "cPrivate", cPrivate: "cPrivate", "Private Person": "cPrivate",
+        G: "cGovernment", cGovernment: "cGovernment", Government: "cGovernment",
+        E: "cEmployee", cEmployee: "cEmployee", Employee: "cEmployee",
+        S: "cSoleTaxableSubject", cSoleTaxableSubject: "cSoleTaxableSubject",
+        "Sole Taxable Subject": "cSoleTaxableSubject",
+      };
+      return map[v] ?? "cCompany";
+    };
+
+    
+    const indicatorCode = (() => {
+      const v = String(formData.Indicator ?? "").trim();
+      if (!v) return "";
+      const found = factoringIndicators.find(
+        (i: any) => String(i.IndicatorName) === v || String(i.IndicatorCode) === v
+      );
+      return found ? String(found.IndicatorCode) : v.split(" - ")[0];
+    })();
+
+    
+    const projectCode = (() => {
+      const v = String(formData.Project ?? "").trim();
+      if (!v) return "";
+      const found = projects.find(
+        (p: any) => String(p.Name) === v || String(p.Code) === v
+      );
+      return found ? String(found.Code) : v.split(" - ")[0];
+    })();
+
+    const industryCode =
+      formData.IndustryCode &&
+      industries.some((i) => String(i.IndustryCode) === String(formData.IndustryCode))
+        ? Number(formData.IndustryCode)
+        : 0;
+
+  
+    const buildPayload = () => ({
       CardCode: formData.CardCode.trim(),
       CardName: formData.CardName.trim(),
       CardType: formData.CardType,
-
+      GroupCode: formData.Group ? Number(formData.Group) : 0,
+      Currency: formData.Currency || "",
+      EmailAddress: formData.EmailAddress || "",
       Valid: formData.Status === "active" ? "tYES" : "tNO",
       Frozen: formData.Status === "active" ? "tNO" : "tYES",
-
-      GroupCode: formData.Group ? Number(formData.Group) : null,
-
       Phone1: formData.Phone1 || "",
       Phone2: formData.Phone2 || "",
+      Website: formData.Website || "",
       Cellular: formData.Cellular || "",
       Fax: formData.Fax || "",
-
-      EmailAddress: formData.EmailAddress || "",
-      Website: formData.Website || "",
-
-      Currency: formData.Currency || "",
-
-      ShippingType: formData.ShippingTypeCode ? Number(formData.ShippingTypeCode) : null,
-
-      Indicator: formData.Indicator ? String(formData.Indicator).split(" - ")[0] : "",
-
-      CompanyPrivate: formData.Company ? String(formData.Company).split(" - ")[0] : "C",
-
-      Industry:
-        formData.IndustryCode &&
-        industries.some((i) => String(i.IndustryCode) === String(formData.IndustryCode))
-          ? Number(formData.IndustryCode)
-          : null,
-
-      ProjectCode: formData.Project ? String(formData.Project).split(" - ")[0] : "",
-
-      U_NTNRegistered: "Registered",
-
-      ...udfPayload,
-
+      ShippingType: formData.ShippingTypeCode ? Number(formData.ShippingTypeCode) : 0,
+      Indicator: indicatorCode,
+      CompanyPrivate: getCompanyPrivateValue(formData.Company),
+      Industry: industryCode,
+      ProjectCode: projectCode,
       Notes: formData.Remarks || "",
       FreeText: formData.FreeText || "",
-    };
-
-    const updatePayload = {
-      CardName: formData.CardName.trim(),
-
-      Valid: formData.Status === "active" ? "tYES" : "tNO",
-      Frozen: formData.Status === "active" ? "tNO" : "tYES",
-
-      GroupCode: formData.Group ? Number(formData.Group) : null,
-
-      Phone1: formData.Phone1 || "",
-      Phone2: formData.Phone2 || "",
-      Cellular: formData.Cellular || "",
-      Fax: formData.Fax || "",
-
-      EmailAddress: formData.EmailAddress || "",
-      Website: formData.Website || "",
-
-      Currency: formData.Currency || "",
-
-      ShippingType: formData.ShippingTypeCode ? Number(formData.ShippingTypeCode) : null,
-
-      Indicator: formData.Indicator ? String(formData.Indicator).split(" - ")[0] : "",
-
-      CompanyPrivate: formData.Company ? String(formData.Company).split(" - ")[0] : "C",
-
-      Industry:
-        formData.IndustryCode &&
-        industries.some((i) => String(i.IndustryCode) === String(formData.IndustryCode))
-          ? Number(formData.IndustryCode)
-          : null,
-
-      ProjectCode: formData.Project ? String(formData.Project).split(" - ")[0] : "",
-
-      U_NTNRegistered: "Registered",
-
       ...udfPayload,
+    });
 
-      Notes: formData.Remarks || "",
-      FreeText: formData.FreeText || "",
-    };
+    const payload = buildPayload();
+    const updatePayload = buildPayload();
+
+    console.log("FINAL CREATE:", JSON.stringify(payload, null, 2));
+    console.log("FINAL UPDATE:", JSON.stringify(updatePayload, null, 2));
 
     setIsSaving(true);
 
@@ -506,8 +501,16 @@ export default function BPMasterDataPage() {
       }
     } catch (error: any) {
       console.error(isUpdateMode ? "Update Business Partner Error:" : "Save Business Partner Error:", error);
-      console.error("Status:", error?.response?.status);
-      console.error("Response:", error?.response?.data);
+
+      console.error("Save Business Partner Error:", error);
+
+      if (axios.isAxiosError(error)) {
+        console.error("Status:", error.response?.status);
+        console.error(
+          "Complete API Error:",
+          JSON.stringify(error.response?.data, null, 2)
+        );
+      }
 
       const message = getSapErrorMessage(error);
       toast.error(
