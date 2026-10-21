@@ -1031,6 +1031,7 @@ export function PRDDocumentHeader() {
       <ItemSelectorDialog
         open={itemSelectorOpen}
         multiple={false}
+        itemUsage="inventory"
         onClose={() => setItemSelectorOpen(false)}
         onSelectItems={(items: Item[]) => {
           if (items.length > 0) {

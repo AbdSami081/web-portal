@@ -587,6 +587,7 @@ export function PurchaseItems() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
+        itemUsage="purchase"
         type={documentMode === "service" ? "service" : "item"}
       />
       <BulkResultModal

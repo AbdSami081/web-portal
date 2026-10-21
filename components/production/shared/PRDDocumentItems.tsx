@@ -239,6 +239,7 @@ export function PRDDocumentItems() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
+        itemUsage="inventory"
         showTypeToggle={config.type === DocumentType.ProductionOrder}
       />
     </div>

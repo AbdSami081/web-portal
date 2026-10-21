@@ -1056,6 +1056,7 @@ const setDocumentMode = useSalesDocument(
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
+        itemUsage="sales"
         type={documentMode === "service" ? "service" : "item"}
 
       />

@@ -41,9 +41,16 @@
 import apiClient, { cachedGet } from "@/lib/apiClient";
 import { Item } from "@/types/sales/Item.type";
 
-export const getItemsList = async (search = "", skip = 0, top = 10): Promise<Item[]> => {
+export type ItemUsage = "sales" | "purchase" | "inventory";
+
+export const getItemsList = async (
+  search = "",
+  skip = 0,
+  top = 10,
+  itemUsage?: ItemUsage
+): Promise<Item[]> => {
   const data = await cachedGet<Item[]>(`api/Master/GetItems`, {
-    params: { search, skip, top },
+    params: { search, skip, top, itemUsage: itemUsage || undefined },
     timeout: 12000,
   });
 

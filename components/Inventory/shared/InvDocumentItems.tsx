@@ -390,6 +390,7 @@ export function InvDocumentItems() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
+        itemUsage="inventory"
       />
 
       <SerialNumberSelectionDialog
