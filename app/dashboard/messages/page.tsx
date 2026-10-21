@@ -370,7 +370,7 @@ export default function MessagesOverviewPage() {
     const approvalReadOnly = isApprovedStatus && !canUpdateApprovedDocument ? "1" : undefined;
 
     const cleanPath = url.split("?")[0];
-    stageDocNavParams(cleanPath, {
+    const navParams = {
       draftEntry: link.isDraft ? draftKey : undefined,
       docEntry: link.isDraft ? undefined : (sourceKey ?? objectKey),
       docType: String(link.objectType),
@@ -379,8 +379,9 @@ export default function MessagesOverviewPage() {
       approvalStatus: rawStatus,
       approvalRole,
       approvalReadOnly,
-    });
+    };
 
+    stageDocNavParams(cleanPath, navParams);
     router.push(cleanPath);
   };
   

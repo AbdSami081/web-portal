@@ -113,7 +113,7 @@ export function getMenuUrlsByObjectCode(objectType: string | number): string[] {
 
 const DRAFT_MODULE_URLS_BY_GROUP: Record<string, string> = {
   Sales: "/dashboard/sales/draft",
-  Purchasing: "/dashboard/purchase/draft",
+  Purchase: "/dashboard/purchase/draft",
   Inventory: "/dashboard/inventory/draft",
   Production: "/dashboard/production/draft",
 };

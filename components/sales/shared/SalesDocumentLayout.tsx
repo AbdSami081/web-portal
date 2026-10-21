@@ -97,7 +97,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const { allowedActions: globalAllowedActions } = useGlobalRights();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const docNav = resolveDocNavParams(searchParams, pathname);
   const headerBadges = useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
   const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
   const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";

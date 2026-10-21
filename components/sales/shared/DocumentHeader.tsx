@@ -122,6 +122,7 @@ const hasFieldAccess = (fieldName: string) =>
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
   const autoCreatedRef = React.useRef(false);
+  const lastAutoNavKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const draftParam = (docNav.draft ?? searchParams.get("draft")) === "1";
@@ -131,9 +132,13 @@ const hasFieldAccess = (fieldName: string) =>
 
     if (!docEntryParam && !(draftParam && draftEntryParam)) return;
 
+    const navKey = `${draftParam ? "draft" : "doc"}:${draftParam ? draftEntryParam : docEntryParam}`;
+    if (lastAutoNavKeyRef.current === navKey) return;
+    lastAutoNavKeyRef.current = navKey;
+
     setSearchValue(docEntryParam);
     fetchDocument(docEntryParam, { isDraft: draftParam }, Number(draftEntryParam));
-  }, []);
+  }, [docNav.docEntry, docNav.draftEntry, docNav.draft, searchParams]);
 
   useEffect(() => {
     if (!watchedStatus && !isLoadedDocument) {

@@ -46,6 +46,7 @@ import { usePurchaseDocConfig, useHeaderFetchRef } from "../purchase/PurchaseDoc
 import { toast } from "sonner";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { DocumentType } from "@/types/master/DocumentType";
+import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { usePathname } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
@@ -287,20 +288,35 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     }
   }, [requester, setValue, isPurchaseRequest]);
 
-  const navAutoLoadRef = useRef(false);
+  const lastAutoNavKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (navAutoLoadRef.current) return;
-    if (pathname.toLowerCase().includes("/purchase/draft")) return;
-    const isDraftNav = docNav.draft === "1" || !!docNav.draftEntry;
+    const draftEntryParam = (docNav.draftEntry ?? "").toString().trim();
     const docEntryParam = (docNav.docEntry ?? "").toString().trim();
-    if (isDraftNav || !docEntryParam || docEntryParam === "0") return;
-    navAutoLoadRef.current = true;
+
+    if (pathname.toLowerCase().includes("/purchase/draft")) {
+      if (!draftEntryParam || draftEntryParam === "0") return;
+
+      const navKey = `draft:${draftEntryParam}`;
+      if (lastAutoNavKeyRef.current === navKey) return;
+      lastAutoNavKeyRef.current = navKey;
+
+      setSearchValue(draftEntryParam);
+      fetchDocument(draftEntryParam, { isDraft: true });
+      return;
+    }
+
+    if (draftEntryParam || !docEntryParam || docEntryParam === "0") return;
+
+    const navKey = `doc:${docEntryParam}`;
+    if (lastAutoNavKeyRef.current === navKey) return;
+    lastAutoNavKeyRef.current = navKey;
+
     setSearchValue(docEntryParam);
     fetchDocument(docEntryParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docNav.docEntry, docNav.draftEntry, docNav.draft]);
+  }, [docNav.docEntry, docNav.draftEntry, docNav.draft, pathname]);
 
-  const fetchDocument = async (docNum: string) => {
+  const fetchDocument = async (docNum: string, opts?: { isDraft?: boolean }) => {
     let documentData;
     const docNumInt = parseInt(docNum);
 
@@ -313,8 +329,11 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
     try {
       const currentPath = pathname.toLowerCase();
+      const isDraftLookup = opts?.isDraft ?? currentPath.includes("/purchase/draft");
 
-      if (currentPath.includes("apdownpaymentrequest")) {
+      if (isDraftLookup) {
+        documentData = await getDraftDocument(docNumInt);
+      } else if (currentPath.includes("apdownpaymentrequest")) {
         documentData = await getAPDownPaymentRequestDocument(docNumInt);
       } else if (currentPath.includes("apdownpaymentinvoice")) {
         documentData = await getAPDownPaymentInvoiceDocument(docNumInt);
@@ -322,6 +341,9 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         documentData = await getPurchaseRequestDocument(docNumInt);
       } else {
         switch (config.type) {
+          case DocumentType.PurchaseRequests:
+            documentData = await getPurchaseRequestDocument(docNumInt);
+            break;
           case DocumentType.PurchaseOrder:
             documentData = await getPurchaseOrderDocument(docNumInt);
             break;
@@ -354,7 +376,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
         // SAP Service Layer GET omits line SerialNumbers/BatchNumbers — pull the
         // allocations from SAP so re-opening a saved document shows them.
-        if (Number(documentData.DocEntry) > 0) {
+        if (!isDraftLookup && Number(documentData.DocEntry) > 0) {
           void hydrateLineAllocations(
             config.type,
             Number(documentData.DocEntry),

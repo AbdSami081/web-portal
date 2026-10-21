@@ -252,10 +252,12 @@ export function RelationshipMapView({
     });
 
     const cleanPath = url.split("?")[0];
-    stageDocNavParams(cleanPath, {
+    const navParams = {
       docEntry: String(node.DocNum),
       docType: String(node.ObjType),
-    });
+    };
+
+    stageDocNavParams(cleanPath, navParams);
 
     onClose();
 

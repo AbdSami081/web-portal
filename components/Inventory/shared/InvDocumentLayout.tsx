@@ -120,7 +120,7 @@ export function InvDocumentLayout<T extends FieldValues>({
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const docNav = resolveDocNavParams(searchParams, pathname);
   const headerBadges = useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
 
   const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();

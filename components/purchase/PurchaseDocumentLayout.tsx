@@ -149,7 +149,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const docNav = React.useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const docNav = resolveDocNavParams(searchParams, pathname);
   const headerBadges = React.useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
   const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
   const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";

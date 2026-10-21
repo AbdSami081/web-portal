@@ -152,7 +152,7 @@ export function InvDocumentHeader() {
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
   const autoCreatedRef = useRef(false);
-  const initialLoadRef = useRef(false);
+  const lastAutoNavKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchWarehouses = async () => {
@@ -167,14 +167,18 @@ export function InvDocumentHeader() {
   }, [loadWarehouses]);
 
   useEffect(() => {
-    if (initialLoadRef.current) return;
-    initialLoadRef.current = true;
     const currentState = useInventoryDocument.getState();
     if (currentState.isCopyingTo) return;
 
     const isDraft = (docNav.draft ?? searchParams.get("draft")) === "1";
     const draftEntryParam = docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
     const docEntryParam = docNav.docEntry ?? searchParams.get("docEntry") ?? "";
+
+    if (!(isDraft && draftEntryParam) && !docEntryParam) return;
+
+    const navKey = isDraft && draftEntryParam ? `draft:${draftEntryParam}` : `doc:${docEntryParam}`;
+    if (lastAutoNavKeyRef.current === navKey) return;
+    lastAutoNavKeyRef.current = navKey;
 
     if (isDraft && draftEntryParam) {
       const draftId = parseInt(draftEntryParam);
@@ -186,7 +190,7 @@ export function InvDocumentHeader() {
       fetchDocument(docEntryParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [docNav.docEntry, docNav.draftEntry, docNav.draft, searchParams]);
 
   const loadDraftDoc = async (draftId: number) => {
     setIsLoading(true);
