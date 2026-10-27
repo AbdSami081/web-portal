@@ -622,7 +622,11 @@ const setDocumentMode = useSalesDocument(
       key: "Freight3LCAmount",
       title: "Freight 3 (LC)",
       width: 180,
-    }
+    },
+    ...activeDimensions.flatMap((n) => [
+      { key: costingCodeField(n), title: distributionFieldTitle(n, false, dimensionLabels[n]), width: 180 },
+      { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
+    ]),
   ].filter((col) => {
   if (col.key === "actions") return true;
 

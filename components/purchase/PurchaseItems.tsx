@@ -357,6 +357,10 @@ export function PurchaseItems() {
     { key: "Freight2LCAmount", title: "Freight 2 (LC)", width: 180 },
     { key: "Freight3Type", title: "Freight 3 Type", width: 180 },
     { key: "Freight3LCAmount", title: "Freight 3 (LC)", width: 180 },
+    ...activeDimensions.flatMap((n) => [
+      { key: costingCodeField(n), title: distributionFieldTitle(n, false, dimensionLabels[n]), width: 180 },
+      { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
+    ]),
   ].filter((col) => {
     if (col.key === "actions") return true;
     return fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false;

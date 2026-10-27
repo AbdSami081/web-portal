@@ -453,6 +453,57 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           </td>
         )}
 
+        {activeDimensions.flatMap((n) => {
+          const costingField = costingCodeField(n);
+          const cogsField = cogsCostingCodeField(n);
+          return [
+            isFieldVisible(costingField) && (
+              <td className="py-2 px-2 w-[160px]" key={costingField}>
+                <div className="flex items-center gap-1">
+                  <Input
+                    className="h-6 w-full bg-gray-100 text-left text-xs"
+                    value={(draftLine as any)[costingField] || ""}
+                    disabled
+                    readOnly
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => openDistModal(costingField, n)}
+                    disabled={!isFieldEnabled(costingField)}
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+              </td>
+            ),
+            isFieldVisible(cogsField) && (
+              <td className="py-2 px-2 w-[160px]" key={cogsField}>
+                <div className="flex items-center gap-1">
+                  <Input
+                    className="h-6 w-full bg-gray-100 text-left text-xs"
+                    value={(draftLine as any)[cogsField] || ""}
+                    disabled
+                    readOnly
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => openDistModal(cogsField, n)}
+                    disabled={!isFieldEnabled(cogsField)}
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+              </td>
+            ),
+          ];
+        })}
+
         <LineUDFCells
           docType={config.type}
           line={draftLine}
@@ -490,6 +541,23 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           hasMore={chartOfAccountsHasMore}
           isLoading={chartOfAccountsLoading}
           onRetry={loadChartOfAccounts}
+        />
+
+        <GenericModal
+          open={distModalOpen}
+          onClose={() => setDistModalOpen(false)}
+          onSelect={(val) => {
+            patchLine({ [activeDistField]: val });
+            setDistModalOpen(false);
+          }}
+          data={distRuleOptions}
+          isLoading={distRulesLoading}
+          columns={[
+            { key: "Code", label: "Code" },
+            { key: "Name", label: "Name" },
+          ]}
+          title="Select Distribution Rule"
+          getSelectValue={(item) => item.Code}
         />
       </>
     );
