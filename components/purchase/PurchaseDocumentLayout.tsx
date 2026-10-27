@@ -30,7 +30,7 @@ import { FilePlus2, Loader2, Keyboard, ChevronDown } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { resolveDocNavParams, clearDocNavParams } from "@/lib/docNavParams";
-import { patchDraftDocument } from "@/api+/sap/draft/draftService";
+import { getDraftByDocEntry, patchDraftDocument } from "@/api+/sap/draft/draftService";
 import { buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 import { hasDraftChanges } from "@/lib/approval/approvalChanges";
 import { linesNeedSerialAllocation, linesNeedBatchAllocation } from "@/lib/sap/helpers/serialBatchHelper";
@@ -279,6 +279,28 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     }
   };
 
+
+  React.useEffect(() => {
+  const draftId = searchParams.get("draftId");
+
+  if (!draftId) return;
+
+  const loadDraft = async () => {
+    try {
+      const data = await getDraftByDocEntry(Number(draftId));
+
+      console.log("Draft API Data:", data);
+
+      if (!data) return;
+
+      await loadFromDocument(data);
+    } catch (error) {
+      console.error("Draft load error:", error);
+    }
+  };
+
+  loadDraft();
+}, [searchParams, loadFromDocument]);
   const finishAndReset = () => {
     ResetForm();
     clearDocNavParams(router, pathname);
