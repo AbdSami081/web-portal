@@ -22,6 +22,8 @@ import {
   syncFieldsConfig,
 } from "@/api+/sap/administration/administrationService";
 import { getFieldCatalog } from "@/lib/config/fieldManifest";
+import { useDimensionLabels } from "@/hooks/useActiveDimensions";
+import { distributionFieldTitle } from "@/lib/sap/helpers/distributionHelper";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -316,9 +318,25 @@ export default function FieldAccessManagement() {
 }, [filteredMenus]);
 
 
+  const dimensionLabels = useDimensionLabels();
+
+  // CostingCode/CostingCode{n}/COGSCostingCode/COGSCostingCode{n} - override the static
+  // catalog's generic "Distribution Rule N" fallback with the company's real SAP dimension
+  // name (e.g. "Locations", "Departments") once it's loaded, so that's what gets synced
+  // into WP_FIELDS_CFG and shown in this admin page's field list.
+  const distributionFieldTitleOverride = (key: string): string | null => {
+    const match = /^(COGS)?CostingCode(\d*)$/.exec(key);
+    if (!match) return null;
+    const dimension = match[2] ? Number(match[2]) : 1;
+    const label = dimensionLabels[dimension];
+    if (!label) return null;
+    return distributionFieldTitle(dimension, !!match[1], label);
+  };
+
   const hasSyncedFieldsRef = useRef(false);
   useEffect(() => {
     if (hasSyncedFieldsRef.current || documents.length === 0) return;
+    if (Object.keys(dimensionLabels).length === 0) return;
     hasSyncedFieldsRef.current = true;
 
     const syncAll = async () => {
@@ -327,14 +345,14 @@ export default function FieldAccessManagement() {
         if (!catalog) continue;
         const docType = resolveFieldAuthDocType(item);
         const fields = [
-          ...catalog.header.map((f) => ({ fieldName: f.key, fieldTitle: f.title, fieldType: "H" as const })),
-          ...catalog.line.map((f) => ({ fieldName: f.key, fieldTitle: f.title, fieldType: "L" as const })),
+          ...catalog.header.map((f) => ({ fieldName: f.key, fieldTitle: distributionFieldTitleOverride(f.key) ?? f.title, fieldType: "H" as const })),
+          ...catalog.line.map((f) => ({ fieldName: f.key, fieldTitle: distributionFieldTitleOverride(f.key) ?? f.title, fieldType: "L" as const })),
         ];
         await syncFieldsConfig(docType, fields);
       }
     };
     syncAll();
-  }, [documents]);
+  }, [documents, dimensionLabels]);
 
 
   const selectedDocumentTitle = useMemo(() => {

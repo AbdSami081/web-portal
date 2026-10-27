@@ -34,6 +34,7 @@ interface GenericModalProps<T> {
   onSearch?: (value: string) => void;
   searchValue?: string;
   onRowClick?: (item: T) => void;
+  onRetry?: () => void;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -53,6 +54,7 @@ export function GenericModal<T>({
   onSearch,
   searchValue,
   onRowClick,
+  onRetry,
 }: GenericModalProps<T>) {
   const [localSearch, setLocalSearch] = useState("");
   const isServerSearch = typeof onSearch === "function";
@@ -224,7 +226,20 @@ export function GenericModal<T>({
                   ) : filteredData.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={skeletonColSpan} className="h-40 text-center text-sm text-zinc-400">
-                        No records found.
+                        <div className="flex flex-col items-center gap-2">
+                          <span>No records found.</span>
+                          {onRetry && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={onRetry}
+                              disabled={isLoading}
+                            >
+                              {isLoading ? "Retrying..." : "Retry"}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (

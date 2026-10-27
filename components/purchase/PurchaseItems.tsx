@@ -32,8 +32,8 @@ import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { fetchItemsByCodesBulk } from "@/lib/sap/helpers/itemCacheHelper";
 import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
 import { BulkResultModal, type BulkResultRow } from "@/components/shared/BulkResultModal";
-import { costingCodeField, cogsCostingCodeField } from "@/lib/sap/helpers/distributionHelper";
-import { useActiveDimensions } from "@/hooks/useActiveDimensions";
+import { costingCodeField, cogsCostingCodeField, distributionFieldTitle } from "@/lib/sap/helpers/distributionHelper";
+import { useActiveDimensions, useDimensionLabels } from "@/hooks/useActiveDimensions";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { resolveUoMPreferModuleName } from "@/utils/inventoryUom";
 
@@ -65,6 +65,7 @@ export function PurchaseItems() {
 
   const { freightsWithCharges, warehouses, loadMasterData, loadWarehouses } = useMasterDataStore();
   const activeDimensions = useActiveDimensions();
+  const dimensionLabels = useDimensionLabels();
   const firstWhs = warehouses.length > 0 ? warehouses[0].WarehouseCode : "";
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -332,8 +333,8 @@ export function PurchaseItems() {
     { key: "Freight3Type", title: "Freight 3 Type", width: 180 },
     { key: "Freight3LCAmount", title: "Freight 3 (LC)", width: 180 },
     ...activeDimensions.flatMap((n) => [
-      { key: costingCodeField(n), title: n === 1 ? "Distribution Rule" : `Distribution Rule ${n}`, width: 180 },
-      { key: cogsCostingCodeField(n), title: n === 1 ? "COGS Distribution Rule" : `COGS Distribution Rule ${n}`, width: 180 },
+      { key: costingCodeField(n), title: distributionFieldTitle(n, false, dimensionLabels[n]), width: 180 },
+      { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
     ]),
   ].filter(col => {
     if (col.key === "actions") return true;

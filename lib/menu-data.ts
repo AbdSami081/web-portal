@@ -131,7 +131,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/request/new",
                 objectCode: 1470000113,
                 isReporting: true,
-                 allowFieldsAuth :true
+                allowFieldsAuth :true
             },
             {
                 id: "8a4b1eed-bb98-4ce2-ade2-63cf9f77ec37",

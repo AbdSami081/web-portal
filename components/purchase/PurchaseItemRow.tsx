@@ -47,6 +47,7 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   const chartOfAccounts = useChartOfAccountsStore((state) => state.chartOfAccounts);
   const chartOfAccountsHasMore = useChartOfAccountsStore((state) => state.hasMore);
   const chartOfAccountsLoading = useChartOfAccountsStore((state) => state.isLoading);
+  const loadChartOfAccounts = useChartOfAccountsStore((state) => state.loadChartOfAccounts);
   const loadMoreChartOfAccounts = useChartOfAccountsStore((state) => state.loadMoreChartOfAccounts);
 
   const isService = documentMode === "service";
@@ -78,6 +79,14 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   const [uomDialogOpen, setUomDialogOpen] = useState(false);
   const [distModalOpen, setDistModalOpen] = useState(false);
   const [glAccountModalOpen, setGlAccountModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!glAccountModalOpen) return;
+    const state = useChartOfAccountsStore.getState();
+    if (state.chartOfAccounts.length === 0 && !state.isLoading) {
+      void loadChartOfAccounts();
+    }
+  }, [glAccountModalOpen, loadChartOfAccounts]);
   const [activeDistField, setActiveDistField] = useState("");
   const [distRuleOptions, setDistRuleOptions] = useState<DistributionRule[]>([]);
   const [distRulesLoading, setDistRulesLoading] = useState(false);
@@ -480,6 +489,7 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           onLoadMore={loadMoreChartOfAccounts}
           hasMore={chartOfAccountsHasMore}
           isLoading={chartOfAccountsLoading}
+          onRetry={loadChartOfAccounts}
         />
       </>
     );

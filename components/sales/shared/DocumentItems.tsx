@@ -45,8 +45,8 @@ import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
-import { costingCodeField, cogsCostingCodeField } from "@/lib/sap/helpers/distributionHelper";
-import { useActiveDimensions } from "@/hooks/useActiveDimensions";
+import { costingCodeField, cogsCostingCodeField, distributionFieldTitle } from "@/lib/sap/helpers/distributionHelper";
+import { useActiveDimensions, useDimensionLabels } from "@/hooks/useActiveDimensions";
 
 export function DocumentItems() {
   const { watch, setValue, register } = useFormContext();
@@ -403,6 +403,7 @@ const setDocumentMode = useSalesDocument(
   const fieldAccess = useSalesDocument((state) => state.fieldAccess);
   const { multiBranchEnabled } = useApprovalSettings();
   const activeDimensions = useActiveDimensions();
+  const dimensionLabels = useDimensionLabels();
   const columns = [
     {
       key: "actions",
@@ -534,8 +535,8 @@ const setDocumentMode = useSalesDocument(
       width: 180,
     },
     ...activeDimensions.flatMap((n) => [
-      { key: costingCodeField(n), title: n === 1 ? "Distribution Rule" : `Distribution Rule ${n}`, width: 180 },
-      { key: cogsCostingCodeField(n), title: n === 1 ? "COGS Distribution Rule" : `COGS Distribution Rule ${n}`, width: 180 },
+      { key: costingCodeField(n), title: distributionFieldTitle(n, false, dimensionLabels[n]), width: 180 },
+      { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
     ]),
   ].filter((col) => {
     if (col.key === "actions") return true;
