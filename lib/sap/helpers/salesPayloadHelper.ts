@@ -81,6 +81,7 @@ export function buildSalesDocumentPayload({
     DocDate: data.DocDate,
     DocDueDate: data.DocDueDate,
     TaxDate: data.TaxDate,
+    BranchRegNo: data.BranchRegNo,
     Comments: data.Comments,
     ...(downPaymentType
       ? { DownPaymentType: downPaymentType, DownPaymentPercentage: discountPercent || 0 }
@@ -186,6 +187,7 @@ export function buildSalesDocumentPatchPayload({
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
+    ...(data.BranchRegNo && { BranchRegNo: data.BranchRegNo }),
      ...(downPaymentType
       ? { DownPaymentType: downPaymentType, DownPaymentPercentage: discountPercent || 0 }
       : includeLines

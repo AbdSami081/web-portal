@@ -6,6 +6,7 @@ export const quotationSchema = z.object({
   DocDate: z.string(),
   DocDueDate: z.string(),
   TaxDate: z.string(),
+  BranchRegNo: z.string().nullish(),
   DocumentLines: z.array(
     z.object({
       ItemCode: z.string().nullish(),

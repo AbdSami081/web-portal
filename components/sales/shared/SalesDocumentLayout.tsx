@@ -384,6 +384,7 @@ useEffect(() => {
         DocDate: state.docDate,
         DocDueDate: state.docDueDate,
         TaxDate: state.taxDate,
+        BranchRegNo: state.branchRegNo,
         Comments: state.comments,
         DiscountPercent: state.discountPercent,
         Freight: state.freight,
@@ -409,6 +410,7 @@ useEffect(() => {
       DocDate: today,
       DocDueDate: today,
       TaxDate: today,
+      BranchRegNo: "",
     } as any);
     lineReset();
     if (config.isDownPayment) {

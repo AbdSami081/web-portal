@@ -23,6 +23,7 @@ export const SALES_HEADER_FIELDS: FieldCatalogEntry[] = [
   { key: "DocDate", title: "Posting Date" },
   { key: "DocDueDate", title: "Due Date" },
   { key: "TaxDate", title: "Tax Date" },
+  { key: "BranchRegNo", title: "Branch Reg. No." },
 ];
 import { getDocumentsList, getQuotationDocument, getSalesDeliveryDocument, getSalesOrderDocument, getARInvoiceDocument, getSalesReturnDocument, getDraftDocument, closeQuotation, closeSalesOrder, closeDeliveryNote, closeARInvoice, closeSalesReturn, getSalesReturnRequestDocument, getSalesCreditMemoDocument, getARDownPaymentRequestDocument, getARDownPaymentInvoiceDocument } from "@/api+/sap/sales/salesService";
 import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
@@ -38,7 +39,6 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 import { findDraftByNumber } from "@/api+/sap/draft/draftService";
-import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { useDocumentRights } from "@/hooks/useDocumentRights";
 
 const statusMap: Record<string, string> = {
@@ -65,7 +65,7 @@ export function DocumentHeader() {
   const [modalOpen, setModalOpen] = useState(false);
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { customer, setCustomer, loadFromDocument, clearLines, reset, setDocDate, setDocDueDate, setTaxDate, setCurrency, setComments } = useSalesDocument();
+  const { customer, setCustomer, loadFromDocument, clearLines, reset, setDocDate, setDocDueDate, setTaxDate, setCurrency, setComments, setBranchRegNo } = useSalesDocument();
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const docEntry = watch("DocEntry");
   const config = useSalesDocConfig();
@@ -84,7 +84,6 @@ export function DocumentHeader() {
   const [isClosing, setIsClosing] = useState(false);
 
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
-  const { multiBranchEnabled } = useApprovalSettings();
   const watchedBranch = watch("BPL_IDAssignedToInvoice");
 
   useEffect(() => {
@@ -126,12 +125,6 @@ export function DocumentHeader() {
       setCloseModalOpen(false);
     }
   };
-const fieldAccess = useSalesDocument(
-  (state) => state.fieldAccess
-);
-
-const hasFieldAccess = (fieldName: string) =>
-  fieldAccess.includes(fieldName);
   const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
   const searchParams = useSearchParams();
   const docNav = useDocNavParams();
@@ -441,8 +434,7 @@ const hasFieldAccess = (fieldName: string) =>
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-4">
         {/* {getFieldSettings(config.type, "headerFieds", "CardCode").visible !== false && ( */}
-        {hasFieldAccess("CardCode") &&
-  getFieldSettings(config.type, "headerFieds", "CardCode").visible !== false && (
+        {(
           <div className="flex items-center gap-3">
             <AppLabel className="w-28 shrink-0">Customer</AppLabel>
             <div className="flex items-center">
@@ -522,8 +514,7 @@ const hasFieldAccess = (fieldName: string) =>
       <div className="flex flex-col lg:flex-row justify-between gap-4">
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
           {/* {getFieldSettings(config.type, "headerFieds", "CardName").visible !== false && ( */}
-          {hasFieldAccess("CardName") &&
-  getFieldSettings(config.type, "headerFieds", "CardName").visible !== false && (
+          {(
             <div className="flex items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0">Name</AppLabel>
               <Input
@@ -537,7 +528,7 @@ const hasFieldAccess = (fieldName: string) =>
           )}
 
           {/* {getFieldSettings(config.type, "headerFieds", "BPLId").visible !== false && ( */}
-          {multiBranchEnabled && hasFieldAccess("BPLid") &&(
+          {(
             <div className="flex items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0">Branch</AppLabel>
               <Select
@@ -567,8 +558,7 @@ const hasFieldAccess = (fieldName: string) =>
 
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
           {/* {getFieldSettings(config.type, "headerFieds", "DocStatus").visible !== false && ( */}
-          {hasFieldAccess("DocStatus") &&
-  getFieldSettings(config.type, "headerFieds", "DocStatus").visible !== false && (
+          {(
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Status</AppLabel>
               <Select
@@ -602,8 +592,7 @@ const hasFieldAccess = (fieldName: string) =>
           )}
 
           {/* {getFieldSettings(config.type, "headerFieds", "DocDate").visible !== false && ( */}
-          {hasFieldAccess("DocDate") &&
-  getFieldSettings(config.type, "headerFieds", "DocDate").visible !== false && (
+          {(
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Posting Date</AppLabel>
               <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "DocDate").enable} onChange={(e) => {
@@ -613,8 +602,7 @@ const hasFieldAccess = (fieldName: string) =>
             </div>
           )}
 
-          {hasFieldAccess("DocDueDate") &&
-  getFieldSettings(config.type, "headerFieds", "DocDueDate").visible !== false && (
+          {(
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">
                 {getDateLabel(config.type)}
@@ -626,8 +614,7 @@ const hasFieldAccess = (fieldName: string) =>
             </div>
           )}
 
-          {hasFieldAccess("TaxDate") &&
-  getFieldSettings(config.type, "headerFieds", "TaxDate").visible !== false && (
+          {(
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
               <Input type="date" {...register("TaxDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "TaxDate").enable} onChange={(e) => {
@@ -636,6 +623,28 @@ const hasFieldAccess = (fieldName: string) =>
               }} />
             </div>
           )}
+
+        {config.type === DocumentType.Quotation &&
+  getFieldSettings(config.type, "headerFieds", "BranchRegNo").visible !== false && (
+    <div className="flex justify-end items-center w-full gap-3">
+      <AppLabel className="w-28 shrink-0 text-right">
+        Branch Reg. No.
+      </AppLabel>
+      <Input
+        type="text"
+        {...register("BranchRegNo")}
+        className="h-8 w-48"
+        disabled={ 
+          isHeaderDisabled ||
+          !getFieldSettings(config.type, "headerFieds", "BranchRegNo").enable
+        }
+        onChange={(e) => {
+          register("BranchRegNo").onChange(e);
+          setBranchRegNo( e.target.value);
+        }}
+      />
+    </div>
+  )}
         </div>
         <BusinessPartnerSelectorDialog
           open={modalOpen}

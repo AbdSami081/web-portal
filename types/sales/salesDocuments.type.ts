@@ -9,6 +9,7 @@ export interface BaseSalesDocument {
   DocDate: string;
   DocDueDate: string;
   TaxDate?: string | null;
+  BranchRegNo?: string;
   CardCode: string;
   CardName?: string;
   NumAtCard?: string;

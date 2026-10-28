@@ -22,6 +22,7 @@ interface SalesDocumentStore {
   docDate: string;
   docDueDate: string;
   taxDate: string;
+  branchRegNo: string;
   comments: string;
   freight: number;
   rounding: number;
@@ -66,6 +67,7 @@ interface SalesDocumentStore {
   setDocDate: (d: string) => void;
   setDocDueDate: (d: string) => void;
   setTaxDate: (d: string) => void;
+  setBranchRegNo: (d: string) => void;
   setComments: (text: string) => void;
   setFreight: (f: number) => void;
   setRounding: (r: number) => void;
@@ -134,6 +136,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     docDate: new Date().toISOString().split("T")[0],
     docDueDate: new Date().toISOString().split("T")[0],
     taxDate: new Date().toISOString().split("T")[0],
+    branchRegNo: "",
     comments: "",
     freight: 0,
     rounding: 0,
@@ -167,6 +170,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     setDocDate: (d) => set({ docDate: d }),
     setDocDueDate: (d) => set({ docDueDate: d }),
     setTaxDate: (d) => set({ taxDate: d }),
+    setBranchRegNo: (d) => set({ branchRegNo: d }),
     setComments: (text) => set({ comments: text }),
     setFreight: (f) => {
       set({ freight: parseSafe(f) });
@@ -431,6 +435,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         docDate: new Date().toISOString().split("T")[0],
         docDueDate: new Date().toISOString().split("T")[0],
         taxDate: new Date().toISOString().split("T")[0],
+        branchRegNo: "",
         comments: "",
         freight: 0,
         rounding: 0,
@@ -592,6 +597,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         taxDate: (doc.TaxDate || doc.taxDate || new Date().toISOString()).split(
           "T",
         )[0],
+        branchRegNo: doc.BranchRegNo || doc.branchRegNo || "",
         comments:
           doc.Comments !== undefined && doc.Comments !== null
             ? doc.Comments

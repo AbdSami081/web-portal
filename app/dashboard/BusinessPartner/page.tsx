@@ -127,9 +127,6 @@ export default function BPMasterDataPage() {
   const [openProject, setOpenProject] = useState(false);
   const [openIndustry, setOpenIndustry] = useState(false);
   const [openCompany, setOpenCompany] = useState(false);
-
-  // Tracks whether the form currently holds a Business Partner that already
-  // exists in SAP (loaded via search/list), which puts the form in update mode.
   const [isExistingBP, setIsExistingBP] = useState(false);
 
   const [formData, setFormData] = useState({ ...EMPTY_FORM });

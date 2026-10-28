@@ -33,6 +33,7 @@ export default function NewQuotationPage() {
     TaxTotal: 0,
     DocTotal: 0,
     TaxDate: new Date().toISOString().split("T")[0],
+    BranchRegNo: "",
     DocumentLines: [],
   };
 
@@ -84,6 +85,7 @@ export default function NewQuotationPage() {
       DocDate: data.DocDate,
       DocDueDate: data.DocDueDate,
       TaxDate: data.TaxDate,
+      BranchRegNo: data.BranchRegNo,
       Comments: data.Comments,
       DiscountPercent: discountPercent || 0,
       ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),

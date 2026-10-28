@@ -23,6 +23,7 @@ export default function NewQuotationPage() {
     DocDueDate: new Date().toISOString().split("T")[0],
     DiscountPercent: 0,
     TaxDate: "",
+    BranchRegNo: "",
     Freight: 0,
     Rounding: 0,
     Comments: "",

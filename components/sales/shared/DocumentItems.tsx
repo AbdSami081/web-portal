@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -124,6 +126,9 @@ const setDocumentMode = useSalesDocument(
   const config = useSalesDocConfig();
 
   const isARInvoice = config.type === DocumentType.ARInvoice;
+  const isQuotation = config.type === DocumentType.Quotation;
+  const hasLogisticsTab = isQuotation;
+  const hasAccountingTab = isARInvoice || isQuotation;
 
   const isTableDisabled = config.isDisabledTable(docStatus);
 
@@ -667,6 +672,17 @@ const setDocumentMode = useSalesDocument(
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
   const isLineUpdateBlocked = isFinancialDoc && isEditMode;
 
+  // Shared layout classes for the Logistics / Accounting tabs
+  // (label column 150px + gap 12px = 162px, used for checkbox alignment).
+  const selectCls = "h-8 w-full max-w-[260px] text-xs";
+  const inputCls = "h-8 w-full max-w-[260px] text-xs";
+  const textareaCls = "w-full max-w-[260px] resize-none text-xs";
+  const checkboxCls =
+    "border-neutral-400 data-[state=checked]:border-black data-[state=checked]:bg-black data-[state=checked]:text-white";
+  const dotsBtnCls = "h-8 w-8 shrink-0 bg-black text-white hover:bg-neutral-800";
+  const rowCls = "grid grid-cols-[150px_1fr] items-center gap-3";
+  const labelCls = "text-xs";
+
   return (
     <div className="grid w-full relative pt-2 overflow-visible">
       <Tabs
@@ -674,8 +690,28 @@ const setDocumentMode = useSalesDocument(
         onValueChange={setActiveTab}
         className="w-full pt-1 overflow-x-auto"
       >
+        <div className="flex items-center gap-3 mb-4">
+          <AppLabel className="text-sm font-semibold">Type</AppLabel>
+          <Select
+            value={documentMode || "items"}
+            disabled={isEditMode}
+            onValueChange={(value) => {
+              const nextMode = value as "items" | "service";
+              if (nextMode !== documentMode && lines.length > 0) clearLines();
+              setDocumentMode(nextMode);
+            }}
+          >
+            <SelectTrigger className="w-48 h-9">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="items">Items</SelectItem>
+              <SelectItem value="service">Service</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <TabsList
-          className={`grid ${isARInvoice ? "w-[360px] grid-cols-3" : "w-[240px] grid-cols-2"} mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800`}
+          className={`grid ${isQuotation ? "w-[480px] grid-cols-4" : isARInvoice ? "w-[360px] grid-cols-3" : "w-[240px] grid-cols-2"} mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800`}
         >
           <TabsTrigger
             value="content"
@@ -683,6 +719,24 @@ const setDocumentMode = useSalesDocument(
           >
             Content
           </TabsTrigger>
+
+          {hasLogisticsTab && (
+            <TabsTrigger
+              value="logistics"
+              className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400"
+            >
+              Logistics
+            </TabsTrigger>
+          )}
+
+          {hasAccountingTab && (
+            <TabsTrigger
+              value="accounting"
+              className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400"
+            >
+              Accounting
+            </TabsTrigger>
+          )}
 
           <TabsTrigger
             value="attachments"
@@ -696,42 +750,10 @@ const setDocumentMode = useSalesDocument(
             )}
           </TabsTrigger>
 
-          {isARInvoice && (
-            <TabsTrigger
-              value="accounting"
-              className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400"
-            >
-              Accounting
-            </TabsTrigger>
-          )}
+
         </TabsList>
-
-        <div className="flex items-center gap-3 mb-4">
-          <AppLabel className="text-sm font-semibold">Type</AppLabel>
-
-          <Select
-            value={documentMode || "items"}
-            disabled={isEditMode}
-            onValueChange={(value) => {
-              const nextMode = value as "items" | "service";
-              if (nextMode !== documentMode && lines.length > 0) {
-                clearLines();
-              }
-              setDocumentMode(nextMode);
-            }}
-          >
-            <SelectTrigger className="w-48 h-9">
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-
-            <SelectContent>
-              <SelectItem value="items">Items</SelectItem>
-
-              <SelectItem value="service">Service</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <TabsContent
+        
+<TabsContent
           value="content"
           className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6 overflow-x-auto"
         >
@@ -993,6 +1015,134 @@ const setDocumentMode = useSalesDocument(
           )}
         </TabsContent>
 
+        {hasLogisticsTab && (
+          <TabsContent
+            value="logistics"
+            className="mt-0 pt-2 animate-in fade-in duration-300"
+          >
+            <div className="min-h-[230px] rounded-md border border-neutral-300 bg-white p-4">
+              <div className="grid grid-cols-1 gap-x-10 gap-y-4 md:grid-cols-2">
+                {/* Left Section */}
+                <div className="space-y-4">
+                  {/* Ship To */}
+                  <div className="grid grid-cols-[150px_1fr] items-start gap-3">
+                    <label className={`${labelCls} pt-2`}>Ship To</label>
+                    <div className="space-y-2">
+                      <Select>
+                        <SelectTrigger className={selectCls}>
+                          <SelectValue placeholder="Select address" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-start gap-2">
+                        <Textarea
+                          className={`${textareaCls} h-16`}
+                          aria-label="Ship To address"
+                        />
+                        <Button type="button" size="icon" className={dotsBtnCls}>
+                          ...
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bill To */}
+                  <div className="grid grid-cols-[150px_1fr] items-start gap-3">
+                    <label className={`${labelCls} pt-2`}>Bill To</label>
+                    <div className="space-y-2">
+                      <Select>
+                        <SelectTrigger className={selectCls}>
+                          <SelectValue placeholder="Select address" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-start gap-2">
+                        <Textarea
+                          className={`${textareaCls} h-16`}
+                          aria-label="Bill To address"
+                        />
+                        <Button type="button" size="icon" className={dotsBtnCls}>
+                          ...
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Shipping Type */}
+                  <div className={rowCls}>
+                    <label className={labelCls}>Shipping Type</label>
+                    <Select>
+                      <SelectTrigger className={selectCls}>
+                        <SelectValue placeholder="Select shipping type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="express">Express</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Right Section */}
+                <div className="space-y-4">
+                  {/* Language */}
+                  <div className={rowCls}>
+                    <label className={labelCls}>Language</label>
+                    <Select>
+                      <SelectTrigger className={selectCls}>
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="ur">Urdu</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Options (aligned with field column) */}
+                  <div className="space-y-2 pl-[162px]">
+                    <label className="flex items-center gap-2 text-xs">
+                      <Checkbox className={checkboxCls} />
+                      Procure Non Drop-Ship Items
+                    </label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <Checkbox className={checkboxCls} defaultChecked />
+                      Procure Drop-Ship Items
+                    </label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <Checkbox className={checkboxCls} defaultChecked />
+                      Confirmed
+                    </label>
+                  </div>
+
+                  {/* BP Channel Name */}
+                  <div className={rowCls}>
+                    <label className={labelCls}>BP Channel Name</label>
+                    <Input type="text" className={inputCls} />
+                  </div>
+
+                  {/* BP Channel Contact */}
+                  <div className={rowCls}>
+                    <label className={labelCls}>BP Channel Contact</label>
+                    <Select>
+                      <SelectTrigger className={selectCls}>
+                        <SelectValue placeholder="Select contact" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="contact1">Contact 1</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        )}
+
         <TabsContent value="attachments" className="overflow-hidden mt-0">
           <AttachmentsTab
             attachments={attachments}
@@ -1003,11 +1153,138 @@ const setDocumentMode = useSalesDocument(
           />
         </TabsContent>
 
-        {isARInvoice && (
+        {hasAccountingTab && (
           <TabsContent
             value="accounting"
             className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6"
           >
+            {config.type === DocumentType.Quotation ? (
+              <div className="min-h-[320px] rounded-md border border-neutral-300 bg-white p-4 text-xs">
+                <div className="grid grid-cols-1 gap-x-10 gap-y-4 md:grid-cols-2">
+                  {/* Left */}
+                  <div className="space-y-4">
+                    <div className={rowCls}>
+                      <label htmlFor="journal-remark">Journal Remark</label>
+                      <Input id="journal-remark" className={inputCls} />
+                    </div>
+
+                    <div className={rowCls}>
+                      <label htmlFor="payment-terms">Payment Terms</label>
+                      <Select>
+                        <SelectTrigger id="payment-terms" className={selectCls}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent />
+                      </Select>
+                    </div>
+
+                    <div className={rowCls}>
+                      <label htmlFor="payment-method">Payment Method</label>
+                      <Select>
+                        <SelectTrigger id="payment-method" className={selectCls}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent />
+                      </Select>
+                    </div>
+
+                    
+<div className="space-y-2">
+  <div>Manually Recalculate Due Date:</div>
+
+  <div className="grid grid-cols-[1fr_72px_auto_72px_auto_1fr] items-center gap-2">
+    <Input
+      type="date"
+      aria-label="Selected Date"
+      className="h-8 w-full text-xs"
+    />
+
+    <Input
+      aria-label="Months"
+      className="h-8 text-center text-xs"
+      defaultValue="0"
+    />
+
+    <span>Months +</span>
+
+    <Input
+      aria-label="Days"
+      className="h-8 text-center text-xs"
+      defaultValue="0"
+    />
+
+    <span>Days</span>
+
+    <Select defaultValue="none">
+      <SelectTrigger
+        aria-label="Due date adjustment"
+        className="h-8 w-full text-xs"
+      >
+        <SelectValue />
+      </SelectTrigger>
+
+      <SelectContent>
+        <SelectItem value="none">None</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+</div>
+
+
+                    <div className={rowCls}>
+                      <label htmlFor="cash-discount-offset">Cash Discount Date Offset:</label>
+                      <Input id="cash-discount-offset" className={inputCls} />
+                    </div>
+
+                    <label className="flex items-center gap-2 pl-[162px]">
+                      <Checkbox className={checkboxCls} /> Use Shipped Goods Account
+                    </label>
+                  </div>
+
+                  {/* Right */}
+                  <div className="space-y-4">
+                    <div className={rowCls}>
+                      <label htmlFor="business-partner-project">Business Partner Project</label>
+                      <Input id="business-partner-project" className={inputCls} />
+                    </div>
+
+                    <div className="grid grid-cols-[150px_1fr] items-start gap-3">
+                      <label htmlFor="qr-code-from" className="pt-2">Create QR Code From</label>
+                      <Textarea id="qr-code-from" className={`${textareaCls} h-16`} />
+                    </div>
+
+                    <div className={rowCls}>
+                      <label htmlFor="indicator">Indicator</label>
+                      <Select>
+                        <SelectTrigger id="indicator" className={selectCls}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent />
+                      </Select>
+                    </div>
+
+                    <div className={rowCls}>
+                      <label htmlFor="federal-tax-id">Federal Tax ID</label>
+                      <Input id="federal-tax-id" className={inputCls} />
+                    </div>
+
+                    <div className={rowCls}>
+                      <label htmlFor="order-number">Order Number</label>
+                      <Input id="order-number" className={inputCls} />
+                    </div>
+
+                    <div className={rowCls}>
+                      <span>Referenced Document</span>
+                      <div>
+                        <Button type="button" size="icon" className={dotsBtnCls}>
+                          ...
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="w-full space-y-4 border rounded p-4">
               <div className="flex items-center gap-3">
                 <AppLabel className="w-40 shrink-0">
@@ -1059,6 +1336,7 @@ const setDocumentMode = useSalesDocument(
                 </div>
               </div>
             </div>
+            )}
           </TabsContent>
         )}
       </Tabs>
