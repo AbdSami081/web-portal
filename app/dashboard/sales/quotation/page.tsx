@@ -15,7 +15,6 @@ export default function QuotationSearchPage() {
     const match = data.value?.[0];
     if (match?.DocEntry) {
       router.push(`/dashboard/sales/quotation/${match.DocEntry}`);
-    // console.log(`Navigate to /dashboard/sales/quotation/${match.DocEntry}`);
     } else {
       alert('Quotation not found');
     }
