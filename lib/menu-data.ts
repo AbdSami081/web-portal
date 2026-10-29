@@ -350,11 +350,16 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "General Authorization",
                 url: "/dashboard/administration/general-authorization",
             },
+            {
+                id: "67ac6341-a12b-4308-b974-003402d1cec5",
+                title: "Approval Template",
+                url: "/dashboard/administration/approval-template",
+            },
         ],
     },
 ];
 
-const collectLeafItems = (items: MenuItem[]): MenuItem[] => {
+export const collectLeafItems = (items: MenuItem[]): MenuItem[] => {
     const leaves: MenuItem[] = [];
     const walk = (nodes: MenuItem[]) => {
         nodes.forEach((node) => {

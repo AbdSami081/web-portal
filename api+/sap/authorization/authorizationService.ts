@@ -7,6 +7,7 @@ export interface PortalUser {
   firstName: string;
   lastName: string;
   fullName: string;
+  userId?: number;
 }
 
 export type OhemUser = PortalUser;

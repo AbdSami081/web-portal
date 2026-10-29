@@ -9,6 +9,16 @@ export const getTemplateDocuments = async (): Promise<ApprovalTemplate[]> => {
   return Array.isArray(templates) ? templates : [];
 };
 
+export const getApprovalStageApprovers = async (stageCode: number): Promise<number[]> => {
+  try {
+    const res = await apiClient.get(`api/Approval/ApprovalStages/${stageCode}/approvers`);
+    const ids = res.data?.UserIds ?? res.data?.userIds ?? [];
+    return Array.isArray(ids) ? ids.map(Number) : [];
+  } catch {
+    return [];
+  }
+};
+
 export const getApprovalDocumentType = (docType: number | string, pathname = ""): string => {
   const numType = Number(docType);
   const currentPath = pathname.toLowerCase();
@@ -77,12 +87,16 @@ export const getApprovalDocumentType = (docType: number | string, pathname = "")
 
 export const getCurrentUserApprovalTemplates = async (
   userId: number | string,
-  documentType?: string
+  documentType?: string,
+  objectTypeCode?: number | string
 ): Promise<ApprovalTemplate[]> => {
   try {
     const params: Record<string, any> = { userId };
     if (documentType) {
       params.documentType = documentType;
+    }
+    if (objectTypeCode !== undefined && objectTypeCode !== null && objectTypeCode !== "") {
+      params.objectTypeCode = objectTypeCode;
     }
     const res = await apiClient.get("api/Approval/ApprovalTemplates/current", {
       params,
