@@ -352,8 +352,33 @@ export const SERVER_MENUS: MenuItem[] = [
             },
             {
                 id: "67ac6341-a12b-4308-b974-003402d1cec5",
-                title: "Approval Template",
+                title: "Query Manager",
                 url: "/dashboard/administration/approval-template",
+            },
+            {
+                id: "e7f8a9b0-c1d2-4e3f-8a9b-0c1d2e3f4a5b",
+                title: "User-Defined Values",
+                url: "/dashboard/administration/user-defined-fields",
+            },
+        ],
+    },
+
+    {
+        id: "b8c9d0e1-f2a3-4b5c-9d0e-1f2a3b4c5d6e",
+        title: "WP Approval Process",
+        url: "#",
+        isMain: true,
+        iconName: "ShieldCheck",
+        items: [
+            {
+                id: "c1d2e3f4-a5b6-4789-9012-3456789abcde",
+                title: "Templates",
+                url: "/dashboard/wp-approval-process/templates",
+            },
+            {
+                id: "d2e3f4a5-b6c7-4890-a123-456789abcdef0",
+                title: "Stages",
+                url: "/dashboard/wp-approval-process/stages",
             },
         ],
     },

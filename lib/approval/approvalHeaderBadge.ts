@@ -4,6 +4,7 @@ export type ApprovalHeaderStatus =
   | "pending"
   | "approved"
   | "rejected"
+  | "canceled"
   | "generated";
 
 export interface ApprovalHeaderBadges {
@@ -78,6 +79,49 @@ export function resolveApprovalHeaderBadges(
   };
 }
 
+/** Prefer the draft's live AuthorizationStatus over the status stored when the draft was first opened. */
+export function resolveLiveApprovalStatus(
+  navStatus?: string | null,
+  authorizationStatus?: string | null
+): string {
+  const mapped = mapAuthorizationStatus(authorizationStatus);
+  if (mapped === "approved") return "arsapproved";
+  if (mapped === "rejected") return "arsrejected";
+  if (mapped === "pending") return "arspending";
+  if (mapped === "generated") return "arsgenerated";
+  return (navStatus || "").trim().toLowerCase();
+}
+
+export function approvalFlagsFromStatus(
+  status: string,
+  hasDraft: boolean,
+  hasRequestCode: boolean
+) {
+  const statusStr = (status || "").trim().toLowerCase();
+  const isApprovedDraft =
+    statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
+  const isRejectedApproval =
+    statusStr === "arsrejected" ||
+    statusStr === "ardrejected" ||
+    statusStr === "arsnotapproved" ||
+    statusStr === "ardnotapproved" ||
+    statusStr === "rejected" ||
+    statusStr === "notapproved" ||
+    statusStr === "arscancelled" ||
+    statusStr === "arscanceled" ||
+    statusStr === "ardcancelled" ||
+    statusStr === "ardcanceled" ||
+    statusStr === "arscomplete";
+  const isPendingApproval =
+    (statusStr === "arspending" ||
+      statusStr === "ardpending" ||
+      statusStr === "pending" ||
+      (!statusStr && hasRequestCode && hasDraft)) &&
+    hasDraft;
+
+  return { isApprovedDraft, isRejectedApproval, isPendingApproval };
+}
+
 export function mapAuthorizationStatus(
   auth?: string | null
 ): ApprovalHeaderStatus | null {
@@ -95,6 +139,10 @@ export function mapAuthorizationStatus(
     return "rejected";
   }
 
+  if (s === "dascanceled" || s === "dascancelled") {
+    return "canceled";
+  }
+
   if (s === "dasgenerated") {
     return "generated";
   }
@@ -108,6 +156,59 @@ export function isAuthorizationWithout(
   return (
     (auth || "").trim().toLowerCase() === "daswithout"
   );
+}
+
+export function isWpGeneratedStatus(
+  authorizationStatus?: string | null,
+  wpApprStatus?: string | null
+): boolean {
+  const wp = (wpApprStatus || "").trim().toUpperCase();
+  if (wp === "P") return true;
+  return mapAuthorizationStatus(authorizationStatus) === "generated";
+}
+
+export function resolveWorkflowHeaderBadges(input: {
+  authWithout: boolean;
+  documentLoaded: boolean;
+  authBadge: ApprovalHeaderStatus | null;
+  headerBadges: ApprovalHeaderBadges;
+  wpApprStatus?: string | null;
+  authorizationStatus?: string | null;
+  approvalApplies: boolean;
+  hasNavApproval: boolean;
+  loadedDraftData: unknown;
+  isPostedLoaded: boolean;
+}): {
+  draftBadgeVisible: boolean;
+  statusBadge: ApprovalHeaderStatus | null;
+} {
+  const generated =
+    input.documentLoaded &&
+    (isWpGeneratedStatus(input.authorizationStatus, input.wpApprStatus) ||
+      (input.isPostedLoaded && input.headerBadges.status === "generated"));
+
+  if (generated) {
+    return {
+      draftBadgeVisible: false,
+      statusBadge: "generated",
+    };
+  }
+
+  const draftBadgeVisible =
+    !input.authWithout &&
+    !input.isPostedLoaded &&
+    input.headerBadges.status !== "generated" &&
+    (input.approvalApplies ||
+      input.hasNavApproval ||
+      input.headerBadges.showDraft ||
+      !!input.loadedDraftData);
+
+  const statusBadge =
+    input.authWithout || !input.documentLoaded
+      ? null
+      : (input.authBadge ?? input.headerBadges.status);
+
+  return { draftBadgeVisible, statusBadge };
 }
 
 export function resolveDocAuthStatus(doc: any): string {
@@ -131,7 +232,7 @@ export function resolveDocAuthStatus(doc: any): string {
   );
 
   if (Number.isFinite(draftKey) && draftKey > 0) {
-    return "dasApproved";
+    return "dasGenerated";
   }
 
   return "";

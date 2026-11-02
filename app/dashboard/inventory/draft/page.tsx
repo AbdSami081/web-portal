@@ -11,7 +11,7 @@ import InvDocumentFooter from "@/components/Inventory/shared/InvDocumentFooter";
 import { InvDocumentLayout } from "@/components/Inventory/shared/InvDocumentLayout";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
 import { DocumentType } from "@/types/master/DocumentType";
-import { getDraftDocument, SaveDraftToDocument } from "@/api+/sap/draft/draftService";
+import { getDraftDocument, SaveDraftToDocument, buildSaveDraftToDocumentPayload } from "@/api+/sap/draft/draftService";
 import { Loader2 } from "lucide-react";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 
@@ -125,20 +125,14 @@ export default function InventoryDraftPage() {
       return;
     }
 
-    const docDueDate = data.TaxDate || data.DocDate || new Date().toISOString().split("T")[0];
-
-    const payload = {
-      Document: {
-        DocEntry: draftId,
-        DocDueDate: String(docDueDate),
-      },
-    };
+    const payload = buildSaveDraftToDocumentPayload(draftId);
 
     try {
       toast.loading("Creating document from draft...", { id: "save-draft-inv" });
       const created = await SaveDraftToDocument(payload);
       if (created) {
         toast.success("Document created successfully from draft!", { id: "save-draft-inv" });
+        return created;
       } else {
         toast.error("Failed to create document from draft.", { id: "save-draft-inv" });
       }

@@ -703,7 +703,7 @@ const FMSSetupModal: React.FC<Props> = ({
                     onChange={(e) => setQueryText(e.target.value)}
                     rows={6}
                     placeholder={`SELECT "CardName" FROM OCRD WHERE "CardCode" = :CardCode`}
-                    className="font-mono text-xs p-3.5 border-0 focus-visible:ring-0 resize-none bg-slate-900 text-emerald-300 leading-relaxed tracking-wide"
+                    className="font-mono text-xs p-3.5 border-0 focus-visible:ring-0 resize-none bg-slate-50 text-slate-800 placeholder:text-slate-400 leading-relaxed tracking-wide"
                     spellCheck={false}
                   />
                 </div>

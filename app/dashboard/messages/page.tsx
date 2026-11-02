@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useNotifications } from "@/context/NotificationContext";
 import { SAPMessage, getMyAlerts, PAGE_SIZE } from "@/api+/sap/notification";
 import apiClient from "@/lib/apiClient";
-import { rejectApprovalRequest } from "@/api+/sap/Templates/approvalTemplate";
+import { rejectApprovalRequest, approveWpInstance, rejectWpInstance } from "@/api+/sap/Templates/approvalTemplate";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +28,8 @@ import { toast } from "sonner";
 import { DRAFT_OBJECT_TYPES } from "@/types/master/DocumentType";
 import { buildDocumentUrl, getMenuInfoByObjectCode, normalizeObjectCode } from "@/lib/menu-lookup";
 import { stageDocNavParams } from "@/lib/docNavParams";
+import { resolveMessageDocumentLink } from "@/lib/messages/resolveMessageDocumentLink";
+import { getPostedDocumentForDraft } from "@/api+/sap/draft/draftService";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { useGlobalRights } from "@/hooks/useDocumentRights";
 
@@ -125,17 +127,32 @@ export default function MessagesOverviewPage() {
     const reqCode = selectedApproval.ApprovalRequestCode;
     setIsApproving(true);
     try {
+      const isWp = selectedApproval.Engine === "WP" && selectedApproval.WddCode;
       if (approveDecision === "reject") {
         optimisticRemoveApproval(reqCode);
-        await rejectApprovalRequest(reqCode, approveRemarks || "Rejected");
-        toast.success(`Approval request #${reqCode} rejected.`);
+        if (isWp) {
+          const result = await rejectWpInstance(selectedApproval.WddCode!, approveRemarks || "Rejected");
+          toast.success(result?.Message || "Rejection recorded.");
+        } else {
+          await rejectApprovalRequest(reqCode, approveRemarks || "Rejected");
+          toast.success(`Approval request #${reqCode} rejected.`);
+        }
       } else {
         optimisticRemoveApproval(reqCode);
-        await apiClient.patch(
-          `api/Approval/ApprovalRequests/${reqCode}/approve`,
-          { Remarks: approveRemarks || "Approved" }
-        );
-        toast.success(`Approval request #${reqCode} approved successfully!`);
+        if (isWp) {
+          const result = await approveWpInstance(selectedApproval.WddCode!, approveRemarks || "Approved");
+          toast.success(
+            result?.FullyApproved
+              ? "Approved. The document is no longer pending and can be posted."
+              : result?.Message || "Your approval was recorded. It is pending for the next approver."
+          );
+        } else {
+          await apiClient.patch(
+            `api/Approval/ApprovalRequests/${reqCode}/approve`,
+            { Remarks: approveRemarks || "Approved" }
+          );
+          toast.success(`Approval request #${reqCode} approved successfully!`);
+        }
       }
       setApproveDialogOpen(false);
       setApproveRemarks("");
@@ -206,9 +223,21 @@ export default function MessagesOverviewPage() {
     }
   };
 
-  const getApprovalStatusBadge = (status?: string | null) => {
-    const s = (status || "").trim().toLowerCase();
-    switch (s) {
+function resolveDisplayedApprovalStatus(status?: string | null, subject?: string | null): string {
+  const current = (status || "").trim().toLowerCase();
+  const pending = current === "" || current.includes("pending");
+  const subjectText = (subject || "").toLowerCase();
+  if (pending) {
+    if (subjectText.includes("not approved") || subjectText.includes("reject")) return "rejected";
+    if (subjectText.includes("generated")) return "generated";
+    if (subjectText.includes("approved")) return "approved";
+  }
+  return current || "pending";
+}
+
+  const getApprovalStatusBadge = (status?: string | null, subject?: string | null) => {
+    const resolved = resolveDisplayedApprovalStatus(status, subject);
+    switch (resolved) {
       case "arsapproved":
       case "ardapproved":
       case "approved":
@@ -272,56 +301,45 @@ export default function MessagesOverviewPage() {
   const documentLink = useMemo(() => {
     if (!selectedMessage) return null;
 
-    const rawObjectEntry = selectedMessage.ObjectEntry?.toString().trim();
-    const objectEntry = rawObjectEntry && rawObjectEntry !== "0" ? rawObjectEntry : undefined;
-    const rawDraftEntry = selectedMessage.DraftEntry?.toString().trim();
-    const draftEntry = rawDraftEntry && rawDraftEntry !== "0" ? rawDraftEntry : undefined;
     const objectType =
       selectedMessage.ObjectType != null && `${selectedMessage.ObjectType}` !== ""
         ? String(normalizeObjectCode(selectedMessage.ObjectType))
         : selectedMessage.ObjectType;
-    const sourceDraftNumber = selectedMessage.SourceDraftNumber;
-    const approvalRequestCode = selectedMessage.ApprovalRequestCode;
-    const cardType = selectedMessage.CardType;
-    const isProductionLinked = selectedMessage.IsProductionLinked;
 
-    if (objectEntry) {
-      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber, approvalRequestCode, cardType, isProductionLinked };
-    }
-    if (draftEntry) {
-      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber, approvalRequestCode, cardType, isProductionLinked };
-    }
-
-    return null;
-
+    return resolveMessageDocumentLink({
+      objectType,
+      draftEntry: selectedMessage.DraftEntry != null ? String(selectedMessage.DraftEntry) : undefined,
+      objectEntry: selectedMessage.ObjectEntry != null ? String(selectedMessage.ObjectEntry) : undefined,
+      approvalStatus: selectedMessage.ApprovalStatus,
+      postedDocEntry: selectedMessage.PostedDocEntry,
+      sourceDraftNumber: selectedMessage.SourceDraftNumber,
+      approvalRequestCode: selectedMessage.ApprovalRequestCode,
+      cardType: selectedMessage.CardType,
+      isProductionLinked: selectedMessage.IsProductionLinked,
+    });
   }, [selectedMessage]);
 
   const approvalDocumentLink = useMemo(() => {
     if (!selectedApproval) return null;
 
-    const rawObjectEntry = selectedApproval.ObjectEntry?.toString().trim();
-    const objectEntry = rawObjectEntry && rawObjectEntry !== "0" ? rawObjectEntry : undefined;
-    const rawDraftEntry = selectedApproval.DraftEntry?.toString().trim();
-    const draftEntry = rawDraftEntry && rawDraftEntry !== "0" ? rawDraftEntry : undefined;
     const objectType =
       selectedApproval.ObjectType != null && `${selectedApproval.ObjectType}` !== ""
         ? String(normalizeObjectCode(selectedApproval.ObjectType))
         : selectedApproval.ObjectType;
-    const approvalRequestCode = selectedApproval.ApprovalRequestCode;
-    const cardType = selectedApproval.CardType;
-    const isProductionLinked = selectedApproval.IsProductionLinked;
 
-    if (objectEntry) {
-      return { objectType, objectEntry, draftEntry: undefined, isDraft: false, sourceDraftNumber: undefined, approvalRequestCode, cardType, isProductionLinked };
-    }
-    if (draftEntry) {
-      return { objectType, objectEntry: undefined, draftEntry, isDraft: true, sourceDraftNumber: undefined, approvalRequestCode, cardType, isProductionLinked };
-    }
-
-    return null;
+    return resolveMessageDocumentLink({
+      objectType,
+      draftEntry: selectedApproval.DraftEntry != null ? String(selectedApproval.DraftEntry) : undefined,
+      objectEntry: selectedApproval.ObjectEntry != null ? String(selectedApproval.ObjectEntry) : undefined,
+      approvalStatus: selectedApproval.ApprovalStatus || selectedApproval.Status,
+      postedDocEntry: (selectedApproval as { PostedDocEntry?: number | null }).PostedDocEntry,
+      approvalRequestCode: selectedApproval.ApprovalRequestCode,
+      cardType: selectedApproval.CardType,
+      isProductionLinked: selectedApproval.IsProductionLinked,
+    });
   }, [selectedApproval]);
 
-  const handleDocumentLinkClick = (link: {
+  const handleDocumentLinkClick = async (link: {
     objectType: string;
     objectEntry?: string;
     draftEntry?: string;
@@ -330,15 +348,30 @@ export default function MessagesOverviewPage() {
     approvalRequestCode?: number;
     cardType?: string | null;
     isProductionLinked?: boolean | null;
+    approvalStatus?: string;
   }, statusOverride?: string) => {
     const cleanKey = (v?: string | number | null) =>
       v === undefined || v === null ? undefined : v.toString().trim().split(/\s+/)[0] || undefined;
 
     const draftKey = cleanKey(link.draftEntry);
-    const objectKey = cleanKey(link.objectEntry);
-    const sourceKey = link.sourceDraftNumber ? String(link.sourceDraftNumber) : undefined;
+    let objectKey = cleanKey(link.objectEntry);
+    let openAsDraft = link.isDraft;
+    let rawStatus = statusOverride ?? link.approvalStatus ?? selectedMessage?.ApprovalStatus;
 
-    const key = link.isDraft ? draftKey : objectKey;
+    if (openAsDraft && draftKey) {
+      try {
+        const posted = await getPostedDocumentForDraft(Number(draftKey));
+        if (posted?.docEntry) {
+          openAsDraft = false;
+          objectKey = String(posted.docEntry);
+          rawStatus = "arsGenerated";
+        }
+      } catch {
+        // Stay on the draft route when the posted document cannot be resolved.
+      }
+    }
+
+    const key = openAsDraft ? draftKey : objectKey;
 
     if (!key || Number.isNaN(Number(key)) || Number(key) <= 0) {
       toast.error("Invalid SAP document key");
@@ -351,30 +384,28 @@ export default function MessagesOverviewPage() {
       return;
     }
 
-    const rawStatus = statusOverride ?? selectedMessage?.ApprovalStatus;
-
     const url = buildDocumentUrl(menuInfo.url, {
       objectType: link.objectType,
-      objectEntry: link.isDraft ? undefined : (sourceKey ?? objectKey),
+      objectEntry: openAsDraft ? undefined : objectKey,
       draftEntry: draftKey,
-      isDraft: link.isDraft,
+      isDraft: openAsDraft,
       approvalRequestCode: link.approvalRequestCode,
       approvalStatus: rawStatus,
       disambiguationHint: { cardType: link.cardType, isProductionLinked: link.isProductionLinked }
     });
 
     const status = (rawStatus || "").toLowerCase();
-    const isApprovedStatus = status.includes("approved");
+    const isApprovedStatus = status.includes("approved") && !status.includes("generated");
     const isPendingStatus = status.includes("pending");
     const approvalRole = isPendingStatus ? "approver" : "originator";
     const approvalReadOnly = isApprovedStatus && !canUpdateApprovedDocument ? "1" : undefined;
 
     const cleanPath = url.split("?")[0];
     const navParams = {
-      draftEntry: link.isDraft ? draftKey : undefined,
-      docEntry: link.isDraft ? undefined : (sourceKey ?? objectKey),
+      draftEntry: openAsDraft ? draftKey : undefined,
+      docEntry: openAsDraft ? undefined : objectKey,
       docType: String(link.objectType),
-      draft: link.isDraft ? "1" : undefined,
+      draft: openAsDraft ? "1" : undefined,
       approvalRequestCode: link.approvalRequestCode ? String(link.approvalRequestCode) : undefined,
       approvalStatus: rawStatus,
       approvalRole,
@@ -535,7 +566,7 @@ export default function MessagesOverviewPage() {
                                 )}
                               </TableCell>
                               <TableCell className="py-3.5 align-top whitespace-nowrap">
-                                {getApprovalStatusBadge(msg.ApprovalStatus)}
+                                {getApprovalStatusBadge(msg.ApprovalStatus, msg.Subject)}
                               </TableCell>
                               <TableCell className="py-3.5 text-right text-[11px] text-slate-400 font-bold whitespace-nowrap pr-4 align-top">
                                 {formatDate(msg.ApprovalCreationDate)}
@@ -823,7 +854,7 @@ export default function MessagesOverviewPage() {
                   </h2>
                   <div className="shrink-0 flex flex-col items-end gap-1.5">
                     {getPriorityBadge(selectedMessage.Priority)}
-                    {getApprovalStatusBadge(selectedMessage.ApprovalStatus)}
+                    {getApprovalStatusBadge(selectedMessage.ApprovalStatus, selectedMessage.Subject)}
                   </div>
                 </div>
 

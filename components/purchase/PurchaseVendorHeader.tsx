@@ -48,8 +48,9 @@ import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { DocumentType } from "@/types/master/DocumentType";
 import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
+import { redirectIfWpGeneratedDraft, withResolvedPostedDocument } from "@/lib/draftNavigation";
 import { useAuth } from "@/context/authContext";
 import { getAdminSettings } from "@/api+/sap/administration/administrationService";
 import { useBranchStore } from "@/stores/useBranchStore";
@@ -112,6 +113,7 @@ const getResourceName = (type: number, pathname = "") => {
 
 export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const docNav = useDocNavParams();
   const {
     register,
@@ -249,6 +251,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
           DocumentStatus:
             d.DocumentStatus?.replace("bost_", "") || d.DocumentStatus,
         }));
+        newDocs.sort((a: { DocNum?: number }, b: { DocNum?: number }) => Number(b.DocNum ?? 0) - Number(a.DocNum ?? 0));
 
         if (isLoadMore) {
           setDocumentsList((prev) => [...prev, ...newDocs]);
@@ -278,7 +281,8 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (docNum) setSearchValue(docNum.toString());
+    if (docNum && Number(docNum) > 0) setSearchValue(docNum.toString());
+    else setSearchValue("");
   }, [docNum]);
 
   useEffect(() => {
@@ -292,10 +296,9 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   useEffect(() => {
     const draftEntryParam = (docNav.draftEntry ?? "").toString().trim();
     const docEntryParam = (docNav.docEntry ?? "").toString().trim();
+    const isDraftNav = (docNav.draft ?? "") === "1" || pathname.toLowerCase().includes("/purchase/draft");
 
-    if (pathname.toLowerCase().includes("/purchase/draft")) {
-      if (!draftEntryParam || draftEntryParam === "0") return;
-
+    if (isDraftNav && draftEntryParam && draftEntryParam !== "0") {
       const navKey = `draft:${draftEntryParam}`;
       if (lastAutoNavKeyRef.current === navKey) return;
       lastAutoNavKeyRef.current = navKey;
@@ -305,18 +308,18 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
       return;
     }
 
-    if (draftEntryParam || !docEntryParam || docEntryParam === "0") return;
+    if (!docEntryParam || docEntryParam === "0") return;
 
     const navKey = `doc:${docEntryParam}`;
     if (lastAutoNavKeyRef.current === navKey) return;
     lastAutoNavKeyRef.current = navKey;
 
     setSearchValue(docEntryParam);
-    fetchDocument(docEntryParam);
+    fetchDocument(docEntryParam, { byEntry: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docNav.docEntry, docNav.draftEntry, docNav.draft, pathname]);
 
-  const fetchDocument = async (docNum: string, opts?: { isDraft?: boolean }) => {
+  const fetchDocument = async (docNum: string, opts?: { isDraft?: boolean; byEntry?: boolean }) => {
     let documentData;
     const docNumInt = parseInt(docNum);
 
@@ -331,39 +334,40 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
       const currentPath = pathname.toLowerCase();
       const isDraftLookup = opts?.isDraft ?? currentPath.includes("/purchase/draft");
 
+      const byEntry = opts?.byEntry ?? false;
       if (isDraftLookup) {
         documentData = await getDraftDocument(docNumInt);
       } else if (currentPath.includes("apdownpaymentrequest")) {
-        documentData = await getAPDownPaymentRequestDocument(docNumInt);
+        documentData = await getAPDownPaymentRequestDocument(docNumInt, byEntry);
       } else if (currentPath.includes("apdownpaymentinvoice")) {
-        documentData = await getAPDownPaymentInvoiceDocument(docNumInt);
+        documentData = await getAPDownPaymentInvoiceDocument(docNumInt, byEntry);
       } else if (currentPath.includes("purchase/request")) {
-        documentData = await getPurchaseRequestDocument(docNumInt);
+        documentData = await getPurchaseRequestDocument(docNumInt, byEntry);
       } else {
         switch (config.type) {
           case DocumentType.PurchaseRequests:
-            documentData = await getPurchaseRequestDocument(docNumInt);
+            documentData = await getPurchaseRequestDocument(docNumInt, byEntry);
             break;
           case DocumentType.PurchaseOrder:
-            documentData = await getPurchaseOrderDocument(docNumInt);
+            documentData = await getPurchaseOrderDocument(docNumInt, byEntry);
             break;
           case DocumentType.GoodsReceiptPO:
-            documentData = await getPurchaseDeliveryDocument(docNumInt);
+            documentData = await getPurchaseDeliveryDocument(docNumInt, byEntry);
             break;
           case DocumentType.PurchaseQuotation:
-            documentData = await getPurchaseQuotationDocument(docNumInt);
+            documentData = await getPurchaseQuotationDocument(docNumInt, byEntry);
             break;
           case DocumentType.APInvoice: // covers APReserveInvoice too (same value=18)
-            documentData = await getAPInvoiceDocument(docNumInt);
+            documentData = await getAPInvoiceDocument(docNumInt, byEntry);
             break;
           case DocumentType.APCreditMemo:
-            documentData = await getAPCreditMemoDocument(docNumInt);
+            documentData = await getAPCreditMemoDocument(docNumInt, byEntry);
             break;
           case DocumentType.GoodsReturn:
-            documentData = await getGoodsReturnDocument(docNumInt);
+            documentData = await getGoodsReturnDocument(docNumInt, byEntry);
             break;
           case DocumentType.GoodsReturnRequest:
-            documentData = await getGoodsReturnRequestDocument(docNumInt);
+            documentData = await getGoodsReturnRequestDocument(docNumInt, byEntry);
             break;
           default:
             toast.error("Document type not supported.");
@@ -393,38 +397,53 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         }
 
         usePurchaseDocument.getState().setLoadedDraftData(documentData);
-        setValue("DocDate", (documentData.DocDate || "").split("T")[0]);
-        setValue("DocDueDate", (documentData.DocDueDate || "").split("T")[0]);
-        setValue("TaxDate", (documentData.TaxDate || "").split("T")[0]);
+        const resolvedDocument = await withResolvedPostedDocument(
+          documentData as Record<string, unknown>,
+          Number(documentData.DocEntry)
+        );
+        setValue("DocDate", (resolvedDocument.DocDate as string || "").split("T")[0]);
+        setValue("DocDueDate", (resolvedDocument.DocDueDate as string || "").split("T")[0]);
+        setValue("TaxDate", (resolvedDocument.TaxDate as string || "").split("T")[0]);
         if (needsRequiredDate) {
-          const requiredDateValue = (documentData.RequriedDate || documentData.RequiredDate || "").split("T")[0];
+          const requiredDateValue = String(resolvedDocument.RequriedDate || resolvedDocument.RequiredDate || "").split("T")[0];
           setValue("RequiredDate", requiredDateValue);
           setRequiredDate(requiredDateValue);
         }
-        setValue("Comments", documentData.Comments || "");
-        setComments(documentData.Comments || "");
-        setValue("DocStatus", documentData.DocumentStatus || documentData.DocStatus || "bost_Open");
-        setValue("DocNum", documentData.DocNum);
-        setValue("DocEntry", documentData.DocEntry);
-        setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
-        setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
+        setValue("Comments", (resolvedDocument.Comments as string) || "");
+        setComments((resolvedDocument.Comments as string) || "");
+        setValue("DocStatus", (resolvedDocument.DocumentStatus as string) || (resolvedDocument.DocStatus as string) || "bost_Open");
+        setValue("DocNum", resolvedDocument.DocNum);
+        setValue("DocEntry", resolvedDocument.DocEntry);
+        setValue("BPL_IDAssignedToInvoice", resolvedDocument.BPL_IDAssignedToInvoice ?? resolvedDocument.BPLId);
+        setValue("AuthorizationStatus", resolveDocAuthStatus(resolvedDocument));
+        setValue("U_WP_ApprEngine", (resolvedDocument as any).U_WP_ApprEngine || "");
+        setValue("U_WP_ApprStatus", (resolvedDocument as any).U_WP_ApprStatus || "");
 
-        if (isPurchaseRequest) {
-          setValue("Requester", documentData.Requester || user?.userName || "");
-          setValue("RequesterName", documentData.RequesterName || user?.fullName || "");
-          setValue("RequesterEmail", documentData.RequesterEmail || "");
-          setValue("SendNotification", documentData.SendNotification || "tNO");
-        } else {
-          setValue("CardCode", documentData.CardCode || "");
-          setValue("CardName", documentData.CardName || "");
+        if (
+          redirectIfWpGeneratedDraft(router, pathname, config.type, resolvedDocument)
+        ) {
+          return;
         }
 
-        toast.success(`Document #${docNumInt} loaded successfully.`);
+        if (isPurchaseRequest) {
+          setValue("Requester", (resolvedDocument.Requester as string) || user?.userName || "");
+          setValue("RequesterName", (resolvedDocument.RequesterName as string) || user?.fullName || "");
+          setValue("RequesterEmail", (resolvedDocument.RequesterEmail as string) || "");
+          setValue("SendNotification", (resolvedDocument.SendNotification as string) || "tNO");
+        } else {
+          setValue("CardCode", (resolvedDocument.CardCode as string) || "");
+          setValue("CardName", (resolvedDocument.CardName as string) || "");
+        }
+
+        const shownNumber = (resolvedDocument.DocNum as number) ?? docNumInt;
+        setSearchValue(String(shownNumber));
+        toast.success(`Document #${shownNumber} loaded successfully.`);
       } else {
         toast.error("Document not found.");
       }
     } catch (error) {
-      toast.error("Error fetching document.");
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      toast.error(status === 404 ? "Document not found." : "Error fetching document.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -735,7 +754,7 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
           open={docListModalOpen}
           onClose={() => setDocListModalOpen(false)}
           onSelect={(val) => {
-            fetchDocument(val.toString());
+            fetchDocument(val.toString(), { byEntry: false });
             setDocListModalOpen(false);
           }}
           data={documentsList}

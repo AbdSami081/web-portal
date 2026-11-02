@@ -1,4 +1,4 @@
-﻿import apiClient from "@/lib/apiClient";
+import apiClient from "@/lib/apiClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,6 +125,13 @@ export const getFmsFields = async (docType: number): Promise<FmsFieldOption[]> =
   }
 };
 
+/** Saved queries from Query Manager. These are not attached to a document field. */
+export const getFmsQueries = async (): Promise<FmsConfigDto[]> => {
+  const res = await apiClient.get<any[]>("api/FMS/queries");
+  const list = Array.isArray(res.data) ? res.data : [];
+  return list.map(normalizeConfig);
+};
+
 /** Load all active FMS configs for a document type */
 export const getFmsConfigs = async (docType: number): Promise<FmsConfigDto[]> => {
   const res = await apiClient.get<any[]>(`api/FMS/configs?docType=${docType}`);
@@ -164,7 +171,7 @@ export const saveFmsConfig = async (config: FmsConfigDto): Promise<{ code: strin
   return { code: resCode, id: resCode };
 };
 
-/** Soft-delete an FMS configuration */
+/** Delete a query configuration. Approval queries are removed from the database. */
 export const deleteFmsConfig = async (code: string | number): Promise<void> => {
   await apiClient.delete(`api/FMS/config/${encodeURIComponent(String(code))}`);
 };

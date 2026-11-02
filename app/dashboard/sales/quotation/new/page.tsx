@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { ReactJsxRuntime } from "next/dist/server/route-modules/app-page/vendored/rsc/entrypoints";
+import { applyDistributionFields } from "@/lib/sap/helpers/distributionHelper";
 import { buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useEffect } from "react";
@@ -108,6 +109,8 @@ export default function NewQuotationPage() {
                 WarehouseCode: line.WarehouseCode || "",
                 UoMCode: line.UoMCode || "",
               };
+        baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
+        applyDistributionFields(line, baseFields);
         if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Quotation) {
           baseFields.BaseType = lastLoadedDocType;
           baseFields.BaseEntry = DocEntry;

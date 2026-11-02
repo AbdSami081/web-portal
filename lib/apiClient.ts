@@ -62,7 +62,18 @@ const requestInterceptor = (config: any) => {
 const responseInterceptor = (response: any) => {
     const data = response?.data;
     if (data && typeof data === "object" && data.IsDraft === true) {
-        if (data.RoutedByRule) {
+        const isWp =
+            data.ApprovalEngine === "CUSTOM" ||
+            data.ApprovalBadge === "WP" ||
+            data.WpApprovalStarted === true;
+        if (isWp) {
+            toast.success("Document submitted for portal approval.", {
+                description: data.DraftEntry
+                    ? `Draft ${data.DraftEntry} — approvers were notified in Messages.`
+                    : undefined,
+                duration: 7000,
+            });
+        } else if (data.RoutedByRule) {
             console.log(`[Approval] Query-based rule routed this document — TemplateCode ${data.RoutedTemplateCode}, DraftEntry ${data.DraftEntry}`);
             toast.success(`Approval routing matched — rebound to Template #${data.RoutedTemplateCode}`, {
                 description: `Draft ${data.DraftEntry} was routed by a query-based rule.`,
@@ -150,13 +161,19 @@ const errorInterceptor = (error: any) => {
     return Promise.reject(error);
 };
 
-apiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
-apiClient.interceptors.response.use(responseInterceptor, createRetryInterceptor(apiClient));
-apiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
+const attachClientInterceptors = (client: typeof apiClient) => {
+    client.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
+    client.interceptors.response.use(responseInterceptor, async (error) => {
+        try {
+            return await createRetryInterceptor(client)(error);
+        } catch (retried) {
+            return errorInterceptor(retried);
+        }
+    });
+};
 
-reportingApiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
-reportingApiClient.interceptors.response.use(responseInterceptor, createRetryInterceptor(reportingApiClient));
-reportingApiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
+attachClientInterceptors(apiClient);
+attachClientInterceptors(reportingApiClient);
 
 export async function cachedGet<T>(
     url: string,

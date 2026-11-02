@@ -11,6 +11,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { patchGoodsReturnRequest , postGoodsReturnRequest } from "@/api+/sap/purchase/purchaseService";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
+import { applyDistributionFields } from "@/lib/sap/helpers/distributionHelper";
 const today = new Date().toISOString().split("T")[0];
 
 export default function GoodsReturnRequestPage() {
@@ -73,6 +74,8 @@ export default function GoodsReturnRequestPage() {
                 VatGroup: line.TaxCode || "",
               }
             : { ...line };
+        lineData.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
+        applyDistributionFields(line, lineData);
 
         if (
           DocEntry &&

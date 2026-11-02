@@ -101,10 +101,13 @@ import { SerialNumberSelectionDialog } from "@/modals/SerialNumberSelectionDialo
 import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog";
 import { CreateSerialDialog } from "@/modals/CreateSerialDialog";
 import { CreateBatchDialog } from "@/modals/CreateBatchDialog";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
+import { planDocumentApproval, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
+import { isCustomApprovalEngineResult } from "@/lib/approval/postSubmitApproval";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
-import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
+import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout, resolveLiveApprovalStatus, approvalFlagsFromStatus, resolveWorkflowHeaderBadges, isWpGeneratedStatus } from "@/lib/approval/approvalHeaderBadge";
+import { finishDraftSubmitNavigation } from "@/lib/draftNavigation";
+import { WpDraftApprovalActions } from "@/components/approval/WpDraftApprovalActions";
 import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
@@ -151,26 +154,6 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const pathname = usePathname();
   const docNav = resolveDocNavParams(searchParams, pathname);
   const headerBadges = React.useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
-  const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
-  const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
-  const isRejectedApproval =
-    statusStr === "arsrejected" ||
-    statusStr === "ardrejected" ||
-    statusStr === "arsnotapproved" ||
-    statusStr === "ardnotapproved" ||
-    statusStr === "rejected" ||
-    statusStr === "notapproved" ||
-    statusStr === "arscancelled" ||
-    statusStr === "arscanceled" ||
-    statusStr === "ardcancelled" ||
-    statusStr === "ardcanceled" ||
-    statusStr === "arscomplete";
-  const isPendingApproval =
-    (statusStr === "arspending" ||
-      statusStr === "ardpending" ||
-      statusStr === "pending" ||
-      (!statusStr && !!docNav.approvalRequestCode && !!docNav.draftEntry)) &&
-    !!docNav.draftEntry;
 
   const [approvalTemplates, setApprovalTemplates] = useState<ApprovalTemplate[]>([]);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
@@ -203,16 +186,34 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   );
 
   const authStatus = watch("AuthorizationStatus" as any);
+  const wpApprStatus = watch("U_WP_ApprStatus" as any);
   const authWithout = isAuthorizationWithout(authStatus);
   const authBadge = mapAuthorizationStatus(authStatus);
+  const liveApproval = approvalFlagsFromStatus(
+    resolveLiveApprovalStatus(docNav.approvalStatus, authStatus),
+    !!docNav.draftEntry,
+    !!docNav.approvalRequestCode
+  );
+  const wpGenerated = isWpGeneratedStatus(authStatus, wpApprStatus);
+  const isApprovedDraft = !wpGenerated && liveApproval.isApprovedDraft;
+  const isRejectedApproval = liveApproval.isRejectedApproval;
+  const isPendingApproval = liveApproval.isPendingApproval;
   const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
   const approvalApplies = useUserHasApprovalTemplate(docType, pathname);
   const documentLoaded = Number(DocEntry) > 0 || !!loadedDraftData;
   const isPostedLoaded = Number(DocEntry) > 0 && !docNav.draftEntry;
-  const draftBadgeVisible =
-    !authWithout && !isPostedLoaded &&
-    (approvalApplies || hasNavApproval || headerBadges.showDraft || !!loadedDraftData);
-  const statusBadge = authWithout || !documentLoaded ? null : (authBadge ?? headerBadges.status);
+  const { draftBadgeVisible, statusBadge } = resolveWorkflowHeaderBadges({
+    authWithout,
+    documentLoaded,
+    authBadge,
+    headerBadges,
+    wpApprStatus,
+    authorizationStatus: authStatus,
+    approvalApplies,
+    hasNavApproval,
+    loadedDraftData,
+    isPostedLoaded,
+  });
 
   const docStatus = watch("DocStatus" as any);
   const docEntry = watch("DocEntry" as any);
@@ -303,6 +304,9 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
           console.error("Submit & View: failed to reload document, falling back to reset", err);
         }
       }
+    }
+    if (finishDraftSubmitNavigation(pathname, router, docType, result, ResetForm)) {
+      return;
     }
     finishAndReset();
   };
@@ -712,8 +716,14 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
             if (currentUserId) {
               setIsCheckingApproval(true);
               try {
-                const docTypeStr = getApprovalDocumentType(docType, pathname);
-                const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+                const stateForApproval = usePurchaseDocument.getState();
+                const activeTemplates = await planDocumentApproval(currentUserId, docType, {
+                  ...(data as object),
+                  DocType: stateForApproval.documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
+                  ItemType: stateForApproval.documentMode === "service" ? "dit_Service" : "dit_Item",
+                  DiscountPercent: stateForApproval.discountPercent,
+                  DocumentLines: stateForApproval.lines,
+                });
                 if (activeTemplates && activeTemplates.length > 0) {
                   setApprovalTemplates(activeTemplates);
                   setPendingFinalData(data as unknown as T);
@@ -721,8 +731,10 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                   setIsCheckingApproval(false);
                   return;
                 }
-              } catch (err) {
-                console.error("Failed to check approval templates:", err);
+              } catch (err: any) {
+                const message = err?.response?.data?.Message || err?.response?.data?.message;
+                toast.error(message || "The approval query could not be checked. The document was not saved.");
+                return;
               } finally {
                 setIsCheckingApproval(false);
               }
@@ -778,6 +790,16 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                     Generated
                   </span>
                 )}
+                {statusBadge === "canceled" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-600 bg-slate-50 border border-slate-200/60 rounded px-1.5 py-0.5">
+                    Canceled
+                  </span>
+                )}
+                <WpDraftApprovalActions
+                  engine={String(watch("U_WP_ApprEngine" as never) || "")}
+                  status={statusBadge}
+                  draftEntry={Number(docNav.draftEntry) || undefined}
+                />
               </h1>
             </div>
 
@@ -1090,7 +1112,12 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               const result = await onSubmit(finalData);
               setPendingFinalData(null);
 
-              if (result && (result as any).IsDraft && (result as any).DocEntry) {
+              if (
+                result &&
+                (result as any).IsDraft &&
+                (result as any).DocEntry &&
+                !isCustomApprovalEngineResult(result)
+              ) {
                 const tpl = approvalTemplates[0];
                 const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
                 if (remarks) {
@@ -1113,7 +1140,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               }
 
               submitModeRef.current = "default";
-              finishAndReset();
+              await finishSubmit(finalData, result);
             }}
           />
 

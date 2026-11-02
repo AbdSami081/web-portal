@@ -21,8 +21,8 @@ export interface PendingApproval {
   ObjectType: string;
   CardType?: string | null;
   IsProductionLinked?: boolean | null;
-  ObjectEntry: number;
-  DraftEntry: number;
+  ObjectEntry: number | string;
+  DraftEntry: number | string;
   Status?: string;
   ApprovalStatus?: string;
   Remarks: string;
@@ -30,6 +30,9 @@ export interface PendingApproval {
   ApprovalCreationDate: string;
   OriginatorID?: number;
   CurrentStage?: number;
+  Engine?: "WP" | "SAP";
+  WddCode?: string;
+  ApprovalBadge?: "WP" | "SAP";
 }
 
 interface NotificationContextType {

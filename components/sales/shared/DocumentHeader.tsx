@@ -17,12 +17,13 @@ import { GenericModal } from "@/modals/GenericModal";
 import { List } from "lucide-react";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useUDFStore } from "@/stores/useUDFStore";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
+import { redirectIfWpGeneratedDraft, withResolvedPostedDocument } from "@/lib/draftNavigation";
 import { findDraftByNumber } from "@/api+/sap/draft/draftService";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { useDocumentRights } from "@/hooks/useDocumentRights";
@@ -120,6 +121,8 @@ const hasFieldAccess = (fieldName: string) =>
   fieldAccess.includes(fieldName);
   const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const docNav = useDocNavParams();
   const autoCreatedRef = React.useRef(false);
   const lastAutoNavKeyRef = useRef<string | null>(null);
@@ -365,27 +368,41 @@ const hasFieldAccess = (fieldName: string) =>
         );
       }
 
-      setValue("DocDate", documentData.DocDate?.split("T")[0]);
-      setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
-      setValue("CardCode", documentData.CardCode);
-      setValue("CardName", documentData.CardName);
-      setValue("DocStatus", documentData.DocumentStatus);
-      setValue("Address2", documentData.Address2);
-      setValue("Address", documentData.Address);
-      setValue("DocEntry", documentData.DocEntry);
-      setValue("DocNum", documentData.DocNum);
-      setValue("Comments", documentData.Comments);
-      setComments(documentData.Comments || "");
-      setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
-      setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
+      const resolvedDocument =
+        opts?.isDraft || resolvedAsDraft
+          ? await withResolvedPostedDocument(documentData as Record<string, unknown>, Number(documentData.DocEntry))
+          : (documentData as Record<string, unknown>);
+
+      setValue("DocDate", String(resolvedDocument.DocDate || "").split("T")[0]);
+      setValue("DocDueDate", String(resolvedDocument.DocDueDate || "").split("T")[0]);
+      setValue("CardCode", resolvedDocument.CardCode);
+      setValue("CardName", resolvedDocument.CardName);
+      setValue("DocStatus", resolvedDocument.DocumentStatus);
+      setValue("Address2", resolvedDocument.Address2);
+      setValue("Address", resolvedDocument.Address);
+      setValue("DocEntry", resolvedDocument.DocEntry);
+      setValue("DocNum", resolvedDocument.DocNum);
+      setValue("Comments", resolvedDocument.Comments);
+      setComments(String(resolvedDocument.Comments || ""));
+      setValue("BPL_IDAssignedToInvoice", resolvedDocument.BPL_IDAssignedToInvoice ?? resolvedDocument.BPLId);
+      setValue("AuthorizationStatus", resolveDocAuthStatus(resolvedDocument));
+      setValue("U_WP_ApprEngine", (resolvedDocument as any).U_WP_ApprEngine || "");
+      setValue("U_WP_ApprStatus", (resolvedDocument as any).U_WP_ApprStatus || "");
 
       if (config.type === DocumentType.ARInvoice) {
-        setValue("FatherType", (documentData as any).FatherType || "");
-        setValue("FatherCard", (documentData as any).FatherCard || "");
+        setValue("FatherType", (resolvedDocument as any).FatherType || "");
+        setValue("FatherCard", (resolvedDocument as any).FatherCard || "");
       }
 
       if (resolvedAsDraft) {
-        useSalesDocument.getState().setLoadedDraftData(documentData);
+        useSalesDocument.getState().setLoadedDraftData(resolvedDocument);
+      }
+
+      if (
+        (opts?.isDraft || resolvedAsDraft) &&
+        redirectIfWpGeneratedDraft(router, pathname, config.type, resolvedDocument)
+      ) {
+        return;
       }
     }
   } catch (error: any) {
