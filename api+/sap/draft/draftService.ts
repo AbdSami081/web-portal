@@ -4,6 +4,7 @@ export interface SaveDraftToDocumentPayload {
   Document: {
     DocEntry: number;
     DocDueDate?: string;
+    DocObjectCode?: string;
   };
 }
 
@@ -31,37 +32,6 @@ export interface DraftRow {
   objectCode: string;
 }
 
-const docNames: Record<string, string> = {
-  oQuotations: "Sales Quotations",
-  oOrders: "Sales Orders",
-  oPurchaseRequest: "Purchase Request",
-  oPurchaseQuotations: "Purchase Quotations",
-  oPurchaseDeliveryNotes: "Goods Receipt PO",
-  oInventoryTransferRequest: "Inventory Transfer Request",
-};
-// draftService.ts ke end mein
-export const draftRoutes: Record<string, string> = {
-  // Sales
-  oQuotations: "/dashboard/sales/quotation/new",
-  oOrders: "/dashboard/sales/order/new",
-  oDeliveryNotes: "/dashboard/sales/delivery/new",
-  oInvoices: "/dashboard/sales/invoice",
-  oReturns: "/dashboard/sales/return/new",
-
-  // Purchase
-  oPurchaseRequest: "/dashboard/purchase/request/new",
-  oPurchaseQuotations: "/dashboard/purchase/quotation/new",
-  oPurchaseOrders: "/dashboard/purchase/order/new",
-  oPurchaseDeliveryNotes: "/dashboard/purchase/grpo/new",
-  oPurchaseInvoices: "/dashboard/purchase/invoice/new",
-
-  // Inventory
-  oInventoryTransferRequest: "/dashboard/inventory/transfer-request/new",
-  oStockTransfer: "/dashboard/inventory/transfer/new",
-  oInventoryGenEntry: "/dashboard/inventory/goods-receipt/new",
-  oInventoryGenExit: "/dashboard/inventory/goods-issue/new",
-};
-
 export const SaveDraftToDocument = async (payload: SaveDraftToDocumentPayload | any): Promise<any | null> => {
   const res = await apiClient.post(`api/Draft/SaveDraftToDocument`, payload);
   if (!res.data) return null;
@@ -73,7 +43,23 @@ export const saveDraftToDocument = SaveDraftToDocument;
 export const getDraftDocument = async (draftID: number): Promise<any | null> => {
   const res = await apiClient.get(`api/Draft/Drafts/${draftID}`);
   if (!res.data) return null;
+  if (typeof res.data === "string") {
+    try {
+      return JSON.parse(res.data);
+    } catch {
+      return null;
+    }
+  }
   return res.data;
+};
+
+export const getPostedDocumentForDraft = async (
+  draftId: number
+): Promise<{ docEntry: number } | null> => {
+  if (!draftId || draftId <= 0) return null;
+  const res = await apiClient.get(`api/Draft/PostedDocument/${draftId}`);
+  const docEntry = Number(res.data?.docEntry ?? res.data?.DocEntry ?? 0);
+  return Number.isFinite(docEntry) && docEntry > 0 ? { docEntry } : null;
 };
 
 export const findDraftByNumber = async (

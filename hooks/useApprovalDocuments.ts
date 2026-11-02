@@ -9,11 +9,11 @@ import {
 
 const cache = new Map<string, Promise<boolean>>();
 
-function check(userId: number, docTypeStr: string): Promise<boolean> {
-  const key = `${userId}:${docTypeStr}`;
+function check(userId: number, docTypeStr: string, objectTypeCode: number | string): Promise<boolean> {
+  const key = `${userId}:${docTypeStr}:${objectTypeCode}`;
   let entry = cache.get(key);
   if (!entry) {
-    entry = getCurrentUserApprovalTemplates(userId, docTypeStr)
+    entry = getCurrentUserApprovalTemplates(userId, docTypeStr, objectTypeCode)
       .then((templates) => Array.isArray(templates) && templates.length > 0)
       .catch(() => false);
     cache.set(key, entry);
@@ -33,13 +33,13 @@ export function useUserHasApprovalTemplate(docType: number | string, pathname = 
       return;
     }
     let active = true;
-    check(userId, docTypeStr).then((v) => {
+    check(userId, docTypeStr, docType).then((v) => {
       if (active) setHasTemplate(v);
     });
     return () => {
       active = false;
     };
-  }, [userId, docTypeStr]);
+  }, [userId, docTypeStr, docType]);
 
   return hasTemplate;
 }

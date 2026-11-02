@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { List } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { BusinessPartner } from "@/types/sales/businessPartner.type";
@@ -30,6 +30,7 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
+import { redirectIfWpGeneratedDraft, withResolvedPostedDocument } from "@/lib/draftNavigation";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -150,6 +151,8 @@ export function InvDocumentHeader() {
   };
 
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const docNav = useDocNavParams();
   const autoCreatedRef = useRef(false);
   const lastAutoNavKeyRef = useRef<string | null>(null);
@@ -197,10 +200,17 @@ export function InvDocumentHeader() {
     try {
       const documentData = await getDraftDocument(draftId);
       if (documentData) {
+        const resolvedDocument = await withResolvedPostedDocument(
+          documentData as Record<string, unknown>,
+          draftId
+        );
         fetchUdfDefinitions(config.type, true);
-        applyDocumentData(documentData, config.type);
+        applyDocumentData(resolvedDocument, config.type);
 
-        useInventoryDocument.getState().setLoadedDraftData(documentData);
+        useInventoryDocument.getState().setLoadedDraftData(resolvedDocument);
+        if (redirectIfWpGeneratedDraft(router, pathname, config.type, resolvedDocument)) {
+          return;
+        }
       } else {
         toast.error(`Draft document ${draftId} not found.`);
       }
@@ -391,6 +401,8 @@ export function InvDocumentHeader() {
     setValue("DocStatus", documentData.DocumentStatus);
     setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
     setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
+    setValue("U_WP_ApprEngine", (documentData as any).U_WP_ApprEngine || "");
+    setValue("U_WP_ApprStatus", (documentData as any).U_WP_ApprStatus || "");
 
     const isCopy = type !== config.type;
     loadFromDocument(documentData, type, isCopy);

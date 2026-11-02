@@ -48,8 +48,8 @@ export const closeGoodsReturnRequest = async (docEntry: number): Promise<any | n
   return res.data;
 };
 
-export const getPurchaseQuotationDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/PurchaseQuotation?docNum=${docNum}`);
+export const getPurchaseQuotationDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseQuotation?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
 
   const doc: BasePurchaseDocument = {
@@ -63,8 +63,8 @@ export const getPurchaseQuotationDocument = async (docNum: number): Promise<Base
   return doc;
 };
 
-export const getPurchaseRequestDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/PurchaseRequests?docNum=${docNum}`);
+export const getPurchaseRequestDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseRequests?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
 
   const doc: BasePurchaseDocument = {
@@ -78,8 +78,8 @@ export const getPurchaseRequestDocument = async (docNum: number): Promise<BasePu
   return doc;
 };
 
-export const getPurchaseOrderDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/PurchaseOrders?docNum=${docNum}`);
+export const getPurchaseOrderDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseOrders?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
 
   const doc: BasePurchaseDocument = {
@@ -93,8 +93,8 @@ export const getPurchaseOrderDocument = async (docNum: number): Promise<BasePurc
   return doc;
 };
 
-export const getPurchaseDeliveryDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/PurchaseDeliveryNotes?docNum=${docNum}`);
+export const getPurchaseDeliveryDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseDeliveryNotes?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
 
   const doc: BasePurchaseDocument = {
@@ -108,8 +108,8 @@ export const getPurchaseDeliveryDocument = async (docNum: number): Promise<BaseP
   return doc;
 };
 
-export const getAPInvoiceDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/PurchaseInvoices?docNum=${docNum}`);
+export const getAPInvoiceDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseInvoices?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
 
   const doc: BasePurchaseDocument = {
@@ -123,8 +123,8 @@ export const getAPInvoiceDocument = async (docNum: number): Promise<BasePurchase
   return doc;
 };
 
-export const getPurchaseReturnDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/Returns?docNum=${docNum}`);
+export const getPurchaseReturnDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/Returns?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
 
   const doc: BasePurchaseDocument = {
@@ -253,8 +253,8 @@ export const getGoodsReturnRequestByBP = async (cardCode: string, skip = 0, top 
   return res.data || [];
 };
 
-export const getAPCreditMemoDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/PurchaseCreditNotes?docNum=${docNum}`);
+export const getAPCreditMemoDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseCreditNotes?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
   const doc: BasePurchaseDocument = {
     ...res.data,
@@ -266,8 +266,8 @@ export const getAPCreditMemoDocument = async (docNum: number): Promise<BasePurch
   return doc;
 };
 
-export const getGoodsReturnDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/PurchaseReturns?docNum=${docNum}`);
+export const getGoodsReturnDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseReturns?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
   const doc: BasePurchaseDocument = {
     ...res.data,
@@ -279,8 +279,8 @@ export const getGoodsReturnDocument = async (docNum: number): Promise<BasePurcha
   return doc;
 };
 
-export const getGoodsReturnRequestDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/GoodsReturnRequest?docNum=${docNum}`);
+export const getGoodsReturnRequestDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/GoodsReturnRequest?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
   const doc: BasePurchaseDocument = {
     ...res.data,
@@ -292,8 +292,8 @@ export const getGoodsReturnRequestDocument = async (docNum: number): Promise<Bas
   return doc;
 };
 
-export const getAPDownPaymentRequestDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/PurchaseDownPayments?docNum=${docNum}`);
+export const getAPDownPaymentRequestDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseDownPayments?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
   const doc: BasePurchaseDocument = {
     ...res.data,
@@ -305,8 +305,8 @@ export const getAPDownPaymentRequestDocument = async (docNum: number): Promise<B
   return doc;
 };
 
-export const getAPDownPaymentInvoiceDocument = async (docNum: number): Promise<BasePurchaseDocument | null> => {
-  const res = await apiClient.get(`api/Purchase/PurchaseDownPayments?docNum=${docNum}`);
+export const getAPDownPaymentInvoiceDocument = async (docNum: number, byEntry = true): Promise<BasePurchaseDocument | null> => {
+  const res = await apiClient.get(`api/Purchase/PurchaseDownPayments?docNum=${docNum}&byEntry=${byEntry}`);
   if (!res.data) return null;
   const doc: BasePurchaseDocument = {
     ...res.data,

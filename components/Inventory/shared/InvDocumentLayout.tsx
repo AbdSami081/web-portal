@@ -26,10 +26,12 @@ import { useDocumentRights } from "@/hooks/useDocumentRights";
 import { useAuth } from "@/context/authContext";
 import { getAllFields } from "@/api+/sap/administration/administrationService";
 import { resolveFieldAuthDocType, findMenuItemByPath, isRouteAllowed } from "@/lib/menu-data";
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
+import { planDocumentApproval, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
-import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
+import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout, resolveLiveApprovalStatus, approvalFlagsFromStatus, resolveWorkflowHeaderBadges, isWpGeneratedStatus } from "@/lib/approval/approvalHeaderBadge";
+import { finishDraftSubmitNavigation } from "@/lib/draftNavigation";
+import { WpDraftApprovalActions } from "@/components/approval/WpDraftApprovalActions";
 import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { ApprovalTemplate } from "@/types/template.type";
@@ -123,28 +125,6 @@ export function InvDocumentLayout<T extends FieldValues>({
   const docNav = resolveDocNavParams(searchParams, pathname);
   const headerBadges = useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
 
-  const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
-  const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
-  const isRejectedApproval =
-    statusStr === "arsrejected" ||
-    statusStr === "ardrejected" ||
-    statusStr === "arsnotapproved" ||
-    statusStr === "ardnotapproved" ||
-    statusStr === "rejected" ||
-    statusStr === "notapproved" ||
-    statusStr === "arscancelled" ||
-    statusStr === "arscanceled" ||
-    statusStr === "ardcancelled" ||
-    statusStr === "ardcanceled" ||
-    statusStr === "arscomplete";
-  const isPendingApproval =
-    (statusStr === "arspending" ||
-      statusStr === "ardpending" ||
-      statusStr === "pending" ||
-      (!statusStr && !!docNav.approvalRequestCode && !!docNav.draftEntry)) &&
-    !!docNav.draftEntry;
-
-
   const [badgeState, setBadgeState] = useState<"draft" | "approved" | null>(() => {
     const draftEntryParam = docNav.draftEntry;
     const docEntryParam = docNav.docEntry;
@@ -200,18 +180,34 @@ export function InvDocumentLayout<T extends FieldValues>({
   );
 
   const authStatus = methods.watch("AuthorizationStatus" as any);
+  const wpApprStatus = methods.watch("U_WP_ApprStatus" as any);
+  const liveApproval = approvalFlagsFromStatus(
+    resolveLiveApprovalStatus(docNav.approvalStatus, authStatus),
+    !!docNav.draftEntry,
+    !!docNav.approvalRequestCode
+  );
+  const wpGenerated = isWpGeneratedStatus(authStatus, wpApprStatus);
+  const isApprovedDraft = !wpGenerated && liveApproval.isApprovedDraft;
+  const isRejectedApproval = liveApproval.isRejectedApproval;
+  const isPendingApproval = liveApproval.isPendingApproval;
   const authWithout = isAuthorizationWithout(authStatus);
   const authBadge = mapAuthorizationStatus(authStatus);
   const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
   const approvalApplies = useUserHasApprovalTemplate(docType);
   const isPostedLoaded = Number(store.DocEntry) > 0 && !store.loadedDraftData && !docNav.draftEntry;
-  const draftBadgeVisible =
-    !authWithout && !isPostedLoaded &&
-    (approvalApplies || hasNavApproval || !!store.loadedDraftData || badgeState === "draft" || headerBadges.showDraft);
   const documentLoaded = Number(store.DocEntry) > 0 || !!store.loadedDraftData;
-  const statusBadge = authWithout || !documentLoaded
-    ? null
-    : (authBadge ?? headerBadges.status ?? (badgeState === "approved" && !draftBadgeVisible ? "approved" : null));
+  const { draftBadgeVisible, statusBadge } = resolveWorkflowHeaderBadges({
+    authWithout,
+    documentLoaded,
+    authBadge,
+    headerBadges,
+    wpApprStatus,
+    authorizationStatus: authStatus,
+    approvalApplies,
+    hasNavApproval,
+    loadedDraftData: store.loadedDraftData,
+    isPostedLoaded,
+  });
 
   const [isSaving, setIsSaving] = useState(false);
   const { user } = useAuth();
@@ -562,7 +558,16 @@ export function InvDocumentLayout<T extends FieldValues>({
       if (confirmedUnchanged) {
         setIsSaving(true);
         try {
-          await onSubmit(finalData);
+          const result = await onSubmit(finalData);
+          if (
+            finishDraftSubmitNavigation(pathname, router, docType, result, () => {
+              reset(defaultValues as any);
+              resetStore();
+            })
+          ) {
+            setIsSaving(false);
+            return;
+          }
           resetFormAndNav();
           setIsSaving(false);
           return;
@@ -583,8 +588,11 @@ export function InvDocumentLayout<T extends FieldValues>({
     if (currentUserId) {
       setIsCheckingApproval(true);
       try {
-        const docTypeStr = getApprovalDocumentType(docType);
-        const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
+        const activeTemplates = await planDocumentApproval(
+          currentUserId,
+          docType,
+          finalData as unknown as Record<string, unknown>
+        );
         if (activeTemplates && activeTemplates.length > 0) {
           setApprovalTemplates(activeTemplates);
           setPendingReApproval(null);
@@ -593,8 +601,10 @@ export function InvDocumentLayout<T extends FieldValues>({
           setIsCheckingApproval(false);
           return;
         }
-      } catch (err) {
-        console.error("Failed to check approval templates:", err);
+      } catch (err: any) {
+        const message = err?.response?.data?.Message || err?.response?.data?.message;
+        toast.error(message || "The approval query could not be checked. The document was not saved.");
+        return;
       } finally {
         setIsCheckingApproval(false);
       }
@@ -682,6 +692,16 @@ export function InvDocumentLayout<T extends FieldValues>({
                     Generated
                   </span>
                 )}
+                {statusBadge === "canceled" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-600 bg-slate-50 border border-slate-200/60 rounded px-1.5 py-0.5">
+                    Canceled
+                  </span>
+                )}
+                <WpDraftApprovalActions
+                  engine={String(methods.watch("U_WP_ApprEngine" as never) || "")}
+                  status={statusBadge}
+                  draftEntry={Number(docNav.draftEntry) || undefined}
+                />
               </h1>
             </div>
             {actions && <div>{actions}</div>}

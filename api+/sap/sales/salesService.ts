@@ -363,11 +363,12 @@ export const getAttachment = async (filePath: string) => {
 export const getDraftDocument = async (draftID: number): Promise<BaseSalesDocument | null> => {
   const res = await apiClient.get(`api/Draft/Drafts/${draftID}`);
   if (!res.data) return null;
+  const payload = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
 
   const doc: BaseSalesDocument = {
-    ...res.data,
-    comments: res.data.Comments ?? "",
-    DocumentLines: (res.data.DocumentLines || []).map((line: any) => ({
+    ...payload,
+    comments: payload.Comments ?? "",
+    DocumentLines: (payload.DocumentLines || []).map((line: any) => ({
       ...line,
     })),
   };

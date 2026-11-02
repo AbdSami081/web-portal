@@ -1,4 +1,4 @@
-﻿import apiClient from "@/lib/apiClient";
+import apiClient from "@/lib/apiClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,6 +18,10 @@ export interface FmsConfigDto {
   isActive: string;
   createdBy?: string | null;
   createdAt?: string | null;
+  isForApproval?: string;
+  templateCode?: number;
+  apprUserIds?: string | null;
+  priority?: number;
 }
 
 export interface FmsExecuteRequest {
@@ -63,6 +67,10 @@ const normalizeConfig = (raw: any): FmsConfigDto => {
     isActive: raw?.isActive ?? raw?.IsActive ?? "Y",
     createdBy: raw?.createdBy ?? raw?.CreatedBy ?? null,
     createdAt: raw?.createdAt ?? raw?.CreatedAt ?? null,
+    isForApproval: raw?.isForApproval ?? raw?.IsForApproval ?? "N",
+    templateCode: Number(raw?.templateCode ?? raw?.TemplateCode ?? 0),
+    apprUserIds: raw?.apprUserIds ?? raw?.ApprUserIds ?? "",
+    priority: Number(raw?.priority ?? raw?.Priority ?? 0),
   };
 };
 
@@ -117,9 +125,24 @@ export const getFmsFields = async (docType: number): Promise<FmsFieldOption[]> =
   }
 };
 
+/** Saved queries from Query Manager. These are not attached to a document field. */
+export const getFmsQueries = async (): Promise<FmsConfigDto[]> => {
+  const res = await apiClient.get<any[]>("api/FMS/queries");
+  const list = Array.isArray(res.data) ? res.data : [];
+  return list.map(normalizeConfig);
+};
+
 /** Load all active FMS configs for a document type */
 export const getFmsConfigs = async (docType: number): Promise<FmsConfigDto[]> => {
   const res = await apiClient.get<any[]>(`api/FMS/configs?docType=${docType}`);
+  const list = Array.isArray(res.data) ? res.data : [];
+  return list.map(normalizeConfig);
+};
+
+export const getApprovalFmsConfigs = async (docType?: number, activeOnly = false): Promise<FmsConfigDto[]> => {
+  const params: Record<string, any> = { activeOnly };
+  if (docType) params.docType = docType;
+  const res = await apiClient.get<any[]>("api/FMS/approval-configs", { params });
   const list = Array.isArray(res.data) ? res.data : [];
   return list.map(normalizeConfig);
 };
@@ -138,13 +161,17 @@ export const saveFmsConfig = async (config: FmsConfigDto): Promise<{ code: strin
     TriggerType: config.triggerType ?? "Manual",
     TriggerField: config.triggerField ?? null,
     IsActive: config.isActive ?? "Y",
+    IsForApproval: config.isForApproval ?? "N",
+    TemplateCode: config.templateCode ?? 0,
+    ApprUserIds: config.apprUserIds ?? "",
+    Priority: config.priority ?? 0,
   };
   const res = await apiClient.post<any>("api/FMS/config", payload);
   const resCode = String(res.data?.code ?? res.data?.Code ?? res.data?.id ?? res.data?.Id ?? code);
   return { code: resCode, id: resCode };
 };
 
-/** Soft-delete an FMS configuration */
+/** Delete a query configuration. Approval queries are removed from the database. */
 export const deleteFmsConfig = async (code: string | number): Promise<void> => {
   await apiClient.delete(`api/FMS/config/${encodeURIComponent(String(code))}`);
 };

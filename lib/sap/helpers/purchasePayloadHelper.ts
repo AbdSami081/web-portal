@@ -127,6 +127,7 @@ export function buildPurchaseDocumentPayload({
               WarehouseCode: line.WarehouseCode || "",
               UoMCode: line.UoMCode || "",
             };
+      baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
 
       if (hasCopyFrom) {
         baseFields.BaseType = lastLoadedDocType;
@@ -145,8 +146,8 @@ export function buildPurchaseDocumentPayload({
       if (documentMode !== "service") {
         if (line.FreeText) baseFields.FreeText = line.FreeText;
         if (line.Project) baseFields.ProjectCode = line.Project;
-        applyDistributionFields(line, baseFields);
       }
+      applyDistributionFields(line, baseFields);
 
       const lineExpenses = mapLineExpenses(line);
       if (lineExpenses.length > 0) {
@@ -221,6 +222,7 @@ export function buildPurchaseDocumentPatchPayload({
                 WarehouseCode: line.WarehouseCode || "",
                 UoMCode: line.UoMCode || "",
               };
+        baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
 
         if (line.LineNum !== undefined && line.LineNum >= 0) {
           baseFields.LineNum = line.LineNum;
@@ -230,6 +232,7 @@ export function buildPurchaseDocumentPatchPayload({
           if (line.FreeText) baseFields.FreeText = line.FreeText;
           if (line.Project) baseFields.ProjectCode = line.Project;
         }
+        applyDistributionFields(line, baseFields);
 
         const lineExpenses = mapLineExpenses(line);
         if (lineExpenses.length > 0) {
