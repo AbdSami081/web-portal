@@ -39,7 +39,7 @@ import { isCustomApprovalEngineResult } from "@/lib/approval/postSubmitApproval"
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
 import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout, resolveLiveApprovalStatus, approvalFlagsFromStatus, resolveWorkflowHeaderBadges, isWpGeneratedStatus } from "@/lib/approval/approvalHeaderBadge";
-import { finishDraftSubmitNavigation } from "@/lib/draftNavigation";
+import { finishDraftSubmitNavigation, isDraftModulePath } from "@/lib/draftNavigation";
 import { WpDraftApprovalActions } from "@/components/approval/WpDraftApprovalActions";
 import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
@@ -429,7 +429,7 @@ useEffect(() => {
   ) => {
     const mode = submitModeRef.current;
     submitModeRef.current = "default";
-    if (mode === "view") {
+    if (mode === "view" && !isDraftModulePath(pathname)) {
       const wasEditMode = Number((data as any).DocEntry) > 0;
       const docNumForView = wasEditMode
         ? (data as any).DocNum
@@ -470,6 +470,11 @@ useEffect(() => {
     if (isEditMode) return "Update";
 
     return "Submit";
+  };
+
+  const getSubmitAndViewButtonText = () => {
+    if (isApprovalDraftContext) return "Create & View";
+    return isEditMode ? "Update & View" : "Submit & View";
   };
 
   const copyToOptions = (() => {
@@ -914,7 +919,7 @@ const documentMode = useSalesDocument(
                           formRef.current?.requestSubmit();
                         }}
                       >
-                        {isEditMode ? "Update & View" : "Submit & View"}
+                        {getSubmitAndViewButtonText()}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

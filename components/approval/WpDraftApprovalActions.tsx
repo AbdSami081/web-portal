@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { cancelWpDraft, restoreWpDraft } from "@/api+/sap/Templates/approvalTemplate";
+import { restoreWpDraft } from "@/api+/sap/Templates/approvalTemplate";
 import type { ApprovalHeaderStatus } from "@/lib/approval/approvalHeaderBadge";
 
 export function WpDraftApprovalActions({
@@ -16,16 +16,12 @@ export function WpDraftApprovalActions({
   draftEntry?: number | null;
 }) {
   const [busy, setBusy] = useState(false);
-  if (engine !== "WP" || !draftEntry || draftEntry <= 0 || !status) return null;
-  if (status !== "pending" && status !== "canceled") return null;
+  if (engine !== "WP" || !draftEntry || draftEntry <= 0 || status !== "canceled") return null;
 
-  const run = async (action: "cancel" | "restore") => {
+  const run = async () => {
     setBusy(true);
     try {
-      const result =
-        action === "cancel"
-          ? await cancelWpDraft(draftEntry)
-          : await restoreWpDraft(draftEntry);
+      const result = await restoreWpDraft(draftEntry);
       toast.success(result?.Message || "Approval updated.");
       window.location.reload();
     } catch (err: unknown) {
@@ -36,17 +32,8 @@ export function WpDraftApprovalActions({
   };
 
   return (
-    <span className="inline-flex gap-1 align-middle">
-      {status === "pending" && (
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run("cancel")}>
-          Cancel
-        </Button>
-      )}
-      {status === "canceled" && (
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run("restore")}>
-          Restore
-        </Button>
-      )}
-    </span>
+    <Button type="button" size="sm" variant="outline" disabled={busy} onClick={run}>
+      Restore
+    </Button>
   );
 }

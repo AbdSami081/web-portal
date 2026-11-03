@@ -29,7 +29,7 @@ import {
 import { WpApprovalProcessShell } from "@/components/administration/wp-approval-process/WpApprovalProcessShell";
 import { SapUserCombobox } from "@/components/administration/wp-approval-process/SapUserCombobox";
 import { SearchableCombobox } from "@/components/administration/wp-approval-process/SearchableCombobox";
-import { getDocTypeOptions } from "@/lib/approval-process/doc-type-options";
+import { getDocTypeOptions, computeConfiguredModuleIds } from "@/lib/approval-process/doc-type-options";
 import { getApiErrorMessage } from "@/lib/approval-process/apiErrors";
 import { WP_CONDITION_TYPES, WP_OPERATORS } from "@/lib/approval-process/term-labels";
 import {
@@ -59,7 +59,7 @@ import {
   updateTemplate,
 } from "@/api+/sap/approval-process/approvalProcessService";
 import { getFmsConfigs, getFmsQueries, type FmsConfigDto } from "@/api+/sap/fms/fmsService";
-import { getUsers } from "@/api+/sap/authorization/authorizationService";
+import { getUsers, getModules } from "@/api+/sap/authorization/authorizationService";
 import { useAuth } from "@/context/authContext";
 import type {
   WpApprovalTemplate,
@@ -106,8 +106,25 @@ export default function WpTemplateEditorPage() {
   const [fmsConfigOptions, setFmsConfigOptions] = useState<FmsConfigDto[]>([]);
   const [allStages, setAllStages] = useState<Awaited<ReturnType<typeof fetchStages>>>([]);
   const [sapUsers, setSapUsers] = useState<SapUserOption[]>([]);
+  const [configuredModuleIds, setConfiguredModuleIds] = useState<Set<string> | undefined>(undefined);
 
-  const docTypeOptions = useMemo(() => getDocTypeOptions(), []);
+  useEffect(() => {
+    if (!user?.companyDB) return;
+    let cancelled = false;
+    getModules(user.companyDB)
+      .then((data) => {
+        if (!cancelled) setConfiguredModuleIds(computeConfiguredModuleIds(data));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.companyDB]);
+
+  const docTypeOptions = useMemo(
+    () => getDocTypeOptions(configuredModuleIds),
+    [configuredModuleIds]
+  );
 
   const templateDocTypes = useMemo(
     () => [...new Set(docTypeRows.map((d) => Number(d.objType)).filter((n) => n > 0))],

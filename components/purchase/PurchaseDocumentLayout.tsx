@@ -106,7 +106,7 @@ import { isCustomApprovalEngineResult } from "@/lib/approval/postSubmitApproval"
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
 import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout, resolveLiveApprovalStatus, approvalFlagsFromStatus, resolveWorkflowHeaderBadges, isWpGeneratedStatus } from "@/lib/approval/approvalHeaderBadge";
-import { finishDraftSubmitNavigation } from "@/lib/draftNavigation";
+import { finishDraftSubmitNavigation, isDraftModulePath } from "@/lib/draftNavigation";
 import { WpDraftApprovalActions } from "@/components/approval/WpDraftApprovalActions";
 import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { ApprovalTemplate } from "@/types/template.type";
@@ -291,7 +291,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   ) => {
     const mode = submitModeRef.current;
     submitModeRef.current = "default";
-    if (mode === "view") {
+    if (mode === "view" && !isDraftModulePath(pathname)) {
       const wasEditMode = Number((data as any).DocEntry) > 0;
       const docNumForView = wasEditMode
         ? (data as any).DocNum
@@ -382,6 +382,11 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
     if (docEntry === "0" || !isEditMode) return "Submit";
     if (isEditMode && docStatus === "bost_Open") return "Update";
     return "";
+  };
+
+  const getSubmitAndViewButtonText = () => {
+    if (isApprovalDraftContext) return "Create & View";
+    return isEditMode ? "Update & View" : "Submit & View";
   };
 
   const isApDownPaymentRequestPage = pathname?.toLowerCase().includes("apdownpaymentrequest") ?? false;
@@ -961,7 +966,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
                           formRef.current?.requestSubmit();
                         }}
                       >
-                        {isEditMode ? "Update & View" : "Submit & View"}
+                        {getSubmitAndViewButtonText()}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

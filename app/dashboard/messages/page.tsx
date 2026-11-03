@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useNotifications } from "@/context/NotificationContext";
 import { SAPMessage, getMyAlerts, PAGE_SIZE } from "@/api+/sap/notification";
 import apiClient from "@/lib/apiClient";
@@ -61,7 +61,9 @@ export default function MessagesOverviewPage() {
   const [approveRemarks, setApproveRemarks] = useState("");
   const [isApproving, setIsApproving] = useState(false);
   const [approveDecision, setApproveDecision] = useState<"approve" | "reject">("approve");
+  const [autoOpenCode, setAutoOpenCode] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { canUpdateApprovedDocument } = useApprovalSettings();
   const { allowedActions: globalAllowedActions } = useGlobalRights();
   const canSeeApprovals = globalAllowedActions.includes("Bell");
@@ -105,10 +107,27 @@ export default function MessagesOverviewPage() {
   }, [canSeeApprovals, activeTab]);
 
   useEffect(() => {
-    if (sortedMessages.length > 0 && !selectedMessage) {
+    if (sortedMessages.length > 0 && !selectedMessage && !autoOpenCode) {
       setSelectedMessage(sortedMessages[0]);
     }
-  }, [sortedMessages, selectedMessage]);
+  }, [sortedMessages, selectedMessage, autoOpenCode]);
+
+  useEffect(() => {
+    const codeParam = searchParams.get("messageCode");
+    if (codeParam) setAutoOpenCode(codeParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!autoOpenCode) return;
+    const target = sortedMessages.find((m) => String(m.MessageCode) === autoOpenCode);
+    if (target) {
+      setActiveTab("inbox");
+      setSelectedMessage(target);
+    } else if (!isLoading && sortedMessages.length > 0) {
+      setAutoOpenCode(null);
+    }
+  }, [autoOpenCode, sortedMessages, isLoading]);
 
   const handleRefresh = async () => {
     const [okMsg, okAppr] = await Promise.all([
@@ -415,7 +434,14 @@ function resolveDisplayedApprovalStatus(status?: string | null, subject?: string
     stageDocNavParams(cleanPath, navParams);
     router.push(cleanPath);
   };
-  
+
+  useEffect(() => {
+    if (!autoOpenCode || !selectedMessage || !documentLink) return;
+    if (String(selectedMessage.MessageCode) !== autoOpenCode) return;
+    setAutoOpenCode(null);
+    void handleDocumentLinkClick(documentLink);
+  }, [autoOpenCode, selectedMessage, documentLink]);
+
   const formatDate = (dateStr: string) => {
     try {
       return format(parseISO(dateStr), "dd.MM.yyyy");

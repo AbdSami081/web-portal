@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, FileText, Loader2, Printer, Star } from "lucide-react";
-import { getLayouts, downloadReport, getReportParameters, isEmbeddedQueryParam, ReportData } from "@/api+/sap/reporting/reportingService";
+import { getLayouts, downloadReport, getReportParameters, isEmbeddedQueryParam, isSapInternalReportParameter, isSystemReportParameter, isUserPromptReportParameter, ReportData } from "@/api+/sap/reporting/reportingService";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ReportParameterModal from "@/modals/ReportParameterModal";
@@ -79,14 +79,7 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
     }
   };
 
-  const SYSTEM_PARAM_NAMES = new Set([
-    "schema@", "schema",
-    "dockey@", "dockey",
-    "objectid@", "objectid",
-  ]);
-
-  const isSystemParam = (name: string) =>
-    SYSTEM_PARAM_NAMES.has(name.toLowerCase());
+  const isSystemParam = (name: string) => isSystemReportParameter(name);
 
   const printLayoutDirect = async (
     layout: ReportData,
@@ -98,6 +91,9 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
       const parameters: Record<string, any> = {};
 
       (layout.Parameters || []).forEach((p) => {
+        if (isSapInternalReportParameter(p.U_ParamName)) {
+          return;
+        }
         const lower = p.U_ParamName.toLowerCase();
         if (lower === "dockey@" || lower === "dockey") {
           parameters[p.U_ParamName] = docEntry;
@@ -138,8 +134,8 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
       return;
     }
 
-    let customParams = (selectedLayout.Parameters || []).filter(
-      (p) => !isSystemParam(p.U_ParamName)
+    let customParams = (selectedLayout.Parameters || []).filter((p) =>
+      isUserPromptReportParameter(p.U_ParamName)
     );
 
     if (customParams.length > 0) {
@@ -192,8 +188,8 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
   const handleParamSubmit = async () => {
     if (!selectedLayout) return;
 
-    const customParams = (selectedLayout.Parameters || []).filter(
-      (p) => !isSystemParam(p.U_ParamName)
+    const customParams = (selectedLayout.Parameters || []).filter((p) =>
+      isUserPromptReportParameter(p.U_ParamName)
     );
 
     const hasEmpty = customParams.some(
@@ -381,9 +377,9 @@ const LayoutPreviewModal: React.FC<LayoutPreviewModalProps> = ({
             onClose={() => setShowParamModal(false)}
             selectedReport={{
               ...selectedLayout,
-                Parameters: (selectedLayout.Parameters || []).filter(
-                (p) => !isSystemParam(p.U_ParamName)
-              ),
+                Parameters: (selectedLayout.Parameters || []).filter((p) =>
+                  isUserPromptReportParameter(p.U_ParamName)
+                ),
             }}
             database={user?.companyDB}
             paramValues={paramValues}

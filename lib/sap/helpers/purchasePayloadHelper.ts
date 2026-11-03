@@ -3,6 +3,8 @@ import { resolveBranchId } from "./documentPayloadHelper";
 import { pickLineUdfs } from "./lineUdfHelper";
 import { applyDistributionFields } from "./distributionHelper";
 import { sanitizeItemCode } from "./sanitizeItemCode";
+import { useUoMStore } from "@/stores/useUoMStore";
+import { resolveUoMEntryByCode } from "@/utils/inventoryUom";
 
 interface BuildPurchasePayloadOptions {
   data: any;
@@ -80,6 +82,7 @@ export function buildPurchaseDocumentPayload({
     lastLoadedDocType !== targetDocType;
 
   const isPurchaseRequest = !!data.Requester;
+  const uoms = useUoMStore.getState().uoms;
 
   return {
     ...pickLineUdfs(data),
@@ -126,6 +129,7 @@ export function buildPurchaseDocumentPayload({
               VatGroup: line.TaxCode || "",
               WarehouseCode: line.WarehouseCode || "",
               UoMCode: line.UoMCode || "",
+              UoMEntry: resolveUoMEntryByCode(line.UoMCode, uoms),
             };
       baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
 
@@ -184,6 +188,7 @@ export function buildPurchaseDocumentPatchPayload({
   documentMode,
 }: BuildPurchasePatchPayloadOptions) {
   const isPurchaseRequest = !!data.Requester;
+  const uoms = useUoMStore.getState().uoms;
 
   return {
     ...pickLineUdfs(data),
@@ -221,6 +226,7 @@ export function buildPurchaseDocumentPatchPayload({
                 VatGroup: line.TaxCode || "",
                 WarehouseCode: line.WarehouseCode || "",
                 UoMCode: line.UoMCode || "",
+                UoMEntry: resolveUoMEntryByCode(line.UoMCode, uoms),
               };
         baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
 

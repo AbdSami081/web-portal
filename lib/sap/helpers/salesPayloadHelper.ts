@@ -4,6 +4,8 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { pickLineUdfs } from "./lineUdfHelper";
 import { applyDistributionFields } from "./distributionHelper";
 import { sanitizeItemCode } from "./sanitizeItemCode";
+import { useUoMStore } from "@/stores/useUoMStore";
+import { resolveUoMEntryByCode } from "@/utils/inventoryUom";
 
 interface BuildSalesPayloadOptions {
   data: QuotationFormData;
@@ -71,6 +73,8 @@ export function buildSalesDocumentPayload({
     lastLoadedDocType &&
     lastLoadedDocType !== targetDocType;
 
+  const uoms = useUoMStore.getState().uoms;
+
   return {
     ...pickLineUdfs(data),
     CardCode: data.CardCode,
@@ -121,6 +125,7 @@ const baseFields: Record<string, unknown> =
         VatGroup: line.TaxCode || "",
         WarehouseCode: line.WarehouseCode || "",
         UoMCode: line.UoMCode || "",
+        UoMEntry: resolveUoMEntryByCode(line.UoMCode, uoms),
       };
       baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
       if (documentMode !== "service") {
@@ -184,6 +189,8 @@ export function buildSalesDocumentPatchPayload({
   BuildSalesPayloadOptions,
   "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses" | "downPaymentType" | "salesPersonCode"
 > & { includeLines?: boolean; targetDocType?: DocumentType; documentMode?: "items" | "service" }) {
+  const uoms = useUoMStore.getState().uoms;
+
   return {
     ...pickLineUdfs(data),
       DocType:
@@ -230,6 +237,7 @@ const baseFields: Record<string, unknown> =
         VatGroup: line.TaxCode || "",
         WarehouseCode: line.WarehouseCode || "",
         UoMCode: line.UoMCode || "",
+        UoMEntry: resolveUoMEntryByCode(line.UoMCode, uoms),
       };
         baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
         if (documentMode !== "service") {
