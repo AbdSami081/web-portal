@@ -95,6 +95,7 @@ export interface PurchaseDocumentLine {
   WarehouseCode?: string;
   BPLid?: number;
   RequiredDate?: string;
+  LineVendor?: string;
   UoMCode?: string;
   UgpEntry?: number;
   TaxCode?: string;

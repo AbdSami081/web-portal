@@ -89,6 +89,7 @@ interface SalesDocumentStore {
     batches: { BatchNumber: string; Quantity: number }[],
   ) => void;
   removeLine: (itemCode: string) => void;
+  removeLineByIndex: (index: number) => void;
 
   documentMode: "items" | "service";
   setDocumentMode: (mode: "items" | "service") => void;
@@ -202,9 +203,9 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     setTaxTotal: (tt) => set({ TaxTotal: parseSafe(tt) }),
 
     addLine: (line) => {
-      const existingLine = get().lines.find(
-        (l) => l.ItemCode === line.ItemCode,
-      );
+      const existingLine = line.ItemCode
+        ? get().lines.find((l) => l.ItemCode === line.ItemCode)
+        : undefined;
       if (existingLine) {
         get().updateLine(existingLine.ItemCode, {
           ...existingLine,
@@ -229,7 +230,7 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         lines.forEach((l, idx) => indexByItemCode.set(l.ItemCode, idx));
 
         for (const line of newLines) {
-          const existingIdx = indexByItemCode.get(line.ItemCode);
+          const existingIdx = line.ItemCode ? indexByItemCode.get(line.ItemCode) : undefined;
           if (existingIdx !== undefined) {
             const existing = lines[existingIdx];
             lines[existingIdx] = {
@@ -308,6 +309,14 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         },
         false,
         "removeLine",
+      );
+      get().calculateTotals();
+    },
+    removeLineByIndex: (index) => {
+      set(
+        (s) => ({ lines: s.lines.filter((_, i) => i !== index) }),
+        false,
+        "removeLineByIndex",
       );
       get().calculateTotals();
     },

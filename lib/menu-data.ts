@@ -24,7 +24,7 @@ export const SERVER_MENUS: MenuItem[] = [
         title: "Business Partner",
         url: "#",
         isMain: true,
-        iconName: "ShieldCheck",
+        iconName: "Users",
         items: [
             {
                 id: "f34ea5e6-41a9-438f-93ec-ef1faeab13b8",

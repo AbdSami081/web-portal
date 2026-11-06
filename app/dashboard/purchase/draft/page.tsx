@@ -77,7 +77,7 @@ export default function PurchaseDraftPage() {
       return;
     }
 
-    const payload = buildSaveDraftToDocumentPayload(draftId);
+    const payload = buildSaveDraftToDocumentPayload(draftId, data.RequiredDate);
 
     try {
       toast.loading("Creating document from draft...", { id: "save-draft-purchase" });

@@ -5,12 +5,18 @@ export interface SaveDraftToDocumentPayload {
     DocEntry: number;
     DocDueDate?: string;
     DocObjectCode?: string;
+    RequriedDate?: string;
   };
 }
 
 /** Service Layer treats extra document fields as a draft update before posting; omit them when converting an approved draft unchanged. */
-export function buildSaveDraftToDocumentPayload(draftEntry: number): SaveDraftToDocumentPayload {
-  return { Document: { DocEntry: draftEntry } };
+export function buildSaveDraftToDocumentPayload(draftEntry: number, requiredDate?: string): SaveDraftToDocumentPayload {
+  return {
+    Document: {
+      DocEntry: draftEntry,
+      ...(requiredDate && { RequriedDate: requiredDate }),
+    },
+  };
 }
 
 export const SaveDraftToDocument = async (payload: SaveDraftToDocumentPayload | any): Promise<any | null> => {

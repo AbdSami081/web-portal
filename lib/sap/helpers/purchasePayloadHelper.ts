@@ -150,6 +150,7 @@ export function buildPurchaseDocumentPayload({
       if (documentMode !== "service") {
         if (line.FreeText) baseFields.FreeText = line.FreeText;
         if (line.Project) baseFields.ProjectCode = line.Project;
+        if (line.LineVendor) baseFields.LineVendor = line.LineVendor;
       }
       applyDistributionFields(line, baseFields);
 
@@ -237,6 +238,7 @@ export function buildPurchaseDocumentPatchPayload({
         if (documentMode !== "service") {
           if (line.FreeText) baseFields.FreeText = line.FreeText;
           if (line.Project) baseFields.ProjectCode = line.Project;
+          if (line.LineVendor) baseFields.LineVendor = line.LineVendor;
         }
         applyDistributionFields(line, baseFields);
 

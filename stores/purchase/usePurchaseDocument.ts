@@ -158,7 +158,11 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     setDocDate: (d) => set({ docDate: d }),
     setDocDueDate: (d) => set({ docDueDate: d }),
     setTaxDate: (d) => set({ taxDate: d }),
-    setRequiredDate: (d) => set({ requiredDate: d }),
+    setRequiredDate: (d) =>
+      set((state) => ({
+        requiredDate: d,
+        lines: state.lines.map((line) => ({ ...line, RequiredDate: d })),
+      })),
     setComments: (c) => set({ comments: c }),
     
     setFreight: (f) => { set({ freight: f }); get().calculateTotals(); },
@@ -171,7 +175,9 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
     setDocTotal: (dt) => set({ DocTotal: dt }),
 
     addLine: (line) => {
-      const existingLine = get().lines.find((l) => l.ItemCode === line.ItemCode);
+      const existingLine = line.ItemCode
+        ? get().lines.find((l) => l.ItemCode === line.ItemCode)
+        : undefined;
       if (existingLine) {
         get().updateLine(existingLine.ItemCode, {
           Quantity: (Number(existingLine.Quantity) || 0) + (Number(line.Quantity) || 1),
@@ -193,7 +199,7 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         lines.forEach((l, idx) => indexByItemCode.set(l.ItemCode, idx));
 
         for (const line of newLines) {
-          const existingIdx = indexByItemCode.get(line.ItemCode);
+          const existingIdx = line.ItemCode ? indexByItemCode.get(line.ItemCode) : undefined;
           if (existingIdx !== undefined) {
             const existing = lines[existingIdx];
             lines[existingIdx] = {
@@ -309,6 +315,8 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
           TaxRate: taxRate,
           LineTotal: parseSafe(line.LineTotal) || (lineSubtotal - discountAmount + calculatedTax),
           WarehouseCode: line.WarehouseCode || "",
+          RequiredDate: (line.RequiredDate || "").split("T")[0] || undefined,
+          LineVendor: line.LineVendor || "",
           TaxAmount: parseSafe(line.TaxTotal || line.TaxSum) || calculatedTax,
           ManSerNum: line.ManSerNum || (line.SerialNumbers?.length ? "Y" : ""),
           ManBtchNum: line.ManBtchNum || (line.BatchNumbers?.length ? "Y" : ""),

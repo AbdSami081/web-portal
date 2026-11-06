@@ -9,7 +9,7 @@ import { NavUser } from "./sidenav-user"
 import { useAuth } from "@/context/authContext";
 import { useEffect, useState } from "react";
 import { getFilteredMenu } from "@/actions/menu";
-import { BadgeDollarSign, BarChart2, Factory, FileText, LayoutDashboardIcon, Package, ShieldCheck, ShoppingCart, LucideIcon } from "lucide-react";
+import { BadgeDollarSign, BarChart2, Factory, FileText, LayoutDashboardIcon, Package, Settings, ShieldCheck, ShoppingCart, Users, LucideIcon } from "lucide-react";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   "LayoutDashboardIcon": LayoutDashboardIcon,
@@ -19,8 +19,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   "FileText": FileText,
   "ShieldCheck": ShieldCheck,
   "ShoppingCart": ShoppingCart,
-  "Settings": ShieldCheck,
+  "Settings": Settings,
   "BarChart2": BarChart2,
+  "Users": Users,
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

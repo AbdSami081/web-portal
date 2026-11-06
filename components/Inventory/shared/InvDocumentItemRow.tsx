@@ -2,7 +2,8 @@
 import { KeyboardEvent, useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Trash } from "lucide-react";
+import { Trash } from "lucide-react";
+import { FieldLookupButton } from "@/components/shared/FieldLookupButton";
 import { useFormContext } from "react-hook-form";
 import { InventoryDocumentLine } from "@/types/inventory/inventory.type";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
@@ -161,6 +162,9 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
 
   return (
     <>
+      <td className="py-2 px-2 border-r border-neutral-100/10 text-center w-[48px]">
+        {index + 1}
+      </td>
       <td className="py-2 px-2 border-r border-neutral-100/10 text-center w-[60px]">
         <Button
           type="button"
@@ -203,19 +207,19 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
               value={draftLine.FromWhsCode || ""}
               disabled
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0"
-              onClick={() => {
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.FromWhsCode)}
+              onSearch={() => {
                 setWhsMode("from");
                 setIsWhsModalOpen(true);
               }}
+              onClear={() => {
+                const updated = { ...draftLine, FromWhsCode: "", OnHand: 0 };
+                setDraftLine(updated);
+                saveRow(updated);
+              }}
               disabled={isRowLocked}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            />
           </div>
         </td>
       )}
@@ -229,19 +233,19 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
             value={draftLine.WhsCode || ""}
             disabled
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={() => {
+          <FieldLookupButton
+            hasValue={Boolean(draftLine.WhsCode)}
+            onSearch={() => {
               setWhsMode("to");
               setIsWhsModalOpen(true);
             }}
+            onClear={() => {
+              const updated = { ...draftLine, WhsCode: "", BPLid: undefined };
+              setDraftLine(updated);
+              saveRow(updated);
+            }}
             disabled={isRowLocked}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
+          />
         </div>
       </td>
       )}
@@ -328,16 +332,12 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
             readOnly
           />
           {!isManualUom(draftLine.UoMCode) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0"
-              onClick={() => setUomDialogOpen(true)}
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.UoMCode)}
+              onSearch={() => setUomDialogOpen(true)}
+              onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
               disabled={isRowLocked}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            />
           )}
         </div>
       </td>
@@ -364,19 +364,15 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
               disabled
               readOnly
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0"
-              onClick={() => {
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.Project)}
+              onSearch={() => {
                 loadProjects();
                 setProjectModalOpen(true);
               }}
+              onClear={() => patchLine({ Project: "" })}
               disabled={isRowLocked || !isProjectEnabled}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            />
           </div>
         </td>
       )}

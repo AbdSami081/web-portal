@@ -23,6 +23,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { WpApprovalProcessShell } from "@/components/administration/wp-approval-process/WpApprovalProcessShell";
+import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import {
   deleteTemplate,
   fetchTemplates,
@@ -36,6 +37,7 @@ export default function WpTemplatesListPage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<WpApprovalTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +80,12 @@ export default function WpTemplatesListPage() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await handleDelete(deleteTarget);
+    setDeleteTarget(null);
+  };
+
   return (
     <WpApprovalProcessShell
       title="Approval Templates"
@@ -98,6 +106,7 @@ export default function WpTemplatesListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-px whitespace-nowrap">S#</TableHead>
                   <TableHead>Code</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Conditions</TableHead>
@@ -107,8 +116,9 @@ export default function WpTemplatesListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {templates.map((t) => (
+                {templates.map((t, index) => (
                   <TableRow key={t.code}>
+                    <TableCell className="w-px whitespace-nowrap text-center text-slate-500">{index + 1}</TableCell>
                     <TableCell className="font-mono text-xs text-slate-600">{t.code}</TableCell>
                     <TableCell className="font-medium text-slate-800">{t.templateName}</TableCell>
                     <TableCell>{t.conds === "Y" ? "Yes" : "No"}</TableCell>
@@ -139,7 +149,7 @@ export default function WpTemplatesListPage() {
                         size="icon"
                         variant="ghost"
                         className="text-red-500 hover:text-red-600"
-                        onClick={() => handleDelete(t.code)}
+                        onClick={() => setDeleteTarget(t.code)}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
@@ -151,6 +161,16 @@ export default function WpTemplatesListPage() {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Template"
+        description="Are you sure you want to delete this approval template? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+      />
     </WpApprovalProcessShell>
   );
 }

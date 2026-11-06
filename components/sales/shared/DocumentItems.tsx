@@ -406,6 +406,12 @@ const setDocumentMode = useSalesDocument(
   const dimensionLabels = useDimensionLabels();
   const columns = [
     {
+      key: "serial",
+      title: "S#",
+      width: 48,
+    },
+
+    {
       key: "actions",
       title: "Actions",
       width: 80,
@@ -539,12 +545,17 @@ const setDocumentMode = useSalesDocument(
       { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
     ]),
   ].filter((col) => {
-    if (col.key === "actions") return true;
+    if (col.key === "serial" || col.key === "actions") return true;
     if (col.key === "BPLid" && !multiBranchEnabled) return false;
     return fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
   const serviceColumns = [
+    {
+      key: "serial",
+      title: "S#",
+      width: 48,
+    },
     {
       key: "actions",
       title: "Actions",
@@ -628,7 +639,7 @@ const setDocumentMode = useSalesDocument(
       { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
     ]),
   ].filter((col) => {
-  if (col.key === "actions") return true;
+  if (col.key === "serial" || col.key === "actions") return true;
 
   return (
     fieldAccess.includes(col.key) &&

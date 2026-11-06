@@ -16,6 +16,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { WpApprovalProcessShell } from "@/components/administration/wp-approval-process/WpApprovalProcessShell";
+import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { getApiErrorMessage } from "@/lib/approval-process/apiErrors";
 import { WP_STAGES_LIST_SUBTITLE } from "@/lib/approval-process/page-copy";
 import {
@@ -29,6 +30,7 @@ export default function WpStagesListPage() {
   const router = useRouter();
   const [stages, setStages] = useState<WpApprovalStage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,6 +46,22 @@ export default function WpStagesListPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleDelete = async (code: string) => {
+    try {
+      await deleteStage(code);
+      toast.success("Stage deleted.");
+      load();
+    } catch {
+      toast.error("Failed to delete stage.");
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await handleDelete(deleteTarget);
+    setDeleteTarget(null);
+  };
 
   const handleNew = async () => {
     try {
@@ -79,6 +97,7 @@ export default function WpStagesListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-px whitespace-nowrap">S#</TableHead>
                   <TableHead>Code</TableHead>
                   <TableHead>Stage name</TableHead>
                   <TableHead>Min approvals</TableHead>
@@ -87,8 +106,9 @@ export default function WpStagesListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stages.map((s) => (
+                {stages.map((s, index) => (
                   <TableRow key={s.code}>
+                    <TableCell className="w-px whitespace-nowrap text-center text-slate-500">{index + 1}</TableCell>
                     <TableCell className="font-mono text-xs">{s.code}</TableCell>
                     <TableCell className="font-medium">{s.stageName}</TableCell>
                     <TableCell>{s.maxReqr}</TableCell>
@@ -105,15 +125,7 @@ export default function WpStagesListPage() {
                         size="icon"
                         variant="ghost"
                         className="text-red-500"
-                        onClick={async () => {
-                          try {
-                            await deleteStage(s.code);
-                            toast.success("Stage deleted.");
-                            load();
-                          } catch {
-                            toast.error("Failed to delete stage.");
-                          }
-                        }}
+                        onClick={() => setDeleteTarget(s.code)}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
@@ -125,6 +137,16 @@ export default function WpStagesListPage() {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Stage"
+        description="Are you sure you want to delete this approval stage? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+      />
     </WpApprovalProcessShell>
   );
 }

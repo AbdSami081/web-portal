@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { SERVER_MENUS, collectLeafItems } from "@/lib/menu-data";
 import { getFieldCatalog } from "@/lib/config/fieldManifest";
 import {
@@ -143,6 +144,7 @@ export default function QueryManagerPage() {
   const [fieldsLoading, setFieldsLoading] = useState(false);
   const [testResult, setTestResult] = useState<FmsExecuteResult | null>(null);
   const [testContext, setTestContext] = useState<Record<string, string>>({});
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const queryRef = useRef<HTMLTextAreaElement>(null);
 
   const queryParams = useMemo(() => {
@@ -289,6 +291,11 @@ export default function QueryManagerPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const confirmRemove = async () => {
+    setRemoveConfirmOpen(false);
+    await remove();
   };
 
   const insertToken = (token: string) => {
@@ -562,13 +569,23 @@ export default function QueryManagerPage() {
               Save
             </Button>
             {selected ? (
-              <Button type="button" variant="outline" onClick={remove} disabled={saving}>
+              <Button type="button" variant="outline" onClick={() => setRemoveConfirmOpen(true)} disabled={saving}>
                 Remove
               </Button>
             ) : null}
           </div>
         </section>
       </div>
+
+      <ConfirmationModal
+        open={removeConfirmOpen}
+        onOpenChange={setRemoveConfirmOpen}
+        title="Remove Query"
+        description="Are you sure you want to remove this query? This action cannot be undone."
+        confirmText="Remove"
+        cancelText="Cancel"
+        onConfirm={confirmRemove}
+      />
     </div>
   );
 }

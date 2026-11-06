@@ -84,6 +84,7 @@ export function InvDocumentItems() {
 
   const columns = (isGoodIssue
     ? [
+        { key: "serial",    title: "S#",          width: 48  },
         { key: "actions",   title: "Actions",     width: 80  },
         { key: "ItemCode",  title: "Item",        width: 180 },
         { key: "Dscription",title: "Description", width: 300 },
@@ -96,6 +97,7 @@ export function InvDocumentItems() {
         { key: "Project",   title: "Project",     width: 140 },
       ]
     : [
+        { key: "serial",    title: "S#",           width: 48  },
         { key: "actions",   title: "Actions",      width: 80  },
         { key: "ItemCode",  title: "Item",         width: 180 },
         { key: "Dscription",title: "Description",  width: 300 },
@@ -109,7 +111,7 @@ export function InvDocumentItems() {
         { key: "UoMName",   title: "UoM Name",     width: 140 },
         { key: "Project",   title: "Project",      width: 140 },
       ]
-  ).filter((col) => (multiBranchEnabled || col.key !== "BPLid") && (col.key === "actions" || (fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false)));
+  ).filter((col) => (multiBranchEnabled || col.key !== "BPLid") && (col.key === "serial" || col.key === "actions" || (fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false)));
 
   const lineUdfs = useLineUDFs(config.type);
   const columnsWithUdf = useMemo(

@@ -310,10 +310,15 @@ export function PurchaseItems() {
     });
   };
 
+  const isPurchaseRequestDocType = config.type === DocumentType.PurchaseRequests;
+  const needsLineRequiredDateColumn = isPurchaseRequestDocType || config.type === DocumentType.PurchaseQuotation;
+
   const columns = [
+    { key: "serial", title: "S#", width: 48 },
     { key: "actions", title: "Actions", width: 80 },
     { key: "ItemCode", title: "Item Code", width: 180 },
     { key: "ItemName", title: "Item Description", width: 300 },
+    ...(isPurchaseRequestDocType ? [{ key: "LineVendor", title: "Vendor", width: 160 }] : []),
     { key: "Quantity", title: "Qty", width: 100 },
     { key: "OnHand", title: "Qty In Whs", width: 100 },
     { key: "Price", title: "Unit Price", width: 120 },
@@ -323,6 +328,7 @@ export function PurchaseItems() {
     { key: "WarehouseCode", title: "Whs", width: 120 },
     { key: "BPLid", title: "Branch", width: 90 },
     { key: "UoMCode", title: "UoM", width: 120 },
+    ...(needsLineRequiredDateColumn ? [{ key: "RequiredDate", title: "Required Date", width: 150 }] : []),
     { key: "LineTotal", title: "Line Total", width: 180 },
     { key: "FreeText", title: "Free Text", width: 220 },
     { key: "Project", title: "Project", width: 140 },
@@ -337,18 +343,20 @@ export function PurchaseItems() {
       { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
     ]),
   ].filter(col => {
-    if (col.key === "actions") return true;
+    if (col.key === "serial" || col.key === "actions") return true;
     if (col.key === "BPLid" && !multiBranchEnabled) return false;
     return fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
   const serviceColumns = [
+    { key: "serial", title: "S#", width: 48 },
     { key: "actions", title: "Actions", width: 80 },
     { key: "AccountCode", title: "G/L Account", width: 200 },
     { key: "AccountName", title: "G/L Account Name", width: 200 },
     { key: "Description", title: "Description", width: 300 },
     { key: "DiscountPercent", title: "Disc %", width: 120 },
     { key: "TaxCode", title: "Tax Code", width: 140 },
+    ...(needsLineRequiredDateColumn ? [{ key: "RequiredDate", title: "Required Date", width: 150 }] : []),
     { key: "LineTotal", title: "Line Total", width: 180 },
     { key: "TaxAmount", title: "Tax Amount (LC)", width: 180 },
     { key: "Freight1Type", title: "Freight 1 Type", width: 180 },
@@ -362,7 +370,7 @@ export function PurchaseItems() {
       { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
     ]),
   ].filter((col) => {
-    if (col.key === "actions") return true;
+    if (col.key === "serial" || col.key === "actions") return true;
     return fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 

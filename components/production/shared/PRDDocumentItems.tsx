@@ -58,6 +58,11 @@ export function PRDDocumentItems() {
   };
 
   const columns = [
+    {
+      key: "serial",
+      title: "S#",
+      width: 48,
+    },
     config.itemColumns.actions && {
       key: "actions",
       title: "Actions",
