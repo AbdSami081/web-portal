@@ -173,6 +173,10 @@ export const getARInvoiceByBP = async (cardCode: string, skip = 0, top = 20): Pr
   const res = await apiClient.get(`api/Sales/GetInvoiceByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
   return res.data || [];
 };
+export const getARDownPaymentByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
+  const res = await apiClient.get(`api/Sales/GetArDownPaymentByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
+  return res.data || [];
+};
 
 export const getSalesReturnRequestByBP = async (cardCode: string, skip = 0, top = 20): Promise<any[] | null> => {
   const res = await apiClient.get(`api/Sales/GetReturnRequestByBP?cardCode=${cardCode}&skip=${skip}&top=${top}`);
@@ -183,6 +187,9 @@ export const patchQuotation = async (docEntry: number, payload: any): Promise<an
   const res = await apiClient.patch(`api/Sales/Quotations/${docEntry}`, payload);
   return res.data;
 };
+
+
+
 
 export const patchSalesOrder = async (docEntry: number, payload: any): Promise<any | null> => {
   const res = await apiClient.patch(`api/Sales/Orders/${docEntry}`, payload);

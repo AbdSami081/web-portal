@@ -42,7 +42,8 @@ export default function InvoicePage() {
     DocumentLines: [],
   };
   const handleSubmit = async (data: QuotationFormData) => {
-    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses, salesPersonCode } = useSalesDocument.getState();
+    const { lines, DocEntry, lastLoadedDocType, attachments, discountPercent, freight, additionalExpenses, salesPersonCode,  selectedDownPayments,
+  amountToDraw, } = useSalesDocument.getState();
 
     if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType === DocumentType.ARInvoice) {
       const payload = buildSalesDocumentPatchPayload({
@@ -56,6 +57,7 @@ export default function InvoicePage() {
         targetDocType: DocumentType.ARInvoice,
         documentMode,
       });
+      
 
       try {
         await patchARInvoice(Number(DocEntry), payload);
@@ -79,18 +81,27 @@ export default function InvoicePage() {
       return;
     }
 
-    const payload = buildSalesDocumentPayload({
-      data,
-      lines,
-      docEntry: DocEntry,
-      lastLoadedDocType,
-      targetDocType: DocumentType.ARInvoice,
-      discountPercent,
-      freight,
-      additionalExpenses,
-      salesPersonCode,
-      documentMode,
-    });
+  const payload = buildSalesDocumentPayload({
+  data,
+  lines,
+  docEntry: DocEntry,
+  lastLoadedDocType,
+  targetDocType: DocumentType.ARInvoice,
+  discountPercent,
+  freight,
+  additionalExpenses,
+  salesPersonCode,
+  documentMode,
+ downPaymentsToDraw: selectedDownPayments.map((item) => {
+  const openAmount = Number(item.OpenAmount || 0);
+  const enteredAmount = Number(amountToDraw[item.DocNum] || 0);
+
+  return {
+    DocEntry: Number(item.DocEntry),
+    AmountToDraw: Math.min(enteredAmount, openAmount),
+  };
+}),
+});
     //  console.log(payload,"response")
 
     try {

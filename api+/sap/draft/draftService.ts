@@ -31,7 +31,36 @@ export interface DraftRow {
   refresher?: "Yes" | "No";
   objectCode: string;
 }
+const docNames: Record<string, string> = {
+  oQuotations: "Sales Quotations",
+  oOrders: "Sales Orders",
+  oPurchaseRequest: "Purchase Request",
+  oPurchaseQuotations: "Purchase Quotations",
+  oPurchaseDeliveryNotes: "Goods Receipt PO",
+  oInventoryTransferRequest: "Inventory Transfer Request",
+};
+// draftService.ts ke end mein
+export const draftRoutes: Record<string, string> = {
+  // Sales
+  oQuotations: "/dashboard/sales/quotation/new",
+  oOrders: "/dashboard/sales/order/new",
+  oDeliveryNotes: "/dashboard/sales/delivery/new",
+  oInvoices: "/dashboard/sales/invoice",
+  oReturns: "/dashboard/sales/return/new",
 
+  // Purchase
+  oPurchaseRequest: "/dashboard/purchase/request/new",
+  oPurchaseQuotations: "/dashboard/purchase/quotation/new",
+  oPurchaseOrders: "/dashboard/purchase/order/new",
+  oPurchaseDeliveryNotes: "/dashboard/purchase/grpo/new",
+  oPurchaseInvoices: "/dashboard/purchase/invoice/new",
+
+  // Inventory
+  oInventoryTransferRequest: "/dashboard/inventory/transfer-request/new",
+  oStockTransfer: "/dashboard/inventory/transfer/new",
+  oInventoryGenEntry: "/dashboard/inventory/goods-receipt/new",
+  oInventoryGenExit: "/dashboard/inventory/goods-issue/new",
+};
 export const SaveDraftToDocument = async (payload: SaveDraftToDocumentPayload | any): Promise<any | null> => {
   const res = await apiClient.post(`api/Draft/SaveDraftToDocument`, payload);
   if (!res.data) return null;
@@ -112,9 +141,8 @@ export const getAllDrafts = async (skip = 0, top = 20): Promise<DraftRow[]> => {
 
 
 
-
 export const getDraftByDocEntry = async (docEntry: number) => {
   const res = await apiClient.get(`api/Documents/drafts/${docEntry}`);
   console.log("getDraftByDocEntry res:", res.data);
-  return res.data; // seedha draft object (DocObjectCode, CardCode, DocumentLines...)
+  return res.data; 
 };

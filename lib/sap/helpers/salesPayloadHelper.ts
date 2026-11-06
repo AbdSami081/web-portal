@@ -17,6 +17,10 @@ interface BuildSalesPayloadOptions {
   downPaymentType?: string;
   salesPersonCode?: number | null;
   documentMode?: "items" | "service";
+  downPaymentsToDraw?: Array<{
+  DocEntry: number;
+  AmountToDraw: number;
+}>;
 }
 
 function withBaseLineNumber<T extends object>(entries: T[] | undefined, lineIndex: number): T[] | undefined {
@@ -62,6 +66,7 @@ export function buildSalesDocumentPayload({
   freight = 0,
   additionalExpenses = [],
   downPaymentType,
+  downPaymentsToDraw = [],
   salesPersonCode,
   documentMode,
 }: BuildSalesPayloadOptions) {
@@ -75,6 +80,7 @@ export function buildSalesDocumentPayload({
     ...pickLineUdfs(data),
     CardCode: data.CardCode,
     CardName: data.CardName,
+    DownPaymentsToDraw: downPaymentsToDraw,
       DocType:
     documentMode === "service"
       ? "dDocument_Service"

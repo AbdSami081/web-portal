@@ -27,6 +27,11 @@ interface SalesDocumentStore {
   rounding: number;
   discountPercent: number;
   isDownPayment: boolean;
+  selectedDownPayments: any[];
+amountToDraw: Record<number, number>;
+
+setSelectedDownPayments: (data: any[]) => void;
+setAmountToDraw: (data: Record<number, number>) => void;
   currency: DocCurrency;
   DocEntry: number;
   DocNum: number;
@@ -140,6 +145,9 @@ export const useSalesDocument = create<SalesDocumentStore>()(
     discountPercent: 0,
     isDownPayment: false,
     currency: "USD",
+    selectedDownPayments: [],
+amountToDraw: {},
+
 
     TotalBeforeDiscount: 0,
     TaxTotal: 0,
@@ -196,6 +204,11 @@ export const useSalesDocument = create<SalesDocumentStore>()(
       set({ isDownPayment: !!v });
       get().calculateTotals();
     },
+    setSelectedDownPayments: (data) =>
+  set({ selectedDownPayments: data }),
+
+setAmountToDraw: (data) =>
+  set({ amountToDraw: data }),
     setCurrency: (c) => set({ currency: c }),
     setSalesPersonCode: (code) => set({ salesPersonCode: code }),
     setDocTotal: (dt) => set({ DocTotal: parseSafe(dt) }),
@@ -436,6 +449,8 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         rounding: 0,
         discountPercent: 0,
         isDownPayment: false,
+        selectedDownPayments: [],
+amountToDraw: {},
         TotalBeforeDiscount: 0,
         TaxTotal: 0,
         discSum: 0,
