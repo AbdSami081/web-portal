@@ -4,6 +4,7 @@ import { getCachedPermissions, setCachedPermissions } from "@/lib/api/permission
 
 export interface PortalUser {
   empId: string;
+  userCode?: string;
   firstName: string;
   lastName: string;
   fullName: string;

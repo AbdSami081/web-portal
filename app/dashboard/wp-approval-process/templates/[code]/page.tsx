@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, Loader2, Save } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Loader2, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,11 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { WpApprovalProcessShell } from "@/components/administration/wp-approval-process/WpApprovalProcessShell";
-import { SapUserCombobox } from "@/components/administration/wp-approval-process/SapUserCombobox";
+import { OriginatorExcelUploadDialog } from "@/components/administration/wp-approval-process/OriginatorExcelUploadDialog";
+import {
+  SapUserCombobox,
+  type SapUserOption,
+} from "@/components/administration/wp-approval-process/SapUserCombobox";
 import { SearchableCombobox } from "@/components/administration/wp-approval-process/SearchableCombobox";
 import { getDocTypeOptions, computeConfiguredModuleIds } from "@/lib/approval-process/doc-type-options";
 import { getApiErrorMessage } from "@/lib/approval-process/apiErrors";
@@ -59,14 +63,22 @@ import {
   updateTemplate,
 } from "@/api+/sap/approval-process/approvalProcessService";
 import { getFmsConfigs, getFmsQueries, type FmsConfigDto } from "@/api+/sap/fms/fmsService";
-import { getUsers, getModules } from "@/api+/sap/authorization/authorizationService";
+import { getUsers, getModules, type PortalUser } from "@/api+/sap/authorization/authorizationService";
 import { useAuth } from "@/context/authContext";
 import type {
   WpApprovalTemplate,
   WpApprovalProcessTab,
 } from "@/types/approval-process/wp-approval.types";
 
-type SapUserOption = { userId: number; userName: string; userCode: string };
+function toSapUser(user: PortalUser): SapUserOption | null {
+  if (user.userId == null || Number.isNaN(Number(user.userId))) return null;
+  const userCode = (user.userCode || user.empId || String(user.userId)).trim();
+  return {
+    userId: Number(user.userId),
+    userCode,
+    userName: (user.fullName || user.firstName || userCode).trim(),
+  };
+}
 
 function emptyHeader(templateCode: string): WpApprovalTemplate {
   return {
@@ -106,6 +118,7 @@ export default function WpTemplateEditorPage() {
   const [fmsConfigOptions, setFmsConfigOptions] = useState<FmsConfigDto[]>([]);
   const [allStages, setAllStages] = useState<Awaited<ReturnType<typeof fetchStages>>>([]);
   const [sapUsers, setSapUsers] = useState<SapUserOption[]>([]);
+  const [excelOpen, setExcelOpen] = useState(false);
   const [configuredModuleIds, setConfiguredModuleIds] = useState<Set<string> | undefined>(undefined);
 
   useEffect(() => {
@@ -215,15 +228,10 @@ export default function WpTemplateEditorPage() {
           if (cancelled) return;
           setMissing(false);
           setAllStages(stages);
-          setSapUsers(
-            users
-              .filter((u) => u.userId != null)
-              .map((u) => ({
-                userId: Number(u.userId),
-                userCode: u.empId || String(u.userId),
-                userName: u.fullName || u.firstName || u.empId || String(u.userId),
-              }))
-          );
+          setSapUsers(users.flatMap((user) => {
+            const option = toSapUser(user);
+            return option ? [option] : [];
+          }));
           return;
         }
 
@@ -266,15 +274,10 @@ export default function WpTemplateEditorPage() {
         );
         setFmsRows(fms);
         setAllStages(stages);
-        setSapUsers(
-          users
-            .filter((u) => u.userId != null)
-            .map((u) => ({
-              userId: Number(u.userId),
-              userCode: u.empId || String(u.userId),
-              userName: u.fullName || u.firstName || u.empId || String(u.userId),
-            }))
-        );
+        setSapUsers(users.flatMap((user) => {
+          const option = toSapUser(user);
+          return option ? [option] : [];
+        }));
       } catch (err) {
         toast.error(getApiErrorMessage(err, "Failed to load template."));
       } finally {
@@ -331,9 +334,16 @@ export default function WpTemplateEditorPage() {
         await updateTemplate({ ...payload, code: wtmCode });
       }
 
+      const seenOriginatorIds = new Set<number>();
       await saveOriginators(
         wtmCode,
-        originatorRows.map((r) => ({ ...r, wtmCode }))
+        originatorRows
+          .filter((row) => {
+            if (seenOriginatorIds.has(row.userId)) return false;
+            seenOriginatorIds.add(row.userId);
+            return true;
+          })
+          .map((row) => ({ ...row, wtmCode }))
       );
       await saveTemplateStages(
         wtmCode,
@@ -380,6 +390,24 @@ export default function WpTemplateEditorPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const addOriginatorRows = (users: SapUserOption[]) => {
+    setOriginatorRows((current) => {
+      const seen = new Set(current.map((row) => row.userId));
+      const next = [...current];
+      for (const user of users) {
+        if (seen.has(user.userId)) continue;
+        seen.add(user.userId);
+        next.push({
+          id: `o-${user.userId}`,
+          wtmCode: code,
+          userId: user.userId,
+          userName: user.userName,
+        });
+      }
+      return next;
+    });
   };
 
   return (
@@ -510,7 +538,7 @@ export default function WpTemplateEditorPage() {
                 </TableHeader>
                 <TableBody>
                   {originatorRows.map((row, idx) => (
-                    <TableRow key={row.id}>
+                    <TableRow key={row.id || `originator-${idx}`}>
                       <TableCell>
                         <SapUserCombobox
                           users={sapUsers}
@@ -558,7 +586,24 @@ export default function WpTemplateEditorPage() {
               >
                 Add originator
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={sapUsers.length === 0}
+                onClick={() => setExcelOpen(true)}
+              >
+                <Upload className="h-4 w-4" />
+                Upload Excel
+              </Button>
             </div>
+            <OriginatorExcelUploadDialog
+              open={excelOpen}
+              onOpenChange={setExcelOpen}
+              users={sapUsers}
+              selectedIds={originatorRows.map((row) => row.userId)}
+              onAdd={addOriginatorRows}
+            />
           </TabsContent>
 
           <TabsContent value="stages" className="space-y-4">

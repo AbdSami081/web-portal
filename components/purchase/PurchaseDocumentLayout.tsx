@@ -112,8 +112,8 @@ import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { ApprovalTemplate } from "@/types/template.type";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { useAuth } from "@/context/authContext";
-import { getAllFields } from "@/api+/sap/administration/administrationService";
-import { resolveFieldAuthDocType, findMenuItemByPath, isRouteAllowed } from "@/lib/menu-data";
+import { useDocumentFieldAccess } from "@/hooks/useDocumentFieldAccess";
+import { isRouteAllowed } from "@/lib/menu-data";
 
 const COPY_TO_RESERVE_INVOICE_VALUE = "reserve-invoice";
 const COPY_TO_AP_DOWNPAYMENT_REQUEST_VALUE = "apdownpaymentrequest";
@@ -519,21 +519,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   }, [docType, fetchUdfDefinitions]);
 
   const setFieldAccess = usePurchaseDocument((state) => state.setFieldAccess);
-  React.useEffect(() => {
-    let cancelled = false;
-    const loadAccess = async () => {
-      if (!user?.empId) return;
-      const menuItem = findMenuItemByPath(pathname);
-      const fieldAuthDocType = menuItem ? resolveFieldAuthDocType(menuItem) : String(docType);
-      const fields = await getAllFields(user.empId, fieldAuthDocType);
-      if (cancelled) return;
-      setFieldAccess(fields.filter((x: any) => x.Enabled === "Y").map((x: any) => x.U_FieldName));
-    };
-    loadAccess();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.empId, pathname, docType]);
+  useDocumentFieldAccess(user?.empId, pathname, docType, setFieldAccess);
 
   React.useEffect(() => {
     usePurchaseDocument.getState().setIsDownPayment(!!config.isDownPayment);

@@ -20,7 +20,7 @@ export const WP_APPLY_ON_UPDATE_HELP =
   "";
 
 export const WP_TAB_ORIGINATORS_HELP =
-  "Users who can start approval using this template when they submit a document.";
+  "Users who can start approval using this template when they submit a document. Select several users, or upload an Excel file of user codes.";
 
 export const WP_TAB_STAGES_HELP = "Approval stages and order for this template.";
 

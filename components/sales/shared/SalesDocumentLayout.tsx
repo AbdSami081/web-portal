@@ -57,8 +57,8 @@ import { useFMS, FmsProvider } from "@/hooks/useFMS";
 import FMSSelectionModal from "@/modals/FMSSelectionModal";
 import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
 import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
-import { getAllFields } from "@/api+/sap/administration/administrationService";
-import { resolveFieldAuthDocType, findMenuItemByPath, isRouteAllowed } from "@/lib/menu-data";
+import { useDocumentFieldAccess } from "@/hooks/useDocumentFieldAccess";
+import { isRouteAllowed } from "@/lib/menu-data";
 import { useAuth } from "@/context/authContext";
 
 
@@ -234,33 +234,7 @@ const setFieldAccess = useSalesDocument(
 );
 const fieldAccess = useSalesDocument((state) => state.fieldAccess);
 
-useEffect(() => {
-  let cancelled = false;
-  const loadAccess = async () => {
-    if (!user?.empId) return;
-
-    const menuItem = findMenuItemByPath(pathname);
-    const fieldAuthDocType = menuItem ? resolveFieldAuthDocType(menuItem) : String(docType);
-
-    const fields = await getAllFields(
-      user.empId,
-      fieldAuthDocType
-    );
-
-    if (cancelled) return;
-
-    const allowed = fields
-      .filter((x: any) => x.Enabled === "Y")
-      .map((x: any) => x.U_FieldName);
-
-    setFieldAccess(allowed);
-  };
-
-  loadAccess();
-  return () => {
-    cancelled = true;
-  };
-}, [user?.empId, pathname, docType]);
+useDocumentFieldAccess(user?.empId, pathname, docType, setFieldAccess);
 
 
 

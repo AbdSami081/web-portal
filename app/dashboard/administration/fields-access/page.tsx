@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
   ChevronsUpDown,
+  Copy,
   FileText,
   Save,
   Search,
@@ -45,7 +46,9 @@ import {
 } from "@/components/ui/popover";
 
 import { SERVER_MENUS, resolveFieldAuthDocType, filterMenusByAllowedModules } from "@/lib/menu-data";
+import { allowedFieldNames, readFieldProp } from "@/lib/field-access/fieldAccessState";
 import { cn } from "@/lib/utils";
+import { CopyFieldAccessDialog } from "./CopyFieldAccessDialog";
 
 import { useAuth } from "@/context/authContext";
 import { toast } from "sonner";
@@ -69,41 +72,18 @@ type FieldGroup = {
 };
 
 
-const normalizeField = (field: any): Field => ({
-  FieldId: Number(field.FieldId ?? field.Code ?? 0),
-
-  FieldName:
-    field.U_FieldName ??
-    field.FieldName ??
-    field.Name ??
-    "",
-
-  FieldTitle:
-    field.U_FieldTitle ??
-    field.FieldTitle ??
-    field.U_FieldName ??
-    field.FieldName ??
-    "",
-
-  ObjectId:
-    field.ObjectId ??
-    field.U_ObjectId ??
-    "",
-
-  U_FieldType:
-    field.U_FieldType ??
-    field.FieldType ??
-    "",
-
-  U_DocType:
-    field.U_DocType ??
-    field.DocType ??
-    "",
-
-  U_Active:
-    field.U_Active ??
-    "Y",
-});
+const normalizeField = (field: unknown): Field => {
+  const text = (...names: string[]) => String(readFieldProp(field, ...names) ?? "").trim();
+  return {
+    FieldId: Number(readFieldProp(field, "FieldId", "Code") ?? 0),
+    FieldName: text("U_FieldName", "FieldName", "Name"),
+    FieldTitle: text("U_FieldTitle", "FieldTitle", "U_FieldName", "FieldName"),
+    ObjectId: text("ObjectId", "U_ObjectId"),
+    U_FieldType: text("U_FieldType", "FieldType"),
+    U_DocType: text("U_DocType", "DocType"),
+    U_Active: text("U_Active") || "Y",
+  };
+};
 
 
 export default function FieldAccessManagement() {
@@ -137,6 +117,10 @@ export default function FieldAccessManagement() {
     useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
+
+  const [copyOpen, setCopyOpen] = useState(false);
+
+  const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -184,63 +168,46 @@ export default function FieldAccessManagement() {
   if (!selectedUser || !selectedDocument) {
     setAllFields([]);
     setSelectedFields([]);
+    setAssignmentsError(null);
     setHasChanges(false);
     return;
   }
 
+  let cancelled = false;
   const loadFields = async () => {
     try {
       setIsLoadingFields(true);
       setIsLoadingAssignments(true);
+      setAssignmentsError(null);
       setHasChanges(false);
 
       const response = await getAllFields(
         selectedUser,
         selectedDocument
       );
+      if (cancelled) return;
 
       const data = Array.isArray(response) ? response : [];
-
-      // All fields
       setAllFields(data.map(normalizeField));
-
-      // Only enabled/allowed fields
-      const assignedKeys = data
-        .filter((item: any) => {
-          const allowed =
-            item.Enabled ??
-            item.enabled ??
-            item.U_IsAllowed ??
-            item.IsAllowed ??
-            "N";
-          return (
-            String(allowed).toUpperCase() === "Y" ||
-            allowed === true
-          );
-        })
-        .map((item: any) => {
-          return (
-            item.U_FieldName ??
-            item.FieldName ??
-            item.U_FieldKey ??
-            item.FieldKey ??
-            ""
-          );
-        })
-        .filter((key: string) => key.trim() !== "");
-
-      setSelectedFields(Array.from(new Set(assignedKeys)));
+      setSelectedFields(allowedFieldNames(data));
     } catch (error) {
       console.error("Failed to load fields:", error);
+      if (cancelled) return;
+      setAssignmentsError("Field access could not be loaded. Existing permissions were not changed.");
       setAllFields([]);
       setSelectedFields([]);
     } finally {
-      setIsLoadingFields(false);
-      setIsLoadingAssignments(false);
+      if (!cancelled) {
+        setIsLoadingFields(false);
+        setIsLoadingAssignments(false);
+      }
     }
   };
 
   loadFields();
+  return () => {
+    cancelled = true;
+  };
 }, [selectedUser, selectedDocument]);
 
   /*
@@ -256,35 +223,12 @@ export default function FieldAccessManagement() {
 
       const response = await getAllFields(userCode, docType);
       const data = Array.isArray(response) ? response : [];
-
-      const assignedKeys = data
-        .filter((item: any) => {
-          const allowed =
-            item.Enabled ??
-            item.enabled ??
-            item.U_IsAllowed ??
-            item.IsAllowed ??
-            "N";
-          return (
-            String(allowed).toUpperCase() === "Y" ||
-            allowed === true
-          );
-        })
-        .map((item: any) => {
-          return (
-            item.U_FieldName ??
-            item.FieldName ??
-            item.U_FieldKey ??
-            item.FieldKey ??
-            ""
-          );
-        })
-        .filter((key: string) => key.trim() !== "");
-
-      setSelectedFields(Array.from(new Set(assignedKeys)));
+      setAllFields(data.map(normalizeField));
+      setSelectedFields(allowedFieldNames(data));
+      setAssignmentsError(null);
     } catch (error) {
       console.error("Failed to load user field assignments:", error);
-      setSelectedFields([]);
+      setAssignmentsError("Field access could not be loaded. Existing permissions were not changed.");
     } finally {
       setIsLoadingAssignments(false);
     }
@@ -683,12 +627,26 @@ const handleSave = async () => {
           </div>
 
           <Button
+            type="button"
+            variant="outline"
+            className="h-9 text-xs font-bold"
+            disabled={!selectedUser}
+            onClick={() => setCopyOpen(true)}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Copy Authorization
+          </Button>
+
+          <Button
             onClick={handleSave}
             disabled={
               !selectedUser ||
               !selectedDocument ||
               !hasChanges ||
-              isSaving
+              isSaving ||
+              isLoadingFields ||
+              isLoadingAssignments ||
+              !!assignmentsError
             }
             className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-md px-6 shadow-sm"
           >
@@ -730,9 +688,13 @@ const handleSave = async () => {
                   <button
                     key={userCode}
                     onClick={() => {
+                      if (userCode === selectedUser) return;
                       setSelectedUser(userCode);
                       setSelectedFields([]);
                       setHasChanges(false);
+                      setAssignmentsError(null);
+                      setIsLoadingFields(true);
+                      setIsLoadingAssignments(true);
                     }}
                     className={cn(
                       "w-full px-6 py-4 text-left transition-all border-b last:border-0",
@@ -772,6 +734,13 @@ const handleSave = async () => {
               })
             )}
           </div>
+          <CopyFieldAccessDialog
+            open={copyOpen}
+            onOpenChange={setCopyOpen}
+            users={users}
+            sourceUserCode={selectedUser}
+            sourceUserName={selectedUserName}
+          />
         </aside>
 
         <main className="flex-1 bg-white flex flex-col overflow-hidden">
@@ -831,9 +800,13 @@ const handleSave = async () => {
                                     key={item.id}
                                     value={item.title}
                                     onSelect={() => {
+                                      setIsDocPickerOpen(false);
+                                      if (docType === selectedDocument) return;
                                       setSelectedDocument(docType);
                                       setHasChanges(false);
-                                      setIsDocPickerOpen(false);
+                                      setAssignmentsError(null);
+                                      setIsLoadingFields(true);
+                                      setIsLoadingAssignments(true);
                                     }}
                                   >
                                     {selectedDocument === docType && (
@@ -874,6 +847,12 @@ const handleSave = async () => {
                   <div className="h-full flex items-center justify-center">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                       Loading fields...
+                    </p>
+                  </div>
+                ) : assignmentsError ? (
+                  <div className="h-full flex flex-col items-center justify-center px-6 text-center">
+                    <p className="text-xs font-bold text-red-700">
+                      {assignmentsError}
                     </p>
                   </div>
                 ) : documentFields.length === 0 ? (

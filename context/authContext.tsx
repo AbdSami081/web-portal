@@ -6,6 +6,7 @@ import { getUserAccess, UserAccessEntry } from "../api+/sap/authorization/author
 import { useAuthStore } from "@/stores/useAuthStore";
 import { clearPermissionsCache } from "@/lib/api/permissionsCache";
 import { clearApiResponseCache } from "@/lib/apiClient";
+import { clearFieldAccessCache } from "@/lib/field-access/fieldAccessState";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { useSalesPersonsStore } from "@/stores/useSalesPersonsStore";
@@ -331,6 +332,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     clearTokens();
     clearPermissionsCache();
     clearApiResponseCache();
+    clearFieldAccessCache();
     useAuthStore.getState().resetSession();
     useBranchStore.getState().clearBranch();
     useUoMStore.getState().reset();
