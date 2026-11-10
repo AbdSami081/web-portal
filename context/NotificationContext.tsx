@@ -7,7 +7,7 @@ import { useAuth } from "./authContext";
 import { toast } from "sonner";
 import { SAPMessage, getMyAlerts, getMyAlertsCount } from "@/api+/sap/notification";
 import apiClient from "@/lib/apiClient";
-import { getMenuInfoByObjectCode } from "@/lib/menu-lookup";
+import { alertFieldsFromSapMessage, buildMessageAlertHref, formatApprovalAlert } from "@/lib/messages/formatApprovalAlert";
 
 export interface ApprovalRemarksEntry {
   Stage?: string | null;
@@ -234,41 +234,37 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
       void refreshPendingApprovals(true);
 
+      const showAlert = (sourceMessage: SAPMessage, messageCode: number) => {
+        const fields = alertFieldsFromSapMessage(sourceMessage);
+        const formatted = formatApprovalAlert(fields);
+        const toastTitle = formatted.decision
+          ? formatted.title
+          : formatted.documentLabel
+            ? `New SAP Alert: ${formatted.documentLabel}`
+            : `New SAP Alert: ${sourceMessage.Subject || msg.Subject}`;
+        toast.info(toastTitle, {
+          id: `sap-alert-${rawCode}`,
+          description: formatted.decision ? formatted.description : (sourceMessage.Text || msg.Text || ""),
+          duration: 8000,
+          action: {
+            label: "View",
+            onClick: () => routerRef.current.push(buildMessageAlertHref(messageCode, fields)),
+          },
+        });
+      };
+
+      showAlert(msg, rawCode);
+
       void (async () => {
-        let enriched: SAPMessage | undefined;
         try {
           const page = await getMyAlerts(0);
           setMessages(page.messages || []);
-          enriched = (page.messages || []).find((m) => Number(m.MessageCode) === rawCode);
+          const enriched = (page.messages || []).find((m) => Number(m.MessageCode) === rawCode);
+          if (enriched) showAlert(enriched, enriched.MessageCode);
         } catch (error) {
           console.error("Failed to refresh messages for real-time notification", error);
           setMessages((prev) => [msg, ...prev]);
         }
-
-        let docLabel = "";
-        if (enriched) {
-          let code = enriched.ObjectType;
-          if (!code || String(code) === "112") code = enriched.DraftType;
-          const menuInfo = code
-            ? getMenuInfoByObjectCode(code, { cardType: enriched.CardType, isProductionLinked: enriched.IsProductionLinked })
-            : undefined;
-          const docNumber = enriched.SourceDraftNumber || enriched.ObjectEntry || enriched.DraftEntry;
-          if (menuInfo?.title) {
-            docLabel = docNumber ? `${menuInfo.title} #${docNumber}` : menuInfo.title;
-          }
-        }
-
-        const toastTitle = docLabel ? `New SAP Alert: ${docLabel}` : `New SAP Alert: ${msg.Subject}`;
-        const targetCode = enriched?.MessageCode ?? rawCode;
-
-        toast.info(toastTitle, {
-          description: msg.Text || "",
-          duration: 8000,
-          action: {
-            label: "View",
-            onClick: () => routerRef.current.push(`/dashboard/messages?messageCode=${targetCode}`),
-          },
-        });
       })();
     });
 

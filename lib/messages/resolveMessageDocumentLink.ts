@@ -1,3 +1,5 @@
+import { normalizeObjectCode } from "@/lib/menu-lookup";
+
 export type MessageDocumentLink = {
   objectType: string;
   objectEntry?: string;
@@ -128,4 +130,61 @@ export function resolveMessageDocumentLink(input: {
   }
 
   return null;
+}
+
+export type AlertDocumentSource = {
+  objectType?: string | number | null;
+  draftType?: string | number | null;
+  draftEntry?: string | number | null;
+  objectEntry?: string | number | null;
+  approvalStatus?: string | null;
+  postedDocEntry?: number | string | null;
+  sourceDraftNumber?: number | null;
+  approvalRequestCode?: number | null;
+  cardType?: string | null;
+  isProductionLinked?: boolean | null;
+};
+
+function preferredObjectType(source: AlertDocumentSource): string {
+  let raw = source.objectType != null && `${source.objectType}` !== "" ? String(source.objectType) : "";
+  if (!raw || raw === "112") {
+    raw = source.draftType != null && `${source.draftType}` !== "" ? String(source.draftType) : raw;
+  }
+  return raw;
+}
+
+export function messageToDocumentLink(source: AlertDocumentSource): MessageDocumentLink | null {
+  const rawType = preferredObjectType(source);
+  if (!rawType && !cleanKey(source.draftEntry) && !cleanKey(source.objectEntry)) return null;
+  const objectType = rawType ? String(normalizeObjectCode(rawType)) : rawType;
+  return resolveMessageDocumentLink({
+    objectType,
+    draftEntry: source.draftEntry != null ? String(source.draftEntry) : undefined,
+    objectEntry: source.objectEntry != null ? String(source.objectEntry) : undefined,
+    approvalStatus: source.approvalStatus,
+    postedDocEntry: source.postedDocEntry,
+    sourceDraftNumber: source.sourceDraftNumber,
+    approvalRequestCode: source.approvalRequestCode ?? undefined,
+    cardType: source.cardType,
+    isProductionLinked: source.isProductionLinked,
+  });
+}
+
+export function documentLinkFromQuery(params: { get(name: string): string | null }): MessageDocumentLink | null {
+  const linked = params.get("isProductionLinked");
+  const requestCode = Number(params.get("approvalRequestCode"));
+  const sourceDraft = Number(params.get("sourceDraftNumber"));
+  const posted = params.get("postedDocEntry");
+  return messageToDocumentLink({
+    objectType: params.get("objectType"),
+    draftType: params.get("draftType"),
+    draftEntry: params.get("draftEntry"),
+    objectEntry: params.get("objectEntry"),
+    approvalStatus: params.get("approvalStatus"),
+    postedDocEntry: posted,
+    sourceDraftNumber: Number.isFinite(sourceDraft) && sourceDraft > 0 ? sourceDraft : null,
+    approvalRequestCode: Number.isFinite(requestCode) && requestCode > 0 ? requestCode : null,
+    cardType: params.get("cardType"),
+    isProductionLinked: linked === "1" ? true : linked === "0" ? false : null,
+  });
 }

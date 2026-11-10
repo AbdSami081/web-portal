@@ -136,13 +136,12 @@ const HeaderNav = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" asChild className="relative h-9 w-9 text-slate-600 hover:text-slate-950 rounded-lg hover:bg-slate-100 transition-colors">
-                      <Link href="/dashboard/messages">
+                    <Button variant="ghost" size="icon" asChild className="relative h-9 w-9 overflow-visible text-slate-600 hover:text-slate-950 rounded-lg hover:bg-slate-100 transition-colors">
+                      <Link href="/dashboard/messages" aria-label={unreadCount > 0 ? `${unreadCount} notifications` : "Messages and alerts"}>
                         <Bell className="h-5 w-5" />
                         {unreadCount > 0 && (
-                          <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+                            {unreadCount > 99 ? "99+" : unreadCount}
                           </span>
                         )}
                       </Link>
