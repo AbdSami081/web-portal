@@ -110,23 +110,71 @@ export function formatApprovalAlert(source: ApprovalAlertFields): ApprovalAlertT
   };
 }
 
-export function alertFieldsFromSapMessage(
-  msg: Partial<SAPMessage> & { Code?: number; DraftType?: string }
-): ApprovalAlertFields {
-  const objectType = msg.ObjectType && String(msg.ObjectType) !== "112" ? msg.ObjectType : msg.DraftType || msg.ObjectType;
+type LooseAlertMessage = Partial<SAPMessage> & Record<string, unknown>;
+
+function pickField<T = unknown>(msg: LooseAlertMessage, ...keys: string[]): T | undefined {
+  for (const key of keys) {
+    if (msg[key] !== undefined && msg[key] !== null && msg[key] !== "") {
+      return msg[key] as T;
+    }
+  }
+  return undefined;
+}
+
+/** Normalize SignalR (camelCase or PascalCase) and REST alert payloads into SAPMessage shape. */
+export function normalizeSapAlertMessage(raw: unknown): SAPMessage {
+  const msg = (raw && typeof raw === "object" ? raw : {}) as LooseAlertMessage;
+  const messageCode = Number(pickField(msg, "MessageCode", "messageCode", "Code", "code") ?? 0);
+  const approvalRequestCode = Number(pickField(msg, "ApprovalRequestCode", "approvalRequestCode") ?? 0);
+  const sourceDraftNumber = Number(pickField(msg, "SourceDraftNumber", "sourceDraftNumber") ?? 0);
+  const postedRaw = pickField(msg, "PostedDocEntry", "postedDocEntry");
+  const postedDocEntry = postedRaw === undefined || postedRaw === null ? null : Number(postedRaw);
+  const objectType = String(pickField(msg, "ObjectType", "objectType") ?? "");
+  const draftType = String(pickField(msg, "DraftType", "draftType") ?? "");
+
   return {
-    subject: msg.Subject,
-    text: msg.Text,
+    MessageCode: Number.isFinite(messageCode) ? messageCode : 0,
+    User: Number(pickField(msg, "User", "user") ?? 0),
+    Priority: String(pickField(msg, "Priority", "priority") ?? "pr_Normal"),
+    Subject: String(pickField(msg, "Subject", "subject") ?? ""),
+    Text: String(pickField(msg, "Text", "text") ?? ""),
+    ApprovalRequestCode: Number.isFinite(approvalRequestCode) ? approvalRequestCode : 0,
+    ApprovalStatus: String(pickField(msg, "ApprovalStatus", "approvalStatus") ?? ""),
+    ApprovalRemarks: String(pickField(msg, "ApprovalRemarks", "approvalRemarks", "Remarks", "remarks") ?? ""),
+    ApprovalCreationDate: String(pickField(msg, "ApprovalCreationDate", "approvalCreationDate", "DecidedAt", "decidedAt") ?? ""),
+    DraftEntry: String(pickField(msg, "DraftEntry", "draftEntry") ?? ""),
+    DraftType: draftType,
+    ObjectType: objectType,
+    CardType: (pickField(msg, "CardType", "cardType") as string | null | undefined) ?? null,
+    IsProductionLinked: (pickField(msg, "IsProductionLinked", "isProductionLinked") as boolean | null | undefined) ?? null,
+    ObjectEntry: String(pickField(msg, "ObjectEntry", "objectEntry") ?? ""),
+    PostedDocEntry: postedDocEntry != null && Number.isFinite(postedDocEntry) ? postedDocEntry : null,
+    Document: pickField(msg, "Document", "document") as string | undefined,
+    SourceDraftNumber: Number.isFinite(sourceDraftNumber) && sourceDraftNumber > 0 ? sourceDraftNumber : null,
+  };
+}
+
+export function alertFieldsFromSapMessage(
+  msg: Partial<SAPMessage> & { Code?: number; DraftType?: string } | Record<string, unknown>
+): ApprovalAlertFields {
+  const normalized = normalizeSapAlertMessage(msg);
+  const objectType =
+    normalized.ObjectType && String(normalized.ObjectType) !== "112"
+      ? normalized.ObjectType
+      : normalized.DraftType || normalized.ObjectType;
+  return {
+    subject: normalized.Subject,
+    text: normalized.Text,
     objectType,
-    draftType: msg.DraftType,
-    draftEntry: msg.DraftEntry,
-    objectEntry: msg.ObjectEntry,
-    approvalStatus: msg.ApprovalStatus,
-    postedDocEntry: msg.PostedDocEntry,
-    sourceDraftNumber: msg.SourceDraftNumber,
-    approvalRequestCode: msg.ApprovalRequestCode,
-    cardType: msg.CardType,
-    isProductionLinked: msg.IsProductionLinked,
+    draftType: normalized.DraftType,
+    draftEntry: normalized.DraftEntry,
+    objectEntry: normalized.ObjectEntry,
+    approvalStatus: normalized.ApprovalStatus,
+    postedDocEntry: normalized.PostedDocEntry,
+    sourceDraftNumber: normalized.SourceDraftNumber,
+    approvalRequestCode: normalized.ApprovalRequestCode,
+    cardType: normalized.CardType,
+    isProductionLinked: normalized.IsProductionLinked,
   };
 }
 

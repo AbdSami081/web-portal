@@ -7,7 +7,7 @@ import { useAuth } from "./authContext";
 import { toast } from "sonner";
 import { SAPMessage, getMyAlerts, getMyAlertsCount } from "@/api+/sap/notification";
 import apiClient from "@/lib/apiClient";
-import { alertFieldsFromSapMessage, buildMessageAlertHref, formatApprovalAlert } from "@/lib/messages/formatApprovalAlert";
+import { alertFieldsFromSapMessage, buildMessageAlertHref, formatApprovalAlert, normalizeSapAlertMessage } from "@/lib/messages/formatApprovalAlert";
 
 export interface ApprovalRemarksEntry {
   Stage?: string | null;
@@ -227,9 +227,11 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       }, 5000);
     });
 
-    connection.on("ReceiveNotification", (msg: SAPMessage) => {
-      console.log("Real-time notification received: ", msg);
-      const rawCode = Number((msg as unknown as { Code?: number }).Code ?? msg.MessageCode);
+    connection.on("ReceiveNotification", (rawMsg: SAPMessage) => {
+      console.log("Real-time notification received: ", rawMsg);
+      const msg = normalizeSapAlertMessage(rawMsg);
+      const rawCode = Number(msg.MessageCode);
+      const draftKey = String(msg.DraftEntry || "").trim();
       setUnreadCount((c) => c + 1);
 
       void refreshPendingApprovals(true);
@@ -241,29 +243,45 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
           ? formatted.title
           : formatted.documentLabel
             ? `New SAP Alert: ${formatted.documentLabel}`
-            : `New SAP Alert: ${sourceMessage.Subject || msg.Subject}`;
+            : `New SAP Alert: ${sourceMessage.Subject || "Document update"}`;
+        const toastId = Number.isFinite(messageCode) && messageCode > 0
+          ? `sap-alert-${messageCode}`
+          : draftKey
+            ? `sap-alert-draft-${draftKey}`
+            : `sap-alert-${Date.now()}`;
         toast.info(toastTitle, {
-          id: `sap-alert-${rawCode}`,
-          description: formatted.decision ? formatted.description : (sourceMessage.Text || msg.Text || ""),
-          duration: 8000,
+          id: toastId,
+          description: formatted.decision
+            ? formatted.description
+            : (sourceMessage.Text || "Open Message Alert to review this document."),
+          duration: 10000,
           action: {
             label: "View",
-            onClick: () => routerRef.current.push(buildMessageAlertHref(messageCode, fields)),
+            onClick: () => routerRef.current.push(buildMessageAlertHref(messageCode || rawCode || 0, fields)),
           },
         });
       };
 
+      // Instant toast from the SignalR payload (must not wait on GetMyAlerts).
       showAlert(msg, rawCode);
+      setMessages((prev) => {
+        if (rawCode > 0 && prev.some((m) => Number(m.MessageCode) === rawCode)) return prev;
+        return [msg, ...prev];
+      });
 
       void (async () => {
         try {
           const page = await getMyAlerts(0);
-          setMessages(page.messages || []);
-          const enriched = (page.messages || []).find((m) => Number(m.MessageCode) === rawCode);
-          if (enriched) showAlert(enriched, enriched.MessageCode);
+          const list = page.messages || [];
+          setMessages(list);
+          const enriched =
+            list.find((m) => rawCode > 0 && Number(m.MessageCode) === rawCode) ||
+            (draftKey
+              ? list.find((m) => String(m.DraftEntry || "").trim() === draftKey)
+              : undefined);
+          if (enriched) showAlert(normalizeSapAlertMessage(enriched), Number(enriched.MessageCode) || rawCode);
         } catch (error) {
           console.error("Failed to refresh messages for real-time notification", error);
-          setMessages((prev) => [msg, ...prev]);
         }
       })();
     });
