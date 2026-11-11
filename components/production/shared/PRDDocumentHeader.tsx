@@ -7,7 +7,7 @@ import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
-import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
+import { resolveDocAuthStatus, resolveDocWpApprStatus } from "@/lib/approval/approvalHeaderBadge";
 import { redirectIfWpGeneratedDraft, withResolvedPostedDocument } from "@/lib/draftNavigation";
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -160,7 +160,6 @@ export function PRDDocumentHeader() {
       setSearchValue(docEntryParam);
       fetchDocument(docEntryParam);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docNav.docEntry, docNav.draftEntry, docNav.draft, searchParams]);
 
   const loadDraftDoc = async (draftId: number) => {
@@ -177,9 +176,10 @@ export function PRDDocumentHeader() {
         setValue("DocEntry", resolvedDocument.DocEntry || 0);
         setValue("DocNum", resolvedDocument.DocNum || 0);
         setValue("Comments", resolvedDocument.Comments || "");
-        setValue("AuthorizationStatus", resolveDocAuthStatus(resolvedDocument));
+        const resolvedAuth = resolveDocAuthStatus(resolvedDocument);
+        setValue("AuthorizationStatus", resolvedAuth);
         setValue("U_WP_ApprEngine", (resolvedDocument as any).U_WP_ApprEngine || "");
-        setValue("U_WP_ApprStatus", (resolvedDocument as any).U_WP_ApprStatus || "");
+        setValue("U_WP_ApprStatus", resolveDocWpApprStatus(resolvedDocument, resolvedAuth));
         const draftBranch = (resolvedDocument.BPL_IDAssignedToInvoice ?? resolvedDocument.BPLId) as number | null;
         setValue("BPL_IDAssignedToInvoice", draftBranch);
         setBranch(draftBranch ?? null);
@@ -376,12 +376,13 @@ export function PRDDocumentHeader() {
       if (documentData && (documentData.DocEntry || documentData.AbsoluteEntry)) {
         resetStore();
         loadFromDocument(documentData, docType);
-        setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
+        const resolvedAuth = resolveDocAuthStatus(documentData);
+        setValue("AuthorizationStatus", resolvedAuth);
         setValue("U_WP_ApprEngine", (documentData as any).U_WP_ApprEngine || "");
+        setValue("U_WP_ApprStatus", resolveDocWpApprStatus(documentData, resolvedAuth));
         const loadedBranch = documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId ?? null;
         setValue("BPL_IDAssignedToInvoice", loadedBranch, { shouldDirty: true });
         setBranch(loadedBranch);
-        // Map header fields to form
         if (docType === SAPDocumentType.ProductionOrder) {
           setValue("AbsoluteEntry", documentData.AbsoluteEntry, { shouldDirty: true });
           setValue("DocNum", documentData.DocumentNumber, { shouldDirty: true });

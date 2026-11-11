@@ -562,7 +562,14 @@ function resolveDisplayedApprovalStatus(status?: string | null, subject?: string
                         {sortedMessages.map((msg) => {
                           const isSelected = selectedMessage?.MessageCode === msg.MessageCode;
                           const hasLinkedDoc = !!(msg.ObjectEntry?.toString().trim() || msg.DraftEntry?.toString().trim());
-                          const isDraft = !!(msg.DraftEntry?.toString().trim() || !msg.ObjectEntry?.toString().trim());
+                          const statusResolved = resolveDisplayedApprovalStatus(msg.ApprovalStatus, msg.Subject);
+                          const isGeneratedStatus =
+                            statusResolved === "generated" ||
+                            statusResolved === "arsgenerated" ||
+                            statusResolved === "ardgenerated";
+                          const isDraft =
+                            !isGeneratedStatus &&
+                            !!(msg.DraftEntry?.toString().trim() || !msg.ObjectEntry?.toString().trim());
                           let code = msg.ObjectType;
                           if (!code || String(code) === "112") {
                             code = msg.DraftType;

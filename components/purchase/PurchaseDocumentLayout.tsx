@@ -201,7 +201,7 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
   const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
   const approvalApplies = useUserHasApprovalTemplate(docType, pathname);
   const documentLoaded = Number(DocEntry) > 0 || !!loadedDraftData;
-  const isPostedLoaded = Number(DocEntry) > 0 && !docNav.draftEntry;
+  const isPostedLoaded = Number(DocEntry) > 0 && !loadedDraftData && !docNav.draftEntry;
   const { draftBadgeVisible, statusBadge } = resolveWorkflowHeaderBadges({
     authWithout,
     documentLoaded,

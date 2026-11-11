@@ -167,6 +167,17 @@ export function isWpGeneratedStatus(
   return mapAuthorizationStatus(authorizationStatus) === "generated";
 }
 
+export function documentHasApprovalAssignment(
+  authorizationStatus?: string | null,
+  wpApprStatus?: string | null
+): boolean {
+  const authBadge = mapAuthorizationStatus(authorizationStatus);
+  if (authBadge) return true;
+
+  const wp = (wpApprStatus || "").trim().toUpperCase();
+  return wp === "W" || wp === "Y" || wp === "N" || wp === "P" || wp === "C";
+}
+
 export function resolveWorkflowHeaderBadges(input: {
   authWithout: boolean;
   documentLoaded: boolean;
@@ -185,7 +196,8 @@ export function resolveWorkflowHeaderBadges(input: {
   const generated =
     input.documentLoaded &&
     (isWpGeneratedStatus(input.authorizationStatus, input.wpApprStatus) ||
-      (input.isPostedLoaded && input.headerBadges.status === "generated"));
+      input.authBadge === "generated" ||
+      input.headerBadges.status === "generated");
 
   if (generated) {
     return {
@@ -194,14 +206,18 @@ export function resolveWorkflowHeaderBadges(input: {
     };
   }
 
-  const draftBadgeVisible =
+  const hasApprovalAssignment = documentHasApprovalAssignment(
+    input.authorizationStatus,
+    input.wpApprStatus
+  );
+
+ const draftBadgeVisible =
     !input.authWithout &&
     !input.isPostedLoaded &&
-    input.headerBadges.status !== "generated" &&
-    (input.approvalApplies ||
+    (hasApprovalAssignment ||
       input.hasNavApproval ||
       input.headerBadges.showDraft ||
-      !!input.loadedDraftData);
+      (input.approvalApplies && !!input.loadedDraftData));
 
   const statusBadge =
     input.authWithout || !input.documentLoaded
@@ -209,6 +225,15 @@ export function resolveWorkflowHeaderBadges(input: {
       : (input.authBadge ?? input.headerBadges.status);
 
   return { draftBadgeVisible, statusBadge };
+}
+
+function readPositiveDraftKey(doc: any): number {
+  const candidates = [doc?.DraftKey, doc?.DraftKeyEntry];
+  for (const value of candidates) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 0;
 }
 
 export function resolveDocAuthStatus(doc: any): string {
@@ -219,21 +244,33 @@ export function resolveDocAuthStatus(doc: any): string {
   )
     .toString()
     .trim();
+  const rawLower = raw.toLowerCase();
+  const wp = String(doc?.U_WP_ApprStatus ?? "")
+    .trim()
+    .toUpperCase();
+  const draftKey = readPositiveDraftKey(doc);
+  const postedFromWp =
+    wp === "P" || Number(doc?.U_WP_PostedDocEntry) > 0;
 
-  if (raw) {
-    return raw;
-  }
-
-  const draftKey = Number(
-    doc?.DraftKey ??
-      doc?.DraftEntry ??
-      doc?.DraftKeyEntry ??
-      -1
-  );
-
-  if (Number.isFinite(draftKey) && draftKey > 0) {
+  if (draftKey > 0 || postedFromWp) {
     return "dasGenerated";
   }
 
+  if (raw && rawLower !== "daswithout") {
+    return raw;
+  }
+
+  return rawLower === "daswithout" ? raw : "";
+}
+
+export function resolveDocWpApprStatus(doc: any, authorizationStatus?: string): string {
+  const existing = String(doc?.U_WP_ApprStatus ?? "").trim();
+  if (existing) return existing;
+  const auth = (authorizationStatus || resolveDocAuthStatus(doc) || "").trim().toLowerCase();
+  if (auth === "dasgenerated") return "P";
+  if (auth === "dasapproved") return "Y";
+  if (auth === "dasrejected") return "N";
+  if (auth === "daspending") return "W";
+  if (auth === "dascanceled" || auth === "dascancelled") return "C";
   return "";
 }

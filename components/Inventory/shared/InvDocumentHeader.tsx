@@ -29,7 +29,7 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
-import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
+import { resolveDocAuthStatus, resolveDocWpApprStatus } from "@/lib/approval/approvalHeaderBadge";
 import { redirectIfWpGeneratedDraft, withResolvedPostedDocument } from "@/lib/draftNavigation";
 
 const statusMap: Record<string, string> = {
@@ -400,9 +400,10 @@ export function InvDocumentHeader() {
     setJournalMemo(documentData.JournalMemo || "");
     setValue("DocStatus", documentData.DocumentStatus);
     setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
-    setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
+    const resolvedAuth = resolveDocAuthStatus(documentData);
+    setValue("AuthorizationStatus", resolvedAuth);
     setValue("U_WP_ApprEngine", (documentData as any).U_WP_ApprEngine || "");
-    setValue("U_WP_ApprStatus", (documentData as any).U_WP_ApprStatus || "");
+    setValue("U_WP_ApprStatus", resolveDocWpApprStatus(documentData, resolvedAuth));
 
     const isCopy = type !== config.type;
     loadFromDocument(documentData, type, isCopy);

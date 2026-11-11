@@ -22,7 +22,7 @@ import { useDocNavParams } from "@/lib/docNavParams";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
-import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
+import { resolveDocAuthStatus, resolveDocWpApprStatus } from "@/lib/approval/approvalHeaderBadge";
 import { redirectIfWpGeneratedDraft, withResolvedPostedDocument } from "@/lib/draftNavigation";
 import { findDraftByNumber } from "@/api+/sap/draft/draftService";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
@@ -385,9 +385,10 @@ const hasFieldAccess = (fieldName: string) =>
       setValue("Comments", resolvedDocument.Comments);
       setComments(String(resolvedDocument.Comments || ""));
       setValue("BPL_IDAssignedToInvoice", resolvedDocument.BPL_IDAssignedToInvoice ?? resolvedDocument.BPLId);
-      setValue("AuthorizationStatus", resolveDocAuthStatus(resolvedDocument));
+      const resolvedAuth = resolveDocAuthStatus(resolvedDocument);
+      setValue("AuthorizationStatus", resolvedAuth);
       setValue("U_WP_ApprEngine", (resolvedDocument as any).U_WP_ApprEngine || "");
-      setValue("U_WP_ApprStatus", (resolvedDocument as any).U_WP_ApprStatus || "");
+      setValue("U_WP_ApprStatus", resolveDocWpApprStatus(resolvedDocument, resolvedAuth));
 
       if (config.type === DocumentType.ARInvoice) {
         setValue("FatherType", (resolvedDocument as any).FatherType || "");

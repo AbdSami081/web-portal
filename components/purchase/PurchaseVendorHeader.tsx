@@ -56,7 +56,7 @@ import { getAdminSettings } from "@/api+/sap/administration/administrationServic
 import { useBranchStore } from "@/stores/useBranchStore";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
-import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
+import { resolveDocAuthStatus, resolveDocWpApprStatus } from "@/lib/approval/approvalHeaderBadge";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -396,11 +396,15 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
           );
         }
 
-        usePurchaseDocument.getState().setLoadedDraftData(documentData);
         const resolvedDocument = await withResolvedPostedDocument(
           documentData as Record<string, unknown>,
           Number(documentData.DocEntry)
         );
+        if (isDraftLookup) {
+          usePurchaseDocument.getState().setLoadedDraftData(resolvedDocument);
+        } else {
+          usePurchaseDocument.getState().setLoadedDraftData(null);
+        }
         setValue("DocDate", (resolvedDocument.DocDate as string || "").split("T")[0]);
         setValue("DocDueDate", (resolvedDocument.DocDueDate as string || "").split("T")[0]);
         setValue("TaxDate", (resolvedDocument.TaxDate as string || "").split("T")[0]);
@@ -415,9 +419,10 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         setValue("DocNum", resolvedDocument.DocNum);
         setValue("DocEntry", resolvedDocument.DocEntry);
         setValue("BPL_IDAssignedToInvoice", resolvedDocument.BPL_IDAssignedToInvoice ?? resolvedDocument.BPLId);
-        setValue("AuthorizationStatus", resolveDocAuthStatus(resolvedDocument));
+        const resolvedAuth = resolveDocAuthStatus(resolvedDocument);
+        setValue("AuthorizationStatus", resolvedAuth);
         setValue("U_WP_ApprEngine", (resolvedDocument as any).U_WP_ApprEngine || "");
-        setValue("U_WP_ApprStatus", (resolvedDocument as any).U_WP_ApprStatus || "");
+        setValue("U_WP_ApprStatus", resolveDocWpApprStatus(resolvedDocument, resolvedAuth));
 
         if (
           redirectIfWpGeneratedDraft(router, pathname, config.type, resolvedDocument)
