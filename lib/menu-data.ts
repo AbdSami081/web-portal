@@ -312,7 +312,7 @@ export const SERVER_MENUS: MenuItem[] = [
                         id: "3351796e-25ad-4bc1-8e47-28a47c19bceb",
                         title: "Update Report",
                         url: "/dashboard/reports/update",
-                    },
+                    }
                 ],
             },
             {
@@ -320,6 +320,11 @@ export const SERVER_MENUS: MenuItem[] = [
                 title: "Report Generate",
                 url: "/dashboard/reports/generate",
             },
+             {
+                        id: "d3b333dc-99af-4c84-800b-ab8c35e64828",
+                        title: "Document Drafts Report",
+                        url: "/dashboard/reports/documentdrafts",
+                    },
         ],
     },
 
