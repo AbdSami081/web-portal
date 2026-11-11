@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, type ComponentType } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { FilePlus2, Search, Package, ShoppingCart, Factory, ClipboardList, BadgeDollarSign, LayoutDashboardIcon, ShieldCheck, Settings, FileText, BarChart2, Bell } from "lucide-react";
+import { Search, Package, ShoppingCart, Factory, ClipboardList, BadgeDollarSign, LayoutDashboardIcon, ShieldCheck, Settings, FileText, BarChart2, Bell, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -19,17 +19,18 @@ import { useAuth } from "@/context/authContext";
 import { useNotifications } from "@/context/NotificationContext";
 import { SERVER_MENUS } from "@/lib/menu-data"
 
-const ICON_MAP: Record<string, any> = {
-  "LayoutDashboardIcon": LayoutDashboardIcon,
-  "BadgeDollarSign": BadgeDollarSign,
-  "Package": Package,
-  "Factory": Factory,
-  "ShoppingCart": ShoppingCart,
-  "ClipboardList": ClipboardList,
-  "FileText": FileText,
-  "ShieldCheck": ShieldCheck,
-  "Settings": ShieldCheck,
-  "BarChart2": BarChart2
+const ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
+  LayoutDashboardIcon,
+  BadgeDollarSign,
+  Package,
+  Factory,
+  ShoppingCart,
+  ClipboardList,
+  FileText,
+  ShieldCheck,
+  Settings,
+  BarChart2,
+  Users,
 };
 
 const HeaderNav = () => {
@@ -46,7 +47,7 @@ const HeaderNav = () => {
     const flatList: any[] = [];
 
     SERVER_MENUS.forEach(menu => {
-      const parentIcon = menu.iconName ? ICON_MAP[menu.iconName] : Package;
+      const parentIcon = (menu.iconName && ICON_MAP[menu.iconName]) || Package;
 
       if (menu.items) {
         menu.items.forEach(item => {

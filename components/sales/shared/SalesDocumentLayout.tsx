@@ -561,10 +561,25 @@ const documentMode = useSalesDocument(
           onSubmit={handleSubmit(async (data) => {
 
           const state = useSalesDocument.getState();
+          const isServiceDoc = state.documentMode === "service";
           const finalData = {
             ...data,
-            DocType: state.documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
-            DocumentLines: state.lines,
+            DocType: isServiceDoc ? "dDocument_Service" : "dDocument_Items",
+            ItemType: isServiceDoc ? "dit_Service" : "dit_Item",
+            documentMode: state.documentMode,
+            DocTotal: state.DocTotal,
+            TotalBeforeDiscount: state.TotalBeforeDiscount,
+            DocumentLines: state.lines.map((line) =>
+              isServiceDoc
+                ? {
+                    ...line,
+                    Quantity: undefined,
+                    LineTotal: Number(line.LineTotal) || 0,
+                    UnitPrice: Number(line.LineTotal) || Number(line.Price) || 0,
+                    ItemType: "dit_Service",
+                  }
+                : { ...line, ItemType: "dit_Item" }
+            ),
           } as unknown as T;
 
           console.log("[SQ submit] start", {

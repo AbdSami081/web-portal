@@ -708,12 +708,28 @@ export function PurchaseDocumentLayout<T extends FieldValues>({
               setIsCheckingApproval(true);
               try {
                 const stateForApproval = usePurchaseDocument.getState();
+                const isServiceDoc = stateForApproval.documentMode === "service";
                 const activeTemplates = await planDocumentApproval(currentUserId, docType, {
                   ...(data as object),
-                  DocType: stateForApproval.documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
-                  ItemType: stateForApproval.documentMode === "service" ? "dit_Service" : "dit_Item",
+                  DocType: isServiceDoc ? "dDocument_Service" : "dDocument_Items",
+                  ItemType: isServiceDoc ? "dit_Service" : "dit_Item",
+                  documentMode: stateForApproval.documentMode,
                   DiscountPercent: stateForApproval.discountPercent,
-                  DocumentLines: stateForApproval.lines,
+                  DocTotal: stateForApproval.DocTotal,
+                  TotalBeforeDiscount: stateForApproval.TotalBeforeDiscount,
+                  DocumentLines: stateForApproval.lines.map((line) =>
+                    isServiceDoc
+                      ? {
+                          ...line,
+                          // Service amounts live on LineTotal; keep Quantity out of
+                          // approval evaluation so CondId 5 uses the service amount.
+                          Quantity: undefined,
+                          LineTotal: Number(line.LineTotal) || 0,
+                          UnitPrice: Number(line.LineTotal) || Number(line.Price) || 0,
+                          ItemType: "dit_Service",
+                        }
+                      : { ...line, ItemType: "dit_Item" }
+                  ),
                 });
                 if (activeTemplates && activeTemplates.length > 0) {
                   setApprovalTemplates(activeTemplates);
