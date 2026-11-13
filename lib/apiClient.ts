@@ -6,6 +6,10 @@ import { dedupeRequest } from "@/lib/api/requestDedupe";
 
 const useApiProxy = process.env.NEXT_PUBLIC_USE_API_PROXY === "true";
 
+if (typeof window !== "undefined") {
+    console.log("NEXT_PUBLIC_API_URL:", process.env.NEXT_PUBLIC_API_URL);
+}
+
 const resolveApiBaseUrl = () => {
     if (typeof window !== "undefined") {
         if (!useApiProxy) {

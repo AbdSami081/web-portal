@@ -40,6 +40,7 @@ import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
 import { findDraftByNumber } from "@/api+/sap/draft/draftService";
 import { useDocumentRights } from "@/hooks/useDocumentRights";
+import { mapSalesDocumentToTabFields } from "@/lib/sap/helpers/salesDocumentTabFields";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -369,6 +370,7 @@ export function DocumentHeader() {
 
       setValue("DocDate", documentData.DocDate?.split("T")[0]);
       setValue("DocDueDate", documentData.DocDueDate?.split("T")[0]);
+      setValue("TaxDate", documentData.TaxDate?.split("T")[0]);
       setValue("CardCode", documentData.CardCode);
       setValue("CardName", documentData.CardName);
       setValue("DocStatus", documentData.DocumentStatus);
@@ -384,6 +386,9 @@ export function DocumentHeader() {
       if (config.type === DocumentType.ARInvoice) {
         setValue("FatherType", (documentData as any).FatherType || "");
         setValue("FatherCard", (documentData as any).FatherCard || "");
+
+        const tabFields = mapSalesDocumentToTabFields(documentData);
+        Object.entries(tabFields).forEach(([field, value]) => setValue(field, value));
       }
 
       if (resolvedAsDraft) {
@@ -544,7 +549,11 @@ export function DocumentHeader() {
                   <SelectGroup>
                     <SelectLabel>Select Branch</SelectLabel>
                     {assignedBranches.map((b) => (
-                      <SelectItem key={b.BPLID} value={String(b.BPLID)}>
+                      <SelectItem
+                        key={b.BPLID}
+                        value={String(b.BPLID)}
+                        disabled={["tyes", "yes", "true", "y", "1"].includes(String(b.Disabled).trim().toLowerCase())}
+                      >
                         {b.BPLName}
                         {b.Disabled === "tYES" ? " (Inactive)" : ""}
                       </SelectItem>

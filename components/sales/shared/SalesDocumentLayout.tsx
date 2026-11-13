@@ -582,6 +582,28 @@ const documentMode = useSalesDocument(
           const state = useSalesDocument.getState();
           const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
 
+          const renderedFields = Array.from(
+            formRef.current?.querySelectorAll<HTMLElement>(
+              "input, textarea, select, [role='combobox'], [role='checkbox']",
+            ) ?? [],
+          ).map((element) => {
+            const input = element as HTMLInputElement;
+            return {
+              name: input.name || element.id || element.getAttribute("aria-label") || element.tagName.toLowerCase(),
+              type: input.type || element.getAttribute("role") || element.tagName.toLowerCase(),
+              value: input.value ?? element.textContent?.trim() ?? "",
+              ...(input.type === "checkbox" ? { checked: input.checked } : {}),
+            };
+          });
+
+          console.log("[Sales document submit] Full form and tab fields:", {
+            documentType: docType,
+            formPayload: finalData,
+            documentLines: state.lines,
+            attachments: state.attachments,
+            renderedFields,
+          });
+
           console.log("[SQ submit] start", {
             docType,
             draftEntry: docNav.draftEntry,

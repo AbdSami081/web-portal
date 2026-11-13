@@ -1,9 +1,10 @@
+
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { FilePlus2, Keyboard, Loader2, Printer, GitFork, SearchCode, TextCursorInput } from "lucide-react";
+import { FilePlus2, Keyboard, Loader2, Printer, GitFork, SearchCode, TextCursorInput, History } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -21,10 +22,11 @@ import LayoutPreviewModal from "@/modals/LayoutPreviewModal";
 import FMSSetupModal from "@/modals/FMSSetupModal";
 import { useRelationshipMapStore } from "@/stores/useRelationshipMapStore";
 import { getMenuUrlsByObjectCode } from "@/lib/menu-lookup";
+import ChangeLogModal from "@/modals/ChangeLogModal";
 
 interface Props {
   DocEntry: number;
-  objectCode: number; // SAP UDO Object Code e.g. DocumentType enum value
+  objectCode: number; 
   schemaName?: string;
   reset: (values: any) => void;
   defaultValues: any;
@@ -50,7 +52,7 @@ const HeaderActions: React.FC<Props> = ({
   const [layoutModalOpen, setLayoutModalOpen] = useState(false);
   const [fmsModalOpen, setFmsModalOpen] = useState(false);
   const { isOpen: isRelMapOpen, openMap, closeMap } = useRelationshipMapStore();
-
+  const [changeLogOpen, setChangeLogOpen] = useState(false);
   const activeSchema = schemaName || user?.companyDB || "";
   const isProduction =
     objectCode === 202 ||
@@ -147,6 +149,23 @@ const HeaderActions: React.FC<Props> = ({
             </Tooltip>
           )}
 
+          {/* Change Log */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setChangeLogOpen(true)}
+                aria-label="Change Log"
+                className="h-8 w-8 border-slate-200 transition-all hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600"
+              >
+                <History className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Change Log</TooltipContent>
+          </Tooltip>
+
           {/* Relationship Map */}
           {!isProduction && canUse("RelationshipMap") && (
             <Tooltip>
@@ -184,7 +203,8 @@ const HeaderActions: React.FC<Props> = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  type="button"
+
+type="button"
                   variant="outline"
                   size="icon"
                   onClick={() => {
@@ -241,6 +261,11 @@ const HeaderActions: React.FC<Props> = ({
         objectCode={objectCode}
         docEntry={DocEntry}
         schemaName={activeSchema}
+      />
+      <ChangeLogModal
+        open={changeLogOpen}
+        onClose={() => setChangeLogOpen(false)}
+        objectCode={objectCode}
       />
 
       {/* FMS Setup Modal */}

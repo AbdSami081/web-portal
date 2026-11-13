@@ -112,6 +112,7 @@ export interface SalesDocumentLine {
   U_ExtraTax?: number;
   U_FurtherTax?: number;
   U_FixedRetailPrice?: number;
+  U_FBRUom?: string;
   U_SaleType?: number;
   U_SroScheduleNo?: string;
   U_SroSerialItem?: string;

@@ -2,6 +2,7 @@ import { SalesDocumentLine } from "@/types/sales/salesDocuments.type";
 import { QuotationFormData } from "@/lib/schemas/quotationSchema";
 import { DocumentType } from "@/types/master/DocumentType";
 import { pickLineUdfs } from "./lineUdfHelper";
+import { resolveBranchId } from "./documentPayloadHelper";
 
 interface BuildSalesPayloadOptions {
   data: QuotationFormData;
@@ -50,6 +51,130 @@ function mapLineExpenses(line: SalesDocumentLine) {
   return expenses;
 }
 
+function getSalesDocumentBranchId(data: QuotationFormData): number | undefined {
+  const rawBranchId = data.BPL_IDAssignedToInvoice ?? (data as any).BPLId;
+  const parsedBranchId = rawBranchId == null || rawBranchId === "" ? undefined : Number(rawBranchId);
+  return resolveBranchId(
+    parsedBranchId !== undefined && Number.isFinite(parsedBranchId)
+      ? parsedBranchId
+      : undefined,
+  );
+}
+
+function mapDocumentHeaderFields(data: QuotationFormData) {
+  const payload: Record<string, any> = {};
+
+  const excludedFields = new Set([
+    "CardCode",
+    "CardName",
+    "DocDate",
+    "DocDueDate",
+    "ManualDueDate",
+    "TaxDate",
+    "Comments",
+    "BranchRegNo",
+    "BPL_IDAssignedToInvoice",
+    "BPLId",
+    "FatherType",
+    "FatherCard",
+  ]);
+
+  const booleanFields = [
+    "Confirmed",
+    "ProcureNonDropShip",
+    "ProcureDropShip",
+    "UseShpdGoodsAct",
+  ];
+
+  const numericFields = [
+    "TransportationCode",
+    "LanguageCode",
+    "BPChannelContact",
+    "PaymentGroupCode",
+    "CashDiscountDateOffset",
+    "ExtraMonth",
+    "ExtraDays",
+  ];
+
+  Object.entries(data).forEach(([key, value]) => {
+    if (
+      excludedFields.has(key) ||
+      value === undefined ||
+      value === null ||
+      value === ""
+    ) {
+      return;
+    }
+
+    if (booleanFields.includes(key)) {
+      payload[key] = value ? "tYES" : "tNO";
+      return;
+    }
+
+    if (numericFields.includes(key)) {
+      const numericValue = Number(value);
+      payload[key] = Number.isFinite(numericValue) ? numericValue : value;
+      return;
+    }
+
+    if (key === "BillToAddress") {
+      payload.Address = value;
+      return;
+    }
+
+    if (key === "ShipToAddress") {
+      payload.Address2 = value;
+      return;
+    }
+
+    payload[key] = value;
+  });
+
+  return payload;
+}
+
+function applyDocumentDueDate(
+  payload: Record<string, any>,
+  docDueDate?: string | null,
+) {
+  const apiPayload = { ...payload };
+
+  if (docDueDate) {
+    apiPayload.DocDueDate = docDueDate;
+  } else {
+    delete apiPayload.DocDueDate;
+  }
+
+  return apiPayload;
+}
+
+function buildLineBaseFields(
+  line: SalesDocumentLine,
+  documentMode: "items" | "service" | undefined,
+): Record<string, unknown> {
+  if (documentMode === "service") {
+    return {
+      AccountCode: line.AccountCode || "",
+      AccountName: line.AccountName || "",
+      ItemDescription: line.Description || "",
+      LineTotal: Number(line.LineTotal) || 0,
+      UnitPrice: Number(line.LineTotal) || 0,
+      DiscountPercent: Number(line.DiscountPercent) || 0,
+      VatGroup: line.TaxCode || "",
+    };
+  }
+
+  return {
+    ItemCode: line.ItemCode || "",
+    Quantity: Number(line.Quantity) || 0,
+    UnitPrice: Number(line.Price) || 0,
+    DiscountPercent: Number(line.DiscountPercent) || 0,
+    VatGroup: line.TaxCode || "",
+    WarehouseCode: line.WarehouseCode || "",
+    UoMCode: line.UoMCode || "",
+  };
+}
+
 export function buildSalesDocumentPayload({
   data,
   lines,
@@ -68,67 +193,42 @@ export function buildSalesDocumentPayload({
     Number(docEntry) > 0 &&
     lastLoadedDocType &&
     lastLoadedDocType !== targetDocType;
+  const branchId = getSalesDocumentBranchId(data);
 
-  return {
+  const payload = {
+    ...(branchId !== undefined && {
+      BPL_IDAssignedToInvoice: branchId,
+    }),
     ...pickLineUdfs(data),
+    ...mapDocumentHeaderFields(data),
     CardCode: data.CardCode,
-    CardName: data.CardName,
-      DocType:
-    documentMode === "service"
-      ? "dDocument_Service"
-      : "dDocument_Items",
-
+    ...(targetDocType !== DocumentType.ARInvoice && data.CardName && { CardName: data.CardName }),
+    DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
     DocDate: data.DocDate,
-    DocDueDate: data.DocDueDate,
+    DocDueDate: data.ManualDueDate || data.DocDueDate,
     TaxDate: data.TaxDate,
     BranchRegNo: data.BranchRegNo,
     Comments: data.Comments,
     ...(downPaymentType
       ? { DownPaymentType: downPaymentType, DownPaymentPercentage: discountPercent || 0 }
-      : { DiscountPercent: discountPercent || 0 }),
+      : discountPercent > 0 ? { DiscountPercent: discountPercent } : {}),
     ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
     DocumentLines: lines.map((line, index) => {
-      // const baseFields: Record<string, unknown> = {
-      //   ItemCode: line.ItemCode,
-      //   Quantity: Number(line.Quantity) || 0,
-      //   UnitPrice: Number(line.Price) || 0,
-      //   DiscountPercent: Number(line.DiscountPercent) || 0,
-      //   VatGroup: line.TaxCode || "",
-      //   WarehouseCode: line.WarehouseCode || "",
-      //   UoMCode: line.UoMCode || "",
-      //   AccountCode: line.AccountCode || "",
-      //  AccountName: line.AccountName || "",
-      //  Description: line.Description || "",
-      // };
-const baseFields: Record<string, unknown> =
-  documentMode === "service"
-    ? {
-        AccountCode: line.AccountCode || "",
-        AccountName: line.AccountName || "",
-        Description: line.Description || "",
-        LineTotal: Number(line.LineTotal) || 0,
-          ItemDescription: line.Description || "",
-        UnitPrice: Number(line.LineTotal) || 0,
-        DiscountPercent: Number(line.DiscountPercent) || 0,
-        VatGroup: line.TaxCode || "",
-      }
-    : {
-        ItemCode: line.ItemCode || "",
-        Quantity: Number(line.Quantity) || 0,
-        UnitPrice: Number(line.Price) || 0,
-        DiscountPercent: Number(line.DiscountPercent) || 0,
-        VatGroup: line.TaxCode || "",
-        WarehouseCode: line.WarehouseCode || "",
-        UoMCode: line.UoMCode || "",
-      };
+      const baseFields = buildLineBaseFields(line, documentMode);
+
       if (hasCopyFrom) {
         baseFields.BaseType = lastLoadedDocType;
         baseFields.BaseEntry = docEntry;
         baseFields.BaseLine = line.LineNum;
-      } else if (!docEntry || Number(docEntry) <= 0) {
+      } else if ((!docEntry || Number(docEntry) <= 0) && targetDocType !== DocumentType.ARInvoice) {
         baseFields.BaseType = -1;
         baseFields.BaseEntry = null;
         baseFields.BaseLine = null;
+      }
+
+      if (targetDocType === DocumentType.ARInvoice) {
+        delete baseFields.UoMCode;
+        if (Number(line.DiscountPercent) === 0) delete baseFields.DiscountPercent;
       }
 
       const lineExpenses = mapLineExpenses(line);
@@ -159,8 +259,15 @@ const baseFields: Record<string, unknown> =
         FatherCard: data.FatherCard || "",
       }),
   };
-}
 
+  const finalPayload = applyDocumentDueDate(payload, data.DocDueDate);
+  console.log("Full SAP sales document payload:", {
+    ...data,
+    ...finalPayload,
+    DocumentLines: lines,
+  });
+  return finalPayload;
+}
 
 export function buildSalesDocumentPatchPayload({
   data,
@@ -177,18 +284,22 @@ export function buildSalesDocumentPatchPayload({
   BuildSalesPayloadOptions,
   "data" | "lines" | "discountPercent" | "freight" | "additionalExpenses" | "downPaymentType" | "salesPersonCode"
 > & { includeLines?: boolean; targetDocType?: DocumentType; documentMode?: "items" | "service" }) {
-  return {
+  const branchId = getSalesDocumentBranchId(data);
+
+  const payload = {
+    ...(branchId !== undefined && {
+      BPL_IDAssignedToInvoice: branchId,
+    }),
     ...pickLineUdfs(data),
-      DocType:
-    documentMode === "service"
-      ? "dDocument_Service"
-      : "dDocument_Items",
+    ...mapDocumentHeaderFields(data),
+    DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
     Comments: data.Comments,
+    ...(data.JournalMemo !== undefined && { JournalMemo: data.JournalMemo }),
     ...(data.DocDate && { DocDate: data.DocDate }),
-    ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
+    ...((data.ManualDueDate || data.DocDueDate) && { DocDueDate: data.ManualDueDate || data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
     ...(data.BranchRegNo && { BranchRegNo: data.BranchRegNo }),
-     ...(downPaymentType
+    ...(downPaymentType
       ? { DownPaymentType: downPaymentType, DownPaymentPercentage: discountPercent || 0 }
       : includeLines
         ? { DiscountPercent: discountPercent || 0 }
@@ -196,35 +307,13 @@ export function buildSalesDocumentPatchPayload({
     ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
     ...(includeLines && {
       DocumentLines: lines.map((line, index) => {
-        // const baseFields: Record<string, unknown> = {
-        //   ItemCode: line.ItemCode,
-        //   Quantity: Number(line.Quantity) || 0,
-        //   UnitPrice: Number(line.Price) || 0,
-        //   DiscountPercent: Number(line.DiscountPercent) || 0,
-        //   VatGroup: line.TaxCode || "",
-        //   WarehouseCode: line.WarehouseCode || "",
-        //   UoMCode: line.UoMCode || "",
-        // };
-const baseFields: Record<string, unknown> =
-  documentMode === "service"
-    ? {
-        AccountCode: line.AccountCode || "",
-        AccountName: line.AccountName || "",
-        ItemDescription: line.Description || "",
-        UnitPrice: Number(line.LineTotal) || 0,
-        LineTotal: Number(line.LineTotal) || 0,
-        DiscountPercent: Number(line.DiscountPercent) || 0,
-        VatGroup: line.TaxCode || "",
-      }
-    : {
-        ItemCode: line.ItemCode || "",
-        Quantity: Number(line.Quantity) || 0,
-        UnitPrice: Number(line.Price) || 0,
-        DiscountPercent: Number(line.DiscountPercent) || 0,
-        VatGroup: line.TaxCode || "",
-        WarehouseCode: line.WarehouseCode || "",
-        UoMCode: line.UoMCode || "",
-      };
+        const baseFields = buildLineBaseFields(line, documentMode);
+
+        if (targetDocType === DocumentType.ARInvoice) {
+          delete baseFields.UoMCode;
+          if (Number(line.DiscountPercent) === 0) delete baseFields.DiscountPercent;
+        }
+
         if (line.LineNum !== undefined && line.LineNum >= 0) {
           baseFields.LineNum = line.LineNum;
         }
@@ -258,4 +347,12 @@ const baseFields: Record<string, unknown> =
         FatherCard: data.FatherCard || "",
       }),
   };
+
+  const finalPayload = applyDocumentDueDate(payload, data.DocDueDate);
+  console.log("Full SAP sales document patch payload:", {
+    ...data,
+    ...finalPayload,
+    DocumentLines: lines,
+  });
+  return finalPayload;
 }

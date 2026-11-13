@@ -34,6 +34,7 @@ interface GenericModalProps<T> {
   onSearch?: (value: string) => void;
   searchValue?: string;
   onRowClick?: (item: T) => void;
+  contentClassName?: string;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -53,6 +54,7 @@ export function GenericModal<T>({
   onSearch,
   searchValue,
   onRowClick,
+  contentClassName,
 }: GenericModalProps<T>) {
   const [localSearch, setLocalSearch] = useState("");
   const isServerSearch = typeof onSearch === "function";
@@ -147,7 +149,7 @@ export function GenericModal<T>({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-full h-[85vh] flex flex-col p-6 overflow-hidden">
+      <DialogContent className={`max-w-6xl w-full h-[85vh] flex flex-col p-6 overflow-hidden ${contentClassName ?? ""}`}>
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

@@ -57,6 +57,8 @@ export default function InvoicePage() {
         documentMode,
       });
 
+      console.log("A/R Invoice payload:", payload);
+
       try {
         await patchARInvoice(Number(DocEntry), payload);
         if (attachments.length > 0) {
@@ -91,7 +93,7 @@ export default function InvoicePage() {
       salesPersonCode,
       documentMode,
     });
-    //  console.log(payload,"response")
+    console.log("A/R Invoice payload:", payload);
 
     try {
 

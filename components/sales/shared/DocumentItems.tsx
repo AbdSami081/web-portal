@@ -22,7 +22,7 @@ import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSalesDocConfig } from "./SalesDocumentLayout";
-import { Plus, FileText, Search } from "lucide-react";
+import { Plus, FileText, Search, MoreHorizontal } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -35,6 +35,7 @@ import { fetchItemsByCodesBulk } from "@/lib/sap/helpers/itemCacheHelper";
 import { MAX_EXCEL_PASTE_ROWS } from "@/lib/constants/excelPaste";
 import { BulkResultModal, type BulkResultRow } from "@/components/shared/BulkResultModal";
 import { AttachmentsTab } from "@/components/shared/AttachmentsTab";
+import { ReferenceInformationDialog } from "@/components/sales/shared/ReferenceInformationDialog";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useUoMStore } from "@/stores/useUoMStore";
 import { getUoMName } from "@/lib/sap/helpers/uomHelper";
@@ -48,10 +49,16 @@ import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
+import { getShippingTypes, type ShippingType } from "@/api+/sap/BusinessPartner/BPService";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-// Field access catalog for this document's line table — kept next to the
-// `columns`/`serviceColumns` arrays below so the two never drift apart.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+
 export const SALES_LINE_FIELDS: FieldCatalogEntry[] = [
   { key: "ItemCode", title: "Item Code" },
   { key: "ItemName", title: "Item Description" },
@@ -90,6 +97,44 @@ export const SALES_SERVICE_LINE_FIELDS: FieldCatalogEntry[] = [
   { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
 ];
 
+const addressComponentFields = [
+  "Street / PO Box",
+  "Street No.",
+  "Block",
+  "City",
+  "Zip Code",
+  "County",
+  "State",
+  "Country/Region",
+  "Building/Floor/Room",
+  "Address Name 2",
+  "Address Name 3",
+  "GLN",
+];
+
+const addressExtensionFieldMap: Record<string, string> = {
+  "Street / PO Box": "Street",
+  "Street No.": "StreetNo",
+  Block: "Block",
+  City: "City",
+  "Zip Code": "ZipCode",
+  County: "County",
+  State: "State",
+  "Country/Region": "Country",
+  "Building/Floor/Room": "BuildingFloorRoom",
+  "Address Name 2": "Address2",
+  "Address Name 3": "Address3",
+  GLN: "GLN",
+};
+
+const toSapAddressExtension = (draft: Record<string, string>, prefix: "ShipTo" | "BillTo") =>
+  Object.fromEntries(
+    addressComponentFields.map((field) => [
+      `${prefix}${addressExtensionFieldMap[field]}`,
+      draft[field] ?? "",
+    ]),
+  );
+
 export function DocumentItems() {
   const { watch, setValue, register } = useFormContext();
 
@@ -114,7 +159,13 @@ export function DocumentItems() {
   const [activeTab, setActiveTab] = useState("content");
 
   const [fatherCardModalOpen, setFatherCardModalOpen] = useState(false);
-
+  const [referenceDialogOpen, setReferenceDialogOpen] = useState(false);
+  const [shipToDialogOpen, setShipToDialogOpen] = useState(false);
+  const [shipToAddress, setShipToAddress] = useState("");
+  const [shipToAddressDraft, setShipToAddressDraft] = useState<Record<string, string>>({});
+  const [billToDialogOpen, setBillToDialogOpen] = useState(false);
+  const [billToAddress, setBillToAddress] = useState("");
+  const [billToAddressDraft, setBillToAddressDraft] = useState<Record<string, string>>({});
   const documentMode = useSalesDocument(
   (state) => state.documentMode
 );
@@ -123,12 +174,12 @@ const setDocumentMode = useSalesDocument(
   (state) => state.setDocumentMode
 );
   const [serviceLines, setServiceLines] = useState<any[]>([]);
+  const [shippingTypes, setShippingTypes] = useState<ShippingType[]>([]);
   const config = useSalesDocConfig();
 
   const isARInvoice = config.type === DocumentType.ARInvoice;
-  const isQuotation = config.type === DocumentType.Quotation;
-  const hasLogisticsTab = isQuotation;
-  const hasAccountingTab = isARInvoice || isQuotation;
+  const hasLogisticsTab = !isARInvoice;
+  const hasAccountingTab = true;
 
   const isTableDisabled = config.isDisabledTable(docStatus);
 
@@ -158,6 +209,15 @@ const setDocumentMode = useSalesDocument(
   useEffect(() => {
     loadDocumentEssentials("O");
   }, [loadDocumentEssentials]);
+
+  useEffect(() => {
+    getShippingTypes()
+      .then(setShippingTypes)
+      .catch((error) => {
+        console.error("Failed to load shipping types:", error);
+        toast.error("Failed to load Shipping Types");
+      });
+  }, []);
 
  const handleOnSelectItems = (items: Item[]) => {
   if (documentMode === "service") {
@@ -312,10 +372,7 @@ const setDocumentMode = useSalesDocument(
   setDialogOpen(false);
 };
 
-  // Paste tab-separated rows copied from Excel straight into the line table:
-  // ItemCode <tab> Quantity <tab> Price <tab> DiscountPercent <tab> WarehouseCode.
-  // Reuses the same item-line construction as handleOnSelectItems so pasted
-  // lines come out identical to manually-added ones (tax, branch, UoM, etc.).
+ 
   const handleExcelPaste = async (e: React.ClipboardEvent) => {
     if (documentMode === "service") return;
     if (!customer?.CardCode) {
@@ -349,10 +406,7 @@ const setDocumentMode = useSalesDocument(
 
     if (parsedRows.length === 0) return;
 
-    // Bulk-fetch all item codes in chunked requests (not one request per
-    // row), then commit every resulting line in a single store update —
-    // keeps this responsive for pastes from a handful of rows up to tens of
-    // thousands.
+   
     const toastId = toast.loading(`Looking up ${parsedRows.length} item(s)...`);
     const itemsByCode = await fetchItemsByCodesBulk(
       parsedRows.map((r) => r.itemCode),
@@ -442,6 +496,7 @@ const setDocumentMode = useSalesDocument(
       line,
     });
   };
+  
 
   const fieldAccess = useSalesDocument((state) => state.fieldAccess);
   const { multiBranchEnabled } = useApprovalSettings();
@@ -672,15 +727,15 @@ const setDocumentMode = useSalesDocument(
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
   const isLineUpdateBlocked = isFinancialDoc && isEditMode;
 
-  // Shared layout classes for the Logistics / Accounting tabs
-  // (label column 150px + gap 12px = 162px, used for checkbox alignment).
+
   const selectCls = "h-8 w-full max-w-[260px] text-xs";
   const inputCls = "h-8 w-full max-w-[260px] text-xs";
   const textareaCls = "w-full max-w-[260px] resize-none text-xs";
   const checkboxCls =
     "border-neutral-400 data-[state=checked]:border-black data-[state=checked]:bg-black data-[state=checked]:text-white";
   const dotsBtnCls = "h-8 w-8 shrink-0 bg-black text-white hover:bg-neutral-800";
-  const rowCls = "grid grid-cols-[150px_1fr] items-center gap-3";
+  const rowCls = "grid grid-cols-[135px_1fr] items-center gap-2";
+  const logisticsRowCls = "grid grid-cols-[105px_1fr] items-center gap-2";
   const labelCls = "text-xs";
 
   return (
@@ -711,7 +766,7 @@ const setDocumentMode = useSalesDocument(
           </Select>
         </div>
         <TabsList
-          className={`grid ${isQuotation ? "w-[480px] grid-cols-4" : isARInvoice ? "w-[360px] grid-cols-3" : "w-[240px] grid-cols-2"} mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800`}
+          className={`grid ${hasLogisticsTab ? "w-[480px] grid-cols-4" : isARInvoice ? "w-[360px] grid-cols-3" : "w-[240px] grid-cols-2"} mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800`}
         >
           <TabsTrigger
             value="content"
@@ -1020,80 +1075,113 @@ const setDocumentMode = useSalesDocument(
             value="logistics"
             className="mt-0 pt-2 animate-in fade-in duration-300"
           >
-            <div className="min-h-[230px] rounded-md border border-neutral-300 bg-white p-4">
-              <div className="grid grid-cols-1 gap-x-10 gap-y-4 md:grid-cols-2">
+            <div className="min-h-[230px] rounded-md border border-neutral-300 bg-white p-3">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
                 {/* Left Section */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Ship To */}
-                  <div className="grid grid-cols-[150px_1fr] items-start gap-3">
-                    <label className={`${labelCls} pt-2`}>Ship To</label>
-                    <div className="space-y-2">
-                      <Select>
-                        <SelectTrigger className={selectCls}>
+                  <div className="grid grid-cols-[150px_250px_28px] items-end gap-2">
+                    <div className="space-y-1">
+                      <label className={labelCls}>Ship To</label>
+                      <Select value={watch("ShipToCode") || ""} onValueChange={(value) => setValue("ShipToCode", value, { shouldDirty: true })}>
+                        <SelectTrigger className="h-7 w-full text-xs">
                           <SelectValue placeholder="Select address" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="default">Default</SelectItem>
                         </SelectContent>
                       </Select>
-                      <div className="flex items-start gap-2">
-                        <Textarea
-                          className={`${textareaCls} h-16`}
-                          aria-label="Ship To address"
-                        />
-                        <Button type="button" size="icon" className={dotsBtnCls}>
-                          ...
-                        </Button>
-                      </div>
                     </div>
+                    <Textarea
+                      className="h-[42px] w-full resize-none text-xs"
+                      aria-label="Ship To address"
+                      value={watch("ShipToAddress") ?? shipToAddress}
+                      onChange={(event) => {
+                        setShipToAddress(event.target.value);
+                        setValue("ShipToAddress", event.target.value, { shouldDirty: true });
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      aria-label="Open Ship To address details"
+                      className="h-7 w-7 bg-neutral-900 px-1 text-white hover:bg-neutral-800"
+                      onClick={() => {
+                        const parts = (watch("ShipToAddress") ?? shipToAddress).split("\n");
+                        setShipToAddressDraft(
+                          Object.fromEntries(
+                            addressComponentFields.map((field, index) => [field, parts[index] ?? ""]),
+                          ),
+                        );
+                        setShipToDialogOpen(true);
+                      }}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
                   </div>
 
                   {/* Bill To */}
-                  <div className="grid grid-cols-[150px_1fr] items-start gap-3">
-                    <label className={`${labelCls} pt-2`}>Bill To</label>
-                    <div className="space-y-2">
-                      <Select>
-                        <SelectTrigger className={selectCls}>
+                  <div className="grid grid-cols-[150px_250px_28px] items-end gap-2">
+                    <div className="space-y-1">
+                      <label className={labelCls}>Bill To</label>
+                      <Select value={watch("PayToCode") || ""} onValueChange={(value) => setValue("PayToCode", value, { shouldDirty: true })}>
+                        <SelectTrigger className="h-7 w-full text-xs">
                           <SelectValue placeholder="Select address" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="default">Default</SelectItem>
                         </SelectContent>
                       </Select>
-                      <div className="flex items-start gap-2">
-                        <Textarea
-                          className={`${textareaCls} h-16`}
-                          aria-label="Bill To address"
-                        />
-                        <Button type="button" size="icon" className={dotsBtnCls}>
-                          ...
-                        </Button>
-                      </div>
                     </div>
+                    <Textarea className="h-[42px] w-full resize-none text-xs" aria-label="Bill To address" value={watch("BillToAddress") ?? billToAddress}
+                     onChange={(event) => {
+                       setBillToAddress(event.target.value);
+                       setValue("BillToAddress", event.target.value, { shouldDirty: true });
+                     }}/>
+                    <Button
+                      type="button"
+                      size="icon"
+                      aria-label="Open Bill To address details"
+                      className="h-7 w-7 bg-neutral-900 px-1 text-white hover:bg-neutral-800"
+                      onClick={() => {
+                        const parts = (watch("BillToAddress") ?? billToAddress).split("\n");
+                        setBillToAddressDraft(
+                          Object.fromEntries(
+                            addressComponentFields.map((field, index) => [field, parts[index] ?? ""]),
+                          ),
+                        );
+                        setBillToDialogOpen(true);
+                      }}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
                   </div>
 
                   {/* Shipping Type */}
-                  <div className={rowCls}>
+                  <div className="grid grid-cols-[150px_250px] items-center gap-2">
                     <label className={labelCls}>Shipping Type</label>
-                    <Select>
-                      <SelectTrigger className={selectCls}>
+                    <Select value={watch("TransportationCode") == null ? "" : String(watch("TransportationCode"))} onValueChange={(value) => setValue("TransportationCode", value, { shouldDirty: true })}>
+                      <SelectTrigger className="h-7 w-full text-xs">
                         <SelectValue placeholder="Select shipping type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="standard">Standard</SelectItem>
-                        <SelectItem value="express">Express</SelectItem>
+                        {shippingTypes.map((shippingType) => (
+                          <SelectItem key={shippingType.Code} value={String(shippingType.Code)}>
+                            {shippingType.Name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 {/* Right Section */}
-                <div className="space-y-4">
+                <div className="ml-auto mr-16 w-full space-y-3 md:w-[280px]">
                   {/* Language */}
-                  <div className={rowCls}>
+                  <div className={logisticsRowCls}>
                     <label className={labelCls}>Language</label>
-                    <Select>
-                      <SelectTrigger className={selectCls}>
+                    <Select value={watch("LanguageCode") == null ? "" : String(watch("LanguageCode"))} onValueChange={(value) => setValue("LanguageCode", value, { shouldDirty: true })}>
+                      <SelectTrigger className="h-7 w-60 max-w-none text-xs">
                         <SelectValue placeholder="Select language" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1104,32 +1192,32 @@ const setDocumentMode = useSalesDocument(
                   </div>
 
                   {/* Options (aligned with field column) */}
-                  <div className="space-y-2 pl-[162px]">
+                  <div className="space-y-0.5 pl-[113px]">
                     <label className="flex items-center gap-2 text-xs">
-                      <Checkbox className={checkboxCls} />
+                      <Checkbox className={checkboxCls} checked={Boolean(watch("ProcureNonDropShip"))} onCheckedChange={(checked) => setValue("ProcureNonDropShip", checked === true, { shouldDirty: true })} />
                       Procure Non Drop-Ship Items
                     </label>
                     <label className="flex items-center gap-2 text-xs">
-                      <Checkbox className={checkboxCls} defaultChecked />
+                      <Checkbox className={checkboxCls} checked={Boolean(watch("ProcureDropShip"))} onCheckedChange={(checked) => setValue("ProcureDropShip", checked === true, { shouldDirty: true })} />
                       Procure Drop-Ship Items
                     </label>
                     <label className="flex items-center gap-2 text-xs">
-                      <Checkbox className={checkboxCls} defaultChecked />
+                      <Checkbox className={checkboxCls} checked={Boolean(watch("Confirmed"))} onCheckedChange={(checked) => setValue("Confirmed", checked === true, { shouldDirty: true })} />
                       Confirmed
                     </label>
                   </div>
 
                   {/* BP Channel Name */}
-                  <div className={rowCls}>
-                    <label className={labelCls}>BP Channel Name</label>
-                    <Input type="text" className={inputCls} />
+                  <div className={logisticsRowCls}>
+                    <label className={`${labelCls} whitespace-nowrap`}>BP Channel Name</label>
+                    <Input type="text" aria-label="BP Channel Name" value={watch("BPChannelCode") ?? ""} onChange={(event) => setValue("BPChannelCode", event.target.value, { shouldDirty: true })} className="h-7 w-60 max-w-none text-xs" />
                   </div>
 
                   {/* BP Channel Contact */}
-                  <div className={rowCls}>
-                    <label className={labelCls}>BP Channel Contact</label>
-                    <Select>
-                      <SelectTrigger className={selectCls}>
+                  <div className={logisticsRowCls}>
+                    <label className={`${labelCls} whitespace-nowrap`}>BP Channel Contact</label>
+                    <Select value={watch("BPChannelContact") == null ? "" : String(watch("BPChannelContact"))} onValueChange={(value) => setValue("BPChannelContact", value, { shouldDirty: true })}>
+                      <SelectTrigger className="h-7 w-60 max-w-none text-xs">
                         <SelectValue placeholder="Select contact" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1158,19 +1246,19 @@ const setDocumentMode = useSalesDocument(
             value="accounting"
             className="mt-0 animate-in fade-in zoom-in-95 duration-500 pt-6"
           >
-            {config.type === DocumentType.Quotation ? (
+            {!isARInvoice ? (
               <div className="min-h-[320px] rounded-md border border-neutral-300 bg-white p-4 text-xs">
                 <div className="grid grid-cols-1 gap-x-10 gap-y-4 md:grid-cols-2">
                   {/* Left */}
                   <div className="space-y-4">
                     <div className={rowCls}>
                       <label htmlFor="journal-remark">Journal Remark</label>
-                      <Input id="journal-remark" className={inputCls} />
+                      <Input id="journal-remark" value={watch("JournalMemo") ?? ""} onChange={(event) => setValue("JournalMemo", event.target.value, { shouldDirty: true })} className={inputCls} />
                     </div>
 
                     <div className={rowCls}>
                       <label htmlFor="payment-terms">Payment Terms</label>
-                      <Select>
+                      <Select value={watch("PaymentGroupCode") == null ? "" : String(watch("PaymentGroupCode"))} onValueChange={(value) => setValue("PaymentGroupCode", value, { shouldDirty: true })}>
                         <SelectTrigger id="payment-terms" className={selectCls}>
                           <SelectValue />
                         </SelectTrigger>
@@ -1180,7 +1268,7 @@ const setDocumentMode = useSalesDocument(
 
                     <div className={rowCls}>
                       <label htmlFor="payment-method">Payment Method</label>
-                      <Select>
+                      <Select value={watch("PaymentMethod") ?? ""} onValueChange={(value) => setValue("PaymentMethod", value, { shouldDirty: true })}>
                         <SelectTrigger id="payment-method" className={selectCls}>
                           <SelectValue />
                         </SelectTrigger>
@@ -1196,21 +1284,25 @@ const setDocumentMode = useSalesDocument(
     <Input
       type="date"
       aria-label="Selected Date"
+      value={watch("ManualDueDate") ?? ""}
+      onChange={(event) => setValue("ManualDueDate", event.target.value, { shouldDirty: true })}
       className="h-8 w-full text-xs"
     />
 
     <Input
       aria-label="Months"
+      value={watch("ExtraMonth") ?? 0}
+      onChange={(event) => setValue("ExtraMonth", event.target.value, { shouldDirty: true })}
       className="h-8 text-center text-xs"
-      defaultValue="0"
     />
 
     <span>Months +</span>
 
     <Input
       aria-label="Days"
+      value={watch("ExtraDays") ?? 0}
+      onChange={(event) => setValue("ExtraDays", event.target.value, { shouldDirty: true })}
       className="h-8 text-center text-xs"
-      defaultValue="0"
     />
 
     <span>Days</span>
@@ -1233,29 +1325,29 @@ const setDocumentMode = useSalesDocument(
 
                     <div className={rowCls}>
                       <label htmlFor="cash-discount-offset">Cash Discount Date Offset:</label>
-                      <Input id="cash-discount-offset" className={inputCls} />
+                      <Input id="cash-discount-offset" type="number" value={watch("CashDiscountDateOffset") ?? ""} onChange={(event) => setValue("CashDiscountDateOffset", event.target.value, { shouldDirty: true })} className={inputCls} />
                     </div>
 
                     <label className="flex items-center gap-2 pl-[162px]">
-                      <Checkbox className={checkboxCls} /> Use Shipped Goods Account
+                      <Checkbox className={checkboxCls} checked={Boolean(watch("UseShpdGoodsAct"))} onCheckedChange={(checked) => setValue("UseShpdGoodsAct", checked === true, { shouldDirty: true })} /> Use Shipped Goods Account
                     </label>
                   </div>
 
                   {/* Right */}
                   <div className="space-y-4">
-                    <div className={rowCls}>
+                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="business-partner-project">Business Partner Project</label>
-                      <Input id="business-partner-project" className={inputCls} />
+                      <Input id="business-partner-project" value={watch("Project") ?? ""} onChange={(event) => setValue("Project", event.target.value, { shouldDirty: true })} className={inputCls} />
                     </div>
 
-                    <div className="grid grid-cols-[150px_1fr] items-start gap-3">
+                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="qr-code-from" className="pt-2">Create QR Code From</label>
-                      <Textarea id="qr-code-from" className={`${textareaCls} h-16`} />
+                      <Textarea id="qr-code-from" value={watch("QRCodeFrom") ?? ""} onChange={(event) => setValue("QRCodeFrom", event.target.value, { shouldDirty: true })} className={`${textareaCls} h-16`} />
                     </div>
 
-                    <div className={rowCls}>
+                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="indicator">Indicator</label>
-                      <Select>
+                      <Select value={watch("Indicator") ?? ""} onValueChange={(value) => setValue("Indicator", value, { shouldDirty: true })}>
                         <SelectTrigger id="indicator" className={selectCls}>
                           <SelectValue />
                         </SelectTrigger>
@@ -1263,20 +1355,26 @@ const setDocumentMode = useSalesDocument(
                       </Select>
                     </div>
 
-                    <div className={rowCls}>
+                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="federal-tax-id">Federal Tax ID</label>
-                      <Input id="federal-tax-id" className={inputCls} />
+                      <Input id="federal-tax-id" value={watch("FederalTaxID") ?? ""} onChange={(event) => setValue("FederalTaxID", event.target.value, { shouldDirty: true })} className={inputCls} />
                     </div>
 
-                    <div className={rowCls}>
+                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="order-number">Order Number</label>
-                      <Input id="order-number" className={inputCls} />
+                      <Input id="order-number" value={watch("NumAtCard") ?? ""} onChange={(event) => setValue("NumAtCard", event.target.value, { shouldDirty: true })} className={inputCls} />
                     </div>
 
-                    <div className={rowCls}>
+                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <span>Referenced Document</span>
                       <div>
-                        <Button type="button" size="icon" className={dotsBtnCls}>
+                        <Button
+                          type="button"
+                          size="icon"
+                          className={dotsBtnCls}
+                          aria-label="Open reference information"
+                          onClick={() => setReferenceDialogOpen(true)}
+                        >
                           ...
                         </Button>
                       </div>
@@ -1350,6 +1448,113 @@ const setDocumentMode = useSalesDocument(
         }}
         cardType="C"
       />
+
+      <ReferenceInformationDialog
+        open={referenceDialogOpen}
+        onOpenChange={setReferenceDialogOpen}
+        cardCode={selectedCardCode}
+      />
+
+      <Dialog open={shipToDialogOpen} onOpenChange={setShipToDialogOpen}>
+        <DialogContent
+          className="z-[120] flex h-[540px] max-h-[calc(100vh-2rem)] w-[420px] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-0 shadow-2xl sm:max-w-[420px]"
+        >
+          <DialogHeader className="shrink-0 border-b border-slate-200 bg-slate-50 px-4 py-3">
+            <DialogTitle className="pr-8 text-left text-sm font-semibold text-slate-900">
+              Address Component
+            </DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 bg-white px-3 py-2">
+            <div className="h-full min-h-0 overflow-y-auto rounded-md border border-slate-200 bg-white">
+              <div className="grid h-full min-h-[300px] grid-rows-12 bg-white">
+                {addressComponentFields.map((field) => (
+                  <div key={field} className="grid min-h-0 grid-cols-[150px_1fr] grid-rows-1 border-b border-slate-200 last:border-b-0">
+                    <label htmlFor={`ship-to-${field}`} className="flex items-center truncate border-r border-slate-200 bg-white px-2 text-[11px] text-slate-700">
+                      {field}
+                    </label>
+                    <Input
+                      id={`ship-to-${field}`}
+                      value={shipToAddressDraft[field] ?? ""}
+                      onChange={(event) => setShipToAddressDraft((current) => ({ ...current, [field]: event.target.value }))}
+                      className="h-full min-h-0 rounded-none border border-slate-200 bg-white px-2 py-0 text-xs text-slate-900 shadow-none focus-visible:border-slate-400 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-slate-400"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="shrink-0 flex-row justify-start gap-2 border-t border-slate-200 bg-white px-3 py-3">
+            <Button type="button" className="h-7 rounded-md bg-neutral-900 px-4 text-xs font-medium text-white shadow-sm hover:bg-neutral-800" onClick={() => {
+              const address = addressComponentFields.map((field) => shipToAddressDraft[field] ?? "").join("\n").trimEnd();
+              setShipToAddress(address);
+              setValue("ShipToAddress", address, { shouldDirty: true });
+              setValue("AddressExtension", {
+                ...(watch("AddressExtension") ?? {}),
+                ...toSapAddressExtension(shipToAddressDraft, "ShipTo"),
+              }, { shouldDirty: true });
+              setShipToDialogOpen(false);
+            }}>
+              OK
+            </Button>
+            <Button type="button" variant="outline" onClick={() => {
+              setShipToDialogOpen(false);
+            }} className="h-7 rounded-md border-slate-200 px-4 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+       <Dialog open={billToDialogOpen} onOpenChange={setBillToDialogOpen}>
+        <DialogContent
+          className="z-[120] flex h-[540px] max-h-[calc(100vh-2rem)] w-[420px] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-0 shadow-2xl sm:max-w-[420px]"
+        >
+          <DialogHeader className="shrink-0 border-b border-slate-200 bg-slate-50 px-4 py-3">
+            <DialogTitle className="pr-8 text-left text-sm font-semibold text-slate-900">
+              Address Component
+            </DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 bg-white px-3 py-2">
+            <div className="h-full min-h-0 overflow-y-auto rounded-md border border-slate-200 bg-white">
+              <div className="grid h-full min-h-[300px] grid-rows-12 bg-white">
+                {addressComponentFields.map((field) => (
+                  <div key={field} className="grid min-h-0 grid-cols-[150px_1fr] grid-rows-1 border-b border-slate-200 last:border-b-0">
+                    <label htmlFor={`bill-to-${field}`} className="flex items-center truncate border-r border-slate-200 bg-white px-2 text-[11px] text-slate-700">
+                      {field}
+                    </label>
+                    <Input
+                      id={`bill-to-${field}`}
+                      value={billToAddressDraft[field] ?? ""}
+                      onChange={(event) => setBillToAddressDraft((current) => ({ ...current, [field]: event.target.value }))}
+                      className="h-full min-h-0 rounded-none border-0 bg-white px-2 py-0 text-xs text-slate-900 shadow-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-slate-400"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="shrink-0 flex-row justify-start gap-2 border-t border-slate-200 bg-white px-3 py-3">
+            <Button type="button" className="h-7 rounded-md bg-neutral-900 px-4 text-xs font-medium text-white shadow-sm hover:bg-neutral-800" onClick={() => {
+              const address = addressComponentFields.map((field) => billToAddressDraft[field] ?? "").join("\n").trimEnd();
+              setBillToAddress(address);
+              setValue("BillToAddress", address, { shouldDirty: true });
+              setValue("AddressExtension", {
+                ...(watch("AddressExtension") ?? {}),
+                ...toSapAddressExtension(billToAddressDraft, "BillTo"),
+              }, { shouldDirty: true });
+              setBillToDialogOpen(false);
+            }}>
+              OK
+            </Button>
+            <Button type="button" variant="outline" onClick={() => {
+              setBillToDialogOpen(false);
+            }} className="h-7 rounded-md border-slate-200 px-4 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <ItemSelectorDialog
         open={dialogOpen}

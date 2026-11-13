@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { ReactJsxRuntime } from "next/dist/server/route-modules/app-page/vendored/rsc/entrypoints";
-import { buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
+import { buildSalesDocumentPayload, buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useEffect } from "react";
 import { useAuth } from "@/context/authContext";
@@ -55,6 +55,7 @@ export default function NewQuotationPage() {
         salesPersonCode,
         documentMode,
       });
+      console.log("[Submit button] Sales Quotation update payload:", patchPayload);
       try {
         await patchQuotation(Number(DocEntry), patchPayload);
         if (attachments.length > 0) {
@@ -78,68 +79,23 @@ export default function NewQuotationPage() {
       return;
     }
 
-    const payload = {
-      CardCode: data.CardCode,
-      CardName: data.CardName,
-      DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
-      DocDate: data.DocDate,
-      DocDueDate: data.DocDueDate,
-      TaxDate: data.TaxDate,
-      BranchRegNo: data.BranchRegNo,
-      Comments: data.Comments,
-      DiscountPercent: discountPercent || 0,
-      ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
-      DocumentLines: lines.map((line, index) => {
-        const baseFields: any =
-          documentMode === "service"
-            ? {
-                AccountCode: line.AccountCode || "",
-                AccountName: line.AccountName || "",
-                ItemDescription: line.Description || "",
-                UnitPrice: Number(line.LineTotal) || 0,
-                LineTotal: Number(line.LineTotal) || 0,
-                DiscountPercent: Number(line.DiscountPercent) || 0,
-                VatGroup: line.TaxCode || "",
-              }
-            : {
-                ItemCode: line.ItemCode,
-                Quantity: Number(line.Quantity) || 0,
-                UnitPrice: Number(line.Price) || 0,
-                DiscountPercent: Number(line.DiscountPercent) || 0,
-                VatGroup: line.TaxCode || "",
-                WarehouseCode: line.WarehouseCode || "",
-                UoMCode: line.UoMCode || "",
-              };
-        if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Quotation) {
-          baseFields.BaseType = lastLoadedDocType;
-          baseFields.BaseEntry = DocEntry;
-          baseFields.BaseLine = line.LineNum;
-        }
-        const lineExpenses: any[] = [];
-        if (line.Freight1Type && Number(line.Freight1LCAmount) > 0) {
-          lineExpenses.push({ ExpenseCode: Number(line.Freight1Type), LineTotal: Number(line.Freight1LCAmount), VatGroup: line.Freight1TaxGroup || "" });
-        }
-        if (line.Freight2Type && Number(line.Freight2LCAmount) > 0) {
-          lineExpenses.push({ ExpenseCode: Number(line.Freight2Type), LineTotal: Number(line.Freight2LCAmount), VatGroup: line.Freight2TaxGroup || "" });
-        }
-        if (line.Freight3Type && Number(line.Freight3LCAmount) > 0) {
-          lineExpenses.push({ ExpenseCode: Number(line.Freight3Type), LineTotal: Number(line.Freight3LCAmount), VatGroup: line.Freight3TaxGroup || "" });
-        }
-        if (lineExpenses.length > 0) baseFields.DocumentLineAdditionalExpenses = lineExpenses;
-        return baseFields;
-      }),
-      ...(additionalExpenses.length > 0 && {
-        DocumentAdditionalExpenses: additionalExpenses.map(e => ({
-          ExpenseCode: e.ExpenseCode,
-          LineTotal: e.LineTotal,
-          VatGroup: e.VatGroup || e.TaxCode || "",
-        }))
-      }),
-      ...(freight > 0 && { Freight: freight }),
-    };
+    const payload = buildSalesDocumentPayload({
+      data,
+      lines,
+      docEntry: DocEntry,
+      lastLoadedDocType,
+      targetDocType: DocumentType.Quotation,
+      discountPercent,
+      freight,
+      additionalExpenses,
+      salesPersonCode,
+      documentMode,
+    });
 
     try {
+      console.log("[Submit button] Sales Quotation create payload:", payload);
       const documentData = await postQuotation(payload);
+
       if (!documentData?.DocEntry && !documentData?.IsDraft) throw new Error("Failed to create quotation");
       if (attachments.length > 0 && !documentData?.IsDraft) {
         const attachmentResult = await uploadAndPatchAttachments(

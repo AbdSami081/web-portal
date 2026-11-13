@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { Check, Columns3 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Check, History, Maximize2, Minimize2 } from "lucide-react";
+import { getChangeLogEntries, type ChangeLogEntry } from "@/api+/sap/common/changeLogService";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,51 +11,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface ChangeLogEntry {
-  instance: number;
-  objectCode: number;
-  updated: string;
-  updatedByUserCode: string;
-  updatedByUserName: string;
-  updatedOn: string;
-  created: string;
-  createdByUserCode: string;
-  createdByUserName: string;
-  createdOn: string;
-}
-
 interface ChangeLogModalProps {
   open: boolean;
   onClose: () => void;
   objectCode: number;
 }
-
-const mockChangeLogPayload = (objectCode: number): ChangeLogEntry[] => [
-  {
-    instance: 1,
-    objectCode,
-    updated: "28.10.26",
-    updatedByUserCode: "Dev01",
-    updatedByUserName: "Development",
-    updatedOn: "28.10.26 17:41:28",
-    created: "28.10.26",
-    createdByUserCode: "Dev01",
-    createdByUserName: "Development",
-    createdOn: "28.10.26 17:41:28",
-  },
-  {
-    instance: 2,
-    objectCode,
-    updated: "28.10.26",
-    updatedByUserCode: "Dev01",
-    updatedByUserName: "Development",
-    updatedOn: "28.10.26 17:41:41",
-    created: "28.10.26",
-    createdByUserCode: "Dev01",
-    createdByUserName: "Development",
-    createdOn: "28.10.26 17:41:28",
-  },
-];
 
 const columns: { key: keyof ChangeLogEntry; label: string }[] = [
   { key: "instance", label: "Instance" },
@@ -62,11 +23,11 @@ const columns: { key: keyof ChangeLogEntry; label: string }[] = [
   { key: "updated", label: "Updated" },
   { key: "updatedByUserCode", label: "Updated By - User Code" },
   { key: "updatedByUserName", label: "Updated By - User Name" },
-  { key: "updatedOn", label: "Updated On/At" },
+  { key: "updatedOnAt", label: "Updated On/At" },
   { key: "created", label: "Created" },
   { key: "createdByUserCode", label: "Created By - User Code" },
   { key: "createdByUserName", label: "Created By - User Name" },
-  { key: "createdOn", label: "Created On/At" },
+  { key: "createdOnAt", label: "Created On/At" },
 ];
 
 const ChangeLogModal: React.FC<ChangeLogModalProps> = ({
@@ -74,35 +35,87 @@ const ChangeLogModal: React.FC<ChangeLogModalProps> = ({
   onClose,
   objectCode,
 }) => {
-  const entries = useMemo(() => mockChangeLogPayload(objectCode), [objectCode]);
-  const [selectedInstance, setSelectedInstance] = useState<number | null>(1);
+  const [entries, setEntries] = useState<ChangeLogEntry[]>([]);
+  const [selectedInstance, setSelectedInstance] = useState<number | null>(null);
   const [showDifferences, setShowDifferences] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setEntries([]);
+      return;
+    }
+
+    let isCurrentRequest = true;
+    setEntries([]);
+    setSelectedInstance(null);
+    setShowDifferences(false);
+
+    getChangeLogEntries(objectCode)
+      .then((result) => {
+        if (!isCurrentRequest) return;
+        setEntries(result);
+        setSelectedInstance(result[0]?.instance ?? null);
+      })
+      .catch((error) => {
+        if (!isCurrentRequest) return;
+        console.error("Failed to load change log:", error);
+      });
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [open, objectCode]);
 
   const closeModal = () => {
     setShowDifferences(false);
+    setIsExpanded(false);
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && closeModal()}>
-      <DialogContent className="z-[100] flex max-h-[90vh] w-[96vw] max-w-[1200px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1200px]">
-        <DialogHeader className="border-b bg-slate-800 px-5 py-3 text-white">
-          <DialogTitle className="text-left text-base font-medium text-white">
+      <DialogContent
+        className={`z-[100] flex max-h-[90vh] ${
+          isExpanded
+            ? "w-[96vw] max-w-[1200px] sm:max-w-[1200px]"
+            : "w-[82vw] max-w-[960px] sm:max-w-[960px]"
+        } flex-col gap-0 overflow-hidden rounded-xl border-slate-200 bg-white p-0 shadow-2xl`}
+      >
+        <DialogHeader className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+          <DialogTitle className="flex items-center gap-2 pr-8 text-left text-base font-semibold text-slate-900">
+            <History className="h-4 w-4 text-slate-600" />
             Change Log
           </DialogTitle>
         </DialogHeader>
 
-        <div className="min-h-[280px] flex-1 overflow-auto p-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+          aria-label={isExpanded ? "Restore modal width" : "Expand modal width"}
+          title={isExpanded ? "Restore modal width" : "Expand modal width"}
+          className="absolute right-12 top-3 z-20 h-8 w-8 border-slate-200 bg-white"
+        >
+          {isExpanded ? (
+            <Minimize2 className="h-4 w-4" />
+          ) : (
+            <Maximize2 className="h-4 w-4" />
+          )}
+        </Button>
+
+        <div className="min-h-[280px] flex-1 overflow-auto bg-white p-3">
           <table className="w-full min-w-[1100px] border-collapse text-left text-xs">
             <thead className="sticky top-0 z-10 bg-slate-100 text-slate-700">
               <tr>
-                <th className="w-9 border border-slate-300 px-2 py-1.5 font-medium">
+                <th className="w-9 border border-slate-200 px-2 py-2 font-semibold">
                   #
                 </th>
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className="whitespace-nowrap border border-slate-300 px-2 py-1.5 font-medium"
+                    className="whitespace-nowrap border border-slate-200 px-2 py-2 font-semibold"
                   >
                     {column.label}
                   </th>
@@ -119,17 +132,17 @@ const ChangeLogModal: React.FC<ChangeLogModalProps> = ({
                   }}
                   className={`cursor-pointer ${
                     selectedInstance === entry.instance
-                      ? "bg-blue-100"
-                      : "bg-white hover:bg-slate-50"
+                      ? "bg-blue-50 text-slate-900"
+                      : "bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  <td className="border border-slate-300 px-2 py-1.5 text-slate-500">
+                  <td className="border border-slate-200 px-2 py-2 text-slate-500">
                     {index + 1}
                   </td>
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className="whitespace-nowrap border border-slate-300 px-2 py-1.5"
+                      className="whitespace-nowrap border border-slate-200 px-2 py-2"
                     >
                       {entry[column.key]}
                     </td>
@@ -137,12 +150,12 @@ const ChangeLogModal: React.FC<ChangeLogModalProps> = ({
                 </tr>
               ))}
               {Array.from({ length: 10 }, (_, index) => (
-                <tr key={`empty-${index}`} aria-hidden="true" className="h-7 bg-slate-50">
-                  <td className="border border-slate-300 px-2 py-1.5" />
+                <tr key={`empty-${index}`} aria-hidden="true" className="h-7 bg-white">
+                  <td className="border border-slate-200 px-2 py-1.5" />
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className="whitespace-nowrap border border-slate-300 px-2 py-1.5"
+                      className="whitespace-nowrap border border-slate-200 px-2 py-1.5"
                     />
                   ))}
                 </tr>
@@ -158,33 +171,18 @@ const ChangeLogModal: React.FC<ChangeLogModalProps> = ({
             </div>
           )}
         </div>
-
-        <div className="flex flex-col-reverse gap-2 border-t bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-2">
-            <Button type="button" onClick={closeModal} className="min-w-20">
-              <Check className="mr-1 h-4 w-4" />
-              OK
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={closeModal}
-              className="min-w-20"
-            >
-              Cancel
-            </Button>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={selectedInstance === null}
-            onClick={() => setShowDifferences((shown) => !shown)}
-            className="sm:ml-auto"
-          >
-            <Columns3 className="mr-2 h-4 w-4" />
-            {showDifferences ? "Hide Differences" : "Show Differences"}
-          </Button>
-        </div>
+<div className="flex flex-col-reverse gap-2 border-t border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center">
+  <div className="flex w-full gap-2">
+    <Button
+      type="button"
+      onClick={closeModal}
+      className="min-w-20 ml-auto bg-slate-900 text-white hover:bg-slate-800"
+    >
+      <Check className="mr-1 h-4 w-4" />
+      OK
+    </Button>
+  </div>
+</div>
       </DialogContent>
     </Dialog>
   );

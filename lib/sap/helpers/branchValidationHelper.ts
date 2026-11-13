@@ -13,6 +13,11 @@ export const isBranchMissing = (documentBranch?: number | null): boolean => {
 export const isBranchInactive = (documentBranch?: number | null): boolean => {
   const branchId = documentBranch ?? useBranchStore.getState().sessionDefaultBranch;
   if (branchId === undefined || branchId === null) return false;
-  const branch = useBranchStore.getState().assignedBranches.find((b) => b.BPLID === branchId);
-  return branch?.Disabled === "tYES";
+  const { assignedBranches, allBranches } = useBranchStore.getState();
+  const branches = assignedBranches.length > 0 ? assignedBranches : allBranches;
+  const branch = branches.find((b) => Number(b.BPLID) === Number(branchId));
+  if (!branch) return assignedBranches.length > 0;
+  return ["tyes", "yes", "true", "y", "1"].includes(
+    String(branch.Disabled).trim().toLowerCase(),
+  );
 };
