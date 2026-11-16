@@ -155,7 +155,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 url: "/dashboard/purchase/grpo/new",
                 objectCode: 20,
                 isReporting: true,
-                 allowFieldsAuth :true
+                allowFieldsAuth :true
             },
             {
                 id: "e9abfe0b-c738-4942-a643-3e3ca2db5016",

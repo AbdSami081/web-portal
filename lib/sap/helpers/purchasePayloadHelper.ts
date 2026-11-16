@@ -95,8 +95,11 @@ export function buildPurchaseDocumentPayload({
       RequesterName: data.RequesterName,
       ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
       ...(data.SendNotification && { SendNotification: data.SendNotification }),
+      // SAP Service Layer typo: header Required Date is "RequriedDate" (Purchase Request only).
+      ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
     }),
-    ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
+    // Purchase Quotation also uses the misspelled Service Layer property when RequiredDate is set.
+    ...(!isPurchaseRequest && data.RequiredDate && { RequriedDate: data.RequiredDate }),
     DocDate: data.DocDate,
     DocDueDate: data.DocDueDate,
     TaxDate: data.TaxDate,
@@ -143,7 +146,8 @@ export function buildPurchaseDocumentPayload({
         baseFields.BaseLine = null;
       }
 
-      if (line.RequiredDate) {
+      // Lines use correctly spelled "RequiredDate"; header alone uses SAP's "RequriedDate" typo.
+      if (line.RequiredDate && (isPurchaseRequest || data.RequiredDate)) {
         baseFields.RequiredDate = line.RequiredDate;
       }
 
@@ -198,7 +202,7 @@ export function buildPurchaseDocumentPatchPayload({
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
-    ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
+    ...((isPurchaseRequest || data.RequiredDate) && data.RequiredDate && { RequriedDate: data.RequiredDate }),
     ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
     ...(data.SendNotification && { SendNotification: data.SendNotification }),
     ...(includeLines && {
@@ -233,6 +237,10 @@ export function buildPurchaseDocumentPatchPayload({
 
         if (line.LineNum !== undefined && line.LineNum >= 0) {
           baseFields.LineNum = line.LineNum;
+        }
+
+        if (line.RequiredDate && (isPurchaseRequest || data.RequiredDate)) {
+          baseFields.RequiredDate = line.RequiredDate;
         }
 
         if (documentMode !== "service") {

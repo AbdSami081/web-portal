@@ -51,6 +51,7 @@ export default function PurchaseDraftPage() {
     DocDate: new Date().toISOString().split("T")[0],
     TaxDate: new Date().toISOString().split("T")[0],
     DocDueDate: new Date().toISOString().split("T")[0],
+    RequiredDate: new Date().toISOString().split("T")[0],
     Comments: "",
     DocStatus: "bost_Open",
     DocNum: 0,
