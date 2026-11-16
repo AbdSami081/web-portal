@@ -7,7 +7,8 @@ import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { usePRDDocConfig } from "./PRDDocumentLayout";
-import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
+import { resolveDocAuthStatus, resolveDocWpApprStatus } from "@/lib/approval/approvalHeaderBadge";
+import { redirectIfWpGeneratedDraft, withResolvedPostedDocument } from "@/lib/draftNavigation";
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
@@ -21,7 +22,7 @@ import { ItemSelectorDialog } from "@/modals/ItemSelectorDialog";
 import { Item } from "@/types/sales/Item.type";
 import { ConfirmationModal } from "@/modals/ConfirmationModal";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { getDraftDocument } from "@/api+/sap/draft/draftService";
@@ -133,13 +134,22 @@ export function PRDDocumentHeader() {
   const watchedPlannedQty = watch("PlannedQuantity");
 
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const docNav = useDocNavParams();
   const autoCreatedRef = useState(() => ({ current: false }))[0];
+  const lastAutoNavKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const isDraft = (docNav.draft ?? searchParams.get("draft")) === "1";
     const draftEntryParam = docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
     const docEntryParam = docNav.docEntry ?? searchParams.get("docEntry") ?? "";
+
+    if (!(isDraft && draftEntryParam) && !docEntryParam) return;
+
+    const navKey = isDraft && draftEntryParam ? `draft:${draftEntryParam}` : `doc:${docEntryParam}`;
+    if (lastAutoNavKeyRef.current === navKey) return;
+    lastAutoNavKeyRef.current = navKey;
 
     if (isDraft && draftEntryParam) {
       const draftId = parseInt(draftEntryParam);
@@ -150,24 +160,33 @@ export function PRDDocumentHeader() {
       setSearchValue(docEntryParam);
       fetchDocument(docEntryParam);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [docNav.docEntry, docNav.draftEntry, docNav.draft, searchParams]);
 
   const loadDraftDoc = async (draftId: number) => {
     setIsLoading(true);
     try {
       const documentData = await getDraftDocument(draftId);
       if (documentData) {
+        const resolvedDocument = await withResolvedPostedDocument(
+          documentData as Record<string, unknown>,
+          draftId
+        );
         fetchUdfDefinitions(docType, true);
-        loadFromDocument(documentData, docType);
-        setValue("DocEntry", documentData.DocEntry || 0);
-        setValue("DocNum", documentData.DocNum || 0);
-        setValue("Comments", documentData.Comments || "");
-        setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
-        const draftBranch = documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId;
+        loadFromDocument(resolvedDocument, docType);
+        setValue("DocEntry", resolvedDocument.DocEntry || 0);
+        setValue("DocNum", resolvedDocument.DocNum || 0);
+        setValue("Comments", resolvedDocument.Comments || "");
+        const resolvedAuth = resolveDocAuthStatus(resolvedDocument);
+        setValue("AuthorizationStatus", resolvedAuth);
+        setValue("U_WP_ApprEngine", (resolvedDocument as any).U_WP_ApprEngine || "");
+        setValue("U_WP_ApprStatus", resolveDocWpApprStatus(resolvedDocument, resolvedAuth));
+        const draftBranch = (resolvedDocument.BPL_IDAssignedToInvoice ?? resolvedDocument.BPLId) as number | null;
         setValue("BPL_IDAssignedToInvoice", draftBranch);
         setBranch(draftBranch ?? null);
-        useIFPRDDocument.getState().setLoadedDraftData(documentData);
+        useIFPRDDocument.getState().setLoadedDraftData(resolvedDocument);
+        if (redirectIfWpGeneratedDraft(router, pathname, docType, resolvedDocument)) {
+          return;
+        }
       } else {
         toast.error(`Draft document ${draftId} not found.`);
       }
@@ -357,11 +376,13 @@ export function PRDDocumentHeader() {
       if (documentData && (documentData.DocEntry || documentData.AbsoluteEntry)) {
         resetStore();
         loadFromDocument(documentData, docType);
-        setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
+        const resolvedAuth = resolveDocAuthStatus(documentData);
+        setValue("AuthorizationStatus", resolvedAuth);
+        setValue("U_WP_ApprEngine", (documentData as any).U_WP_ApprEngine || "");
+        setValue("U_WP_ApprStatus", resolveDocWpApprStatus(documentData, resolvedAuth));
         const loadedBranch = documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId ?? null;
         setValue("BPL_IDAssignedToInvoice", loadedBranch, { shouldDirty: true });
         setBranch(loadedBranch);
-        // Map header fields to form
         if (docType === SAPDocumentType.ProductionOrder) {
           setValue("AbsoluteEntry", documentData.AbsoluteEntry, { shouldDirty: true });
           setValue("DocNum", documentData.DocumentNumber, { shouldDirty: true });
@@ -1042,6 +1063,7 @@ export function PRDDocumentHeader() {
       <ItemSelectorDialog
         open={itemSelectorOpen}
         multiple={false}
+        itemUsage="inventory"
         onClose={() => setItemSelectorOpen(false)}
         onSelectItems={(items: Item[]) => {
           if (items.length > 0) {

@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { FieldLookupButton } from "@/components/shared/FieldLookupButton";
 import { GenericModal } from "@/modals/GenericModal";
 import { getwarehouses } from "@/api+/sap/master-data/warehouses";
 import { Warehouse } from "@/types/warehouse/warehouse";
@@ -93,6 +94,9 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
   return (
     <>
+      <td className="w-[48px] text-center">
+        {index + 1}
+      </td>
       {config.itemColumns.actions && (
         <td className="w-[50px]">
           <Button
@@ -254,16 +258,12 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
           <div className="flex items-center justify-center gap-1">
             <span className="block truncate">{normalizeInventoryUom(line.UoMCode)}</span>
             {!isManualUom(line.UoMCode) && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0"
-                onClick={() => setUomDialogOpen(true)}
+              <FieldLookupButton
+                hasValue={Boolean(line.UoMCode)}
+                onSearch={() => setUomDialogOpen(true)}
+                onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
                 disabled={initialStatus === "boposClosed"}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
+              />
             )}
           </div>
         </td>
@@ -292,16 +292,14 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
                 {resolveBranchName(draftLine.BPLid, allBranches)}
               </span>
             )}
-            <Button
-              type="button"
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.Warehouse)}
               variant="outline"
-              size="icon"
               className="h-7 w-7 cursor-pointer"
-              onClick={() => setWarehouseModalOpen(true)}
+              onSearch={() => setWarehouseModalOpen(true)}
+              onClear={() => patchLine({ Warehouse: "", BPLid: undefined })}
               disabled={initialStatus === "boposClosed"}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            />
           </div>
         </td>
       )}
@@ -337,19 +335,16 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
               disabled
               readOnly
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.Project)}
               className="h-7 w-7 shrink-0"
-              onClick={() => {
+              onSearch={() => {
                 loadProjects();
                 setProjectModalOpen(true);
               }}
+              onClear={() => patchLine({ Project: "" })}
               disabled={initialStatus === "boposClosed" || !isProjectEnabled}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            />
           </div>
         </td>
       )}

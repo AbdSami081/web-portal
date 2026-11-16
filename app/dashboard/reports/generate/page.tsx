@@ -14,7 +14,7 @@ import {
   X
 } from "lucide-react";
 import { useAuth } from "@/context/authContext";
-import { getAuthorizedReports, getReports, downloadReport, getReportParameters, isEmbeddedQueryParam, ReportData, ReportParameter } from "@/api+/sap/reporting/reportingService";
+import { getAuthorizedReports, getReports, downloadReport, getReportParameters, isEmbeddedQueryParam, isSapInternalReportParameter, ReportData, ReportParameter } from "@/api+/sap/reporting/reportingService";
 import ReportViewer from "@/components/reporting/ReportViewer";
 import { cn } from "@/lib/utils";
 import ReportParameterModal from "@/modals/ReportParameterModal";
@@ -84,13 +84,18 @@ export default function ReportGeneratePage() {
     return result;
   }, [reports, searchQuery, sortOrder]);
 
+  const visibleReportParameters = (params: ReportParameter[] | undefined) =>
+    (params || []).filter((p) => !isSapInternalReportParameter(p.U_ParamName));
+
   const handleGenerate = async (report: ReportData) => {
     if (!report.Code) return;
 
-    if (report.Parameters && report.Parameters.length > 0) {
-      let resolvedParams = report.Parameters;
+    const promptParams = visibleReportParameters(report.Parameters);
 
-      const hasDropdown = report.Parameters.some(
+    if (promptParams.length > 0) {
+      let resolvedParams = promptParams;
+
+      const hasDropdown = promptParams.some(
         p => p.U_ComponentType === "Dropdown" || isEmbeddedQueryParam(p.U_ParamName)
       );
       if (hasDropdown) {
@@ -101,7 +106,7 @@ export default function ReportGeneratePage() {
           const liveByName = new Map(
             live.map(p => [p.name.toLowerCase(), p])
           );
-          resolvedParams = report.Parameters.map(p => {
+          resolvedParams = promptParams.map(p => {
             if (p.U_ComponentType !== "Dropdown" && !isEmbeddedQueryParam(p.U_ParamName)) return p;
             const fresh = liveByName.get(p.U_ParamName.toLowerCase());
             if (!fresh?.values?.length) return p;
@@ -303,10 +308,10 @@ export default function ReportGeneratePage() {
                        <span className="h-5 px-2 rounded bg-slate-100 text-[9px] font-bold text-slate-500 flex items-center uppercase tracking-wider">
                         {report.U_ExtType || ".rpt"}
                       </span>
-                      {report.Parameters && report.Parameters.length > 0 && (
+                      {visibleReportParameters(report.Parameters).length > 0 && (
                         <span className="h-5 px-2 rounded bg-blue-50 text-[9px] font-bold text-blue-600 flex items-center gap-1 uppercase tracking-wider">
                           <Settings2 className="h-3 w-3" />
-                          {report.Parameters.length} Params
+                          {visibleReportParameters(report.Parameters).length} Params
                         </span>
                       )}
                     </div>

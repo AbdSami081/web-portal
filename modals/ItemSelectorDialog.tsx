@@ -18,7 +18,7 @@ import {
 
 import { Item } from "@/types/sales/Item.type";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { getItemsList } from "@/api+/sap/master-data/items";
+import { getItemsList, type ItemUsage } from "@/api+/sap/master-data/items";
 import { getResourcesList } from "@/api+/sap/master-data/resources";
 
 type SelectorType = "item" | "service";
@@ -33,6 +33,12 @@ interface Props {
   // service = Resources
   type?: SelectorType;
   showTypeToggle?: boolean;
+
+  // Restricts the item list to the OITM usage flag matching the document
+  // module this picker was opened from (SellItem for sales, PrchseItem for
+  // purchase, InvntItem for inventory/production), so e.g. a non-sales item
+  // never shows up in the Sales item picker.
+  itemUsage?: ItemUsage;
 }
 
 export function ItemSelectorDialog({
@@ -42,6 +48,7 @@ export function ItemSelectorDialog({
   multiple = true,
   type = "item",
   showTypeToggle = false,
+  itemUsage,
 }: Props) {
   const [items, setItems] = useState<Item[]>([]);
   const [selectorType, setSelectorType] = useState<SelectorType>(type);
@@ -146,7 +153,8 @@ export function ItemSelectorDialog({
       const res = await getItemsList(
         searchValue,
         skip,
-        top
+        top,
+        itemUsage
       );
 
       setItems((prev) =>

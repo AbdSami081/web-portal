@@ -4,6 +4,17 @@ export type UoMEntry = {
   Name: string;
 };
 
+export const resolveUoMEntryByCode = (
+  code: unknown,
+  uoms: UoMEntry[] = []
+): number | undefined => {
+  if (code === undefined || code === null) return undefined;
+  const raw = String(code).trim();
+  if (!raw) return undefined;
+  const match = uoms.find((u) => u.Code === raw);
+  return match ? match.AbsEntry : undefined;
+};
+
 export const resolveUoMCode = (
   value: unknown,
   uoms: UoMEntry[] = []

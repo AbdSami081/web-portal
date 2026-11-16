@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
-import { resolveDocNavParams } from "@/lib/docNavParams";
+import { readDocNavFromBrowser, type DocNavParams } from "@/lib/docNavParams";
 import { toast } from "sonner";
 import { z } from "zod";
 import { PurchaseVendorHeader } from "@/components/purchase/PurchaseVendorHeader";
@@ -11,7 +10,7 @@ import { PurchaseFooter } from "@/components/purchase/PurchaseFooter";
 import { PurchaseDocumentLayout } from "@/components/purchase/PurchaseDocumentLayout";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
 import { DocumentType } from "@/types/master/DocumentType";
-import { getDraftDocument, SaveDraftToDocument } from "@/api+/sap/draft/draftService";
+import { SaveDraftToDocument, buildSaveDraftToDocumentPayload } from "@/api+/sap/draft/draftService";
 import { Loader2 } from "lucide-react";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 
@@ -34,88 +33,43 @@ const draftSchema = z.object({
 type DraftFormData = z.infer<typeof draftSchema>;
 
 export default function PurchaseDraftPage() {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const docNav = resolveDocNavParams(searchParams, pathname);
-  const draftEntryStr = docNav.draftEntry ?? null;
-  const docTypeParam = docNav.docType ?? null;
+  const [docNav, setDocNav] = useState<DocNavParams | null>(null);
+
+  useEffect(() => {
+    setDocNav(readDocNavFromBrowser());
+  }, []);
+
+  const draftEntryStr = docNav?.draftEntry ?? null;
+  const docTypeParam = docNav?.docType ?? null;
 
   const [isLoading, setIsLoading] = useState(true);
-  const [targetDocType, setTargetDocType] = useState<DocumentType>(() => {
-    const code = Number(docTypeParam);
-    if (!isNaN(code) && code > 0) return code as DocumentType;
-    return DocumentType.PurchaseQuotation;
-  });
+  const [targetDocType, setTargetDocType] = useState<DocumentType>(DocumentType.PurchaseQuotation);
 
-  const [defaultValues, setDefaultValues] = useState<DraftFormData>({
+  const [defaultValues] = useState<DraftFormData>({
     CardCode: "",
     CardName: "",
     DocDate: new Date().toISOString().split("T")[0],
     TaxDate: new Date().toISOString().split("T")[0],
     DocDueDate: new Date().toISOString().split("T")[0],
+    RequiredDate: new Date().toISOString().split("T")[0],
     Comments: "",
     DocStatus: "bost_Open",
     DocNum: 0,
     DocEntry: 0,
   });
 
-  const { loadFromDocument } = usePurchaseDocument();
   const fieldAccess = usePurchaseDocument((s) => s.fieldAccess);
 
   useEffect(() => {
-    const draftId = Number((draftEntryStr ?? "").toString().trim().split(/\s+/)[0]);
-    if (!draftId || isNaN(draftId)) {
-      setIsLoading(false);
-      return;
+    if (!docNav) return;
+
+    const navDocType = Number(docTypeParam);
+    if (!isNaN(navDocType) && navDocType > 0) {
+      setTargetDocType(navDocType as DocumentType);
     }
 
-    const loadDraft = async () => {
-      setIsLoading(true);
-      try {
-        const res = await getDraftDocument(draftId);
-        if (res) {
-          const documentData = {
-            ...res,
-            Comments: res.Comments ?? "",
-            DocumentLines: (res.DocumentLines || []).map((line: any) => ({ ...line })),
-          };
-
-          usePurchaseDocument.getState().setLoadedDraftData(documentData);
-
-          const parsedObjectCode =
-            documentData.DocObjectCode !== undefined && documentData.DocObjectCode !== null
-              ? Number(documentData.DocObjectCode)
-              : NaN;
-          const inferredDocType =
-            !isNaN(parsedObjectCode) && parsedObjectCode > 0
-              ? (parsedObjectCode as DocumentType)
-              : targetDocType;
-
-          setTargetDocType(inferredDocType);
-          loadFromDocument(documentData, inferredDocType, true);
-
-          setDefaultValues((prev) => ({
-            ...prev,
-            CardCode: documentData.CardCode || "",
-            CardName: documentData.CardName || "",
-            NumAtCard: documentData.NumAtCard || "",
-            DocDate: documentData.DocDate ? documentData.DocDate.split("T")[0] : prev.DocDate,
-            TaxDate: documentData.TaxDate ? documentData.TaxDate.split("T")[0] : prev.TaxDate,
-            DocDueDate: documentData.DocDueDate ? documentData.DocDueDate.split("T")[0] : prev.DocDueDate,
-            Comments: documentData.Comments || "",
-          }));
-        } else {
-          toast.error(`Draft #${draftId} not found.`);
-        }
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to load draft document.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadDraft();
-  }, [draftEntryStr]);
+    setIsLoading(false);
+  }, [docNav, docTypeParam]);
 
   const handleCreateDocument = async (data: DraftFormData) => {
     const draftId = Number((draftEntryStr ?? "").toString().trim().split(/\s+/)[0]);
@@ -124,20 +78,14 @@ export default function PurchaseDraftPage() {
       return;
     }
 
-    const docDueDate = data.DocDueDate || data.DocDate || new Date().toISOString().split("T")[0];
-
-    const payload = {
-      Document: {
-        DocEntry: draftId,
-        DocDueDate: String(docDueDate),
-      },
-    };
+    const payload = buildSaveDraftToDocumentPayload(draftId, data.RequiredDate);
 
     try {
       toast.loading("Creating document from draft...", { id: "save-draft-purchase" });
       const created = await SaveDraftToDocument(payload);
       if (created) {
         toast.success("Document created successfully from draft!", { id: "save-draft-purchase" });
+        return created;
       } else {
         toast.error("Failed to create document from draft.", { id: "save-draft-purchase" });
       }

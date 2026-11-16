@@ -16,6 +16,7 @@ export interface SAPMessage {
   CardType?: string | null;
   IsProductionLinked?: boolean | null;
   ObjectEntry: string;
+  PostedDocEntry?: number | null;
   Document?: string;   
   SourceDraftNumber?: number | null;          
 }

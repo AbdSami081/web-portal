@@ -58,6 +58,11 @@ export function PRDDocumentItems() {
   };
 
   const columns = [
+    {
+      key: "serial",
+      title: "S#",
+      width: 48,
+    },
     config.itemColumns.actions && {
       key: "actions",
       title: "Actions",
@@ -239,6 +244,7 @@ export function PRDDocumentItems() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
+        itemUsage="inventory"
         showTypeToggle={config.type === DocumentType.ProductionOrder}
       />
     </div>

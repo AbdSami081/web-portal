@@ -9,6 +9,7 @@ import { PurchaseFooter } from "@/components/purchase/PurchaseFooter";
 import { PurchaseItems } from "@/components/purchase/PurchaseItems";
 import { PurchaseVendorHeader } from "@/components/purchase/PurchaseVendorHeader";
 import { getSapErrorMessage } from "@/lib/errorHelper";
+import { applyDistributionFields } from "@/lib/sap/helpers/distributionHelper";
 import {
   APDownPaymentInoviceFormData,
   APDownPaymentInvoiceSchema,
@@ -93,6 +94,8 @@ export default function APDownPaymentInvoicePage() {
                 VatGroup: line.TaxCode || "",
               }
             : { ...line };
+        lineData.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
+        applyDistributionFields(line, lineData);
 
         if (
           DocEntry &&

@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
 
 const PENDING_KEY = "portalDocNav.pending";
 const ACTIVE_KEY = "portalDocNav.active";
@@ -64,41 +63,71 @@ const writeStored = (key: string, value: StoredNav | null) => {
   }
 };
 
-export const resolveDocNavParams = (
-  searchParams: URLSearchParams,
-  pathname: string
-): DocNavParams => {
+const readFromUrl = (searchParams: URLSearchParams): DocNavParams => {
   const fromUrl: DocNavParams = {};
   for (const key of KEYS) {
     const value = searchParams.get(key);
     if (value) fromUrl[key] = value;
   }
 
+  if (Object.keys(fromUrl).length > 0) return fromUrl;
+
+  if (typeof window !== "undefined" && window.location.search) {
+    const live = new URLSearchParams(window.location.search);
+    for (const key of KEYS) {
+      const value = live.get(key);
+      if (value) fromUrl[key] = value;
+    }
+  }
+
+  return fromUrl;
+};
+
+const matchesPathname = (stored: string, pathname: string): boolean => {
+  if (stored === pathname) return true;
+  if (typeof window !== "undefined" && stored === window.location.pathname) return true;
+  return false;
+};
+
+export const resolveDocNavParams = (
+  searchParams: URLSearchParams,
+  pathname: string
+): DocNavParams => {
+  const fromUrl = readFromUrl(searchParams);
+
   const pending = readStored(PENDING_KEY);
   let active = readStored(ACTIVE_KEY);
 
-  if (active && active.pathname !== pathname) {
+  if (active && !matchesPathname(active.pathname, pathname)) {
     writeStored(ACTIVE_KEY, null);
     active = null;
   }
 
-  if (pending && pending.pathname === pathname) {
+  if (pending && matchesPathname(pending.pathname, pathname)) {
     writeStored(ACTIVE_KEY, pending);
     writeStored(PENDING_KEY, null);
     return { ...pending.params, ...fromUrl };
   }
 
-  if (active && active.pathname === pathname) {
+  if (active && matchesPathname(active.pathname, pathname)) {
     return { ...active.params, ...fromUrl };
   }
 
   return fromUrl;
 };
 
+export const readDocNavFromBrowser = (): DocNavParams => {
+  if (typeof window === "undefined") return {};
+  return resolveDocNavParams(
+    new URLSearchParams(window.location.search),
+    window.location.pathname
+  );
+};
+
 export function useDocNavParams(): DocNavParams {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  return useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  return resolveDocNavParams(searchParams, pathname);
 }
 
 export const clearDocNavParams = (

@@ -47,6 +47,7 @@ export function FmsFieldButton({ field, className = "", size = 14, onApply, cont
   return (
     <button
       type="button"
+      data-fms-icon="1"
       title="Run formatted search (Shift+F2)"
       aria-label={`Run formatted search for ${field}`}
       onClick={run}

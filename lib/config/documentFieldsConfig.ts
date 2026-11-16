@@ -43,6 +43,8 @@ export const PURCHASE_DOWNPAYMENT_FOOTER_FIELDS: FieldDef[] = withTitle(
 export const PURCHASE_LINE_FIELDS: FieldDef[] = [
   { key: "ItemCode", title: "Item Code", enabled: true },
   { key: "ItemName", title: "Item Description", enabled: true },
+  { key: "LineVendor", title: "Vendor", enabled: true },
+  { key: "RequiredDate", title: "Required Date", enabled: true },
   { key: "Quantity", title: "Qty", enabled: true },
   { key: "OnHand", title: "Qty In Whs", enabled: true },
   { key: "Price", title: "Unit Price", enabled: true },

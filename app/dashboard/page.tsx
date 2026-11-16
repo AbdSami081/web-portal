@@ -446,10 +446,12 @@ export default function DashboardPage() {
       isDraft: false,
     }).split("?")[0];
 
-    stageDocNavParams(cleanPath, {
+    const navParams = {
       docEntry: String(docEntry),
       docType: String(docType),
-    });
+    };
+
+    stageDocNavParams(cleanPath, navParams);
     setDocumentsModalOpen(false);
     router.push(cleanPath);
   };

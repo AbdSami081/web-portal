@@ -3,6 +3,8 @@ import { resolveBranchId } from "./documentPayloadHelper";
 import { pickLineUdfs } from "./lineUdfHelper";
 import { applyDistributionFields } from "./distributionHelper";
 import { sanitizeItemCode } from "./sanitizeItemCode";
+import { useUoMStore } from "@/stores/useUoMStore";
+import { resolveUoMEntryByCode } from "@/utils/inventoryUom";
 
 interface BuildPurchasePayloadOptions {
   data: any;
@@ -80,6 +82,7 @@ export function buildPurchaseDocumentPayload({
     lastLoadedDocType !== targetDocType;
 
   const isPurchaseRequest = !!data.Requester;
+  const uoms = useUoMStore.getState().uoms;
 
   return {
     ...pickLineUdfs(data),
@@ -92,8 +95,11 @@ export function buildPurchaseDocumentPayload({
       RequesterName: data.RequesterName,
       ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
       ...(data.SendNotification && { SendNotification: data.SendNotification }),
+      // SAP Service Layer typo: header Required Date is "RequriedDate" (Purchase Request only).
+      ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
     }),
-    ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
+    // Purchase Quotation also uses the misspelled Service Layer property when RequiredDate is set.
+    ...(!isPurchaseRequest && data.RequiredDate && { RequriedDate: data.RequiredDate }),
     DocDate: data.DocDate,
     DocDueDate: data.DocDueDate,
     TaxDate: data.TaxDate,
@@ -126,7 +132,9 @@ export function buildPurchaseDocumentPayload({
               VatGroup: line.TaxCode || "",
               WarehouseCode: line.WarehouseCode || "",
               UoMCode: line.UoMCode || "",
+              UoMEntry: resolveUoMEntryByCode(line.UoMCode, uoms),
             };
+      baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
 
       if (hasCopyFrom) {
         baseFields.BaseType = lastLoadedDocType;
@@ -138,15 +146,17 @@ export function buildPurchaseDocumentPayload({
         baseFields.BaseLine = null;
       }
 
-      if (line.RequiredDate) {
+      // Lines use correctly spelled "RequiredDate"; header alone uses SAP's "RequriedDate" typo.
+      if (line.RequiredDate && (isPurchaseRequest || data.RequiredDate)) {
         baseFields.RequiredDate = line.RequiredDate;
       }
 
       if (documentMode !== "service") {
         if (line.FreeText) baseFields.FreeText = line.FreeText;
         if (line.Project) baseFields.ProjectCode = line.Project;
-        applyDistributionFields(line, baseFields);
+        if (line.LineVendor) baseFields.LineVendor = line.LineVendor;
       }
+      applyDistributionFields(line, baseFields);
 
       const lineExpenses = mapLineExpenses(line);
       if (lineExpenses.length > 0) {
@@ -183,6 +193,7 @@ export function buildPurchaseDocumentPatchPayload({
   documentMode,
 }: BuildPurchasePatchPayloadOptions) {
   const isPurchaseRequest = !!data.Requester;
+  const uoms = useUoMStore.getState().uoms;
 
   return {
     ...pickLineUdfs(data),
@@ -191,7 +202,7 @@ export function buildPurchaseDocumentPatchPayload({
     ...(data.DocDate && { DocDate: data.DocDate }),
     ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
-    ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
+    ...((isPurchaseRequest || data.RequiredDate) && data.RequiredDate && { RequriedDate: data.RequiredDate }),
     ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),
     ...(data.SendNotification && { SendNotification: data.SendNotification }),
     ...(includeLines && {
@@ -220,16 +231,24 @@ export function buildPurchaseDocumentPatchPayload({
                 VatGroup: line.TaxCode || "",
                 WarehouseCode: line.WarehouseCode || "",
                 UoMCode: line.UoMCode || "",
+                UoMEntry: resolveUoMEntryByCode(line.UoMCode, uoms),
               };
+        baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
 
         if (line.LineNum !== undefined && line.LineNum >= 0) {
           baseFields.LineNum = line.LineNum;
         }
 
+        if (line.RequiredDate && (isPurchaseRequest || data.RequiredDate)) {
+          baseFields.RequiredDate = line.RequiredDate;
+        }
+
         if (documentMode !== "service") {
           if (line.FreeText) baseFields.FreeText = line.FreeText;
           if (line.Project) baseFields.ProjectCode = line.Project;
+          if (line.LineVendor) baseFields.LineVendor = line.LineVendor;
         }
+        applyDistributionFields(line, baseFields);
 
         const lineExpenses = mapLineExpenses(line);
         if (lineExpenses.length > 0) {

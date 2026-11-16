@@ -9,6 +9,7 @@ import {
   getReportFolders, 
   importReport, 
   getReportParameters,
+  isSapInternalReportParameter,
   ReportFolderItem 
 } from "@/api+/sap/reporting/reportingService";
 import { getUserAccess } from "@/api+/sap/authorization/authorizationService";
@@ -187,7 +188,9 @@ export default function ReportsManagePage() {
       
       for (const item of Array.from(selectedItems)) {
         const cls = getClassification(item.name);
-        const paramsData = await getReportParameters(item.path, currentUser?.companyDB);
+        const paramsData = (await getReportParameters(item.path, currentUser?.companyDB)).filter(
+          (p) => !isSapInternalReportParameter(p.name)
+        );
         const paramsArray = (paramsData || []).map((p) => {
           const hasValues = p.componentType === "Dropdown" && (p.values?.length ?? 0) > 0;
           return {

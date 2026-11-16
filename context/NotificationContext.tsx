@@ -7,6 +7,7 @@ import { useAuth } from "./authContext";
 import { toast } from "sonner";
 import { SAPMessage, getMyAlerts, getMyAlertsCount } from "@/api+/sap/notification";
 import apiClient from "@/lib/apiClient";
+import { alertFieldsFromSapMessage, buildMessageAlertHref, formatApprovalAlert, normalizeSapAlertMessage } from "@/lib/messages/formatApprovalAlert";
 
 export interface ApprovalRemarksEntry {
   Stage?: string | null;
@@ -21,8 +22,8 @@ export interface PendingApproval {
   ObjectType: string;
   CardType?: string | null;
   IsProductionLinked?: boolean | null;
-  ObjectEntry: number;
-  DraftEntry: number;
+  ObjectEntry: number | string;
+  DraftEntry: number | string;
   Status?: string;
   ApprovalStatus?: string;
   Remarks: string;
@@ -30,6 +31,9 @@ export interface PendingApproval {
   ApprovalCreationDate: string;
   OriginatorID?: number;
   CurrentStage?: number;
+  Engine?: "WP" | "SAP";
+  WddCode?: string;
+  ApprovalBadge?: "WP" | "SAP";
 }
 
 interface NotificationContextType {
@@ -223,21 +227,63 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       }, 5000);
     });
 
-    connection.on("ReceiveNotification", (msg: SAPMessage) => {
-      console.log("Real-time notification received: ", msg);
-      setMessages((prev) => [msg, ...prev]);
+    connection.on("ReceiveNotification", (rawMsg: SAPMessage) => {
+      console.log("Real-time notification received: ", rawMsg);
+      const msg = normalizeSapAlertMessage(rawMsg);
+      const rawCode = Number(msg.MessageCode);
+      const draftKey = String(msg.DraftEntry || "").trim();
       setUnreadCount((c) => c + 1);
 
       void refreshPendingApprovals(true);
 
-      toast.info(`New SAP Alert: ${msg.Subject}`, {
-        description: msg.Text || "",
-        duration: 8000,
-        action: {
-          label: "View Inbox",
-          onClick: () => routerRef.current.push("/dashboard/messages"),
-        },
+      const showAlert = (sourceMessage: SAPMessage, messageCode: number) => {
+        const fields = alertFieldsFromSapMessage(sourceMessage);
+        const formatted = formatApprovalAlert(fields);
+        const toastTitle = formatted.decision
+          ? formatted.title
+          : formatted.documentLabel
+            ? `New SAP Alert: ${formatted.documentLabel}`
+            : `New SAP Alert: ${sourceMessage.Subject || "Document update"}`;
+        const toastId = Number.isFinite(messageCode) && messageCode > 0
+          ? `sap-alert-${messageCode}`
+          : draftKey
+            ? `sap-alert-draft-${draftKey}`
+            : `sap-alert-${Date.now()}`;
+        toast.info(toastTitle, {
+          id: toastId,
+          description: formatted.decision
+            ? formatted.description
+            : (sourceMessage.Text || "Open Message Alert to review this document."),
+          duration: 10000,
+          action: {
+            label: "View",
+            onClick: () => routerRef.current.push(buildMessageAlertHref(messageCode || rawCode || 0, fields)),
+          },
+        });
+      };
+
+      // Instant toast from the SignalR payload (must not wait on GetMyAlerts).
+      showAlert(msg, rawCode);
+      setMessages((prev) => {
+        if (rawCode > 0 && prev.some((m) => Number(m.MessageCode) === rawCode)) return prev;
+        return [msg, ...prev];
       });
+
+      void (async () => {
+        try {
+          const page = await getMyAlerts(0);
+          const list = page.messages || [];
+          setMessages(list);
+          const enriched =
+            list.find((m) => rawCode > 0 && Number(m.MessageCode) === rawCode) ||
+            (draftKey
+              ? list.find((m) => String(m.DraftEntry || "").trim() === draftKey)
+              : undefined);
+          if (enriched) showAlert(normalizeSapAlertMessage(enriched), Number(enriched.MessageCode) || rawCode);
+        } catch (error) {
+          console.error("Failed to refresh messages for real-time notification", error);
+        }
+      })();
     });
 
     void startHubConnection();

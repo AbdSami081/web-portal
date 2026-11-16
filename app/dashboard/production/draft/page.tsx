@@ -11,7 +11,7 @@ import PRDDocumentFooter from "@/components/production/shared/PRDDocumentFooter"
 import { PRDDocumentLayout } from "@/components/production/shared/PRDDocumentLayout";
 import { useIFPRDDocument } from "@/stores/production/useProductionDocument";
 import { DocumentType } from "@/types/master/DocumentType";
-import { getDraftDocument, SaveDraftToDocument } from "@/api+/sap/draft/draftService";
+import { getDraftDocument, SaveDraftToDocument, buildSaveDraftToDocumentPayload } from "@/api+/sap/draft/draftService";
 import { Loader2 } from "lucide-react";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 
@@ -119,20 +119,14 @@ export default function ProductionDraftPage() {
       return;
     }
 
-    const rawDate = data.PostDate || data.DocDate || new Date().toISOString().split("T")[0];
-
-    const payload = {
-      Document: {
-        DocEntry: draftId,
-        DocDueDate: String(rawDate),
-      },
-    };
+    const payload = buildSaveDraftToDocumentPayload(draftId);
 
     try {
       toast.loading("Creating document from draft...", { id: "save-draft-prd" });
       const created = await SaveDraftToDocument(payload);
       if (created) {
         toast.success("Document created successfully from draft!", { id: "save-draft-prd" });
+        return created;
       } else {
         toast.error("Failed to create document from draft.", { id: "save-draft-prd" });
       }

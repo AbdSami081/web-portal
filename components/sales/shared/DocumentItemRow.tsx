@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Settings, Trash, Search } from "lucide-react";
+import { Settings, Trash } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { useSalesDocument } from "@/stores/sales/useSalesDocument";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
@@ -43,6 +43,7 @@ import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { useChartOfAccountsStore } from "@/stores/useChartOfAccountsStore";
 import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService";
+import { FieldLookupButton } from "@/components/shared/FieldLookupButton";
 interface Props {
   index: number;
   line: SalesDocumentLine;
@@ -61,6 +62,7 @@ export function DocumentLineRow({
 );
   const chartOfAccountsHasMore = useChartOfAccountsStore((state) => state.hasMore);
   const chartOfAccountsLoading = useChartOfAccountsStore((state) => state.isLoading);
+  const loadChartOfAccounts = useChartOfAccountsStore((state) => state.loadChartOfAccounts);
   const loadMoreChartOfAccounts = useChartOfAccountsStore((state) => state.loadMoreChartOfAccounts);
 
   const isService = documentMode === "service";
@@ -107,7 +109,7 @@ export function DocumentLineRow({
   const isCellEditable = (fieldName: string) =>
     isFieldEnabled(fieldName) && !isLineDisabled;
 
-  const { updateLine, removeLine } = useSalesDocument();
+  const { updateLine, removeLine, removeLineByIndex } = useSalesDocument();
 
   const {
     freightsWithCharges,
@@ -129,6 +131,14 @@ export function DocumentLineRow({
   const [distModalOpen, setDistModalOpen] =
     useState(false);
     const [glAccountModalOpen, setGlAccountModalOpen] = useState(false);
+
+    useEffect(() => {
+      if (!glAccountModalOpen) return;
+      const state = useChartOfAccountsStore.getState();
+      if (state.chartOfAccounts.length === 0 && !state.isLoading) {
+        void loadChartOfAccounts();
+      }
+    }, [glAccountModalOpen, loadChartOfAccounts]);
 
   const [activeDistField, setActiveDistField] = useState("");
   const [distRuleOptions, setDistRuleOptions] = useState<DistributionRule[]>([]);
@@ -498,13 +508,15 @@ useEffect(() => {
 if (isService) {
   return (
     <>
-      {}
+      <td className="py-2 px-2 border-r border-neutral-100/10 text-center w-[48px]">
+        {index + 1}
+      </td>
       <td className="py-2 px-2 border-r border-neutral-100/10 text-center">
         <Button
           type="button"
           variant="ghost"
           className="h-6 w-6 p-0 hover:bg-red-100/10"
-          onClick={() => removeLine(line.ItemCode)}
+          onClick={() => removeLineByIndex(index)}
           disabled={isLineDisabled}
           title="Remove service"
         >
@@ -528,16 +540,13 @@ if (isService) {
         disabled
         readOnly
       />
-      <Button
-        type="button"
+      <FieldLookupButton
+        hasValue={Boolean(draftLine.AccountCode)}
         variant="outline"
-        size="icon"
         className="h-8 w-8 shrink-0"
-        
-  onClick={() => setGlAccountModalOpen(true)}
-      >
-        <Search className="h-4 w-4" />
-      </Button>
+        onSearch={() => setGlAccountModalOpen(true)}
+        onClear={() => patchLine({ AccountCode: "", AccountName: "", ItemCode: "", ItemName: "" })}
+      />
 
     </div>
   </td>
@@ -1045,6 +1054,49 @@ if (isService) {
         </td>
       )}
 
+      {activeDimensions.flatMap((n) => {
+        const costingField = costingCodeField(n);
+        const cogsField = cogsCostingCodeField(n);
+        return [
+          isFieldVisible(costingField) && (
+            <td className="py-2 px-2 w-[160px]" key={costingField}>
+              <div className="flex items-center gap-1">
+                <Input
+                  className="h-6 w-full bg-gray-100 text-left text-xs"
+                  value={(draftLine as any)[costingField] || ""}
+                  disabled
+                  readOnly
+                />
+                <FieldLookupButton
+                  hasValue={Boolean((draftLine as any)[costingField])}
+                  className="h-6 w-6"
+                  onSearch={() => openDistModal(costingField, n)}
+                  onClear={() => patchLine({ [costingField]: "" })}
+                />
+              </div>
+            </td>
+          ),
+          isFieldVisible(cogsField) && (
+            <td className="py-2 px-2 w-[160px]" key={cogsField}>
+              <div className="flex items-center gap-1">
+                <Input
+                  className="h-6 w-full bg-gray-100 text-left text-xs"
+                  value={(draftLine as any)[cogsField] || ""}
+                  disabled
+                  readOnly
+                />
+                <FieldLookupButton
+                  hasValue={Boolean((draftLine as any)[cogsField])}
+                  className="h-6 w-6"
+                  onSearch={() => openDistModal(cogsField, n)}
+                  onClear={() => patchLine({ [cogsField]: "" })}
+                />
+              </div>
+            </td>
+          ),
+        ];
+      })}
+
       <LineUDFCells
         docType={config.type}
         line={draftLine}
@@ -1077,7 +1129,26 @@ if (isService) {
           );
         }}
       />
-      
+
+      <GenericModal
+        open={distModalOpen}
+        onClose={() => setDistModalOpen(false)}
+        onSelect={(val) => {
+          patchLine({
+            [activeDistField]: val,
+          });
+          setDistModalOpen(false);
+        }}
+        data={distRuleOptions}
+        isLoading={distRulesLoading}
+        columns={[
+          { key: "Code", label: "Code" },
+          { key: "Name", label: "Name" },
+        ]}
+        title="Select Distribution Rule"
+        getSelectValue={(item) => item.Code}
+      />
+
 <GenericModal
   open={glAccountModalOpen}
   onClose={() => setGlAccountModalOpen(false)}
@@ -1104,6 +1175,7 @@ if (isService) {
   onLoadMore={loadMoreChartOfAccounts}
   hasMore={chartOfAccountsHasMore}
   isLoading={chartOfAccountsLoading}
+  onRetry={loadChartOfAccounts}
 />
     </>
   );
@@ -1111,6 +1183,9 @@ if (isService) {
 
   return (
     <>
+      <td className="py-2 px-2 border-r border-neutral-100/10 text-center w-[48px]">
+        {index + 1}
+      </td>
       <td className="py-2 px-2 border-r border-neutral-100/10 text-center">
         <Button
           type="button"
@@ -1456,24 +1531,12 @@ if (isService) {
               readOnly
             />
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0"
-              onClick={() =>
-                setWhDialogOpen(
-                  true
-                )
-              }
-              disabled={
-                !isCellEditable(
-                  "WarehouseCode"
-                )
-              }
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.WarehouseCode)}
+              onSearch={() => setWhDialogOpen(true)}
+              onClear={() => patchLine({ WarehouseCode: "", BPLid: undefined, OnHand: 0 })}
+              disabled={!isCellEditable("WarehouseCode")}
+            />
 
             <LineCellFms
               field="WarehouseCode"
@@ -1524,24 +1587,12 @@ if (isService) {
             {!isManualUom(
               draftLine.UoMCode
             ) && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0"
-                onClick={() =>
-                  setUomDialogOpen(
-                    true
-                  )
-                }
-                disabled={
-                  !isCellEditable(
-                    "UoMCode"
-                  )
-                }
-              >
-                <Search className="h-4 w-4" />
-              </Button>
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.UoMCode)}
+                onSearch={() => setUomDialogOpen(true)}
+                onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
+                disabled={!isCellEditable("UoMCode")}
+              />
             )}
 
             <LineCellFms
@@ -1618,19 +1669,15 @@ if (isService) {
               disabled
               readOnly
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => {
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.Project)}
+              onSearch={() => {
                 loadProjects();
                 setProjectModalOpen(true);
               }}
+              onClear={() => patchLine({ Project: "" })}
               disabled={!isCellEditable("Project")}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            />
           </div>
         </td>
       )}
@@ -1984,16 +2031,13 @@ if (isService) {
                   disabled
                   readOnly
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <FieldLookupButton
+                  hasValue={Boolean((draftLine as any)[costingField])}
                   className="h-6 w-6"
-                  onClick={() => openDistModal(costingField, n)}
+                  onSearch={() => openDistModal(costingField, n)}
+                  onClear={() => patchLine({ [costingField]: "" })}
                   disabled={!isCellEditable(costingField)}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
+                />
               </div>
             </td>
           ),
@@ -2006,16 +2050,13 @@ if (isService) {
                   disabled
                   readOnly
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <FieldLookupButton
+                  hasValue={Boolean((draftLine as any)[cogsField])}
                   className="h-6 w-6"
-                  onClick={() => openDistModal(cogsField, n)}
+                  onSearch={() => openDistModal(cogsField, n)}
+                  onClear={() => patchLine({ [cogsField]: "" })}
                   disabled={!isCellEditable(cogsField)}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
+                />
               </div>
             </td>
           ),

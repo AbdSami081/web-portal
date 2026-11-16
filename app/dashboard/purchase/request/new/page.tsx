@@ -10,7 +10,7 @@ import { PurchaseFooter } from "@/components/purchase/PurchaseFooter";
 import { PurchaseRequestFormData, purchaseRequestSchema } from "@/lib/schemas/purchaseVendorSchemas";
 import { DocumentType } from "@/types/master/DocumentType";
 import { getSapErrorMessage } from "@/lib/errorHelper";
-import { patchPurchaseRequest, postPurchaseRequest } from "@/api+/sap/purchase/purchaseService";
+import { postPurchaseRequest, patchPurchaseRequest } from "@/api+/sap/purchase/purchaseService";
 import { uploadAttachments } from "@/api+/sap/attachments/attachmentService";
 import { buildPurchaseDocumentPayload, buildPurchaseDocumentPatchPayload } from "@/lib/sap/helpers/purchasePayloadHelper";
 
@@ -137,7 +137,7 @@ export default function PurchaseRequestPage() {
       console.log("Submitting Purchase Request with payload:", payload);
       const documentData = await postPurchaseRequest(payload);
       if (documentData?.IsDraft) {
-        toast.success("Purchase Request submitted for approval.");
+        toast.success("Purchase request sent for approval.");
         return documentData;
       }
       if (!documentData?.DocEntry) throw new Error("Failed to create request");

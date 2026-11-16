@@ -34,10 +34,13 @@ import { BatchNumberSelectionDialog } from "@/modals/BatchNumberSelectionDialog"
 import HeaderActions from "@/components/Custom/HeaderAction";
 import { useDocumentRights, useGlobalRights } from "@/hooks/useDocumentRights";
 
-import { getCurrentUserApprovalTemplates, getApprovalDocumentType, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
+import { planDocumentApproval, submitApprovalRequest, validateDraftChanged, interpretReApprovalResponse } from "@/api+/sap/Templates/approvalTemplate";
+import { isCustomApprovalEngineResult } from "@/lib/approval/postSubmitApproval";
 import { APPROVED_DOC_EDIT_BLOCKED_MSG, REJECTED_DOC_EDIT_BLOCKED_MSG } from "@/lib/approval/approvalCondition";
 import { runReopenApproval } from "@/lib/approval/reopenApproval";
-import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout } from "@/lib/approval/approvalHeaderBadge";
+import { resolveApprovalHeaderBadges, mapAuthorizationStatus, isAuthorizationWithout, resolveLiveApprovalStatus, approvalFlagsFromStatus, resolveWorkflowHeaderBadges, isWpGeneratedStatus } from "@/lib/approval/approvalHeaderBadge";
+import { finishDraftSubmitNavigation, isDraftModulePath } from "@/lib/draftNavigation";
+import { WpDraftApprovalActions } from "@/components/approval/WpDraftApprovalActions";
 import { useUserHasApprovalTemplate } from "@/hooks/useApprovalDocuments";
 import { RequestDocumentGenerationModal } from "@/modals/RequestDocumentGenerationModal";
 import { ApprovalTemplate } from "@/types/template.type";
@@ -54,8 +57,8 @@ import { useFMS, FmsProvider } from "@/hooks/useFMS";
 import FMSSelectionModal from "@/modals/FMSSelectionModal";
 import { FmsKeyboardBridge } from "@/components/Custom/FmsKeyboardBridge";
 import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
-import { getAllFields } from "@/api+/sap/administration/administrationService";
-import { resolveFieldAuthDocType, findMenuItemByPath, isRouteAllowed } from "@/lib/menu-data";
+import { useDocumentFieldAccess } from "@/hooks/useDocumentFieldAccess";
+import { isRouteAllowed } from "@/lib/menu-data";
 import { useAuth } from "@/context/authContext";
 
 
@@ -97,28 +100,8 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const { allowedActions: globalAllowedActions } = useGlobalRights();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const docNav = useMemo(() => resolveDocNavParams(searchParams, pathname), [searchParams, pathname]);
+  const docNav = resolveDocNavParams(searchParams, pathname);
   const headerBadges = useMemo(() => resolveApprovalHeaderBadges(docNav), [docNav]);
-  const statusStr = (docNav.approvalStatus || "").trim().toLowerCase();
-  const isApprovedDraft = statusStr === "arsapproved" || statusStr === "ardapproved" || statusStr === "approved";
-  const isRejectedApproval =
-    statusStr === "arsrejected" ||
-    statusStr === "ardrejected" ||
-    statusStr === "arsnotapproved" ||
-    statusStr === "ardnotapproved" ||
-    statusStr === "rejected" ||
-    statusStr === "notapproved" ||
-    statusStr === "arscancelled" ||
-    statusStr === "arscanceled" ||
-    statusStr === "ardcancelled" ||
-    statusStr === "ardcanceled" ||
-    statusStr === "arscomplete";
-  const isPendingApproval =
-    (statusStr === "arspending" ||
-      statusStr === "ardpending" ||
-      statusStr === "pending" ||
-      (!statusStr && !!docNav.approvalRequestCode && !!docNav.draftEntry)) &&
-    !!docNav.draftEntry;
 
   const [badgeState, setBadgeState] = useState<"draft" | "approved" | null>(() => {
     const draftEntryParam = docNav.draftEntry;
@@ -151,18 +134,34 @@ export function SalesDocumentLayout<T extends FieldValues>({
   const { reset: lineReset, customer, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, lines, loadedDraftData } = useSalesDocument();
 
   const authStatus = watch("AuthorizationStatus" as any);
+  const wpApprStatus = watch("U_WP_ApprStatus" as any);
+  const liveApproval = approvalFlagsFromStatus(
+    resolveLiveApprovalStatus(docNav.approvalStatus, authStatus),
+    !!docNav.draftEntry,
+    !!docNav.approvalRequestCode
+  );
+  const wpGenerated = isWpGeneratedStatus(authStatus, wpApprStatus);
+  const isApprovedDraft = !wpGenerated && liveApproval.isApprovedDraft;
+  const isRejectedApproval = liveApproval.isRejectedApproval;
+  const isPendingApproval = liveApproval.isPendingApproval;
   const authWithout = isAuthorizationWithout(authStatus);
   const authBadge = mapAuthorizationStatus(authStatus);
   const hasNavApproval = !!docNav.approvalStatus || !!docNav.approvalRequestCode;
   const approvalApplies = useUserHasApprovalTemplate(docType);
   const isPostedLoaded = Number(DocEntry) > 0 && !loadedDraftData && !docNav.draftEntry;
-  const draftBadgeVisible =
-    !authWithout && !isPostedLoaded &&
-    (approvalApplies || hasNavApproval || !!loadedDraftData || badgeState === "draft" || headerBadges.showDraft);
   const documentLoaded = Number(DocEntry) > 0 || !!loadedDraftData;
-  const statusBadge = authWithout || !documentLoaded
-    ? null
-    : (authBadge ?? headerBadges.status ?? (badgeState === "approved" && !draftBadgeVisible ? "approved" : null));
+  const { draftBadgeVisible, statusBadge } = resolveWorkflowHeaderBadges({
+    authWithout,
+    documentLoaded,
+    authBadge,
+    headerBadges,
+    wpApprStatus,
+    authorizationStatus: authStatus,
+    approvalApplies,
+    hasNavApproval,
+    loadedDraftData,
+    isPostedLoaded,
+  });
 
   useEffect(() => {
     console.log("[SQ draft/badge]", {
@@ -235,33 +234,7 @@ const setFieldAccess = useSalesDocument(
 );
 const fieldAccess = useSalesDocument((state) => state.fieldAccess);
 
-useEffect(() => {
-  let cancelled = false;
-  const loadAccess = async () => {
-    if (!user?.empId) return;
-
-    const menuItem = findMenuItemByPath(pathname);
-    const fieldAuthDocType = menuItem ? resolveFieldAuthDocType(menuItem) : String(docType);
-
-    const fields = await getAllFields(
-      user.empId,
-      fieldAuthDocType
-    );
-
-    if (cancelled) return;
-
-    const allowed = fields
-      .filter((x: any) => x.Enabled === "Y")
-      .map((x: any) => x.U_FieldName);
-
-    setFieldAccess(allowed);
-  };
-
-  loadAccess();
-  return () => {
-    cancelled = true;
-  };
-}, [user?.empId, pathname, docType]);
+useDocumentFieldAccess(user?.empId, pathname, docType, setFieldAccess);
 
 
 
@@ -430,7 +403,7 @@ useEffect(() => {
   ) => {
     const mode = submitModeRef.current;
     submitModeRef.current = "default";
-    if (mode === "view") {
+    if (mode === "view" && !isDraftModulePath(pathname)) {
       const wasEditMode = Number((data as any).DocEntry) > 0;
       const docNumForView = wasEditMode
         ? (data as any).DocNum
@@ -443,6 +416,9 @@ useEffect(() => {
           console.error("Submit & View: failed to reload document, falling back to reset", err);
         }
       }
+    }
+    if (finishDraftSubmitNavigation(pathname, router, docType, result, ResetForm)) {
+      return;
     }
     finishAndReset();
   };
@@ -468,6 +444,11 @@ useEffect(() => {
     if (isEditMode) return "Update";
 
     return "Submit";
+  };
+
+  const getSubmitAndViewButtonText = () => {
+    if (isApprovalDraftContext) return "Create & View";
+    return isEditMode ? "Update & View" : "Submit & View";
   };
 
   const copyToOptions = (() => {
@@ -580,7 +561,26 @@ const documentMode = useSalesDocument(
           onSubmit={handleSubmit(async (data) => {
 
           const state = useSalesDocument.getState();
-          const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
+          const isServiceDoc = state.documentMode === "service";
+          const finalData = {
+            ...data,
+            DocType: isServiceDoc ? "dDocument_Service" : "dDocument_Items",
+            ItemType: isServiceDoc ? "dit_Service" : "dit_Item",
+            documentMode: state.documentMode,
+            DocTotal: state.DocTotal,
+            TotalBeforeDiscount: state.TotalBeforeDiscount,
+            DocumentLines: state.lines.map((line) =>
+              isServiceDoc
+                ? {
+                    ...line,
+                    Quantity: undefined,
+                    LineTotal: Number(line.LineTotal) || 0,
+                    UnitPrice: Number(line.LineTotal) || Number(line.Price) || 0,
+                    ItemType: "dit_Service",
+                  }
+                : { ...line, ItemType: "dit_Item" }
+            ),
+          } as unknown as T;
 
           console.log("[SQ submit] start", {
             docType,
@@ -675,9 +675,12 @@ const documentMode = useSalesDocument(
           if (currentUserId) {
             setIsCheckingApproval(true);
             try {
-              const docTypeStr = getApprovalDocumentType(docType);
-              const activeTemplates = await getCurrentUserApprovalTemplates(currentUserId, docTypeStr);
-              console.log("[SQ submit] new-doc approval check", { docTypeStr, templatesFound: activeTemplates?.length ?? 0 });
+              const activeTemplates = await planDocumentApproval(
+                currentUserId,
+                docType,
+                finalData as unknown as Record<string, unknown>
+              );
+              console.log("[SQ submit] new-doc approval check", { templatesFound: activeTemplates?.length ?? 0 });
               if (activeTemplates && activeTemplates.length > 0) {
                 setApprovalTemplates(activeTemplates);
                 setPendingReApproval(null);
@@ -686,8 +689,10 @@ const documentMode = useSalesDocument(
                 setIsCheckingApproval(false);
                 return;
               }
-            } catch (err) {
-              console.error("Failed to check approval templates:", err);
+            } catch (err: any) {
+              const message = err?.response?.data?.Message || err?.response?.data?.message;
+              toast.error(message || "The approval query could not be checked. The document was not saved.");
+              return;
             } finally {
               setIsCheckingApproval(false);
             }
@@ -744,6 +749,16 @@ const documentMode = useSalesDocument(
                     Generated
                   </span>
                 )}
+                {statusBadge === "canceled" && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-600 bg-slate-50 border border-slate-200/60 rounded px-1.5 py-0.5">
+                    Canceled
+                  </span>
+                )}
+                <WpDraftApprovalActions
+                  engine={String(watch("U_WP_ApprEngine" as never) || "")}
+                  status={statusBadge}
+                  draftEntry={Number(docNav.draftEntry) || undefined}
+                />
               </h1>
             </div>
             {actions && <div>{actions}</div>}
@@ -893,7 +908,7 @@ const documentMode = useSalesDocument(
                           formRef.current?.requestSubmit();
                         }}
                       >
-                        {isEditMode ? "Update & View" : "Submit & View"}
+                        {getSubmitAndViewButtonText()}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1002,7 +1017,12 @@ const documentMode = useSalesDocument(
               const result = await onSubmit(finalData);
               setPendingFinalData(null);
 
-              if (result && (result as any).IsDraft && (result as any).DocEntry) {
+              if (
+                result &&
+                (result as any).IsDraft &&
+                (result as any).DocEntry &&
+                !isCustomApprovalEngineResult(result)
+              ) {
                 const tpl = approvalTemplates[0];
                 const remarks = tpl ? (remarksMap[tpl.Code] ?? "").trim() : "";
                 if (remarks) {

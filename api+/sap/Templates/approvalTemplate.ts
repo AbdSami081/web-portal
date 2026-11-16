@@ -9,6 +9,16 @@ export const getTemplateDocuments = async (): Promise<ApprovalTemplate[]> => {
   return Array.isArray(templates) ? templates : [];
 };
 
+export const getApprovalStageApprovers = async (stageCode: number): Promise<number[]> => {
+  try {
+    const res = await apiClient.get(`api/Approval/ApprovalStages/${stageCode}/approvers`);
+    const ids = res.data?.UserIds ?? res.data?.userIds ?? [];
+    return Array.isArray(ids) ? ids.map(Number) : [];
+  } catch {
+    return [];
+  }
+};
+
 export const getApprovalDocumentType = (docType: number | string, pathname = ""): string => {
   const numType = Number(docType);
   const currentPath = pathname.toLowerCase();
@@ -75,14 +85,32 @@ export const getApprovalDocumentType = (docType: number | string, pathname = "")
   }
 };
 
+export const planDocumentApproval = async (
+  userId: number,
+  objectTypeCode: number | string,
+  document: Record<string, unknown>
+): Promise<ApprovalTemplate[]> => {
+  const res = await apiClient.post("api/Approval/plan", {
+    UserId: userId,
+    ObjectTypeCode: String(objectTypeCode),
+    Document: document,
+  });
+  const templates = res.data?.ApprovalTemplate || res.data?.approvalTemplate || [];
+  return Array.isArray(templates) ? templates : [];
+};
+
 export const getCurrentUserApprovalTemplates = async (
   userId: number | string,
-  documentType?: string
+  documentType?: string,
+  objectTypeCode?: number | string
 ): Promise<ApprovalTemplate[]> => {
   try {
     const params: Record<string, any> = { userId };
     if (documentType) {
       params.documentType = documentType;
+    }
+    if (objectTypeCode !== undefined && objectTypeCode !== null && objectTypeCode !== "") {
+      params.objectTypeCode = objectTypeCode;
     }
     const res = await apiClient.get("api/Approval/ApprovalTemplates/current", {
       params,
@@ -90,10 +118,11 @@ export const getCurrentUserApprovalTemplates = async (
     if (!res.data) return [];
 
     const templates = res.data.ApprovalTemplate || res.data.value || res.data;
-    if (Array.isArray(templates)) {
-      return templates;
+    if (!Array.isArray(templates)) return [];
+    if (templates.some((t: ApprovalTemplate) => t.Code === -2)) {
+      return templates.filter((t: ApprovalTemplate) => t.Code === -2);
     }
-    return [];
+    return templates;
   } catch (error) {
     return [];
   }
@@ -140,6 +169,37 @@ export const rejectApprovalRequest = async (id: number, remarks = "Rejected"): P
   const res = await apiClient.patch(`api/Approval/ApprovalRequests/${id}/reject`, {
     Remarks: remarks,
   });
+  return res.data;
+};
+
+export const approveWpInstance = async (wddCode: string, remarks = "Approved"): Promise<any> => {
+  const res = await apiClient.patch(
+    `api/Approval/WpInstances/${encodeURIComponent(wddCode)}/approve`,
+    { Remarks: remarks }
+  );
+  return res.data;
+};
+
+export const cancelWpDraft = async (draftEntry: number): Promise<any> => {
+  const res = await apiClient.post(`api/Approval/WpDrafts/${draftEntry}/cancel`);
+  return res.data;
+};
+
+export const restoreWpDraft = async (draftEntry: number): Promise<any> => {
+  const res = await apiClient.post(`api/Approval/WpDrafts/${draftEntry}/restore`);
+  return res.data;
+};
+
+export const resubmitWpDraft = async (draftEntry: number): Promise<any> => {
+  const res = await apiClient.post(`api/Approval/WpDrafts/${draftEntry}/resubmit`);
+  return res.data;
+};
+
+export const rejectWpInstance = async (wddCode: string, remarks = "Rejected"): Promise<any> => {
+  const res = await apiClient.patch(
+    `api/Approval/WpInstances/${encodeURIComponent(wddCode)}/reject`,
+    { Remarks: remarks }
+  );
   return res.data;
 };
 

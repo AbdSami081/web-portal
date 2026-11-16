@@ -45,8 +45,8 @@ import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
-import { costingCodeField, cogsCostingCodeField } from "@/lib/sap/helpers/distributionHelper";
-import { useActiveDimensions } from "@/hooks/useActiveDimensions";
+import { costingCodeField, cogsCostingCodeField, distributionFieldTitle } from "@/lib/sap/helpers/distributionHelper";
+import { useActiveDimensions, useDimensionLabels } from "@/hooks/useActiveDimensions";
 
 export function DocumentItems() {
   const { watch, setValue, register } = useFormContext();
@@ -403,7 +403,14 @@ const setDocumentMode = useSalesDocument(
   const fieldAccess = useSalesDocument((state) => state.fieldAccess);
   const { multiBranchEnabled } = useApprovalSettings();
   const activeDimensions = useActiveDimensions();
+  const dimensionLabels = useDimensionLabels();
   const columns = [
+    {
+      key: "serial",
+      title: "S#",
+      width: 48,
+    },
+
     {
       key: "actions",
       title: "Actions",
@@ -534,16 +541,21 @@ const setDocumentMode = useSalesDocument(
       width: 180,
     },
     ...activeDimensions.flatMap((n) => [
-      { key: costingCodeField(n), title: n === 1 ? "Distribution Rule" : `Distribution Rule ${n}`, width: 180 },
-      { key: cogsCostingCodeField(n), title: n === 1 ? "COGS Distribution Rule" : `COGS Distribution Rule ${n}`, width: 180 },
+      { key: costingCodeField(n), title: distributionFieldTitle(n, false, dimensionLabels[n]), width: 180 },
+      { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
     ]),
   ].filter((col) => {
-    if (col.key === "actions") return true;
+    if (col.key === "serial" || col.key === "actions") return true;
     if (col.key === "BPLid" && !multiBranchEnabled) return false;
     return fieldAccess.includes(col.key) && getFieldSettings(config.type, "linesFieds", col.key).visible !== false;
   });
 
   const serviceColumns = [
+    {
+      key: "serial",
+      title: "S#",
+      width: 48,
+    },
     {
       key: "actions",
       title: "Actions",
@@ -621,9 +633,13 @@ const setDocumentMode = useSalesDocument(
       key: "Freight3LCAmount",
       title: "Freight 3 (LC)",
       width: 180,
-    }
+    },
+    ...activeDimensions.flatMap((n) => [
+      { key: costingCodeField(n), title: distributionFieldTitle(n, false, dimensionLabels[n]), width: 180 },
+      { key: cogsCostingCodeField(n), title: distributionFieldTitle(n, true, dimensionLabels[n]), width: 180 },
+    ]),
   ].filter((col) => {
-  if (col.key === "actions") return true;
+  if (col.key === "serial" || col.key === "actions") return true;
 
   return (
     fieldAccess.includes(col.key) &&
@@ -1056,6 +1072,7 @@ const setDocumentMode = useSalesDocument(
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSelectItems={handleOnSelectItems}
+        itemUsage="sales"
         type={documentMode === "service" ? "service" : "item"}
 
       />

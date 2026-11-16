@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Trash, Search } from "lucide-react";
+import { Settings, Trash } from "lucide-react";
 import { useFormContext } from "react-hook-form";
+import { toast } from "sonner";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { WarehouseSelectorDialog } from "@/modals/WarehouseSelectorDialog";
 import { UoMSelectorDialog } from "@/modals/UoMSelectorDialog";
+import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorDialog";
 import { GenericModal } from "@/modals/GenericModal";
 import { calculateFreightTax, calculateLineTax } from "@/utils/taxCalculations";
 import { costingCodeField, cogsCostingCodeField } from "@/lib/sap/helpers/distributionHelper";
@@ -21,6 +23,7 @@ import { resolveBranchForWarehouse, resolveBranchName } from "@/lib/sap/helpers/
 import { useBranchStore } from "@/stores/useBranchStore";
 import { isManualUom } from "@/utils/inventoryUom";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
+import { FieldLookupButton } from "@/components/shared/FieldLookupButton";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
@@ -47,6 +50,7 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   const chartOfAccounts = useChartOfAccountsStore((state) => state.chartOfAccounts);
   const chartOfAccountsHasMore = useChartOfAccountsStore((state) => state.hasMore);
   const chartOfAccountsLoading = useChartOfAccountsStore((state) => state.isLoading);
+  const loadChartOfAccounts = useChartOfAccountsStore((state) => state.loadChartOfAccounts);
   const loadMoreChartOfAccounts = useChartOfAccountsStore((state) => state.loadMoreChartOfAccounts);
 
   const isService = documentMode === "service";
@@ -76,8 +80,17 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   const qtyGuard = usePositiveField("Quantity", line.Quantity);
   const [whDialogOpen, setWhDialogOpen] = useState(false);
   const [uomDialogOpen, setUomDialogOpen] = useState(false);
+  const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
   const [distModalOpen, setDistModalOpen] = useState(false);
   const [glAccountModalOpen, setGlAccountModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!glAccountModalOpen) return;
+    const state = useChartOfAccountsStore.getState();
+    if (state.chartOfAccounts.length === 0 && !state.isLoading) {
+      void loadChartOfAccounts();
+    }
+  }, [glAccountModalOpen, loadChartOfAccounts]);
   const [activeDistField, setActiveDistField] = useState("");
   const [distRuleOptions, setDistRuleOptions] = useState<DistributionRule[]>([]);
   const [distRulesLoading, setDistRulesLoading] = useState(false);
@@ -196,6 +209,9 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   if (isService) {
     return (
       <>
+        <td className="py-1 px-2 border-r border-neutral-200 text-center w-[48px]">
+          {index + 1}
+        </td>
         <td className="py-1 px-2 border-r border-neutral-200 text-center w-[40px]">
           <Button
             type="button"
@@ -218,16 +234,14 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
                 disabled
                 readOnly
               />
-              <Button
-                type="button"
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.AccountCode)}
                 variant="outline"
-                size="icon"
                 className="h-8 w-8 shrink-0"
-                onClick={() => setGlAccountModalOpen(true)}
+                onSearch={() => setGlAccountModalOpen(true)}
+                onClear={() => patchLine({ AccountCode: "", AccountName: "", ItemCode: "", ItemName: "" })}
                 disabled={!isFieldEnabled("AccountCode")}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
+              />
             </div>
           </td>
         )}
@@ -294,6 +308,25 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
                 })}
               </SelectContent>
             </Select>
+          </td>
+        )}
+
+        {isFieldVisible("RequiredDate") && (
+          <td className="py-2 px-2">
+            <Input
+              type="date"
+              className="h-6 w-full text-xs"
+              value={draftLine.RequiredDate || ""}
+              onChange={(e) => setDraftLine({ ...draftLine, RequiredDate: e.target.value })}
+              onBlur={() => {
+                patchLine({ RequiredDate: draftLine.RequiredDate });
+                const headerRequiredDate = watch("RequiredDate");
+                if (draftLine.RequiredDate && headerRequiredDate && draftLine.RequiredDate !== headerRequiredDate) {
+                  toast.warning(`Required Date for ${draftLine.AccountCode || "this line"} does not match the header Required Date.`);
+                }
+              }}
+              disabled={!isFieldEnabled("RequiredDate")}
+            />
           </td>
         )}
 
@@ -444,6 +477,51 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           </td>
         )}
 
+        {activeDimensions.flatMap((n) => {
+          const costingField = costingCodeField(n);
+          const cogsField = cogsCostingCodeField(n);
+          return [
+            isFieldVisible(costingField) && (
+              <td className="py-2 px-2 w-[160px]" key={costingField}>
+                <div className="flex items-center gap-1">
+                  <Input
+                    className="h-6 w-full bg-gray-100 text-left text-xs"
+                    value={(draftLine as any)[costingField] || ""}
+                    disabled
+                    readOnly
+                  />
+                  <FieldLookupButton
+                    hasValue={Boolean((draftLine as any)[costingField])}
+                    className="h-6 w-6"
+                    onSearch={() => openDistModal(costingField, n)}
+                    onClear={() => patchLine({ [costingField]: "" })}
+                    disabled={!isFieldEnabled(costingField)}
+                  />
+                </div>
+              </td>
+            ),
+            isFieldVisible(cogsField) && (
+              <td className="py-2 px-2 w-[160px]" key={cogsField}>
+                <div className="flex items-center gap-1">
+                  <Input
+                    className="h-6 w-full bg-gray-100 text-left text-xs"
+                    value={(draftLine as any)[cogsField] || ""}
+                    disabled
+                    readOnly
+                  />
+                  <FieldLookupButton
+                    hasValue={Boolean((draftLine as any)[cogsField])}
+                    className="h-6 w-6"
+                    onSearch={() => openDistModal(cogsField, n)}
+                    onClear={() => patchLine({ [cogsField]: "" })}
+                    disabled={!isFieldEnabled(cogsField)}
+                  />
+                </div>
+              </td>
+            ),
+          ];
+        })}
+
         <LineUDFCells
           docType={config.type}
           line={draftLine}
@@ -480,6 +558,24 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           onLoadMore={loadMoreChartOfAccounts}
           hasMore={chartOfAccountsHasMore}
           isLoading={chartOfAccountsLoading}
+          onRetry={loadChartOfAccounts}
+        />
+
+        <GenericModal
+          open={distModalOpen}
+          onClose={() => setDistModalOpen(false)}
+          onSelect={(val) => {
+            patchLine({ [activeDistField]: val });
+            setDistModalOpen(false);
+          }}
+          data={distRuleOptions}
+          isLoading={distRulesLoading}
+          columns={[
+            { key: "Code", label: "Code" },
+            { key: "Name", label: "Name" },
+          ]}
+          title="Select Distribution Rule"
+          getSelectValue={(item) => item.Code}
         />
       </>
     );
@@ -487,6 +583,9 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
 
   return (
     <>
+      <td className="py-1 px-2 border-r border-neutral-200 text-center w-[48px]">
+        {index + 1}
+      </td>
       <td className="py-1 px-2 border-r border-neutral-200 text-center w-[40px]">
         <Button
           type="button"
@@ -515,6 +614,25 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
       {isFieldVisible("ItemName") && (
         <td className="px-2 py-1 w-[220px]">
           <span className="block text-left truncate">{draftLine.ItemName}</span>
+        </td>
+      )}
+
+      {isFieldVisible("LineVendor") && (
+        <td className="w-[160px]">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full bg-gray-100 text-left text-xs"
+              value={draftLine.LineVendor || ""}
+              disabled
+              readOnly
+            />
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.LineVendor)}
+              onSearch={() => setVendorDialogOpen(true)}
+              onClear={() => patchLine({ LineVendor: "" })}
+              disabled={!isFieldEnabled("LineVendor")}
+            />
+          </div>
         </td>
       )}
 
@@ -637,16 +755,12 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
               disabled
               readOnly
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => setWhDialogOpen(true)}
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.WarehouseCode)}
+              onSearch={() => setWhDialogOpen(true)}
+              onClear={() => patchLine({ WarehouseCode: "", BPLid: undefined, OnHand: 0 })}
               disabled={!isFieldEnabled("WarehouseCode")}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            />
           </div>
         </td>
       )}
@@ -672,18 +786,33 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
               readOnly
             />
             {!isManualUom(draftLine.UoMCode) && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0"
-                onClick={() => setUomDialogOpen(true)}
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.UoMCode)}
+                onSearch={() => setUomDialogOpen(true)}
+                onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
                 disabled={!isFieldEnabled("UoMCode")}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
+              />
             )}
           </div>
+        </td>
+      )}
+
+      {isFieldVisible("RequiredDate") && (
+        <td className="w-[150px]">
+          <Input
+            type="date"
+            className="h-6 w-full text-xs"
+            value={draftLine.RequiredDate || ""}
+            onChange={(e) => setDraftLine({ ...draftLine, RequiredDate: e.target.value })}
+            onBlur={() => {
+              patchLine({ RequiredDate: draftLine.RequiredDate });
+              const headerRequiredDate = watch("RequiredDate");
+              if (draftLine.RequiredDate && headerRequiredDate && draftLine.RequiredDate !== headerRequiredDate) {
+                toast.warning(`Required Date for item ${line.ItemCode} does not match the header Required Date.`);
+              }
+            }}
+            disabled={!isFieldEnabled("RequiredDate")}
+          />
         </td>
       )}
 
@@ -719,19 +848,15 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
               disabled
               readOnly
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => {
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.Project)}
+              onSearch={() => {
                 loadProjects();
                 setProjectModalOpen(true);
               }}
+              onClear={() => patchLine({ Project: "" })}
               disabled={!isFieldEnabled("Project")}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+            />
           </div>
         </td>
       )}
@@ -910,16 +1035,13 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
                   disabled
                   readOnly
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <FieldLookupButton
+                  hasValue={Boolean((draftLine as any)[costingField])}
                   className="h-6 w-6"
-                  onClick={() => openDistModal(costingField, n)}
+                  onSearch={() => openDistModal(costingField, n)}
+                  onClear={() => patchLine({ [costingField]: "" })}
                   disabled={!isFieldEnabled(costingField)}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
+                />
               </div>
             </td>
           ),
@@ -932,16 +1054,13 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
                   disabled
                   readOnly
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+                <FieldLookupButton
+                  hasValue={Boolean((draftLine as any)[cogsField])}
                   className="h-6 w-6"
-                  onClick={() => openDistModal(cogsField, n)}
+                  onSearch={() => openDistModal(cogsField, n)}
+                  onClear={() => patchLine({ [cogsField]: "" })}
                   disabled={!isFieldEnabled(cogsField)}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
+                />
               </div>
             </td>
           ),
@@ -991,6 +1110,16 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           patchLine({ UoMCode: uom.Code, MeasureUnit: uom.Name });
         }}
         ugpEntry={draftLine.UgpEntry}
+      />
+
+      <BusinessPartnerSelectorDialog
+        open={vendorDialogOpen}
+        onClose={() => setVendorDialogOpen(false)}
+        onSelect={(bp) => {
+          patchLine({ LineVendor: bp.CardCode });
+          setVendorDialogOpen(false);
+        }}
+        cardType="cSupplier"
       />
 
       <GenericModal

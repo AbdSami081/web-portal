@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, type ComponentType } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { FilePlus2, Search, Package, ShoppingCart, Factory, ClipboardList, BadgeDollarSign, LayoutDashboardIcon, ShieldCheck, Settings, FileText, BarChart2, Bell } from "lucide-react";
+import { Search, Package, ShoppingCart, Factory, ClipboardList, BadgeDollarSign, LayoutDashboardIcon, ShieldCheck, Settings, FileText, BarChart2, Bell, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -19,17 +19,18 @@ import { useAuth } from "@/context/authContext";
 import { useNotifications } from "@/context/NotificationContext";
 import { SERVER_MENUS } from "@/lib/menu-data"
 
-const ICON_MAP: Record<string, any> = {
-  "LayoutDashboardIcon": LayoutDashboardIcon,
-  "BadgeDollarSign": BadgeDollarSign,
-  "Package": Package,
-  "Factory": Factory,
-  "ShoppingCart": ShoppingCart,
-  "ClipboardList": ClipboardList,
-  "FileText": FileText,
-  "ShieldCheck": ShieldCheck,
-  "Settings": ShieldCheck,
-  "BarChart2": BarChart2
+const ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
+  LayoutDashboardIcon,
+  BadgeDollarSign,
+  Package,
+  Factory,
+  ShoppingCart,
+  ClipboardList,
+  FileText,
+  ShieldCheck,
+  Settings,
+  BarChart2,
+  Users,
 };
 
 const HeaderNav = () => {
@@ -46,7 +47,7 @@ const HeaderNav = () => {
     const flatList: any[] = [];
 
     SERVER_MENUS.forEach(menu => {
-      const parentIcon = menu.iconName ? ICON_MAP[menu.iconName] : Package;
+      const parentIcon = (menu.iconName && ICON_MAP[menu.iconName]) || Package;
 
       if (menu.items) {
         menu.items.forEach(item => {
@@ -136,13 +137,12 @@ const HeaderNav = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" asChild className="relative h-9 w-9 text-slate-600 hover:text-slate-950 rounded-lg hover:bg-slate-100 transition-colors">
-                      <Link href="/dashboard/messages">
+                    <Button variant="ghost" size="icon" asChild className="relative h-9 w-9 overflow-visible text-slate-600 hover:text-slate-950 rounded-lg hover:bg-slate-100 transition-colors">
+                      <Link href="/dashboard/messages" aria-label={unreadCount > 0 ? `${unreadCount} notifications` : "Messages and alerts"}>
                         <Bell className="h-5 w-5" />
                         {unreadCount > 0 && (
-                          <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+                            {unreadCount > 99 ? "99+" : unreadCount}
                           </span>
                         )}
                       </Link>

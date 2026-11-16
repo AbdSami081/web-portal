@@ -12,6 +12,8 @@ export const getSapErrorMessage = (error: any): string => {
         rawMessage = sapError?.value || sapError || "";
     } else if (error?.response?.data?.error) {
         rawMessage = typeof error.response.data.error === "string" ? error.response.data.error : JSON.stringify(error.response.data.error);
+    } else if (error?.response?.data?.Message) {
+        rawMessage = error.response.data.Message;
     } else if (error?.response?.data?.message) {
         rawMessage = error.response.data.message;
     } else if (error?.response?.data?.title) {

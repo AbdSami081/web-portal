@@ -27,8 +27,7 @@ import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/authContext";
-import { getAllFields } from "@/api+/sap/administration/administrationService";
-import { resolveFieldAuthDocType, findMenuItemByPath } from "@/lib/menu-data";
+import { useDocumentFieldAccess } from "@/hooks/useDocumentFieldAccess";
 
 import { Search, List, Loader2, X } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -143,21 +142,7 @@ export default function BPMasterDataPage() {
   const pathname = usePathname();
   const [fieldAccess, setFieldAccess] = useState<string[]>([]);
   const hasFieldAccess = (field: string) => fieldAccess.includes(field);
-
-  useEffect(() => {
-    const loadAccess = async () => {
-      if (!user?.empId) return;
-      const menuItem = findMenuItemByPath(pathname);
-      const fieldAuthDocType = menuItem
-        ? resolveFieldAuthDocType(menuItem)
-        : String(DocumentType.BusinessPartner);
-      const fields = await getAllFields(user.empId, fieldAuthDocType);
-      setFieldAccess(
-        fields.filter((x: any) => x.Enabled === "Y").map((x: any) => x.U_FieldName)
-      );
-    };
-    loadAccess();
-  }, [user?.empId, pathname]);
+  useDocumentFieldAccess(user?.empId, pathname, DocumentType.BusinessPartner, setFieldAccess);
 
   const getResourceName = (type: number) => {
     switch (type) {

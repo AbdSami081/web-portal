@@ -6,15 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import {Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,} from "@/components/ui/select";
 import { List } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
@@ -25,14 +17,7 @@ import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorD
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-import {
-  getGoodIssue,
-  getGoodIssueList,
-  getGoodReceipt,
-  getInventoryTransfer,
-  getInventoryTransferRequest,
-  closeInventoryTransferRequest,
-} from "@/api+/sap/inventory/inventoryService";
+import { getGoodIssue, getGoodIssueList, getGoodReceipt, getInventoryTransfer, getInventoryTransferRequest, closeInventoryTransferRequest,} from "@/api+/sap/inventory/inventoryService";
 import { useDocumentRights } from "@/hooks/useDocumentRights";
 import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { GenericModal } from "@/modals/GenericModal";
@@ -44,7 +29,8 @@ import { getSapErrorMessage } from "@/lib/errorHelper";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
-import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
+import { resolveDocAuthStatus, resolveDocWpApprStatus } from "@/lib/approval/approvalHeaderBadge";
+import { redirectIfWpGeneratedDraft, withResolvedPostedDocument } from "@/lib/draftNavigation";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { getPriceLists, type PriceList } from "@/api+/sap/master-data/price-lists";
 
@@ -557,12 +543,14 @@ export function InvDocumentHeader() {
     setToWarehouse(documentData.ToWarehouse || "");
     setJournalMemo(documentData.JournalMemo || "");
     setValue("DocStatus", documentData.DocumentStatus);
-    setValue(
-      "BPL_IDAssignedToInvoice",
-      documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId,
-    );
-    setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
-
+   setValue(
+  "BPL_IDAssignedToInvoice",
+  documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId,
+);
+const resolvedAuth = resolveDocAuthStatus(documentData);
+setValue("AuthorizationStatus", resolvedAuth);
+setValue("U_WP_ApprEngine", (documentData as any).U_WP_ApprEngine || "");
+setValue("U_WP_ApprStatus", resolveDocWpApprStatus(documentData, resolvedAuth));
     const isCopy = type !== config.type;
     loadFromDocument(documentData, type, isCopy);
     if (isCopy) {

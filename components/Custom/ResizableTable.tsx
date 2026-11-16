@@ -107,9 +107,9 @@ export function ResizableTable<T>({
   };
 
   return (
-    <div className="resizable-table overflow-auto w-full max-w-full min-w-0">
+    <div className="resizable-table overflow-auto w-full max-w-full min-w-0 [&_td]:border [&_td]:border-neutral-200 [&_td]:py-0.5">
       <Table
-        className="table-fixed text-xs"
+        className="table-fixed text-xs border-collapse"
         style={{ minWidth: tableWidth }}
       >
         <colgroup>
@@ -127,7 +127,7 @@ export function ResizableTable<T>({
               <TableHead
                 key={col.key}
                 data-fms-field={col.key}
-                className={`relative whitespace-nowrap border-r border-neutral-700 px-4 py-2 text-gray-300 ${
+                className={`relative whitespace-nowrap border border-neutral-700 h-8 px-2 py-1 text-gray-300 ${
                   col.className || ""
                 }`}
               >

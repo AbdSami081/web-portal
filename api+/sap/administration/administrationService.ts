@@ -47,38 +47,48 @@ export const getAdminSettings = async (force = false): Promise<AdminSettings | n
 
 
 
-// Get all master fields
+// Get all master fields. Failures propagate so callers keep the last good
+// permission list instead of treating an error as "no fields assigned".
 export const getAllFields = async (
   userCode: string,
   docType: string
 ): Promise<Field[]> => {
-  try {
-    console.log("Fetching fields for user:", userCode, "and document type:", docType);
-    const res = await apiClient.get<Field[]>(
-      "api/Master/GetAllFields",
-      {
-        params: {
-          userCode,
-          docType,
-        },
-      }
-    );
+  const res = await apiClient.get<Field[]>(
+    "api/Master/GetAllFields",
+    {
+      params: {
+        userCode,
+        docType,
+      },
+    }
+  );
 
-    return res.data;
-  } catch (error) {
-    console.error("Failed to fetch fields:", error);
-    return [];
-  }
+  return Array.isArray(res.data) ? res.data : [];
+};
+
+export const copyUserFieldAccess = async (
+  sourceUserCode: string,
+  targetUserCodes: string[]
+): Promise<{ sourceRowCount: number; targetCount: number }> => {
+  const res = await apiClient.post<Record<string, unknown>>("api/Master/copy-field-access", {
+    SourceUserCode: sourceUserCode,
+    TargetUserCodes: targetUserCodes,
+  });
+  const data = res.data ?? {};
+  const sourceRowCount = Number(data.sourceRowCount ?? data.SourceRowCount ?? 0);
+  const targetCount = Number(data.targetCount ?? data.TargetCount ?? 0);
+  return {
+    sourceRowCount: Number.isFinite(sourceRowCount) ? sourceRowCount : 0,
+    targetCount: Number.isFinite(targetCount) ? targetCount : 0,
+  };
 };
 
 
 
 
 // Reconcile @WP_FIELDS_CFG for one docType against the frontend's own field
-// catalog (lib/config/fieldManifest.ts) — insert rows for new fields, hard-
-// delete rows for fields no longer rendered anywhere. Called automatically
-// whenever the Field Access admin screen opens a document, so this table
-// never needs a hand-run SQL script again.
+// catalog. Inserts rows for new fields and refreshes titles. It does not
+// delete existing field rows or any user's field access.
 export const syncFieldsConfig = async (
   docType: string,
   fields: { fieldName: string; fieldTitle: string; fieldType: "H" | "L" }[]

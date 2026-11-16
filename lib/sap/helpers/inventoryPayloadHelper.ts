@@ -3,6 +3,8 @@ import { InventoryTransferLine } from "@/api+/sap/inventory/inventoryService";
 import { withDefaultBPLId } from "./documentPayloadHelper";
 import { pickLineUdfs } from "./lineUdfHelper";
 import { sanitizeItemCode } from "./sanitizeItemCode";
+import { useUoMStore } from "@/stores/useUoMStore";
+import { resolveUoMEntryByCode } from "@/utils/inventoryUom";
 
 interface BuildInventoryPayloadOptions {
   data: any;
@@ -50,6 +52,7 @@ function buildDocumentLines(
   toWarehouse?: string,
   isPatch: boolean = false
 ): InventoryTransferLine[] {
+  const uoms = useUoMStore.getState().uoms;
   return getValidLines(lines).map((line, index) => {
     const baseFields: Record<string, any> = {
       ItemCode: sanitizeItemCode(line.ItemCode),
@@ -64,6 +67,7 @@ function buildDocumentLines(
 
     if (line.UoMCode && String(line.UoMCode).trim() !== "") {
       baseFields.UoMCode = line.UoMCode;
+      baseFields.UoMEntry = resolveUoMEntryByCode(line.UoMCode, uoms);
     }
 
     if (line.Project) baseFields.ProjectCode = line.Project;
@@ -170,6 +174,7 @@ function buildGoodIssueLines(
   lines: InventoryDocumentLine[],
   isPatch: boolean = false
 ): InventoryTransferLine[] {
+  const uoms = useUoMStore.getState().uoms;
   return getValidLines(lines).map((line, index) => {
     const baseFields: Record<string, any> = {
       ItemCode: sanitizeItemCode(line.ItemCode),
@@ -184,6 +189,7 @@ function buildGoodIssueLines(
 
     if (line.UoMCode && String(line.UoMCode).trim() !== "") {
       baseFields.UoMCode = line.UoMCode;
+      baseFields.UoMEntry = resolveUoMEntryByCode(line.UoMCode, uoms);
     }
 
     if (line.Project) baseFields.ProjectCode = line.Project;

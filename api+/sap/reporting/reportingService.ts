@@ -94,6 +94,34 @@ export interface ReportAccessPayload {
 export const isEmbeddedQueryParam = (paramName: string): boolean =>
   /^@?\s*select\s+/i.test(paramName || "");
 
+/** Main-report keys filled automatically from company DB / document context. */
+export const SYSTEM_REPORT_PARAM_NAMES = new Set([
+  "schema@",
+  "schema",
+  "dockey@",
+  "dockey",
+  "objectid@",
+  "objectid",
+]);
+
+export const isSystemReportParameter = (paramName: string): boolean =>
+  SYSTEM_REPORT_PARAM_NAMES.has((paramName || "").trim().toLowerCase());
+
+/**
+ * SAP B1 Crystal layouts expose many subreport/formula parameters (Pm-@TotalBeforeTax,
+ * Pm-OQUT.DocEntry, …). They are not user prompts — Crystal fills them from main keys.
+ */
+export const isSapInternalReportParameter = (paramName: string): boolean =>
+  /^pm-/i.test((paramName || "").trim());
+
+/** Parameters the portal should show or persist (excludes system + internal Pm-*). */
+export const isUserPromptReportParameter = (paramName: string): boolean =>
+  !isSystemReportParameter(paramName) && !isSapInternalReportParameter(paramName);
+
+export const filterUserPromptReportParameters = <T extends { U_ParamName: string }>(
+  parameters: T[] | undefined | null
+): T[] => (parameters || []).filter((p) => isUserPromptReportParameter(p.U_ParamName));
+
 export const getReportParameters = async (
   filePath: string,
   database?: string

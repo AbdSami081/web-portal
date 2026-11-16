@@ -11,11 +11,14 @@ import { toast } from "sonner";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
 import { ReactJsxRuntime } from "next/dist/server/route-modules/app-page/vendored/rsc/entrypoints";
+import { applyDistributionFields } from "@/lib/sap/helpers/distributionHelper";
 import { buildSalesDocumentPatchPayload } from "@/lib/sap/helpers/salesPayloadHelper";
 import { DocumentType } from "@/types/master/DocumentType";
 import { useEffect } from "react";
 import { useAuth } from "@/context/authContext";
 import { getAllFields } from "@/api+/sap/administration/administrationService";
+import { useUoMStore } from "@/stores/useUoMStore";
+import { resolveUoMEntryByCode } from "@/utils/inventoryUom";
 
 export default function NewQuotationPage() {
   const loadFromDocument = useSalesDocument((state) => state.loadFromDocument);
@@ -88,6 +91,7 @@ export default function NewQuotationPage() {
       DiscountPercent: discountPercent || 0,
       ...(salesPersonCode !== undefined && salesPersonCode !== null && { SalesPersonCode: salesPersonCode }),
       DocumentLines: lines.map((line, index) => {
+        const uoms = useUoMStore.getState().uoms;
         const baseFields: any =
           documentMode === "service"
             ? {
@@ -107,7 +111,10 @@ export default function NewQuotationPage() {
                 VatGroup: line.TaxCode || "",
                 WarehouseCode: line.WarehouseCode || "",
                 UoMCode: line.UoMCode || "",
+                UoMEntry: resolveUoMEntryByCode(line.UoMCode, uoms),
               };
+        baseFields.ItemType = documentMode === "service" ? "dit_Service" : "dit_Item";
+        applyDistributionFields(line, baseFields);
         if (DocEntry && Number(DocEntry) > 0 && lastLoadedDocType && lastLoadedDocType !== DocumentType.Quotation) {
           baseFields.BaseType = lastLoadedDocType;
           baseFields.BaseEntry = DocEntry;

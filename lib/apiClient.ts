@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "sonner";
 import { getAccessToken } from "@/api+/sap/auth/authService";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { getSapErrorMessage } from "@/lib/errorHelper";
@@ -58,7 +59,36 @@ const requestInterceptor = (config: any) => {
     return config;
 };
 
-const responseInterceptor = (response: any) => response;
+const responseInterceptor = (response: any) => {
+    const data = response?.data;
+    if (data && typeof data === "object" && data.IsDraft === true) {
+        const isWp =
+            data.ApprovalEngine === "CUSTOM" ||
+            data.ApprovalBadge === "WP" ||
+            data.WpApprovalStarted === true;
+        if (isWp) {
+            toast.success("Document submitted for portal approval.", {
+                description: data.DraftEntry
+                    ? `Draft ${data.DraftEntry} — approvers were notified in Messages.`
+                    : undefined,
+                duration: 7000,
+            });
+        } else if (data.RoutedByRule) {
+            console.log(`[Approval] Query-based rule routed this document — TemplateCode ${data.RoutedTemplateCode}, DraftEntry ${data.DraftEntry}`);
+            toast.success(`Approval routing matched — rebound to Template #${data.RoutedTemplateCode}`, {
+                description: `Draft ${data.DraftEntry} was routed by a query-based rule.`,
+                duration: 7000,
+            });
+        } else {
+            console.log(`[Approval] Default SAP "Always" approval used — no routing rule matched, DraftEntry ${data.DraftEntry}`);
+            toast.info(`Default approval used (SAP "Always" template)`, {
+                description: `Draft ${data.DraftEntry} — no query-based rule matched.`,
+                duration: 7000,
+            });
+        }
+    }
+    return response;
+};
 
 // Transparent retry for GET requests that fail because of a transient network
 // blip or server-side hiccup (timeout, dropped connection, 502/503/504) —
@@ -131,13 +161,19 @@ const errorInterceptor = (error: any) => {
     return Promise.reject(error);
 };
 
-apiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
-apiClient.interceptors.response.use(responseInterceptor, createRetryInterceptor(apiClient));
-apiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
+const attachClientInterceptors = (client: typeof apiClient) => {
+    client.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
+    client.interceptors.response.use(responseInterceptor, async (error) => {
+        try {
+            return await createRetryInterceptor(client)(error);
+        } catch (retried) {
+            return errorInterceptor(retried);
+        }
+    });
+};
 
-reportingApiClient.interceptors.request.use(requestInterceptor, (err) => Promise.reject(err));
-reportingApiClient.interceptors.response.use(responseInterceptor, createRetryInterceptor(reportingApiClient));
-reportingApiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
+attachClientInterceptors(apiClient);
+attachClientInterceptors(reportingApiClient);
 
 export async function cachedGet<T>(
     url: string,
