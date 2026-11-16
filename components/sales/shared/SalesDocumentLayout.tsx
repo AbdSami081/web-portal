@@ -60,7 +60,6 @@ import { FieldNameInspector } from "@/components/Custom/FieldNameInspector";
 import { useDocumentFieldAccess } from "@/hooks/useDocumentFieldAccess";
 import { isRouteAllowed } from "@/lib/menu-data";
 import { useAuth } from "@/context/authContext";
-import { getDraftByDocEntry } from "@/api+/sap/draft/draftService";
 
 
 const SalesDocContext = createContext<DocumentConfig | null>(null);
@@ -120,26 +119,6 @@ export function SalesDocumentLayout<T extends FieldValues>({
   React.useEffect(() => {
     fetchUdfDefinitions(docType);
   }, [docType, fetchUdfDefinitions]);
-
-  React.useEffect(() => {
-    const draftId = searchParams.get("draftId");
-
-    if (!draftId) return;
-
-    const loadDraft = async () => {
-      try {
-        const data = await getDraftByDocEntry(Number(draftId));
-
-        if (!data) return;
-
-        await loadFromDocument(data);
-      } catch (error) {
-        console.error("Draft load error:", error);
-      }
-    };
-
-    loadDraft();
-  }, [searchParams]);
 
   React.useEffect(() => {
     useSalesDocument.getState().setIsDownPayment(!!config.isDownPayment);

@@ -43,35 +43,48 @@ export interface DraftRow {
   objectCode: string;
 }
 
-const docNames: Record<string, string> = {
-  oQuotations: "Sales Quotations",
-  oOrders: "Sales Orders",
-  oPurchaseRequest: "Purchase Request",
-  oPurchaseQuotations: "Purchase Quotations",
-  oPurchaseDeliveryNotes: "Goods Receipt PO",
-  oInventoryTransferRequest: "Inventory Transfer Request",
+
+const normalizeDraftObjectCode = (code: string): string =>
+  (code || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^o/, "")
+    .replace(/s$/, "");
+
+const DRAFT_DOC_DEFS: Record<string, { name: string; numericType: number }> = {
+  quotation: { name: "Sales Quotation", numericType: 23 },
+  order: { name: "Sales Order", numericType: 17 },
+  deliverynote: { name: "Delivery", numericType: 15 },
+  invoice: { name: "A/R Invoice", numericType: 13 },
+  return: { name: "Sales Return", numericType: 16 },
+  returnrequest: { name: "Sales Return Request", numericType: 234000031 },
+  creditnote: { name: "A/R Credit Memo", numericType: 14 },
+  downpayment: { name: "A/R Down Payment Invoice", numericType: 203 },
+
+  purchaserequest: { name: "Purchase Request", numericType: 1470000113 },
+  purchasequotation: { name: "Purchase Quotation", numericType: 54 },
+  purchaseorder: { name: "Purchase Order", numericType: 22 },
+  purchasedeliverynote: { name: "Goods Receipt PO", numericType: 20 },
+  purchaseinvoice: { name: "A/P Invoice", numericType: 18 },
+  purchasereturnrequest: { name: "Goods Return Request", numericType: 234000032 },
+  purchasereturn: { name: "Goods Return", numericType: 21 },
+  purchasecreditnote: { name: "A/P Credit Memo", numericType: 19 },
+
+  inventorytransferrequest: { name: "Inventory Transfer Request", numericType: 1250000001 },
+  stocktransfer: { name: "Inventory Transfer", numericType: 67 },
+  inventorygenexit: { name: "Goods Issue", numericType: 60 },
+  inventorygenentry: { name: "Goods Receipt", numericType: 59 },
+  productionorder: { name: "Production Order", numericType: 202 },
 };
-// draftService.ts ke end mein
-export const draftRoutes: Record<string, string> = {
-  // Sales
-  oQuotations: "/dashboard/sales/quotation/new",
-  oOrders: "/dashboard/sales/order/new",
-  oDeliveryNotes: "/dashboard/sales/delivery/new",
-  oInvoices: "/dashboard/sales/invoice",
-  oReturns: "/dashboard/sales/return/new",
 
-  // Purchase
-  oPurchaseRequest: "/dashboard/purchase/request/new",
-  oPurchaseQuotations: "/dashboard/purchase/quotation/new",
-  oPurchaseOrders: "/dashboard/purchase/order/new",
-  oPurchaseDeliveryNotes: "/dashboard/purchase/grpo/new",
-  oPurchaseInvoices: "/dashboard/purchase/invoice/new",
+export const getDraftDocName = (objectCode: string): string => {
+  const def = DRAFT_DOC_DEFS[normalizeDraftObjectCode(objectCode)];
+  return def?.name ?? objectCode;
+};
 
-  // Inventory
-  oInventoryTransferRequest: "/dashboard/inventory/transfer-request/new",
-  oStockTransfer: "/dashboard/inventory/transfer/new",
-  oInventoryGenEntry: "/dashboard/inventory/goods-receipt/new",
-  oInventoryGenExit: "/dashboard/inventory/goods-issue/new",
+export const getDraftNumericType = (objectCode: string): number | null => {
+  const def = DRAFT_DOC_DEFS[normalizeDraftObjectCode(objectCode)];
+  return def?.numericType ?? null;
 };
 
 export const SaveDraftToDocument = async (payload: SaveDraftToDocumentPayload | any): Promise<any | null> => {
@@ -141,8 +154,8 @@ export const getAllDrafts = async (skip = 0, top = 20): Promise<DraftRow[]> => {
 
   return (res.data?.value ?? []).map((d: any) => ({
     id: d.DocEntry,
-      objectCode: d.DocObjectCode, 
-    document: docNames[d.DocObjectCode] ?? d.DocObjectCode,
+    objectCode: d.DocObjectCode,
+    document: getDraftDocName(d.DocObjectCode),
     documentNo: d.DocNum,
     postingDate: formatDate(d.DocDate),
     bpCode: d.CardCode ?? "",
@@ -150,13 +163,4 @@ export const getAllDrafts = async (skip = 0, top = 20): Promise<DraftRow[]> => {
     currency: d.DocCurrency ?? "AUD",
     remarks: d.Comments ?? "",
   }));
-};
-
-
-
-
-export const getDraftByDocEntry = async (docEntry: number) => {
-  const res = await apiClient.get(`api/Documents/drafts/${docEntry}`);
-  console.log("getDraftByDocEntry res:", res.data);
-  return res.data; // seedha draft object (DocObjectCode, CardCode, DocumentLines...)
 };

@@ -29,6 +29,7 @@ import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService";
 import { useChartOfAccountsStore } from "@/stores/useChartOfAccountsStore";
+import { DocumentType } from "@/types/master/DocumentType";
 
 interface Props {
   index: number;
@@ -56,6 +57,8 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
   const isService = documentMode === "service";
 
   const isFinancialPurchaseDoc = isPostedPurchaseDocType(config.type);
+  const needsLineRequiredDateColumn =
+    config.type === DocumentType.PurchaseRequests || config.type === DocumentType.PurchaseQuotation;
 
   const docEntry = watch("DocEntry");
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
@@ -311,7 +314,7 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           </td>
         )}
 
-        {isFieldVisible("RequiredDate") && (
+        {needsLineRequiredDateColumn && isFieldVisible("RequiredDate") && (
           <td className="py-2 px-2">
             <Input
               type="date"
@@ -617,7 +620,7 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
         </td>
       )}
 
-      {isFieldVisible("LineVendor") && (
+      {config.type === DocumentType.PurchaseRequests && isFieldVisible("LineVendor") && (
         <td className="w-[160px]">
           <div className="flex items-center gap-1">
             <Input
@@ -797,7 +800,7 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
         </td>
       )}
 
-      {isFieldVisible("RequiredDate") && (
+      {needsLineRequiredDateColumn && isFieldVisible("RequiredDate") && (
         <td className="w-[150px]">
           <Input
             type="date"
