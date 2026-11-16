@@ -19,6 +19,8 @@ import {
   PRODUCTION_LINE_FIELDS,
   PRODUCTION_FOOTER_FIELDS,
   resolveFields,
+  INVENTORY_GOOD_RECEIPT_HEADER_FIELDS,
+  INVENTORY_GOOD_RECEIPT_LINE_FIELDS,
 } from "./documentFieldsConfig";
 
 export interface DocFieldCatalog {
@@ -61,6 +63,11 @@ const INVENTORY_TRANSFER_REQUEST_CATALOG: DocFieldCatalog = {
   line: resolveFields(INVENTORY_TRANSFER_REQUEST_LINE_FIELDS),
 };
 
+const INVENTORY_GOOD_RECEIPT_CATALOG: DocFieldCatalog = {
+  header: dedupe(resolveFields([...INVENTORY_GOOD_RECEIPT_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS])),
+  line: resolveFields(INVENTORY_GOOD_RECEIPT_LINE_FIELDS),
+}
+
 export function getFieldCatalog(
   url: string,
   objectCode: number | string | undefined
@@ -76,6 +83,7 @@ export function getFieldCatalog(
     if (code === DocumentType.GoodIssue) return INVENTORY_GOOD_ISSUE_CATALOG;
     if (code === DocumentType.InvTransferReq) return INVENTORY_TRANSFER_REQUEST_CATALOG;
     if (code === DocumentType.InvTransfer) return INVENTORY_TRANSFER_CATALOG;
+    if (code === DocumentType.GoodsReceipt) return INVENTORY_GOOD_RECEIPT_CATALOG
     return null;
   }
   return null;

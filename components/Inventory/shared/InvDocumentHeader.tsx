@@ -6,7 +6,15 @@ import { Input } from "@/components/ui/input";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { List } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
@@ -17,7 +25,14 @@ import { BusinessPartnerSelectorDialog } from "@/modals/BusinessPartnerSelectorD
 import { Warehouse } from "@/types/warehouse/warehouse";
 import { useMasterDataStore } from "@/stores/sales/useMasterDataStore";
 import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
-import { getGoodIssue, getGoodIssueList, getInventoryTransfer, getInventoryTransferRequest, closeInventoryTransferRequest } from "@/api+/sap/inventory/inventoryService";
+import {
+  getGoodIssue,
+  getGoodIssueList,
+  getGoodReceipt,
+  getInventoryTransfer,
+  getInventoryTransferRequest,
+  closeInventoryTransferRequest,
+} from "@/api+/sap/inventory/inventoryService";
 import { useDocumentRights } from "@/hooks/useDocumentRights";
 import { getDraftDocument } from "@/api+/sap/draft/draftService";
 import { GenericModal } from "@/modals/GenericModal";
@@ -30,6 +45,8 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { hydrateLineAllocations } from "@/lib/sap/helpers/hydrateLineAllocations";
 import { resolveDocAuthStatus } from "@/lib/approval/approvalHeaderBadge";
+import { getFieldSettings } from "@/lib/config/Client/clientSettings";
+import { getPriceLists, type PriceList } from "@/api+/sap/master-data/price-lists";
 
 const statusMap: Record<string, string> = {
   bost_Open: "Open",
@@ -47,7 +64,9 @@ export function InvDocumentHeader() {
   const [modalOpen, setModalOpen] = useState(false);
   const [fromWhsModalOpen, setFromWhsModalOpen] = useState(false);
   const [toWhsModalOpen, setToWhsModalOpen] = useState(false);
-  const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
+  const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState(false);
   const {
     lines,
@@ -72,7 +91,8 @@ export function InvDocumentHeader() {
   const loadWarehouses = useMasterDataStore((s) => s.loadWarehouses);
   const rawWarehouses = useMasterDataStore((s) => s.rawWarehouses);
   const [localWarehouses, setLocalWarehouses] = useState<Warehouse[]>([]);
-  const warehouses: Warehouse[] = rawWarehouses.length > 0 ? rawWarehouses : localWarehouses;
+  const warehouses: Warehouse[] =
+    rawWarehouses.length > 0 ? rawWarehouses : localWarehouses;
 
   const docNum = watch("DocNum");
   const [docNumSearch, setDocNumSearch] = useState("");
@@ -89,7 +109,7 @@ export function InvDocumentHeader() {
   const isFetchingRef = useRef(false);
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const config = useInvDocConfig();
-  const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
+  const fetchUdfDefinitions = useUDFStore((state) => state.fetchDefinitions);
   const [syncDialog, setSyncDialog] = useState<{
     open: boolean;
     type: "from" | "to" | null;
@@ -101,37 +121,83 @@ export function InvDocumentHeader() {
   const [isClosing, setIsClosing] = useState(false);
   const isLoadedDocument = !!DocEntry && DocEntry > 0;
   const isHeaderDisabled = isLoadedDocument && watchedStatus === "bost_Close";
-  const canChangeStatus = isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
+  const canChangeStatus =
+    isLoadedDocument && !isClosing && watchedStatus === "bost_Open";
   const { assignedBranches, sessionDefaultBranch } = useBranchStore();
   const { multiBranchEnabled } = useApprovalSettings();
   const watchedBranch = watch("BPL_IDAssignedToInvoice");
+  const watchedPriceList = watch("PriceList");
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
+  const [isLoadingPriceLists, setIsLoadingPriceLists] = useState(false);
+
+  useEffect(() => {
+    if (config.type !== DocumentType.GoodsReceipt) return;
+
+    let isActive = true;
+    setIsLoadingPriceLists(true);
+    getPriceLists()
+      .then((lists) => {
+        if (isActive) setPriceLists(lists);
+      })
+      .catch((error) => {
+        if (isActive) {
+          toast.error(getSapErrorMessage(error) || "Failed to load price lists.");
+        }
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingPriceLists(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [config.type]);
 
   useEffect(() => {
     const branchWhs = toWarehouse || fromWarehouse;
     const derivedBranch = warehouses.find(
-      (w: any) => (w.WhsCode || w.WarehouseCode) === branchWhs
+      (w: any) => (w.WhsCode || w.WarehouseCode) === branchWhs,
     )?.BPLid;
     const branchUnset = watchedBranch === undefined || watchedBranch === null;
     if (derivedBranch !== undefined && derivedBranch !== null) {
       if (derivedBranch !== watchedBranch) {
         setValue("BPL_IDAssignedToInvoice", derivedBranch);
       }
-    } else if (!isLoadedDocument && branchUnset && sessionDefaultBranch !== null && sessionDefaultBranch !== undefined) {
+    } else if (
+      !isLoadedDocument &&
+      branchUnset &&
+      sessionDefaultBranch !== null &&
+      sessionDefaultBranch !== undefined
+    ) {
       setValue("BPL_IDAssignedToInvoice", sessionDefaultBranch);
     }
-  }, [toWarehouse, fromWarehouse, warehouses, watchedBranch, isLoadedDocument, sessionDefaultBranch, setValue]);
+  }, [
+    toWarehouse,
+    fromWarehouse,
+    warehouses,
+    watchedBranch,
+    isLoadedDocument,
+    sessionDefaultBranch,
+    setValue,
+  ]);
 
   const closeDocumentByType = (type: number, entry: number) => {
     switch (type) {
-      case DocumentType.InvTransferReq: return closeInventoryTransferRequest(entry);
-      default: return Promise.reject(new Error("Close is not supported for this document type"));
+      case DocumentType.InvTransferReq:
+        return closeInventoryTransferRequest(entry);
+      default:
+        return Promise.reject(
+          new Error("Close is not supported for this document type"),
+        );
     }
   };
 
   const handleCloseDocument = async (entry: number) => {
     if (isClosing) return;
     if (!allowedActions.includes("CloseDocument")) {
-      toast.error("You don't have rights to close document. Contact Portal Administration.");
+      toast.error(
+        "You don't have rights to close document. Contact Portal Administration.",
+      );
       setCloseModalOpen(false);
       return;
     }
@@ -173,7 +239,8 @@ export function InvDocumentHeader() {
     if (currentState.isCopyingTo) return;
 
     const isDraft = (docNav.draft ?? searchParams.get("draft")) === "1";
-    const draftEntryParam = docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
+    const draftEntryParam =
+      docNav.draftEntry ?? searchParams.get("draftEntry") ?? "";
     const docEntryParam = docNav.docEntry ?? searchParams.get("docEntry") ?? "";
 
     if (isDraft && draftEntryParam) {
@@ -213,9 +280,10 @@ export function InvDocumentHeader() {
   useEffect(() => {
     const currentState = useInventoryDocument.getState();
     if (currentState.isCopyingTo) return;
-    const first = warehouses.length > 0
-      ? (warehouses[0].WhsCode || (warehouses[0] as any).WarehouseCode)
-      : "";
+    const first =
+      warehouses.length > 0
+        ? warehouses[0].WhsCode || (warehouses[0] as any).WarehouseCode
+        : "";
     if (!first) return;
     if (!fromWarehouse) {
       setFromWarehouse(first);
@@ -223,7 +291,13 @@ export function InvDocumentHeader() {
     if (!toWarehouse) {
       setToWarehouse(first);
     }
-  }, [warehouses, fromWarehouse, toWarehouse, setFromWarehouse, setToWarehouse]);
+  }, [
+    warehouses,
+    fromWarehouse,
+    toWarehouse,
+    setFromWarehouse,
+    setToWarehouse,
+  ]);
 
   useEffect(() => {
     if (docNum) {
@@ -236,33 +310,69 @@ export function InvDocumentHeader() {
 
   const getResourceName = (type: number) => {
     switch (type) {
-      case DocumentType.InvTransfer: return "StockTransfers";
-      case DocumentType.InvTransferReq: return "InventoryTransferRequests";
-      case DocumentType.GoodIssue: return "GoodIssues";
-      default: return "";
+      case DocumentType.InvTransfer:
+        return "StockTransfers";
+      case DocumentType.InvTransferReq:
+        return "InventoryTransferRequests";
+      case DocumentType.GoodIssue:
+        return "GoodIssues";
+      case DocumentType.GoodsReceipt:
+        return "Good Receipt";
+      default:
+        return "";
     }
   };
 
   const searchRequestIdRef = useRef(0);
 
-  const fetchDocumentsList = async (isLoadMore = false, searchText?: string) => {
+  const fetchDocumentsList = async (
+    isLoadMore = false,
+    searchText?: string,
+  ) => {
     const resourceName = getResourceName(config.type);
     if (!resourceName) return;
 
+    const requestId = isLoadMore
+      ? searchRequestIdRef.current
+      : ++searchRequestIdRef.current;
     setIsLoadingList(true);
     try {
       const currentSkip = isLoadMore ? listSkipRef.current + LIST_PAGE_SIZE : 0;
+      if (!isLoadMore) {
+        setDocumentsList([]);
+        setListSkip(0);
+        listSkipRef.current = 0;
+      }
       let rawList: any[] = [];
       let hasMore = false;
 
       if (config.type === DocumentType.GoodIssue) {
-        const page = await getGoodIssueList(currentSkip, LIST_PAGE_SIZE, searchText);
+        const page = await getGoodIssueList(
+          currentSkip,
+          LIST_PAGE_SIZE,
+          searchText,
+        );
         rawList = page.value;
         hasMore = page.hasMore;
+      } else if (config.type === DocumentType.GoodsReceipt) {
+        rawList = await getDocumentsList(
+          "InventoryGenEntries",
+          currentSkip,
+          LIST_PAGE_SIZE,
+          searchText,
+        );
+        hasMore = rawList.length === LIST_PAGE_SIZE;
       } else {
-        rawList = await getDocumentsList(resourceName, currentSkip, LIST_PAGE_SIZE, searchText);
+        rawList = await getDocumentsList(
+          resourceName,
+          currentSkip,
+          LIST_PAGE_SIZE,
+          searchText,
+        );
         hasMore = rawList.length === LIST_PAGE_SIZE;
       }
+
+      if (requestId !== searchRequestIdRef.current) return;
 
       if (isLoadMore) {
         setListSkip(currentSkip);
@@ -274,11 +384,13 @@ export function InvDocumentHeader() {
 
       const newDocs = (rawList || []).map((d: any) => ({
         ...d,
-        DocumentStatus: d.DocumentStatus?.replace("bost_", "") || d.DocumentStatus,
+        DocNum: d.DocNum ?? d.DocumentNumber ?? d.docNum,
+        DocumentStatus:
+          d.DocumentStatus?.replace("bost_", "") || d.DocumentStatus,
       }));
 
       if (isLoadMore) {
-        setDocumentsList(prev => [...prev, ...newDocs]);
+        setDocumentsList((prev) => [...prev, ...newDocs]);
       } else {
         setDocumentsList(newDocs);
       }
@@ -286,10 +398,13 @@ export function InvDocumentHeader() {
       setListHasMore(hasMore);
       listHasMoreRef.current = hasMore;
     } catch (error: any) {
+      if (requestId !== searchRequestIdRef.current) return;
       const message = getSapErrorMessage(error);
       toast.error(message || "Failed to fetch documents list.");
     } finally {
-      setIsLoadingList(false);
+      if (requestId === searchRequestIdRef.current) {
+        setIsLoadingList(false);
+      }
     }
   };
 
@@ -307,15 +422,15 @@ export function InvDocumentHeader() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
         e.preventDefault();
         e.stopPropagation();
         setDocListModalOpen(true);
         fetchDocumentsList(false);
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [config.type]);
 
   const handleSelectBP = (bp: BusinessPartner) => {
@@ -326,14 +441,17 @@ export function InvDocumentHeader() {
   };
 
   const fetchDocument = async (overrideNum?: string) => {
-    const rawNum = overrideNum || docNumSearch;
-    const docNumInt = parseInt(rawNum);
-    if (isNaN(docNumInt) || docNumInt <= 0) {
+    const rawNum = (overrideNum ?? docNumSearch).trim();
+    if (!/^\d+$/.test(rawNum)) {
+      toast.error("Please enter a valid document number to load.");
+      return;
+    }
+    const docNumInt = Number(rawNum);
+    if (!Number.isSafeInteger(docNumInt) || docNumInt <= 0) {
       toast.error("Please enter a valid document number to load.");
       return;
     }
 
-    setDocNumSearch(docNumInt.toString());
     useInventoryDocument.getState().setLoadedDraftData(null);
     setIsLoading(true);
 
@@ -345,9 +463,19 @@ export function InvDocumentHeader() {
         documentData = await getInventoryTransfer(docNumInt);
       } else if (config.type === DocumentType.GoodIssue) {
         documentData = await getGoodIssue(docNumInt);
-      } 
-
+      } else if (config.type === DocumentType.GoodsReceipt) {
+        documentData = await getGoodReceipt(docNumInt);
+      }
       if (documentData) {
+        const returnedDocNum = documentData.DocNum ?? documentData.DocumentNumber;
+        if (
+          returnedDocNum !== undefined &&
+          Number(returnedDocNum) !== docNumInt
+        ) {
+          toast.info("Document not found.");
+          return;
+        }
+        setDocNumSearch(String(documentData.DocNum ?? docNumInt));
         fetchUdfDefinitions(config.type, true);
         applyDocumentData(documentData, config.type);
       } else {
@@ -358,34 +486,81 @@ export function InvDocumentHeader() {
         toast.info("Document not found.");
       } else {
         const message = getSapErrorMessage(error);
-        toast.error(message || "An error occurred while fetching the document.");
+        toast.error(
+          message || "An error occurred while fetching the document.",
+        );
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    const handleDocumentNavigation = (event: Event) => {
+      const navigation = (
+        event as CustomEvent<{
+          objectCode: number;
+          docNum: string;
+          handled: boolean;
+          onComplete: () => void;
+        }>
+      ).detail;
+      if (Number(navigation.objectCode) !== Number(config.type)) return;
+
+      navigation.handled = true;
+      void fetchDocument(navigation.docNum).finally(navigation.onComplete);
+    };
+
+    window.addEventListener(
+      "portal:document-navigation",
+      handleDocumentNavigation,
+    );
+    return () =>
+      window.removeEventListener(
+        "portal:document-navigation",
+        handleDocumentNavigation,
+      );
+  }, [config.type, fetchDocument]);
+
   const applyDocumentData = (documentData: any, type: number) => {
     setValue("DocEntry", documentData.DocEntry || 0);
     setValue("DocNum", documentData.DocNum || 0);
-    const dateStr = documentData.TaxDate ? documentData.TaxDate.split("T")[0] : "";
+    const dateStr = documentData.TaxDate
+      ? documentData.TaxDate.split("T")[0]
+      : "";
     setValue("DocDate", dateStr);
     setValue("TaxDate", dateStr);
     setValue("DocDueDate", dateStr);
     setValue("CardCode", documentData.CardCode || "");
     setValue("CardName", documentData.CardName || "");
+    setValue(
+      "PriceList",
+      documentData.PriceList === undefined || documentData.PriceList === null
+        ? ""
+        : String(documentData.PriceList),
+    );
     setValue("FromWarehouse", documentData.FromWarehouse || "");
     setValue("ToWarehouse", documentData.ToWarehouse || "");
     setValue("Comments", documentData.Comments || "");
     setValue("JournalMemo", documentData.JournalMemo || "");
     setDocDate(dateStr);
-    setCustomer(documentData.CardCode ? { CardCode: documentData.CardCode, CardName: documentData.CardName || "" } : null);
+    setCustomer(
+      documentData.CardCode
+        ? {
+            CardCode: documentData.CardCode,
+            CardName: documentData.CardName || "",
+          }
+        : null,
+    );
     setComments(documentData.Comments || "");
     setFromWarehouse(documentData.FromWarehouse || "");
     setToWarehouse(documentData.ToWarehouse || "");
     setJournalMemo(documentData.JournalMemo || "");
     setValue("DocStatus", documentData.DocumentStatus);
-    setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
+    setValue(
+      "BPL_IDAssignedToInvoice",
+      documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId,
+    );
     setValue("AuthorizationStatus", resolveDocAuthStatus(documentData));
 
     const isCopy = type !== config.type;
@@ -407,130 +582,162 @@ export function InvDocumentHeader() {
               return patch.has(key) ? { ...line, ...patch.get(key) } : line;
             }),
           }));
-        }
+        },
       );
     }
     toast.success(`Document loaded successfully.`);
-  }
+  };
 
   return (
     <div className="flex flex-col lg:flex-row gap-4">
       <div className="flex flex-col gap-2 w-full lg:w-1/2">
-        {config.type !== DocumentType.GoodIssue && hasFieldAccess("CardCode") && (
-          <div className="flex items-center gap-3">
-            <AppLabel className="w-28 shrink-0">Customer</AppLabel>
-            <div className="flex items-center gap-2">
+        {config.type !== DocumentType.GoodIssue &&
+          hasFieldAccess("CardCode") && (
+            <div className="flex items-center gap-3">
+              <AppLabel className="w-28 shrink-0">Customer</AppLabel>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={customer?.CardCode || ""}
+                  className="h-8 w-56 pr-10"
+                  placeholder="Card Code"
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 cursor-pointer"
+                  disabled={DocEntry > 0}
+                  onClick={() => {
+                    setModalOpen(true);
+                  }}
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+        {config.type !== DocumentType.GoodIssue &&
+          hasFieldAccess("CardName") && (
+            <div className="flex items-center gap-3 w-full">
+              <AppLabel className="w-28 shrink-0">Name</AppLabel>
               <Input
                 type="text"
-                value={customer?.CardCode || ""}
-                className="h-8 w-56 pr-10"
-                placeholder="Card Code"
+                value={customer?.CardName || ""}
+                className="h-8 w-56"
+                placeholder="Card Name"
                 readOnly
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 cursor-pointer"
-                disabled={DocEntry > 0}
-                onClick={() => {
-                  setModalOpen(true);
-                }}
-              >
-                <Search className="h-5 w-5" />
-              </Button>
             </div>
-          </div>
-        )}
+          )}
 
-        {config.type !== DocumentType.GoodIssue && hasFieldAccess("CardName") && (
+        {config.type === DocumentType.GoodsReceipt && (
           <div className="flex items-center gap-3 w-full">
-            <AppLabel className="w-28 shrink-0">Name</AppLabel>
-            <Input
-              type="text"
-              value={customer?.CardName || ""}
-              className="h-8 w-56"
-              placeholder="Card Name"
-              readOnly
-            />
+            <AppLabel className="w-28 shrink-0">Price List</AppLabel>
+            <Select
+              value={watchedPriceList ? String(watchedPriceList) : ""}
+              onValueChange={(value) =>
+                setValue("PriceList", value, { shouldDirty: true })
+              }
+              disabled={isHeaderDisabled || isLoadingPriceLists}
+            >
+              <SelectTrigger className="h-8 w-56">
+                <SelectValue placeholder="Select price list" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Price Lists</SelectLabel>
+                  {priceLists.map((priceList) => (
+                    <SelectItem key={priceList.id} value={String(priceList.id)}>
+                      {priceList.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
         {multiBranchEnabled && hasFieldAccess("BPL_IDAssignedToInvoice") && (
-        <div className="flex items-center gap-3 w-full">
-          <AppLabel className="w-28 shrink-0">Branch</AppLabel>
-          <Select
-            value={watchedBranch ? String(watchedBranch) : ""}
-            onValueChange={(val) => setValue("BPL_IDAssignedToInvoice", Number(val))}
-            disabled={isHeaderDisabled}
-          >
-            <SelectTrigger className="w-56">
-              <SelectValue placeholder="Select branch" />
-            </SelectTrigger>
-
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Select Branch</SelectLabel>
-                {assignedBranches.map((b) => (
-                  <SelectItem key={b.BPLID} value={String(b.BPLID)}>
-                    {b.BPLName}
-                    {b.Disabled === "tYES" ? " (Inactive)" : ""}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-        )}
-
-        {config.type !== DocumentType.GoodIssue && hasFieldAccess("FromWarehouse") && (
           <div className="flex items-center gap-3 w-full">
-            <AppLabel className="w-28 shrink-0">From Warehouse</AppLabel>
-            <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                value={fromWarehouse}
-                className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
-                readOnly
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 cursor-pointer"
-                disabled={DocEntry > 0}
-                onClick={() => setFromWhsModalOpen(true)}
-              >
-                <Search className="h-5 w-5" />
-              </Button>
-            </div>
+            <AppLabel className="w-28 shrink-0">Branch</AppLabel>
+            <Select
+              value={watchedBranch ? String(watchedBranch) : ""}
+              onValueChange={(val) =>
+                setValue("BPL_IDAssignedToInvoice", Number(val))
+              }
+              disabled={isHeaderDisabled}
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder="Select branch" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Select Branch</SelectLabel>
+                  {assignedBranches.map((b) => (
+                    <SelectItem key={b.BPLID} value={String(b.BPLID)}>
+                      {b.BPLName}
+                      {b.Disabled === "tYES" ? " (Inactive)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
-        {config.type !== DocumentType.GoodIssue && hasFieldAccess("ToWarehouse") && (
-          <div className="flex items-center gap-3 w-full">
-            <AppLabel className="w-28 shrink-0">To Warehouse</AppLabel>
-            <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                value={toWarehouse}
-                className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
-                readOnly
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 cursor-pointer"
-                disabled={DocEntry > 0}
-                onClick={() => setToWhsModalOpen(true)}
-              >
-                <Search className="h-5 w-5" />
-              </Button>
+        {config.type !== DocumentType.GoodIssue &&
+          hasFieldAccess("FromWarehouse") && (
+            <div className="flex items-center gap-3 w-full">
+              <AppLabel className="w-28 shrink-0">From Warehouse</AppLabel>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={fromWarehouse}
+                  className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 cursor-pointer"
+                  disabled={DocEntry > 0}
+                  onClick={() => setFromWhsModalOpen(true)}
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
+        {config.type !== DocumentType.GoodIssue &&
+          hasFieldAccess("ToWarehouse") && (
+            <div className="flex items-center gap-3 w-full">
+              <AppLabel className="w-28 shrink-0">To Warehouse</AppLabel>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={toWarehouse}
+                  className="h-8 w-56 bg-gray-100 text-gray-500 cursor-not-allowed"
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 cursor-pointer"
+                  disabled={DocEntry > 0}
+                  onClick={() => setToWhsModalOpen(true)}
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          )}
       </div>
 
       <div className="flex flex-col gap-2 w-full lg:w-1/2">
@@ -612,22 +819,46 @@ export function InvDocumentHeader() {
             </Select>
           </div>
         )}
-
+        {hasFieldAccess("DocDate") &&
+          getFieldSettings(config.type, "headerFieds", "DocDate").visible !==
+            false && (
+            <div className="flex justify-end items-center gap-3 w-full">
+              <AppLabel className="w-28 shrink-0 text-right">
+                Posting Date
+              </AppLabel>
+              <Input
+                type="date"
+                {...register("DocDate")}
+                className="h-8 w-56"
+                disabled={
+                  isHeaderDisabled ||
+                  !getFieldSettings(config.type, "headerFieds", "DocDate")
+                    .enable
+                }
+                onChange={(e) => {
+                  register("DocDate").onChange(e);
+                  setDocDate(e.target.value);
+                }}
+              />
+            </div>
+          )}
         {hasFieldAccess("DocDate") && (
-        <div className="flex justify-end items-center gap-3 w-full">
-          <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
-          <Input
-            type="date"
-            value={docDate}
-            onChange={(e) => {
-              setDocDate(e.target.value);
-              setValue("DocDate", e.target.value);
-              setValue("TaxDate", e.target.value);
-            }}
-            className="h-8 w-56"
-            disabled={DocEntry > 0}
-          />
-        </div>
+          <div className="flex justify-end items-center gap-3 w-full">
+            <AppLabel className="w-28 shrink-0 text-right">
+              Document Date
+            </AppLabel>
+            <Input
+              type="date"
+              value={docDate}
+              onChange={(e) => {
+                setDocDate(e.target.value);
+                setValue("DocDate", e.target.value);
+                setValue("TaxDate", e.target.value);
+              }}
+              className="h-8 w-56"
+              disabled={DocEntry > 0}
+            />
+          </div>
         )}
       </div>
 
@@ -641,9 +872,12 @@ export function InvDocumentHeader() {
       />
 
       <GenericModal
-        title={`Select ${getResourceName(config.type).replace(/([A-Z])/g, ' $1').trim()}`}
+        title={`Select ${getResourceName(config.type)
+          .replace(/([A-Z])/g, " $1")
+          .trim()}`}
         open={docListModalOpen}
         onClose={() => {
+          searchRequestIdRef.current += 1;
           setDocListModalOpen(false);
           setIsLoadingList(false);
         }}
@@ -656,8 +890,14 @@ export function InvDocumentHeader() {
         getSelectValue={(item) => item.DocNum || item.DocumentNumber}
         columns={[
           { key: "DocNum", label: "Doc Num" },
-          { key: "CardCode", label: customer?.CardCode ? "Customer Code" : "BP Code" },
-          { key: "CardName", label: customer?.CardName ? "Customer Name" : "BP Name" },
+          {
+            key: "CardCode",
+            label: customer?.CardCode ? "Customer Code" : "BP Code",
+          },
+          {
+            key: "CardName",
+            label: customer?.CardName ? "Customer Name" : "BP Name",
+          },
           { key: "DocDate", label: "Date" },
           { key: "DocumentStatus", label: "Status" },
         ]}
@@ -666,6 +906,12 @@ export function InvDocumentHeader() {
         hasMore={listHasMore}
         onSearch={(value) => {
           setListSearch(value);
+          searchRequestIdRef.current += 1;
+          setDocumentsList([]);
+          setListSkip(0);
+          listSkipRef.current = 0;
+          setListHasMore(true);
+          listHasMoreRef.current = true;
           debouncedFetchDocumentsList(value);
         }}
         searchValue={listSearch}
@@ -679,7 +925,11 @@ export function InvDocumentHeader() {
           setFromWarehouse(wh.WhsCode);
           setFromWhsModalOpen(false);
           if (lines.length > 0) {
-            setTimeout(() => setSyncDialog({ open: true, type: "from", value: wh.WhsCode }), 200);
+            setTimeout(
+              () =>
+                setSyncDialog({ open: true, type: "from", value: wh.WhsCode }),
+              200,
+            );
           }
         }}
         data={warehouses}
@@ -698,7 +948,11 @@ export function InvDocumentHeader() {
           setToWarehouse(wh.WhsCode);
           setToWhsModalOpen(false);
           if (lines.length > 0) {
-            setTimeout(() => setSyncDialog({ open: true, type: "to", value: wh.WhsCode }), 200);
+            setTimeout(
+              () =>
+                setSyncDialog({ open: true, type: "to", value: wh.WhsCode }),
+              200,
+            );
           }
         }}
         data={warehouses}
@@ -711,18 +965,27 @@ export function InvDocumentHeader() {
 
       <ConfirmationModal
         open={syncDialog.open}
-        onOpenChange={(open) => !open && setSyncDialog((s) => ({ ...s, open: false }))}
+        onOpenChange={(open) =>
+          !open && setSyncDialog((s) => ({ ...s, open: false }))
+        }
         title="Update Line Warehouses?"
         description={
           <>
-            Do you want to update the <strong>{syncDialog.type === "from" ? "From Warehouse" : "To Warehouse"}</strong> for all existing lines to <strong>{syncDialog.value}</strong>?
+            Do you want to update the{" "}
+            <strong>
+              {syncDialog.type === "from" ? "From Warehouse" : "To Warehouse"}
+            </strong>{" "}
+            for all existing lines to <strong>{syncDialog.value}</strong>?
           </>
         }
         cancelText="No, keep lines"
         confirmText="Yes, update all"
         onConfirm={() => {
           if (syncDialog.type) {
-            updateAllLinesWarehouse(syncDialog.value, syncDialog.type === "from");
+            updateAllLinesWarehouse(
+              syncDialog.value,
+              syncDialog.type === "from",
+            );
           }
           setSyncDialog({ open: false, type: null, value: "" });
         }}
@@ -742,6 +1005,6 @@ export function InvDocumentHeader() {
         }}
         onCancel={() => setCloseModalOpen(false)}
       />
-    </div >
+    </div>
   );
 }

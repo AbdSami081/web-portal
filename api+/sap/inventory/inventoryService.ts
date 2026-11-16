@@ -2,6 +2,8 @@ import apiClient from "@/lib/apiClient";
 import { getSapErrorMessage } from "@/lib/errorHelper";
 import { withDefaultBPLId } from "@/lib/sap/helpers/documentPayloadHelper";
 
+const GOOD_RECEIPT_ENDPOINT = "api/Inventory/GoodReciept";
+
 export interface InventoryTransferLine {
     ItemCode: string;
     Quantity: number;
@@ -45,6 +47,42 @@ export const postInventoryTransfer = async (payload: any) => {
 export const postGoodIssue = async (payload: any) => {
     const response = await apiClient.post("api/Inventory/GoodIssue", withDefaultBPLId(payload));
     return response.data;
+};
+
+export const postGoodReceipt = async (payload: any) => {
+    const response = await apiClient.post(GOOD_RECEIPT_ENDPOINT, withDefaultBPLId(payload));
+    return response.data;
+}
+
+export const patchGoodReceipt = async (docEntry: number, payload: any) => {
+    const response = await apiClient.patch(`api/Inventory/GoodReciept/${docEntry}`, payload);
+    return response.data;
+};
+
+export const getGoodReceipt = async (docNum: number) => {
+    const response = await apiClient.get(`${GOOD_RECEIPT_ENDPOINT}?docNum=${docNum}`);
+    return response.data;
+};
+
+export const getGoodReceiptList = async (skip = 0, top = 20, search = "") => {
+    const response = await apiClient.get(`${GOOD_RECEIPT_ENDPOINT}List`, {
+        params: { skip, top, search: search || undefined },
+    });
+    const data = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
+    const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.value)
+          ? data.value
+          : Array.isArray(data?.data)
+            ? data.data
+            : null;
+
+    if (!list) {
+        throw new Error("Unexpected Good Receipt list response from the server.");
+    }
+
+    const hasMore = Boolean(data?.["@odata.nextLink"] || data?.hasMore) || list.length >= top;
+    return { value: list, hasMore };
 };
 
 export const getInventoryTransferRequest = async (docNum: number) => {

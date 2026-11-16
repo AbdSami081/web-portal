@@ -1,0 +1,143 @@
+"use client"
+
+import { toast } from "sonner";
+import { postGoodReceipt, patchGoodReceipt } from "@/api+/sap/inventory/inventoryService";
+import { z } from "zod";
+import { InvDocumentLayout } from "@/components/Inventory/shared/InvDocumentLayout";
+import { InvDocumentHeader } from "@/components/Inventory/shared/InvDocumentHeader";
+import { InvDocumentItems } from "@/components/Inventory/shared/InvDocumentItems";
+import InvDocumentFooter from "@/components/Inventory/shared/InvDocumentFooter";
+import { useInventoryDocument } from "@/stores/inventory/useInventoryDocument";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { uploadAndPatchAttachments } from "@/api+/sap/attachments/attachmentService";
+import { DocumentType } from "@/types/master/DocumentType";
+import { buildGoodReceiptPayload, buildGoodReceiptPatchPayload } from "@/lib/sap/helpers/inventoryPayloadHelper";
+
+const InventoryGenLineSchema = z.object({
+  ItemCode: z.string(),
+  Quantity: z.number(),
+  WarehouseCode: z.string().optional(),
+
+  BaseType: z.number().nullable().optional(),
+  BaseEntry: z.number().nullable().optional(),
+  BaseLine: z.number().nullable().optional(),
+});
+
+const schema = z.object({
+  CardCode: z.string().optional(),
+  CardName: z.string().optional(),
+  DocDate: z.string().optional(),
+  DocDueDate: z.string().optional(),
+  TaxDate: z.string().optional(),
+  DocumentLines: z.array(InventoryGenLineSchema).optional(),
+  JournalMemo: z.string().optional(),
+  Comments: z.string().optional(),
+  FromWarehouse: z.string().optional(),
+  ToWarehouse: z.string().optional(),
+  DiscountPercent: z.number().optional(),
+  Freight: z.number().optional(),
+  Rounding: z.number().optional(),
+  TotalBeforeDiscount: z.number().optional(),
+  TaxTotal: z.number().optional(),
+  DocTotal: z.number().optional(),
+  BPL_IDAssignedToInvoice: z.number().optional(),
+}).loose();
+
+type FormData = z.infer<typeof schema>;
+
+export default function InvTransferPage() {
+  const router = useRouter();
+
+  const defaultValues: FormData = useMemo(() => ({
+    CardCode: "",
+    CardName: "",
+    DocDate: new Date().toISOString().split("T")[0],
+    DocDueDate: new Date().toISOString().split("T")[0],
+    DiscountPercent: 0,
+    Freight: 0,
+    Rounding: 0,
+    Comments: "",
+    JournalMemo: "",
+    TotalBeforeDiscount: 0,
+    TaxTotal: 0,
+    DocTotal: 0,
+    TaxDate: new Date().toISOString().split("T")[0],
+    DocumentLines: [],
+    FromWarehouse: "",
+    ToWarehouse: "",
+    Series: "",
+    PriceList: "",
+    PostingDate: "",
+  }), []);
+
+  const handleSubmit = async (data: FormData) => {
+    const {
+      lines,
+      reset: resetStore,
+      DocEntry,
+      attachments,
+    } = useInventoryDocument.getState();
+
+    try {
+      let result;
+
+      if (DocEntry && DocEntry > 0) {
+        const payload = buildGoodReceiptPatchPayload({
+          data,
+          lines,
+        });
+        result = await patchGoodReceipt(DocEntry, payload);
+        toast.success(`Good Receipt updated!`);
+      } else {
+        const payload = buildGoodReceiptPayload({
+          data,
+          lines,
+        });
+
+        console.log("Good Receipt Result:", payload);
+        result = await postGoodReceipt(payload);
+
+        
+        if (result?.IsDraft) {
+          toast.success("Good Receipt submitted for approval.");
+        } else if (result?.DocEntry) {
+          toast.success(`Good Receipt created! #${result.DocNum || result.DocEntry}`);
+        }
+      }
+
+      if (result || (DocEntry && DocEntry > 0)) {
+        const savedDocEntry = Number(DocEntry || result?.DocEntry || 0);
+
+        if (savedDocEntry > 0 && attachments.length > 0) {
+          const attachmentResult = await uploadAndPatchAttachments(
+            attachments,
+            "InventoryGenEntries",
+            savedDocEntry,
+            patchGoodReceipt
+          );
+
+          if (attachmentResult.uploadedCount > 0) {
+            toast.success(`${attachmentResult.uploadedCount} attachments uploaded successfully`);
+          }
+        }
+        resetStore();
+        router.push("/dashboard/inventory/good_receipt");
+      } else {
+        throw new Error("Failed to process good issue");
+      }
+
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create Good Receipt");
+      throw error;
+    }
+  };
+
+  return (
+    <InvDocumentLayout schema={schema} defaultValues={defaultValues} onSubmit={handleSubmit} docType={DocumentType.GoodsReceipt}>
+      <InvDocumentHeader />
+      <InvDocumentItems />
+      <InvDocumentFooter />
+    </InvDocumentLayout>
+  );
+}

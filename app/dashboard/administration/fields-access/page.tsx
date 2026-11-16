@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Check,
   ChevronsUpDown,
@@ -192,6 +192,28 @@ export default function FieldAccessManagement() {
       setIsLoadingAssignments(true);
       setHasChanges(false);
 
+      const menuItem = SERVER_MENUS
+        .flatMap((menu) => menu.items ?? [])
+        .find((item) => resolveFieldAuthDocType(item) === selectedDocument);
+      const catalog = menuItem
+        ? getFieldCatalog(menuItem.url, menuItem.objectCode)
+        : null;
+
+      if (catalog) {
+        await syncFieldsConfig(selectedDocument, [
+          ...catalog.header.map((field) => ({
+            fieldName: field.key,
+            fieldTitle: field.title,
+            fieldType: "H" as const,
+          })),
+          ...catalog.line.map((field) => ({
+            fieldName: field.key,
+            fieldTitle: field.title,
+            fieldType: "L" as const,
+          })),
+        ]);
+      }
+
       const response = await getAllFields(
         selectedUser,
         selectedDocument
@@ -314,27 +336,6 @@ export default function FieldAccessManagement() {
       ) ?? []
   );
 }, [filteredMenus]);
-
-
-  const hasSyncedFieldsRef = useRef(false);
-  useEffect(() => {
-    if (hasSyncedFieldsRef.current || documents.length === 0) return;
-    hasSyncedFieldsRef.current = true;
-
-    const syncAll = async () => {
-      for (const item of documents) {
-        const catalog = getFieldCatalog(item.url, item.objectCode);
-        if (!catalog) continue;
-        const docType = resolveFieldAuthDocType(item);
-        const fields = [
-          ...catalog.header.map((f) => ({ fieldName: f.key, fieldTitle: f.title, fieldType: "H" as const })),
-          ...catalog.line.map((f) => ({ fieldName: f.key, fieldTitle: f.title, fieldType: "L" as const })),
-        ];
-        await syncFieldsConfig(docType, fields);
-      }
-    };
-    syncAll();
-  }, [documents]);
 
 
   const selectedDocumentTitle = useMemo(() => {

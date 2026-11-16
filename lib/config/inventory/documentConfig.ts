@@ -19,12 +19,17 @@ export const GoodIssueConfig: DocumentConfig = {
   type: DocumentType.GoodIssue,
   title: "Good Issue",
 };
+export const GoodReceiptConfig: DocumentConfig = {
+  type: DocumentType.GoodsReceipt,
+  title: "Good Receipt",
+};
 
 export const getDocumentConfig = (type: DocumentType): DocumentConfig => {
   switch (type) {
     case DocumentType.InvTransfer: return InvTransferConfig;
     case DocumentType.InvTransferReq: return InvTransferReqConfig;
     case DocumentType.GoodIssue: return GoodIssueConfig;
+    case DocumentType.GoodsReceipt: return GoodReceiptConfig;
     default: return InvTransferConfig; 
   }
 };

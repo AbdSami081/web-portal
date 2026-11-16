@@ -26,6 +26,7 @@ export enum DocumentType {
   APInvoice = 18,
   APCreditMemo = 19,
   GoodsReturn = 21,
+  GoodsReceipt= 59,
   APDownPaymentInvoice = 204,
   GoodsReturnRequest = 234000032,
   APDownPaymentRequest = 1470000113,

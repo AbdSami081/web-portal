@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowUpDown, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -57,17 +57,27 @@ export function GenericModal<T>({
   const [localSearch, setLocalSearch] = useState("");
   const isServerSearch = typeof onSearch === "function";
   const search = isServerSearch ? (searchValue ?? "") : localSearch;
+  const [selected, setSelected] = useState<T | null>(null);
+  const [selectedItems, setSelectedItems] = useState<T[]>([]);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
   const handleSearchChange = (value: string) => {
+    setSelected(null);
+    setSelectedItems([]);
     if (isServerSearch) {
       onSearch!(value);
     } else {
       setLocalSearch(value);
     }
   };
-  const [selected, setSelected] = useState<T | null>(null);
-  const [selectedItems, setSelectedItems] = useState<T[]>([]);
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setSelected(null);
+      setSelectedItems([]);
+    }
+  }, [open]);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {

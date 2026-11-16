@@ -65,6 +65,10 @@ const AMBIGUOUS_CODE_RESOLVERS: Record<number, (hint: ObjectTypeDisambiguationHi
     if (hint.cardType === "cSupplier" || hint.cardType === "S") return "/dashboard/purchase/apdownpaymentinvoice";
     return undefined;
   },
+  59: (hint) => {
+    if (hint.isProductionLinked === true) return "/dashboard/production/receipt-from-production";
+    return "/dashboard/inventory/good_receipt";
+  },
   60: (hint) => {
     if (hint.isProductionLinked === true) return "/dashboard/production/issue-for-production";
     if (hint.isProductionLinked === false) return "/dashboard/inventory/Good_Issue";

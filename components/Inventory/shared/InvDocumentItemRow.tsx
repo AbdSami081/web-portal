@@ -73,7 +73,9 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   const isClosed = docStatus === "bost_Close";
   const docEntry = watch("DocEntry");
   const isEditMode = Boolean(docEntry && Number(docEntry) > 0);
-  const isRowLocked = isClosed || (isGoodIssue && isEditMode);
+  const isPostedLineLocked =
+    isGoodIssue || invConfig.type === DocumentType.GoodsReceipt;
+  const isRowLocked = isClosed || (isPostedLineLocked && isEditMode);
 
   // Fetch QtyInWhs from Item API if not present on the line (e.g. when loading existing documents)
   useEffect(() => {

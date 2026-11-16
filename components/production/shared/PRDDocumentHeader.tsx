@@ -424,6 +424,24 @@ export function PRDDocumentHeader() {
     }
   };
 
+  useEffect(() => {
+    const handleDocumentNavigation = (event: Event) => {
+      const navigation = (event as CustomEvent<{
+        objectCode: number;
+        docNum: string;
+        handled: boolean;
+        onComplete: () => void;
+      }>).detail;
+      if (Number(navigation.objectCode) !== Number(docType)) return;
+
+      navigation.handled = true;
+      void fetchDocument(navigation.docNum).finally(navigation.onComplete);
+    };
+
+    window.addEventListener("portal:document-navigation", handleDocumentNavigation);
+    return () => window.removeEventListener("portal:document-navigation", handleDocumentNavigation);
+  }, [docType, fetchDocument]);
+
   const fetchItems = async (isReset = true) => {
     const type = watch("ProductionOrderType");
     if (!isMultiBom && type === "bopotSpecial") {

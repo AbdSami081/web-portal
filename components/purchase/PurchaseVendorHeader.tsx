@@ -409,6 +409,24 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
     }
   };
 
+  useEffect(() => {
+    const handleDocumentNavigation = (event: Event) => {
+      const navigation = (event as CustomEvent<{
+        objectCode: number;
+        docNum: string;
+        handled: boolean;
+        onComplete: () => void;
+      }>).detail;
+      if (Number(navigation.objectCode) !== Number(config.type)) return;
+
+      navigation.handled = true;
+      void fetchDocument(navigation.docNum).finally(navigation.onComplete);
+    };
+
+    window.addEventListener("portal:document-navigation", handleDocumentNavigation);
+    return () => window.removeEventListener("portal:document-navigation", handleDocumentNavigation);
+  }, [config.type, fetchDocument]);
+
   const headerFetchRef = useHeaderFetchRef();
   if (headerFetchRef) headerFetchRef.current = fetchDocument;
 

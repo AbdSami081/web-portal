@@ -162,6 +162,25 @@ export const INVENTORY_TRANSFER_HEADER_FIELDS: FieldDef[] = [
   { key: "DocDate", title: "Posting Date", enabled: true },
 ];
 
+export const INVENTORY_GOOD_RECEIPT_HEADER_FIELDS : FieldDef[] = [
+  { key:"DocNum", title:"Number", enabled:true },
+  { key:"DocDate", title:"Posting Date", enabled:true },
+  { key:"TaxDate", title:"Document Date", enabled:true },
+  { key:"BPLid", title:"Branch", enabled: true },
+]
+
+export const INVENTORY_GOOD_RECEIPT_LINE_FIELDS: FieldDef[] = [
+  { key: "ItemCode", title: "Item", enabled: true },
+  { key: "Dscription", title: "Description", enabled: true },
+  { key: "WhsCode", title: "Warehouse", enabled: true },
+  { key: "BPLid", title: "Branch", enabled: true },
+  { key: "Quantity", title: "Quantity", enabled: true },
+  { key: "OnHand", title: "Qty In Whs", enabled: true },
+  { key: "UoMCode", title: "UoM Code", enabled: true },
+  { key: "UoMName", title: "UoM Name", enabled: true },
+  { key: "Project", title: "Project", enabled: true },
+];
+
 export const INVENTORY_GOOD_ISSUE_LINE_FIELDS: FieldDef[] = [
   { key: "ItemCode", title: "Item", enabled: true },
   { key: "Dscription", title: "Description", enabled: true },
@@ -188,7 +207,7 @@ export const INVENTORY_TRANSFER_LINE_FIELDS: FieldDef[] = [
 ];
 
 export const INVENTORY_TRANSFER_REQUEST_LINE_FIELDS: FieldDef[] = [
-  { key: "ItemCode", title: "Item", enabled: true },
+  { key: "ItemCode", title: "Item", enabled: true }, 
   { key: "Dscription", title: "Description", enabled: true },
   { key: "FromWhsCode", title: "From Whs", enabled: true },
   { key: "WhsCode", title: "To Whs", enabled: true },
@@ -277,7 +296,7 @@ const HEADER_FIELDS_BY_OBJTYPE: Record<number, FieldDef[]> = {
   [DocumentType.GoodIssue]: [...INVENTORY_GOOD_ISSUE_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS, ...PRODUCTION_HEADER_FIELDS, ...PRODUCTION_FOOTER_FIELDS, copyField("CopyFrom", false)],
   [DocumentType.InvTransfer]: [...INVENTORY_TRANSFER_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS],
   [DocumentType.InvTransferReq]: [...INVENTORY_TRANSFER_HEADER_FIELDS, ...INVENTORY_FOOTER_FIELDS],
-
+  
   [DocumentType.ProductionOrder]: [...PRODUCTION_HEADER_FIELDS, ...PRODUCTION_FOOTER_FIELDS, copyField("CopyFrom", true)],
   [DocumentType.ReceiptFromProduction]: [...PRODUCTION_HEADER_FIELDS, ...PRODUCTION_FOOTER_FIELDS, copyField("CopyFrom", false)],
 };

@@ -18,7 +18,7 @@ export const getDocumentsList = async (
 
     const data = raw.value ?? [];
 
-    (data as any).hasMore = raw.hasMore ?? false;
+    (data as any).hasMore = raw.hasMore ?? data.length >= top;
 
     return data;
   } catch (error: any) {

@@ -213,6 +213,9 @@ export function buildGoodIssuePayload({
 }: BuildGoodIssuePayloadOptions) {
   return withDefaultBPLId({
     ...pickLineUdfs(data),
+    ...(data.PriceList !== undefined &&
+      data.PriceList !== null &&
+      data.PriceList !== "" && { PriceList: Number(data.PriceList) }),
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
     DocumentLines: buildGoodIssueLines(lines, false),
@@ -226,6 +229,30 @@ export function buildGoodIssuePatchPayload({
   // movement on Add, so line Quantity is locked post-add. Omit DocumentLines entirely.
   return {
     ...pickLineUdfs(data),
+    ...(data.PriceList !== undefined &&
+      data.PriceList !== null &&
+      data.PriceList !== "" && { PriceList: Number(data.PriceList) }),
+    Comments: data.Comments || "",
+    JournalMemo: data.JournalMemo || "",
+  };
+}
+
+export function buildGoodReceiptPayload({
+  data,
+  lines,
+}: BuildGoodIssuePayloadOptions) {
+  return buildGoodIssuePayload({ data, lines });
+}
+
+export function buildGoodReceiptPatchPayload({
+  data,
+}: BuildGoodIssuePayloadOptions) {
+  // Posted Goods Receipts already move stock; leave their item collection unchanged.
+  return {
+    ...pickLineUdfs(data),
+    ...(data.PriceList !== undefined &&
+      data.PriceList !== null &&
+      data.PriceList !== "" && { PriceList: Number(data.PriceList) }),
     Comments: data.Comments || "",
     JournalMemo: data.JournalMemo || "",
   };

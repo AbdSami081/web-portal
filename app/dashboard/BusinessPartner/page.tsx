@@ -635,6 +635,8 @@ export default function BPMasterDataPage() {
           defaultValues={EMPTY_FORM}
           resetStore={() => {}}
           allowedActions={allowedActions}
+          currentDocumentKey={isExistingBP ? formData.CardCode : ""}
+          onNavigateToDocument={handleRowDoubleClick}
         />
       </HeaderActionPortal>
 

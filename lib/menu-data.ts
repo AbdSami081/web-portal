@@ -247,6 +247,14 @@ export const SERVER_MENUS: MenuItem[] = [
                  allowFieldsAuth :true
             },
             {
+                id: "168d88c9-9aef-4402-a7fd-f6eb46f2dd48",
+                title: "Good Receipt",
+                url: "/dashboard/inventory/good_receipt",
+                objectCode: 59,
+                isReporting:true,
+                allowFieldsAuth:true,
+            },
+            {
                 id: "d159c928-1124-4a49-a9cb-fe3fc928b6e1",
                 title: "Item Master Data",
                 url: "/dashboard/inventory/item_master",
@@ -286,7 +294,7 @@ export const SERVER_MENUS: MenuItem[] = [
                 objectCode: 59,
                 isReporting: true,
                 allowFieldsAuth: true,
-            },
+            }
         ],
     },
 
