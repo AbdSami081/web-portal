@@ -106,13 +106,6 @@ async function automate() {
         const finalPath = path.join(ZIP_OUTPUT_DIR, ZIP_FILE_NAME);
         zip.writeZip(finalPath);
 
-        // Also place app_offline_1.html and app_offline.html in the release output folder
-        if (fs.existsSync(OFFLINE_HTML_PATH)) {
-            fs.copySync(OFFLINE_HTML_PATH, path.join(ZIP_OUTPUT_DIR, 'app_offline_1.html'));
-            fs.copySync(OFFLINE_HTML_PATH, path.join(ZIP_OUTPUT_DIR, 'app_offline.html'));
-            console.log('📄 Placed app_offline_1.html & app_offline.html in the release folder.');
-        }
-
         // 6. Cleanup
         fs.removeSync(TEMP_DIR);
 
