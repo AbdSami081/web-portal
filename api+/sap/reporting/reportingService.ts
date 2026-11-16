@@ -91,6 +91,11 @@ export interface ReportAccessPayload {
   reportCodes: string[];
 }
 
+
+
+
+
+
 export const isEmbeddedQueryParam = (paramName: string): boolean =>
   /^@?\s*select\s+/i.test(paramName || "");
 
@@ -264,3 +269,6 @@ export const deleteComponent = async (code: string, type: string, companyDB?: st
   const response = await apiClient.delete(`api/ReportingAPI/DeleteReportLayout?${params.toString()}`);
   return response.data;
 };
+
+
+
