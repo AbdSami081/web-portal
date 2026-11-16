@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal - System Maintenance</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            background-image: radial-gradient(#dbe3ee 1px, transparent 1px);
+            background-size: 24px 24px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #1c2d42;
+        }
+
+        /* Portal ShellBar Header */
+        .portal-header {
+            background: #003366;
+            color: #ffffff;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        .portal-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .portal-logo-badge {
+            background: #ffffff;
+            color: #003366;
+            font-weight: 900;
+            font-size: 14px;
+            padding: 3px 9px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 0 0 rgba(10, 110, 209, 0.5);
+            animation: badgePulse 2.4s ease-in-out infinite;
+        }
+
+        @keyframes badgePulse {
+            0% { box-shadow: 0 0 0 0 rgba(10, 110, 209, 0.45); }
+            70% { box-shadow: 0 0 0 7px rgba(10, 110, 209, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(10, 110, 209, 0); }
+        }
+
+        .portal-title {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            color: #ffffff;
+        }
+
+        .portal-system-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 4px 12px;
+            border-radius: 14px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #f59e0b;
+            border-radius: 50%;
+            animation: blink 1.6s infinite ease-in-out;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        /* Main Container */
+        .main-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+
+        /* Card */
+        .portal-card {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            width: 100%;
+            padding: 40px 36px;
+            box-shadow: none;
+            text-align: center;
+        }
+
+        /* Animated icon cluster: rotating gear (maintenance) + flickering bolt (electric) */
+        .icon-wrapper {
+            position: relative;
+            width: 84px;
+            height: 84px;
+            background: #e8f2fc;
+            border: 1px solid #b9d8f8;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+        }
+
+        .gear-icon {
+            width: 42px;
+            height: 42px;
+            fill: #0a6ed1;
+            animation: spin 5s linear infinite;
+            transform-origin: 50% 50%;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .bolt-badge {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 30px;
+            height: 30px;
+            background: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            animation: flicker 1.3s ease-in-out infinite;
+        }
+
+        .bolt-icon {
+            width: 18px;
+            height: 18px;
+            fill: #f59e0b;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; filter: drop-shadow(0 0 2px rgba(245,158,11,0.9)); }
+            45% { opacity: 0.55; filter: drop-shadow(0 0 7px rgba(245,158,11,0.9)); }
+            60% { opacity: 1; filter: drop-shadow(0 0 2px rgba(245,158,11,0.9)); }
+        }
+
+        .badge {
+            display: inline-block;
+            background: #fff8e6;
+            color: #b25900;
+            border: 1px solid #fcd34d;
+            padding: 4px 14px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 14px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f2744;
+            margin-bottom: 10px;
+        }
+
+        p.description {
+            font-size: 14.5px;
+            line-height: 1.6;
+            color: #52637a;
+            margin-bottom: 24px;
+        }
+
+        /* Info Panel */
+        .info-panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 28px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+        }
+
+        .info-row:not(:last-child) {
+            border-bottom: 1px solid #eef2f6;
+        }
+
+        .info-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        .info-value.live {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mini-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #f59e0b;
+            animation: blink 1.4s infinite ease-in-out;
+        }
+
+        /* Footer */
+        .portal-footer {
+            text-align: center;
+            padding: 16px;
+            font-size: 12px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header: brand name appears here only -->
+    <header class="portal-header">
+        <div class="portal-brand">
+            <span class="portal-logo-badge">SAP</span>
+            <span class="portal-title">Supernova Web Portal</span>
+        </div>
+        <div class="portal-system-status">
+            <span class="status-dot"></span>
+            <span>Maintenance Mode</span>
+        </div>
+    </header>
+
+    <!-- Main Card -->
+    <main class="main-container">
+        <div class="portal-card">
+            <div class="icon-wrapper">
+                <!-- Gear = maintenance, rotating -->
+                <svg class="gear-icon" viewBox="0 0 24 24">
+                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.04-.7-1.63-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.44.17-.48.41l-.36 2.54c-.59.24-1.13.57-1.63.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.63c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.04.7 1.63.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.63-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+                <!-- Bolt = electric/power, flickering -->
+                <div class="bolt-badge">
+                    <svg class="bolt-icon" viewBox="0 0 24 24">
+                        <path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="badge">System Maintenance</div>
+            <h1>Portal Under Maintenance</h1>
+            <p class="description">
+                The web portal is currently undergoing scheduled system maintenance to enhance performance and stability. Services will be restored shortly.
+            </p>
+
+            <div class="info-panel">
+                <div class="info-row">
+                    <span class="info-label">Current State</span>
+                    <span class="info-value live"><span class="mini-dot"></span>Offline (Maintenance)</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Est. Time to Unlock</span>
+                    <span class="info-value" id="countdown-value">--:--:--</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="portal-footer">
+        Enterprise Resource Planning &bull; Maintenance in Progress
+    </footer>
+
+    <script>
+        // --- Estimated time to unlock ---
+        // Fixed target date/time (same for every visitor, does not reset on refresh).
+        // Edit this to the actual date/time maintenance will end, format: "YYYY-MM-DDTHH:MM:SS"
+        var unlockTargetISO = "2026-11-16T20:00:00";
+
+        var unlockTarget = new Date(unlockTargetISO).getTime();
+        var countdownEl = document.getElementById('countdown-value');
+
+        function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+        function updateCountdown() {
+            var remainingMs = unlockTarget - Date.now();
+            if (remainingMs <= 0) {
+                countdownEl.textContent = 'Any moment now';
+                clearInterval(countdownTimer);
+                return;
+            }
+            var totalSeconds = Math.floor(remainingMs / 1000);
+            var hours = Math.floor(totalSeconds / 3600);
+            var minutes = Math.floor((totalSeconds % 3600) / 60);
+            var seconds = totalSeconds % 60;
+
+            if (hours > 0) {
+                countdownEl.textContent = hours + 'h ' + pad(minutes) + 'm ' + pad(seconds) + 's';
+            } else if (minutes > 0) {
+                countdownEl.textContent = minutes + 'm ' + pad(seconds) + 's';
+            } else {
+                countdownEl.textContent = seconds + 's';
+            }
+        }
+
+        updateCountdown();
+        var countdownTimer = setInterval(updateCountdown, 1000);
+    </script>
+</body>
+</html>

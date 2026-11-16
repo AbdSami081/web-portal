@@ -14,6 +14,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const STATIC_DIR = path.join(__dirname, '.next', 'static');
 const TEMP_DIR = path.join(__dirname, 'temp_build_folder');
 const WEBCONFIG_PATH = path.join(__dirname, 'web.config'); // <-- Path to your local web.config
+const OFFLINE_HTML_PATH = path.join(__dirname, 'app_offline.html');
 
 
 async function automate() {
@@ -78,6 +79,16 @@ async function automate() {
             console.warn('⚠️  Warning: web.config was not found in the root directory!');
         }
 
+        // --- COPY APP_OFFLINE HTML (WITH DEFAULT NAME: app_offline_1.html) ---
+        // Naming it app_offline_1.html ensures that deploying/extracting the zip does NOT immediately put the portal offline.
+        // When you want to go offline, simply rename app_offline_1.html -> app_offline.html!
+        if (fs.existsSync(OFFLINE_HTML_PATH)) {
+            console.log('📄 Copying app_offline.html as app_offline_1.html to deployment package...');
+            fs.copySync(OFFLINE_HTML_PATH, path.join(TEMP_DIR, 'app_offline_1.html'));
+        } else {
+            console.warn('⚠️  Warning: app_offline.html was not found in root directory!');
+        }
+
         // --- CREATE LOGS FOLDER (required by web.config stdoutLogFile) ---
         // IIS HttpPlatformHandler will fail to start if this folder does not exist
         const logsDir = path.join(TEMP_DIR, 'logs');
@@ -94,6 +105,13 @@ async function automate() {
         if (!fs.existsSync(ZIP_OUTPUT_DIR)) fs.ensureDirSync(ZIP_OUTPUT_DIR);
         const finalPath = path.join(ZIP_OUTPUT_DIR, ZIP_FILE_NAME);
         zip.writeZip(finalPath);
+
+        // Also place app_offline_1.html and app_offline.html in the release output folder
+        if (fs.existsSync(OFFLINE_HTML_PATH)) {
+            fs.copySync(OFFLINE_HTML_PATH, path.join(ZIP_OUTPUT_DIR, 'app_offline_1.html'));
+            fs.copySync(OFFLINE_HTML_PATH, path.join(ZIP_OUTPUT_DIR, 'app_offline.html'));
+            console.log('📄 Placed app_offline_1.html & app_offline.html in the release folder.');
+        }
 
         // 6. Cleanup
         fs.removeSync(TEMP_DIR);
