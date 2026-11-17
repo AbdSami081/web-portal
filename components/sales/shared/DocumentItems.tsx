@@ -599,6 +599,12 @@ const setDocumentMode = useSalesDocument(
       width: 180,
     },
 
+    {
+      key: "Project",
+      title: "Project",
+      width: 140,
+    },
+
   {
       key: "Freight1Type",
       title: "Freight 1 Type",

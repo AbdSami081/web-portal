@@ -359,6 +359,7 @@ export function PurchaseItems() {
     ...(needsLineRequiredDateColumn ? [{ key: "RequiredDate", title: "Required Date", width: 150 }] : []),
     { key: "LineTotal", title: "Line Total", width: 180 },
     { key: "TaxAmount", title: "Tax Amount (LC)", width: 180 },
+    { key: "Project", title: "Project", width: 140 },
     { key: "Freight1Type", title: "Freight 1 Type", width: 180 },
     { key: "Freight1LCAmount", title: "Freight 1 (LC)", width: 180 },
     { key: "Freight2Type", title: "Freight 2 Type", width: 180 },

@@ -718,6 +718,28 @@ if (isService) {
         </td>
       )}
 
+      {isFieldVisible("Project") && (
+        <td className="w-[140px]">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full bg-gray-100 text-left text-xs"
+              value={draftLine.Project || ""}
+              disabled
+              readOnly
+            />
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.Project)}
+              onSearch={() => {
+                loadProjects();
+                setProjectModalOpen(true);
+              }}
+              onClear={() => patchLine({ Project: "" })}
+              disabled={!isCellEditable("Project")}
+            />
+          </div>
+        </td>
+      )}
+
       {isFieldVisible(
         "Freight1Type"
       ) && (
@@ -1177,6 +1199,29 @@ if (isService) {
   isLoading={chartOfAccountsLoading}
   onRetry={loadChartOfAccounts}
 />
+
+      <GenericModal
+        open={projectModalOpen}
+        onClose={() => setProjectModalOpen(false)}
+        data={projects}
+        onSelect={(value) => {
+          const selectedProject = projects.find(
+            (project: any) => project.Code === value || project.code === value
+          );
+          if (!selectedProject) return;
+
+          patchLine({
+            Project: selectedProject.Code || selectedProject.code || value,
+          });
+          setProjectModalOpen(false);
+        }}
+        columns={[
+          { key: "Code", label: "Project Code" },
+          { key: "Name", label: "Project Name" },
+        ]}
+        title="Select Project"
+        getSelectValue={(item: any) => item.Code || item.code}
+      />
     </>
   );
 }
