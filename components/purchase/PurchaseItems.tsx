@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { PurchaseQuotationLogisticsTab } from "./PurchaseQuotationLogisticsTab";
+import { PurchaseQuotationAccountingTab } from "./PurchaseQuotationAccountingTab";
 import { useFormContext } from "react-hook-form";
 import { Item } from "@/types/sales/Item.type";
 import { getCustomerPrice } from "@/lib/sap/helpers/masterDataHelper";
@@ -95,6 +97,7 @@ export function PurchaseItems() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
   const config = usePurchaseDocConfig();
+  const hasLogisticsTab = config.type === DocumentType.PurchaseQuotation;
   const isTableDisabled = config.isDisabledTable(docStatus);
   const { multiBranchEnabled } = useApprovalSettings();
 
@@ -210,10 +213,7 @@ export function PurchaseItems() {
     });
   };
 
-  // Paste tab-separated rows copied from Excel straight into the line table:
-  // ItemCode <tab> Quantity <tab> Price <tab> DiscountPercent <tab> WarehouseCode.
-  // Reuses the same item-line construction as handleOnSelectItems so pasted
-  // lines come out identical to manually-added ones (tax, branch, UoM, etc.).
+
   const handleExcelPaste = async (e: React.ClipboardEvent) => {
     if (documentMode === "service") return;
     if (!requester?.CardCode && config.type !== DocumentType.PurchaseRequests) {
@@ -251,10 +251,6 @@ export function PurchaseItems() {
 
     if (parsedRows.length === 0) return;
 
-    // Bulk-fetch all item codes in chunked requests (not one request per
-    // row), then commit every resulting line in a single store update —
-    // keeps this responsive for pastes from a handful of rows up to tens of
-    // thousands.
     const toastId = toast.loading(`Looking up ${parsedRows.length} item(s)...`);
     const itemsByCode = await fetchItemsByCodesBulk(
       parsedRows.map((r) => r.itemCode),
@@ -408,27 +404,7 @@ export function PurchaseItems() {
         onValueChange={setActiveTab}
         className="w-full pt-1 overflow-x-auto"
       >
-        <TabsList className="grid w-[240px] grid-cols-2 mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800">
-          <TabsTrigger
-            value="content"
-            className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
-          >
-            Content
-          </TabsTrigger>
-          <TabsTrigger
-            value="attachments"
-            className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
-          >
-            Attachments
-            {attachments.length > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.2 text-[10px] bg-blue-500 text-white rounded-full font-bold">
-                {attachments.length}
-              </span>
-            )}
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="flex items-center gap-3 mb-4">
+        <div className="mb-4 flex items-center gap-3">
           <AppLabel className="text-sm font-semibold">Type</AppLabel>
           <Select
             value={documentMode || "items"}
@@ -450,6 +426,41 @@ export function PurchaseItems() {
             </SelectContent>
           </Select>
         </div>
+        <TabsList className={`grid ${hasLogisticsTab ? "w-[480px] grid-cols-4" : "w-[240px] grid-cols-2"} mb-4 bg-neutral-900 p-1 rounded-lg h-9 border border-neutral-800`}>
+          <TabsTrigger
+            value="content"
+            className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
+          >
+            Content
+          </TabsTrigger>
+          {hasLogisticsTab && (
+            <TabsTrigger
+              value="logistics"
+              className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
+            >
+              Logistics
+            </TabsTrigger>
+          )}
+          {hasLogisticsTab && (
+            <TabsTrigger
+              value="accounting"
+              className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
+            >
+              Accounting
+            </TabsTrigger>
+          )}
+          <TabsTrigger
+            value="attachments"
+            className="rounded-md font-bold text-[9px] uppercase tracking-wider transition-all duration-300 data-[state=active]:bg-neutral-800 data-[state=active]:text-white text-neutral-400 data-[state=active]:shadow-sm"
+          >
+            Attachments
+            {attachments.length > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.2 text-[10px] bg-blue-500 text-white rounded-full font-bold">
+                {attachments.length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent
           value="content"
@@ -600,6 +611,18 @@ export function PurchaseItems() {
             </div>
           </div>
         </TabsContent>
+
+        {hasLogisticsTab && (
+          <TabsContent value="logistics" className="mt-0 pt-2 animate-in fade-in duration-300">
+            <PurchaseQuotationLogisticsTab />
+          </TabsContent>
+        )}
+
+        {hasLogisticsTab && (
+          <TabsContent value="accounting" className="mt-0 pt-2 animate-in fade-in duration-300">
+            <PurchaseQuotationAccountingTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="attachments" className="overflow-hidden mt-0">
           <AttachmentsTab

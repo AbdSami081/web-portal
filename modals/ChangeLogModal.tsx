@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Check, History, Maximize2, Minimize2 } from "lucide-react";
-import { getChangeLogEntries, type ChangeLogEntry } from "@/api+/sap/common/changeLogService";
+import type { ChangeLogEntry } from "@/api+/sap/common/changeLogService";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,7 +14,6 @@ import {
 interface ChangeLogModalProps {
   open: boolean;
   onClose: () => void;
-  objectCode: number;
 }
 
 const columns: { key: keyof ChangeLogEntry; label: string }[] = [
@@ -30,42 +29,49 @@ const columns: { key: keyof ChangeLogEntry; label: string }[] = [
   { key: "createdOnAt", label: "Created On/At" },
 ];
 
+// Temporary mock history matching the supplied Change Log example.
+const mockChangeLogEntries: ChangeLogEntry[] = [
+  {
+    instance: 1,
+    objectCode: 2575,
+    updated: "28.10.26",
+    updatedByUserCode: "Dev01",
+    updatedByUserName: "Development",
+    updatedOnAt: "28.10.26 17:41:28",
+    created: "28.10.26",
+    createdByUserCode: "Dev01",
+    createdByUserName: "Development",
+    createdOnAt: "28.10.26 17:41:28",
+  },
+  {
+    instance: 2,
+    objectCode: 2575,
+    updated: "28.10.26",
+    updatedByUserCode: "Dev01",
+    updatedByUserName: "Development",
+    updatedOnAt: "28.10.26 17:41:41",
+    created: "28.10.26",
+    createdByUserCode: "Dev01",
+    createdByUserName: "Development",
+    createdOnAt: "28.10.26 17:41:28",
+  },
+];
+
 const ChangeLogModal: React.FC<ChangeLogModalProps> = ({
   open,
   onClose,
-  objectCode,
 }) => {
-  const [entries, setEntries] = useState<ChangeLogEntry[]>([]);
-  const [selectedInstance, setSelectedInstance] = useState<number | null>(null);
+  const [selectedInstance, setSelectedInstance] = useState<number | null>(1);
   const [showDifferences, setShowDifferences] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
-    if (!open) {
-      setEntries([]);
-      return;
-    }
-
-    let isCurrentRequest = true;
-    setEntries([]);
+    if (!open) return;
     setSelectedInstance(null);
     setShowDifferences(false);
+    setSelectedInstance(mockChangeLogEntries[0]?.instance ?? null);
+  }, [open]);
 
-    getChangeLogEntries(objectCode)
-      .then((result) => {
-        if (!isCurrentRequest) return;
-        setEntries(result);
-        setSelectedInstance(result[0]?.instance ?? null);
-      })
-      .catch((error) => {
-        if (!isCurrentRequest) return;
-        console.error("Failed to load change log:", error);
-      });
-
-    return () => {
-      isCurrentRequest = false;
-    };
-  }, [open, objectCode]);
 
   const closeModal = () => {
     setShowDifferences(false);
@@ -123,51 +129,57 @@ const ChangeLogModal: React.FC<ChangeLogModalProps> = ({
               </tr>
             </thead>
             <tbody>
-              {entries.map((entry, index) => (
-                <tr
-                  key={entry.instance}
-                  onClick={() => {
-                    setSelectedInstance(entry.instance);
-                    setShowDifferences(false);
-                  }}
-                  className={`cursor-pointer ${
-                    selectedInstance === entry.instance
-                      ? "bg-blue-50 text-slate-900"
-                      : "bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <td className="border border-slate-200 px-2 py-2 text-slate-500">
-                    {index + 1}
-                  </td>
-                  {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className="whitespace-nowrap border border-slate-200 px-2 py-2"
-                    >
-                      {entry[column.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-              {Array.from({ length: 10 }, (_, index) => (
-                <tr key={`empty-${index}`} aria-hidden="true" className="h-7 bg-white">
-                  <td className="border border-slate-200 px-2 py-1.5" />
-                  {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className="whitespace-nowrap border border-slate-200 px-2 py-1.5"
-                    />
-                  ))}
-                </tr>
-              ))}
-            </tbody>
+              {mockChangeLogEntries.map((entry, index) => (
+      <tr
+        key={entry.instance}
+        onClick={() => {
+          setSelectedInstance(entry.instance);
+          setShowDifferences(false);
+        }}
+        className={`cursor-pointer ${
+          selectedInstance === entry.instance
+            ? "bg-blue-50 text-slate-900"
+            : "bg-white text-slate-700 hover:bg-slate-50"
+        }`}
+      >
+        <td className="border border-slate-200 px-2 py-2 text-slate-500">
+          {index + 1}
+        </td>
+
+        {columns.map((column) => (
+          <td
+            key={column.key}
+            className="whitespace-nowrap border border-slate-200 px-2 py-2"
+          >
+            {entry[column.key] ?? ""}
+          </td>
+        ))}
+      </tr>
+    ))}
+
+  {Array.from({ length: 10 }, (_, index) => (
+    <tr
+      key={`empty-${index}`}
+      aria-hidden="true"
+      className="h-7 bg-white"
+    >
+      <td className="border border-slate-200 px-2 py-1.5" />
+      {columns.map((column) => (
+        <td
+          key={column.key}
+          className="whitespace-nowrap border border-slate-200 px-2 py-1.5"
+        />
+      ))}
+    </tr>
+  ))}
+</tbody>
+
           </table>
 
           {showDifferences && (
             <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
-              Showing mock change-log instance {selectedInstance}. The supplied
-              sample contains header history only; field-level differences are
-              not included.
+              Showing mock change-log instance {selectedInstance}. Field-level
+              differences are not included in this sample.
             </div>
           )}
         </div>

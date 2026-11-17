@@ -20,6 +20,31 @@ const vendorDocBase = z.object({
 
 export const purchaseQuotationSchema = vendorDocBase.extend({
   RequiredDate: z.string().optional(),
+  ShipToCode: z.string().optional(),
+  PayToCode: z.string().optional(),
+  ShipToAddress: z.string().optional(),
+  BillToAddress: z.string().optional(),
+  AddressExtension: z.any().optional(),
+  TransportationCode: z.union([z.coerce.number(), z.string()]).nullish(),
+  LanguageCode: z.union([z.coerce.number(), z.string()]).nullish(),
+  CreateOnlineQuotation: z.boolean().optional(),
+  Confirmed: z.boolean().optional(),
+  SalesPersonCode: z.coerce.number().nullish(),
+  JournalMemo: z.string().nullish(),
+  PaymentGroupCode: z.coerce.number().nullish(),
+  PaymentMethod: z.string().nullish(),
+  CentralBankIndicator: z.string().nullish(),
+  ManualDueDate: z.string().nullish(),
+  ExtraMonth: z.coerce.number().optional(),
+  ExtraDays: z.coerce.number().optional(),
+  PayDuMonth: z.string().nullish(),
+  CashDiscountDateOffset: z.coerce.number().nullish(),
+  Project: z.string().nullish(),
+  QRCodeFrom: z.string().nullish(),
+  CancelDate: z.string().nullish(),
+  Indicator: z.string().nullish(),
+  FederalTaxID: z.string().nullish(),
+  DocumentReferences: z.array(z.any()).optional(),
 });
 export type PurchaseQuotationFormData = z.infer<typeof purchaseQuotationSchema>;
 

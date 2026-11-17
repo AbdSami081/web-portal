@@ -59,6 +59,44 @@ function mapLineExpenses(line: PurchaseDocumentLine) {
   return expenses;
 }
 
+function mapPurchaseQuotationHeaderFields(data: Record<string, any>) {
+  const payload: Record<string, any> = {};
+  const simpleFields = [
+    "ShipToCode", "PayToCode", "AddressExtension", "DocumentReferences",
+    "JournalMemo", "PaymentMethod", "CentralBankIndicator", "PayDuMonth",
+    "Project", "QRCodeFrom", "CancelDate", "Indicator", "FederalTaxID", "NumAtCard",
+  ] as const;
+
+  simpleFields.forEach((key) => {
+    if (data[key] !== undefined && data[key] !== null) payload[key] = data[key];
+  });
+
+  if (data.ShipToAddress !== undefined && data.ShipToAddress !== null) {
+    payload.Address2 = data.ShipToAddress;
+  }
+  if (data.BillToAddress !== undefined && data.BillToAddress !== null) {
+    payload.Address = data.BillToAddress;
+  }
+
+  ["Confirmed", "CreateOnlineQuotation"].forEach((key) => {
+    if (data[key] !== undefined && data[key] !== null) {
+      payload[key] = data[key] ? "tYES" : "tNO";
+    }
+  });
+
+  [
+    "TransportationCode", "LanguageCode", "SalesPersonCode", "PaymentGroupCode",
+    "ExtraMonth", "ExtraDays", "CashDiscountDateOffset",
+  ].forEach((key) => {
+    const value = data[key];
+    if (value === undefined || value === null || value === "") return;
+    const numericValue = Number(value);
+    payload[key] = Number.isFinite(numericValue) ? numericValue : value;
+  });
+
+  return payload;
+}
+
 export function buildPurchaseDocumentPayload({
   data,
   lines,
@@ -80,6 +118,7 @@ export function buildPurchaseDocumentPayload({
   const isPurchaseRequest = !!data.Requester;
 
   return {
+    ...mapPurchaseQuotationHeaderFields(data),
     ...pickLineUdfs(data),
     ...(!isPurchaseRequest && {
       CardCode: data.CardCode,
@@ -93,7 +132,7 @@ export function buildPurchaseDocumentPayload({
     }),
     ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
     DocDate: data.DocDate,
-    DocDueDate: data.DocDueDate,
+    DocDueDate: data.ManualDueDate || data.DocDueDate,
     TaxDate: data.TaxDate,
     Comments: data.Comments,
     ...(() => {
@@ -182,11 +221,12 @@ export function buildPurchaseDocumentPatchPayload({
   const isPurchaseRequest = !!data.Requester;
 
   return {
+    ...mapPurchaseQuotationHeaderFields(data),
     ...pickLineUdfs(data),
     DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",
     Comments: data.Comments,
     ...(data.DocDate && { DocDate: data.DocDate }),
-    ...(data.DocDueDate && { DocDueDate: data.DocDueDate }),
+    ...((data.ManualDueDate || data.DocDueDate) && { DocDueDate: data.ManualDueDate || data.DocDueDate }),
     ...(data.TaxDate && { TaxDate: data.TaxDate }),
     ...(data.RequiredDate && { RequriedDate: data.RequiredDate }),
     ...(data.RequesterEmail && { RequesterEmail: data.RequesterEmail }),

@@ -192,6 +192,38 @@ export const getShippingTypes = async (): Promise<ShippingType[]> => {
   }
 };
 
+export type LogisticsMasterOption = Record<string, unknown>;
+
+const getLogisticsMasterOptions = async (
+  endpoint: string,
+): Promise<LogisticsMasterOption[]> => {
+  try {
+    const res = await apiClient.get(`api/Master/${endpoint}`);
+    const data =
+      typeof res.data === "string"
+        ? JSON.parse(res.data)
+        : res.data;
+
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.value)) return data.value;
+    if (Array.isArray(data?.data)) return data.data;
+
+    return [];
+  } catch (error) {
+    console.error(`Get ${endpoint} Error:`, error);
+    throw error;
+  }
+};
+
+export const getShipToOptions = () => getLogisticsMasterOptions("GetShipTo");
+export const getBillToOptions = () => getLogisticsMasterOptions("GetBillTo");
+export const getUserLanguageOptions = () =>
+  getLogisticsMasterOptions("GetUserLanguages");
+export const getBpChannelNameOptions = () =>
+  getLogisticsMasterOptions("GetBpChannelName");
+export const getBpChannelContactOptions = () =>
+  getLogisticsMasterOptions("GetBpChannelContact");
+
 export interface FactoringIndicator {
   IndicatorCode: string;
   IndicatorName: string;

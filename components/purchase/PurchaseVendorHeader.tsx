@@ -62,6 +62,9 @@ const statusMap: Record<string, string> = {
   bost_Close: "Closed",
 };
 
+const sapYesNo = (value: unknown) =>
+  value === true || String(value ?? "").toLowerCase() === "tyes" || String(value ?? "").toLowerCase() === "y";
+
 // PurchaseRequests and APDownPaymentRequest share the same SAP object code
 // (1470000113), so this can't disambiguate them by number alone — the "Valid Until"
 // label for Purchase Request is applied separately below via isPurchaseRequest,
@@ -399,6 +402,34 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
         }
         setValue("Comments", documentData.Comments || "");
         setComments(documentData.Comments || "");
+        if (config.type === DocumentType.PurchaseQuotation) {
+          setValue("ShipToCode", documentData.ShipToCode ?? "");
+          setValue("PayToCode", documentData.PayToCode ?? "");
+          setValue("ShipToAddress", documentData.Address2 ?? "");
+          setValue("BillToAddress", documentData.Address ?? "");
+          setValue("AddressExtension", documentData.AddressExtension ?? undefined);
+          setValue("TransportationCode", documentData.TransportationCode ?? "");
+          setValue("LanguageCode", documentData.LanguageCode ?? "");
+          setValue("CreateOnlineQuotation", sapYesNo(documentData.CreateOnlineQuotation));
+          setValue("Confirmed", sapYesNo(documentData.Confirmed));
+          setValue("SalesPersonCode", documentData.SalesPersonCode ?? -1);
+          setValue("JournalMemo", documentData.JournalMemo ?? "");
+          setValue("PaymentGroupCode", documentData.PaymentGroupCode ?? undefined);
+          setValue("PaymentMethod", documentData.PaymentMethod ?? "");
+          setValue("CentralBankIndicator", documentData.CentralBankIndicator ?? "");
+          setValue("ManualDueDate", documentData.ManualDueDate ?? documentData.DocDueDate ?? "");
+          setValue("ExtraMonth", documentData.ExtraMonth ?? 0);
+          setValue("ExtraDays", documentData.ExtraDays ?? 0);
+          setValue("PayDuMonth", documentData.PayDuMonth ?? "N");
+          setValue("CashDiscountDateOffset", documentData.CashDiscountDateOffset ?? "");
+          setValue("Project", documentData.Project ?? "");
+          setValue("QRCodeFrom", documentData.QRCodeFrom ?? "");
+          setValue("CancelDate", documentData.CancelDate ?? "");
+          setValue("Indicator", documentData.Indicator ?? "");
+          setValue("FederalTaxID", documentData.FederalTaxID ?? "");
+          setValue("NumAtCard", documentData.NumAtCard ?? "");
+          setValue("DocumentReferences", documentData.DocumentReferences ?? []);
+        }
         setValue("DocStatus", documentData.DocumentStatus || documentData.DocStatus || "bost_Open");
         setValue("DocNum", documentData.DocNum);
         setValue("DocEntry", documentData.DocEntry);
@@ -436,10 +467,18 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
   };
 
   const handleSelectBP = (bp: BusinessPartner) => {
+    const previousCardCode = watch("CardCode");
     setRequester(bp);
     setValue("CardCode", bp.CardCode);
     setValue("CardName", bp.CardName);
     setValue("listNum", bp.PriceListNum);
+    if (config.type === DocumentType.PurchaseQuotation && previousCardCode !== bp.CardCode) {
+      setValue("ShipToCode", "");
+      setValue("PayToCode", "");
+      setValue("ShipToAddress", "");
+      setValue("BillToAddress", "");
+      setValue("AddressExtension", undefined);
+    }
     setModalOpen(false);
   };
 

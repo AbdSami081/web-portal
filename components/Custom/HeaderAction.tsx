@@ -265,7 +265,6 @@ type="button"
       <ChangeLogModal
         open={changeLogOpen}
         onClose={() => setChangeLogOpen(false)}
-        objectCode={objectCode}
       />
 
       {/* FMS Setup Modal */}

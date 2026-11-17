@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppLabel } from "@/components/Custom/AppLabel";
 import { Textarea } from "@/components/ui/textarea";
 import { usePurchaseDocument } from "@/stores/purchase/usePurchaseDocument";
@@ -7,6 +9,8 @@ import { formatCurrency } from "@/lib/sap/helpers/currencyFormatter";
 import { useFmsContext } from "@/hooks/useFMS";
 import { FmsFieldButton, fmsKeyDown } from "@/components/Custom/FmsFieldButton";
 import { usePurchaseDocConfig } from "./PurchaseDocumentLayout";
+import { useSalesPersonsStore } from "@/stores/useSalesPersonsStore";
+import { DocumentType } from "@/types/master/DocumentType";
 import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 
 // Field access catalog for this document's footer/totals — folded into the
@@ -25,6 +29,12 @@ export function PurchaseFooter() {
   const { watch, register, setValue } = useFormContext();
   const { triggerFMS } = useFmsContext();
   const config = usePurchaseDocConfig();
+  const isPurchaseQuotation = config.type === DocumentType.PurchaseQuotation;
+  const salesPersons = useSalesPersonsStore((state) => state.salesPersons);
+  const loadSalesPersons = useSalesPersonsStore((state) => state.loadSalesPersons);
+  useEffect(() => {
+    if (isPurchaseQuotation) void loadSalesPersons();
+  }, [isPurchaseQuotation, loadSalesPersons]);
   const {
     DocTotal,
     TaxTotal,
@@ -58,6 +68,28 @@ export function PurchaseFooter() {
 
       <div className="grid grid-cols-2 gap-20">
         <div>
+          {isPurchaseQuotation && (
+            <div className="mb-4 max-w-95 space-y-2">
+              <AppLabel htmlFor="SalesPersonCode">Buyer</AppLabel>
+              <Select
+                value={String(watch("SalesPersonCode") ?? -1)}
+                onValueChange={(value) => setValue("SalesPersonCode", Number(value), { shouldDirty: true })}
+                disabled={isFooterDisabled}
+              >
+                <SelectTrigger id="SalesPersonCode" className="h-8 w-full">
+                  <SelectValue placeholder="-No Sales Employee-" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="-1">-No Sales Employee-</SelectItem>
+                  {salesPersons.map((person) => (
+                    <SelectItem key={person.SalesEmployeeCode} value={String(person.SalesEmployeeCode)}>
+                      {person.SalesEmployeeName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex items-center gap-1">
             <AppLabel htmlFor="Comments">Remarks</AppLabel>
             <FmsFieldButton field="Comments" />

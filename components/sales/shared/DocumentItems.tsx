@@ -49,7 +49,16 @@ import { hasInvalidPrice } from "@/lib/sap/helpers/priceValidationHelper";
 import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
-import { getShippingTypes, type ShippingType } from "@/api+/sap/BusinessPartner/BPService";
+import {
+  getBillToOptions,
+  getBpChannelContactOptions,
+  getBpChannelNameOptions,
+  getShipToOptions,
+  getShippingTypes,
+  getUserLanguageOptions,
+  type LogisticsMasterOption,
+  type ShippingType,
+} from "@/api+/sap/BusinessPartner/BPService";
 import {
   Dialog,
   DialogContent,
@@ -135,6 +144,19 @@ const toSapAddressExtension = (draft: Record<string, string>, prefix: "ShipTo" |
     ]),
   );
 
+const getMasterOptionValue = (
+  option: LogisticsMasterOption,
+  keys: string[],
+) => {
+  for (const key of keys) {
+    const value = option[key];
+    if ((typeof value === "string" || typeof value === "number") && String(value).trim()) {
+      return String(value);
+    }
+  }
+  return "";
+};
+
 export function DocumentItems() {
   const { watch, setValue, register } = useFormContext();
 
@@ -175,6 +197,11 @@ const setDocumentMode = useSalesDocument(
 );
   const [serviceLines, setServiceLines] = useState<any[]>([]);
   const [shippingTypes, setShippingTypes] = useState<ShippingType[]>([]);
+  const [shipToOptions, setShipToOptions] = useState<LogisticsMasterOption[]>([]);
+  const [billToOptions, setBillToOptions] = useState<LogisticsMasterOption[]>([]);
+  const [languageOptions, setLanguageOptions] = useState<LogisticsMasterOption[]>([]);
+  const [bpChannelNameOptions, setBpChannelNameOptions] = useState<LogisticsMasterOption[]>([]);
+  const [bpChannelContactOptions, setBpChannelContactOptions] = useState<LogisticsMasterOption[]>([]);
   const config = useSalesDocConfig();
 
   const isARInvoice = config.type === DocumentType.ARInvoice;
@@ -218,6 +245,43 @@ const setDocumentMode = useSalesDocument(
         toast.error("Failed to load Shipping Types");
       });
   }, []);
+
+  useEffect(() => {
+    if (!hasLogisticsTab) return;
+
+    let isCurrent = true;
+    const requests = [
+      { label: "Ship To", load: getShipToOptions, set: setShipToOptions },
+      { label: "Bill To", load: getBillToOptions, set: setBillToOptions },
+      { label: "Languages", load: getUserLanguageOptions, set: setLanguageOptions },
+      { label: "BP Channel Names", load: getBpChannelNameOptions, set: setBpChannelNameOptions },
+      { label: "BP Channel Contacts", load: getBpChannelContactOptions, set: setBpChannelContactOptions },
+    ] as const;
+
+    Promise.all(
+      requests.map(async ({ label, load, set }) => {
+        try {
+          const options = await load();
+          if (isCurrent) set(options);
+          return null;
+        } catch (error) {
+          console.error(`Failed to load ${label} logistics options:`, error);
+          return label;
+        }
+      }),
+    ).then((failures) => {
+      const failedLabels = failures.filter(
+        (label): label is Exclude<typeof label, null> => label !== null,
+      );
+      if (isCurrent && failedLabels.length > 0) {
+        toast.error(`Failed to load logistics options: ${failedLabels.join(", ")}`);
+      }
+    });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [hasLogisticsTab]);
 
  const handleOnSelectItems = (items: Item[]) => {
   if (documentMode === "service") {
@@ -1089,6 +1153,30 @@ const setDocumentMode = useSalesDocument(
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="default">Default</SelectItem>
+                          {shipToOptions.map((option, index) => {
+                            const value = getMasterOptionValue(option, [
+                              "ShipToCode",
+                              "AddressCode",
+                              "Code",
+                              "Address",
+                              "AddressName",
+                              "Name",
+                              "Id",
+                            ]);
+                            const label = getMasterOptionValue(option, [
+                              "AddressName",
+                              "Name",
+                              "Address",
+                              "ShipToCode",
+                              "AddressCode",
+                              "Code",
+                            ]);
+                            return value ? (
+                              <SelectItem key={`${value}-${index}`} value={value}>
+                                {label || value}
+                              </SelectItem>
+                            ) : null;
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1130,6 +1218,30 @@ const setDocumentMode = useSalesDocument(
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="default">Default</SelectItem>
+                          {billToOptions.map((option, index) => {
+                            const value = getMasterOptionValue(option, [
+                              "PayToCode",
+                              "AddressCode",
+                              "Code",
+                              "Address",
+                              "AddressName",
+                              "Name",
+                              "Id",
+                            ]);
+                            const label = getMasterOptionValue(option, [
+                              "AddressName",
+                              "Name",
+                              "Address",
+                              "PayToCode",
+                              "AddressCode",
+                              "Code",
+                            ]);
+                            return value ? (
+                              <SelectItem key={`${value}-${index}`} value={value}>
+                                {label || value}
+                              </SelectItem>
+                            ) : null;
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1185,8 +1297,26 @@ const setDocumentMode = useSalesDocument(
                         <SelectValue placeholder="Select language" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="ur">Urdu</SelectItem>
+                        {languageOptions.map((option, index) => {
+                          const value = getMasterOptionValue(option, [
+                            "LanguageCode",
+                            "Code",
+                            "LanguageId",
+                            "Id",
+                          ]);
+                          const label = getMasterOptionValue(option, [
+                            "LanguageName",
+                            "Name",
+                            "Description",
+                            "LanguageCode",
+                            "Code",
+                          ]);
+                          return value ? (
+                            <SelectItem key={`${value}-${index}`} value={value}>
+                              {label || value}
+                            </SelectItem>
+                          ) : null;
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1210,7 +1340,26 @@ const setDocumentMode = useSalesDocument(
                   {/* BP Channel Name */}
                   <div className={logisticsRowCls}>
                     <label className={`${labelCls} whitespace-nowrap`}>BP Channel Name</label>
-                    <Input type="text" aria-label="BP Channel Name" value={watch("BPChannelCode") ?? ""} onChange={(event) => setValue("BPChannelCode", event.target.value, { shouldDirty: true })} className="h-7 w-60 max-w-none text-xs" />
+                    <Input type="text" aria-label="BP Channel Name" list="bp-channel-name-options" value={watch("BPChannelCode") ?? ""} onChange={(event) => setValue("BPChannelCode", event.target.value, { shouldDirty: true })} className="h-7 w-60 max-w-none text-xs" />
+                    <datalist id="bp-channel-name-options">
+                      {bpChannelNameOptions.map((option, index) => {
+                        const value = getMasterOptionValue(option, [
+                          "Code",
+                          "ChannelCode",
+                          "BPChannelCode",
+                          "AbsEntry",
+                          "Id",
+                        ]);
+                        const label = getMasterOptionValue(option, [
+                          "Name",
+                          "ChannelName",
+                          "Description",
+                        ]);
+                        return value ? (
+                          <option key={`${value}-${index}`} value={value} label={label} />
+                        ) : null;
+                      })}
+                    </datalist>
                   </div>
 
                   {/* BP Channel Contact */}
@@ -1221,7 +1370,25 @@ const setDocumentMode = useSalesDocument(
                         <SelectValue placeholder="Select contact" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="contact1">Contact 1</SelectItem>
+                        {bpChannelContactOptions.map((option, index) => {
+                          const value = getMasterOptionValue(option, [
+                            "ContactCode",
+                            "CntctCode",
+                            "BPChannelContact",
+                            "Code",
+                            "Id",
+                          ]);
+                          const label = getMasterOptionValue(option, [
+                            "Name",
+                            "ContactName",
+                            "FirstName",
+                          ]);
+                          return value ? (
+                            <SelectItem key={`${value}-${index}`} value={value}>
+                              {label || value}
+                            </SelectItem>
+                          ) : null;
+                        })}
                       </SelectContent>
                     </Select>
                   </div>

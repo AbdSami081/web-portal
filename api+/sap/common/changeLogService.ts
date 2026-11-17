@@ -1,3 +1,10 @@
+import apiClient from "@/lib/apiClient";
+
+export interface ChangeLogRequest {
+  Object: string;
+  PrimaryKey: string;
+}
+
 export interface ChangeLogEntry {
   instance: number;
   objectCode: number;
@@ -11,34 +18,23 @@ export interface ChangeLogEntry {
   createdOnAt: string;
 }
 
-
-const mockChangeLogPayload = (objectCode: number): ChangeLogEntry[] => [
-  {
-    instance: 1,
-    objectCode,
-    updated: "28.10.26",
-    updatedByUserCode: "Dev01",
-    updatedByUserName: "Development",
-    updatedOnAt: "28.10.26 17:41:28",
-    created: "28.10.26",
-    createdByUserCode: "Dev01",
-    createdByUserName: "Development",
-    createdOnAt: "28.10.26 17:41:28",
-  },
-  {
-    instance: 2,
-    objectCode,
-    updated: "28.10.26",
-    updatedByUserCode: "Dev01",
-    updatedByUserName: "Development",
-    updatedOnAt: "28.10.26 17:41:41",
-    created: "28.10.26",
-    createdByUserCode: "Dev01",
-    createdByUserName: "Development",
-    createdOnAt: "28.10.26 17:41:28",
-  },
-];
-
 export const getChangeLogEntries = async (
-  objectCode: number
-): Promise<ChangeLogEntry[]> => mockChangeLogPayload(objectCode);
+  payload: ChangeLogRequest
+): Promise<ChangeLogEntry[]> => {
+  const response = await apiClient.post<unknown>(
+    "/api/ChangeLog/GetChangeLog",
+    payload
+  );
+  const body = response.data;
+  const result =
+    body && typeof body === "object" && !Array.isArray(body)
+      ? ("data" in body ? body.data : "value" in body ? body.value : body)
+      : body;
+
+  if (!Array.isArray(result)) {
+    throw new Error("Unexpected Change Log API response.");
+  }
+
+  return result as ChangeLogEntry[];
+};
+
