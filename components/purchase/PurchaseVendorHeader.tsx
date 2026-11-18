@@ -46,7 +46,7 @@ import { usePurchaseDocConfig, useHeaderFetchRef } from "../purchase/PurchaseDoc
 import { toast } from "sonner";
 import { getDocumentsList } from "@/api+/sap/common/documentService";
 import { DocumentType } from "@/types/master/DocumentType";
-import { getDraftDocument } from "@/api+/sap/draft/draftService";
+import { getDraftDocument, findDraftByNumber } from "@/api+/sap/draft/draftService";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { usePathname, useRouter } from "next/navigation";
 import { useDocNavParams } from "@/lib/docNavParams";
@@ -332,11 +332,14 @@ export function PurchaseVendorHeader({ docType }: PurchaseVendorHeaderProps) {
 
     try {
       const currentPath = pathname.toLowerCase();
-      const isDraftLookup = opts?.isDraft ?? currentPath.includes("/purchase/draft");
+      const isDraftNavByEntry = opts?.isDraft === true;
+      const isDraftLookup = isDraftNavByEntry || currentPath.includes("/purchase/draft");
 
       const byEntry = opts?.byEntry ?? false;
       if (isDraftLookup) {
-        documentData = await getDraftDocument(docNumInt);
+        documentData = isDraftNavByEntry
+          ? await getDraftDocument(docNumInt)
+          : (await findDraftByNumber(docNumInt, config.type)) ?? (await getDraftDocument(docNumInt));
       } else if (currentPath.includes("apdownpaymentrequest")) {
         documentData = await getAPDownPaymentRequestDocument(docNumInt, byEntry);
       } else if (currentPath.includes("apdownpaymentinvoice")) {

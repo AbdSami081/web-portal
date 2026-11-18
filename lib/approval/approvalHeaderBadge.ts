@@ -264,10 +264,12 @@ export function resolveDocAuthStatus(doc: any): string {
 }
 
 export function resolveDocWpApprStatus(doc: any, authorizationStatus?: string): string {
+  const auth = (authorizationStatus || resolveDocAuthStatus(doc) || "").trim().toLowerCase();
+
+  if (auth === "dasgenerated") return "P";
+
   const existing = String(doc?.U_WP_ApprStatus ?? "").trim();
   if (existing) return existing;
-  const auth = (authorizationStatus || resolveDocAuthStatus(doc) || "").trim().toLowerCase();
-  if (auth === "dasgenerated") return "P";
   if (auth === "dasapproved") return "Y";
   if (auth === "dasrejected") return "N";
   if (auth === "daspending") return "W";
