@@ -161,7 +161,7 @@ export function InvDocumentItems() {
         UoMCode: uomCode,
         UgpEntry: item.UgpEntry,
         unitMsr: uomCode,
-        MeasureUnit: item.MeasureUnit || getUoMName(uomCode) || "",
+        MeasureUnit: getUoMName(uomCode) || item.MeasureUnit || "",
         PlPaWght: 0,
         U_LastPrice: price,
         OcrCode2: "",
@@ -179,11 +179,6 @@ export function InvDocumentItems() {
     });
   };
 
-  // Paste tab-separated rows copied from Excel straight into the line table:
-  // ItemCode <tab> Quantity <tab> (Price/Discount are ignored here — this
-  // document has no pricing lines) <tab> <tab> WarehouseCode. Reuses the same
-  // item-line construction as handleOnSelectItems so pasted lines come out
-  // identical to manually-added ones.
   const handleExcelPaste = async (e: React.ClipboardEvent) => {
     const text = e.clipboardData.getData("text");
     if (!text || (!text.includes("\t") && !text.includes("\n"))) return;
@@ -210,10 +205,6 @@ export function InvDocumentItems() {
 
     if (parsedRows.length === 0) return;
 
-    // Bulk-fetch all item codes in chunked requests (not one request per
-    // row), then commit every resulting line in a single store update —
-    // keeps this responsive for pastes from a handful of rows up to tens of
-    // thousands.
     const toastId = toast.loading(`Looking up ${parsedRows.length} item(s)...`);
     const itemsByCode = await fetchItemsByCodesBulk(
       parsedRows.map((r) => r.itemCode),
@@ -263,7 +254,7 @@ export function InvDocumentItems() {
         UoMCode: uomCode,
         UgpEntry: item.UgpEntry,
         unitMsr: uomCode,
-        MeasureUnit: item.MeasureUnit || getUoMName(uomCode) || "",
+        MeasureUnit: getUoMName(uomCode) || item.MeasureUnit || "",
         QtyInWhs: qtyInWhs,
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,

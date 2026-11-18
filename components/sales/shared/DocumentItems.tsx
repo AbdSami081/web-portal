@@ -255,8 +255,8 @@ const setDocumentMode = useSalesDocument(
       UgpEntry: item.UgpEntry,
 
       MeasureUnit:
-        item.MeasureUnit ||
         getUoMName(uomVal) ||
+        item.MeasureUnit ||
         "",
 
       ManSerNum: item.ManSerNum,
@@ -268,10 +268,6 @@ const setDocumentMode = useSalesDocument(
   setDialogOpen(false);
 };
 
-  // Paste tab-separated rows copied from Excel straight into the line table:
-  // ItemCode <tab> Quantity <tab> Price <tab> DiscountPercent <tab> WarehouseCode.
-  // Reuses the same item-line construction as handleOnSelectItems so pasted
-  // lines come out identical to manually-added ones (tax, branch, UoM, etc.).
   const handleExcelPaste = async (e: React.ClipboardEvent) => {
     if (documentMode === "service") return;
     if (!customer?.CardCode) {
@@ -305,10 +301,6 @@ const setDocumentMode = useSalesDocument(
 
     if (parsedRows.length === 0) return;
 
-    // Bulk-fetch all item codes in chunked requests (not one request per
-    // row), then commit every resulting line in a single store update —
-    // keeps this responsive for pastes from a handful of rows up to tens of
-    // thousands.
     const toastId = toast.loading(`Looking up ${parsedRows.length} item(s)...`);
     const itemsByCode = await fetchItemsByCodesBulk(
       parsedRows.map((r) => r.itemCode),
@@ -350,7 +342,8 @@ const setDocumentMode = useSalesDocument(
         BPLid: resolveBranchForWarehouse(defaultWhsLine, warehouses),
         UoMCode: uomVal,
         UgpEntry: item.UgpEntry,
-        MeasureUnit: item.MeasureUnit || getUoMName(uomVal) || "",
+        // Same Sales-UoM-vs-Inventory-UoM mismatch as handleOnSelectItems above.
+        MeasureUnit: getUoMName(uomVal) || item.MeasureUnit || "",
         ManSerNum: item.ManSerNum,
         ManBtchNum: item.ManBtchNum,
         QtyInWhs: qtyInWhs,
