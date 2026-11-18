@@ -25,6 +25,7 @@ import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService";
 import { GenericModal } from "@/modals/GenericModal";
+import { CopyDownField } from "@/components/shared/CopyDownField";
 
 interface Props {
   index: number;
@@ -36,6 +37,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   const { watch } = useFormContext();
   const updateLine = useInventoryDocument((s) => s.updateLine);
   const removeLine = useInventoryDocument((s) => s.removeLine);
+  const copyFieldToLinesBelow = useInventoryDocument((s) => s.copyFieldToLinesBelow);
   const fieldAccess = useInventoryDocument((s) => s.fieldAccess);
   const isFieldVisible = (f: string) => fieldAccess.includes(f);
   const warehouses = useMasterDataStore((s) => s.warehouses);
@@ -201,52 +203,62 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       {/* From Warehouse */}
       {!isGoodIssue && isFieldVisible("FromWhsCode") && (
         <td className="py-2 px-4">
-          <div className="flex items-center gap-1 w-full">
-            <Input
-              className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
-              value={draftLine.FromWhsCode || ""}
-              disabled
-            />
-            <FieldLookupButton
-              hasValue={Boolean(draftLine.FromWhsCode)}
-              onSearch={() => {
-                setWhsMode("from");
-                setIsWhsModalOpen(true);
-              }}
-              onClear={() => {
-                const updated = { ...draftLine, FromWhsCode: "", OnHand: 0 };
-                setDraftLine(updated);
-                saveRow(updated);
-              }}
-              disabled={isRowLocked}
-            />
-          </div>
+          <CopyDownField
+            disabled={isRowLocked}
+            onCopyDown={() => copyFieldToLinesBelow(index, "FromWhsCode", draftLine.FromWhsCode)}
+          >
+            <div className="flex items-center gap-1 w-full">
+              <Input
+                className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
+                value={draftLine.FromWhsCode || ""}
+                disabled
+              />
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.FromWhsCode)}
+                onSearch={() => {
+                  setWhsMode("from");
+                  setIsWhsModalOpen(true);
+                }}
+                onClear={() => {
+                  const updated = { ...draftLine, FromWhsCode: "", OnHand: 0 };
+                  setDraftLine(updated);
+                  saveRow(updated);
+                }}
+                disabled={isRowLocked}
+              />
+            </div>
+          </CopyDownField>
         </td>
       )}
 
       {/* Warehouse (To Warehouse for transfers; single warehouse for Good Issue) */}
       {isFieldVisible("WhsCode") && (
       <td className="py-2 px-4">
-        <div className="flex items-center gap-1 w-full">
-          <Input
-            className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
-            value={draftLine.WhsCode || ""}
-            disabled
-          />
-          <FieldLookupButton
-            hasValue={Boolean(draftLine.WhsCode)}
-            onSearch={() => {
-              setWhsMode("to");
-              setIsWhsModalOpen(true);
-            }}
-            onClear={() => {
-              const updated = { ...draftLine, WhsCode: "", BPLid: undefined };
-              setDraftLine(updated);
-              saveRow(updated);
-            }}
-            disabled={isRowLocked}
-          />
-        </div>
+        <CopyDownField
+          disabled={isRowLocked}
+          onCopyDown={() => copyFieldToLinesBelow(index, "WhsCode", draftLine.WhsCode)}
+        >
+          <div className="flex items-center gap-1 w-full">
+            <Input
+              className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
+              value={draftLine.WhsCode || ""}
+              disabled
+            />
+            <FieldLookupButton
+              hasValue={Boolean(draftLine.WhsCode)}
+              onSearch={() => {
+                setWhsMode("to");
+                setIsWhsModalOpen(true);
+              }}
+              onClear={() => {
+                const updated = { ...draftLine, WhsCode: "", BPLid: undefined };
+                setDraftLine(updated);
+                saveRow(updated);
+              }}
+              disabled={isRowLocked}
+            />
+          </div>
+        </CopyDownField>
       </td>
       )}
 
@@ -324,22 +336,27 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
       {/* UoM Code*/}
       {isFieldVisible("UoMCode") && (
       <td className="py-2 px-4">
-        <div className="flex items-center gap-1">
-          <Input
-            className="h-6 w-full bg-slate-50 cursor-not-allowed"
-            value={normalizeInventoryUom(draftLine.UoMCode)}
-            disabled
-            readOnly
-          />
-          {!isManualUom(draftLine.UoMCode) && (
-            <FieldLookupButton
-              hasValue={Boolean(draftLine.UoMCode)}
-              onSearch={() => setUomDialogOpen(true)}
-              onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
-              disabled={isRowLocked}
+        <CopyDownField
+          disabled={isRowLocked}
+          onCopyDown={() => copyFieldToLinesBelow(index, "UoMCode", draftLine.UoMCode)}
+        >
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-6 w-full bg-slate-50 cursor-not-allowed"
+              value={normalizeInventoryUom(draftLine.UoMCode)}
+              disabled
+              readOnly
             />
-          )}
-        </div>
+            {!isManualUom(draftLine.UoMCode) && (
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.UoMCode)}
+                onSearch={() => setUomDialogOpen(true)}
+                onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
+                disabled={isRowLocked}
+              />
+            )}
+          </div>
+        </CopyDownField>
       </td>
       )}
 
@@ -357,23 +374,28 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
 
       {isProjectVisible && (
         <td className="py-2 px-4">
-          <div className="flex items-center gap-1 w-full">
-            <Input
-              className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
-              value={draftLine.Project || ""}
-              disabled
-              readOnly
-            />
-            <FieldLookupButton
-              hasValue={Boolean(draftLine.Project)}
-              onSearch={() => {
-                loadProjects();
-                setProjectModalOpen(true);
-              }}
-              onClear={() => patchLine({ Project: "" })}
-              disabled={isRowLocked || !isProjectEnabled}
-            />
-          </div>
+          <CopyDownField
+            disabled={isRowLocked || !isProjectEnabled}
+            onCopyDown={() => copyFieldToLinesBelow(index, "Project", draftLine.Project)}
+          >
+            <div className="flex items-center gap-1 w-full">
+              <Input
+                className="h-6 w-full bg-gray-100 text-gray-500 cursor-not-allowed"
+                value={draftLine.Project || ""}
+                disabled
+                readOnly
+              />
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.Project)}
+                onSearch={() => {
+                  loadProjects();
+                  setProjectModalOpen(true);
+                }}
+                onClear={() => patchLine({ Project: "" })}
+                disabled={isRowLocked || !isProjectEnabled}
+              />
+            </div>
+          </CopyDownField>
         </td>
       )}
 

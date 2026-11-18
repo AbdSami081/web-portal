@@ -91,6 +91,7 @@ interface PurchaseDocumentStore {
   addLines: (lines: PurchaseDocumentLine[]) => void;
   updateLine: (itemCode: string, updated: Partial<PurchaseDocumentLine>) => void;
   updateLineByIndex: (index: number, updated: Partial<PurchaseDocumentLine>) => void;
+  copyFieldToLinesBelow: (fromIndex: number, field: keyof PurchaseDocumentLine, value: unknown) => void;
   removeLine: (itemCode: string) => void;
   removeLineByIndex: (index: number) => void;
   clearLines: () => void;
@@ -235,6 +236,14 @@ export const usePurchaseDocument = create<PurchaseDocumentStore>()(
         newLines[index] = { ...newLines[index], ...updated };
         return { lines: newLines };
       });
+      get().calculateTotals();
+    },
+    copyFieldToLinesBelow: (fromIndex, field, value) => {
+      set((state) => ({
+        lines: state.lines.map((line, i) =>
+          i > fromIndex && line.IsClosed !== "tYES" ? { ...line, [field]: value } : line
+        ),
+      }));
       get().calculateTotals();
     },
     setLineSerials: (itemCode, serials) => {

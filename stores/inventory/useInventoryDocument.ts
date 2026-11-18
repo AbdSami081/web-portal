@@ -53,6 +53,7 @@ interface IOPRDDocumentStore {
   addLines: (lines: InventoryDocumentLine[]) => void;
   removeLine: (index: number) => void;
   updateLine: (itemCode: string, updated: Partial<InventoryDocumentLine>) => void;
+  copyFieldToLinesBelow: (fromIndex: number, field: keyof InventoryDocumentLine, value: unknown) => void;
   setLineSerials: (itemCode: string, serials: any[]) => void;
   setLineBatches: (itemCode: string, batches: any[]) => void;
   updateAllLinesWarehouse: (whs: string, isFrom: boolean) => void;
@@ -166,6 +167,11 @@ export const useInventoryDocument = create<IOPRDDocumentStore>()(
     updateLine: (itemCode, updated) =>
       set((s) => ({
         lines: s.lines.map((l) => (l.ItemCode === itemCode ? { ...l, ...updated } : l)),
+      })),
+
+    copyFieldToLinesBelow: (fromIndex, field, value) =>
+      set((s) => ({
+        lines: s.lines.map((line, i) => (i > fromIndex ? { ...line, [field]: value } : line)),
       })),
 
     setLineSerials: (itemCode, serials) =>

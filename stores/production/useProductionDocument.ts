@@ -45,6 +45,7 @@ interface IFPRDDocumentStore {
   removeLine: (index: number) => void;
   loadFromDocument: (doc: any, type?: number, isCopy?: boolean) => void;
   updateLine: (index: number, updated: Partial<PRDDocumentLine>) => void;
+  copyFieldToLinesBelow: (fromIndex: number, field: keyof PRDDocumentLine, value: unknown) => void;
   loadFromBOM: (bom: any, plannedQty: number) => void;
   reset: (docType?: DocumentType) => void;
   recalculateFromHeader: (headerPlannedQty: number) => void;
@@ -88,6 +89,13 @@ export const useIFPRDDocument = create<IFPRDDocumentStore>()(
       set((state) => ({
         lines: state.lines.map((line, idx) =>
           idx === index ? { ...line, ...updated } : line
+        ),
+      }));
+    },
+    copyFieldToLinesBelow: (fromIndex, field, value) => {
+      set((state) => ({
+        lines: state.lines.map((line, idx) =>
+          idx > fromIndex ? { ...line, [field]: value } : line
         ),
       }));
     },

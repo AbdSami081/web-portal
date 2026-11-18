@@ -24,6 +24,7 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { isManualUom } from "@/utils/inventoryUom";
 import { LineUDFCells } from "@/components/shared/LineUDFCells";
 import { FieldLookupButton } from "@/components/shared/FieldLookupButton";
+import { CopyDownField } from "@/components/shared/CopyDownField";
 import { usePositiveField } from "@/lib/validation/usePositiveField";
 import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
@@ -44,7 +45,7 @@ const glAccountColumns = [
 
 export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) {
   const { watch } = useFormContext();
-  const { updateLineByIndex, removeLine, removeLineByIndex, fieldAccess } = usePurchaseDocument();
+  const { updateLineByIndex, removeLine, removeLineByIndex, fieldAccess, copyFieldToLinesBelow } = usePurchaseDocument();
   const { freightsWithCharges, freightTypes, warehouses } = useMasterDataStore();
   const { allBranches } = useBranchStore();
   const config = usePurchaseDocConfig();
@@ -291,26 +292,31 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
 
         {isFieldVisible("TaxCode") && (
           <td className="py-2 px-2">
-            <Select
-              value={draftLine.TaxCode || ""}
+            <CopyDownField
               disabled={!isFieldEnabled("TaxCode")}
-              onValueChange={(val) => patchLine({ TaxCode: val })}
+              onCopyDown={() => copyFieldToLinesBelow(index, "TaxCode", draftLine.TaxCode)}
             >
-              <SelectTrigger className="h-6 w-full text-xs">
-                <SelectValue placeholder="Tax" />
-              </SelectTrigger>
-              <SelectContent>
-                {freightsWithCharges?.map((grp: any) => {
-                  const code = grp.Code || grp.code;
-                  const name = grp.Name || grp.name;
-                  return (
-                    <SelectItem key={code} value={code} className="text-xs">
-                      {code} - {name}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+              <Select
+                value={draftLine.TaxCode || ""}
+                disabled={!isFieldEnabled("TaxCode")}
+                onValueChange={(val) => patchLine({ TaxCode: val })}
+              >
+                <SelectTrigger className="h-6 w-full text-xs">
+                  <SelectValue placeholder="Tax" />
+                </SelectTrigger>
+                <SelectContent>
+                  {freightsWithCharges?.map((grp: any) => {
+                    const code = grp.Code || grp.code;
+                    const name = grp.Name || grp.name;
+                    return (
+                      <SelectItem key={code} value={code} className="text-xs">
+                        {code} - {name}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </CopyDownField>
           </td>
         )}
 
@@ -362,23 +368,28 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
 
         {isFieldVisible("Project") && (
           <td className="w-[140px]">
-            <div className="flex items-center gap-1">
-              <Input
-                className="h-6 w-full bg-gray-100 text-left text-xs"
-                value={draftLine.Project || ""}
-                disabled
-                readOnly
-              />
-              <FieldLookupButton
-                hasValue={Boolean(draftLine.Project)}
-                onSearch={() => {
-                  loadProjects();
-                  setProjectModalOpen(true);
-                }}
-                onClear={() => patchLine({ Project: "" })}
-                disabled={!isFieldEnabled("Project")}
-              />
-            </div>
+            <CopyDownField
+              disabled={!isFieldEnabled("Project")}
+              onCopyDown={() => copyFieldToLinesBelow(index, "Project", draftLine.Project)}
+            >
+              <div className="flex items-center gap-1">
+                <Input
+                  className="h-6 w-full bg-gray-100 text-left text-xs"
+                  value={draftLine.Project || ""}
+                  disabled
+                  readOnly
+                />
+                <FieldLookupButton
+                  hasValue={Boolean(draftLine.Project)}
+                  onSearch={() => {
+                    loadProjects();
+                    setProjectModalOpen(true);
+                  }}
+                  onClear={() => patchLine({ Project: "" })}
+                  disabled={!isFieldEnabled("Project")}
+                />
+              </div>
+            </CopyDownField>
           </td>
         )}
 
@@ -508,40 +519,54 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           return [
             isFieldVisible(costingField) && (
               <td className="py-2 px-2 w-[160px]" key={costingField}>
-                <div className="flex items-center gap-1">
-                  <Input
-                    className="h-6 w-full bg-gray-100 text-left text-xs"
-                    value={(draftLine as any)[costingField] || ""}
-                    disabled
-                    readOnly
-                  />
-                  <FieldLookupButton
-                    hasValue={Boolean((draftLine as any)[costingField])}
-                    className="h-6 w-6"
-                    onSearch={() => openDistModal(costingField, n)}
-                    onClear={() => patchLine({ [costingField]: "" })}
-                    disabled={!isFieldEnabled(costingField)}
-                  />
-                </div>
+                <CopyDownField
+                  disabled={!isFieldEnabled(costingField)}
+                  onCopyDown={() =>
+                    copyFieldToLinesBelow(index, costingField as any, (draftLine as any)[costingField])
+                  }
+                >
+                  <div className="flex items-center gap-1">
+                    <Input
+                      className="h-6 w-full bg-gray-100 text-left text-xs"
+                      value={(draftLine as any)[costingField] || ""}
+                      disabled
+                      readOnly
+                    />
+                    <FieldLookupButton
+                      hasValue={Boolean((draftLine as any)[costingField])}
+                      className="h-6 w-6"
+                      onSearch={() => openDistModal(costingField, n)}
+                      onClear={() => patchLine({ [costingField]: "" })}
+                      disabled={!isFieldEnabled(costingField)}
+                    />
+                  </div>
+                </CopyDownField>
               </td>
             ),
             isFieldVisible(cogsField) && (
               <td className="py-2 px-2 w-[160px]" key={cogsField}>
-                <div className="flex items-center gap-1">
-                  <Input
-                    className="h-6 w-full bg-gray-100 text-left text-xs"
-                    value={(draftLine as any)[cogsField] || ""}
-                    disabled
-                    readOnly
-                  />
-                  <FieldLookupButton
-                    hasValue={Boolean((draftLine as any)[cogsField])}
-                    className="h-6 w-6"
-                    onSearch={() => openDistModal(cogsField, n)}
-                    onClear={() => patchLine({ [cogsField]: "" })}
-                    disabled={!isFieldEnabled(cogsField)}
-                  />
-                </div>
+                <CopyDownField
+                  disabled={!isFieldEnabled(cogsField)}
+                  onCopyDown={() =>
+                    copyFieldToLinesBelow(index, cogsField as any, (draftLine as any)[cogsField])
+                  }
+                >
+                  <div className="flex items-center gap-1">
+                    <Input
+                      className="h-6 w-full bg-gray-100 text-left text-xs"
+                      value={(draftLine as any)[cogsField] || ""}
+                      disabled
+                      readOnly
+                    />
+                    <FieldLookupButton
+                      hasValue={Boolean((draftLine as any)[cogsField])}
+                      className="h-6 w-6"
+                      onSearch={() => openDistModal(cogsField, n)}
+                      onClear={() => patchLine({ [cogsField]: "" })}
+                      disabled={!isFieldEnabled(cogsField)}
+                    />
+                  </div>
+                </CopyDownField>
               </td>
             ),
           ];
@@ -753,28 +778,33 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
 
       {isFieldVisible("TaxCode") && (
         <td className="w-[140px]">
-          <Select
-            value={draftLine.TaxCode || ""}
+          <CopyDownField
             disabled={!isFieldEnabled("TaxCode")}
-            onValueChange={(val) =>
-              setDraftLine({ ...draftLine, TaxCode: val })
-            }
+            onCopyDown={() => copyFieldToLinesBelow(index, "TaxCode", draftLine.TaxCode)}
           >
-            <SelectTrigger className="h-6 w-full text-xs">
-              <SelectValue placeholder="Tax" />
-            </SelectTrigger>
-            <SelectContent>
-              {freightsWithCharges?.map((grp: any) => {
-                const code = grp.Code || grp.code;
-                const name = grp.Name || grp.name;
-                return (
-                  <SelectItem key={code} value={code} className="text-xs">
-                    {code} - {name}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+            <Select
+              value={draftLine.TaxCode || ""}
+              disabled={!isFieldEnabled("TaxCode")}
+              onValueChange={(val) =>
+                setDraftLine({ ...draftLine, TaxCode: val })
+              }
+            >
+              <SelectTrigger className="h-6 w-full text-xs">
+                <SelectValue placeholder="Tax" />
+              </SelectTrigger>
+              <SelectContent>
+                {freightsWithCharges?.map((grp: any) => {
+                  const code = grp.Code || grp.code;
+                  const name = grp.Name || grp.name;
+                  return (
+                    <SelectItem key={code} value={code} className="text-xs">
+                      {code} - {name}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </CopyDownField>
         </td>
       )}
 
@@ -796,20 +826,27 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
 
       {isFieldVisible("WarehouseCode") && (
         <td className="w-[120px]">
-          <div className="flex items-center gap-1">
-            <Input
-              className="h-6 w-full bg-gray-100 text-center text-xs"
-              value={draftLine.WarehouseCode || ""}
-              disabled
-              readOnly
-            />
-            <FieldLookupButton
-              hasValue={Boolean(draftLine.WarehouseCode)}
-              onSearch={() => setWhDialogOpen(true)}
-              onClear={() => patchLine({ WarehouseCode: "", BPLid: undefined, OnHand: 0 })}
-              disabled={!isFieldEnabled("WarehouseCode")}
-            />
-          </div>
+          <CopyDownField
+            disabled={!isFieldEnabled("WarehouseCode")}
+            onCopyDown={() =>
+              copyFieldToLinesBelow(index, "WarehouseCode", draftLine.WarehouseCode)
+            }
+          >
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-6 w-full bg-gray-100 text-center text-xs"
+                value={draftLine.WarehouseCode || ""}
+                disabled
+                readOnly
+              />
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.WarehouseCode)}
+                onSearch={() => setWhDialogOpen(true)}
+                onClear={() => patchLine({ WarehouseCode: "", BPLid: undefined, OnHand: 0 })}
+                disabled={!isFieldEnabled("WarehouseCode")}
+              />
+            </div>
+          </CopyDownField>
         </td>
       )}
 
@@ -826,22 +863,29 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
 
       {isFieldVisible("UoMCode") && (
         <td className="w-[100px]">
-          <div className="flex items-center gap-1">
-            <Input
-              className="h-6 w-full text-center bg-neutral-100"
-              value={draftLine.UoMCode || ""}
-              disabled
-              readOnly
-            />
-            {!isManualUom(draftLine.UoMCode) && (
-              <FieldLookupButton
-                hasValue={Boolean(draftLine.UoMCode)}
-                onSearch={() => setUomDialogOpen(true)}
-                onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
-                disabled={!isFieldEnabled("UoMCode")}
+          <CopyDownField
+            disabled={!isFieldEnabled("UoMCode")}
+            onCopyDown={() =>
+              copyFieldToLinesBelow(index, "UoMCode", draftLine.UoMCode)
+            }
+          >
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-6 w-full text-center bg-neutral-100"
+                value={draftLine.UoMCode || ""}
+                disabled
+                readOnly
               />
-            )}
-          </div>
+              {!isManualUom(draftLine.UoMCode) && (
+                <FieldLookupButton
+                  hasValue={Boolean(draftLine.UoMCode)}
+                  onSearch={() => setUomDialogOpen(true)}
+                  onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
+                  disabled={!isFieldEnabled("UoMCode")}
+                />
+              )}
+            </div>
+          </CopyDownField>
         </td>
       )}
 
@@ -889,23 +933,28 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
 
       {isFieldVisible("Project") && (
         <td className="w-[140px]">
-          <div className="flex items-center gap-1">
-            <Input
-              className="h-6 w-full bg-gray-100 text-left text-xs"
-              value={draftLine.Project || ""}
-              disabled
-              readOnly
-            />
-            <FieldLookupButton
-              hasValue={Boolean(draftLine.Project)}
-              onSearch={() => {
-                loadProjects();
-                setProjectModalOpen(true);
-              }}
-              onClear={() => patchLine({ Project: "" })}
-              disabled={!isFieldEnabled("Project")}
-            />
-          </div>
+          <CopyDownField
+            disabled={!isFieldEnabled("Project")}
+            onCopyDown={() => copyFieldToLinesBelow(index, "Project", draftLine.Project)}
+          >
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-6 w-full bg-gray-100 text-left text-xs"
+                value={draftLine.Project || ""}
+                disabled
+                readOnly
+              />
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.Project)}
+                onSearch={() => {
+                  loadProjects();
+                  setProjectModalOpen(true);
+                }}
+                onClear={() => patchLine({ Project: "" })}
+                disabled={!isFieldEnabled("Project")}
+              />
+            </div>
+          </CopyDownField>
         </td>
       )}
 
@@ -1076,40 +1125,54 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
         return [
           isFieldVisible(costingField) && (
             <td className="w-[160px]" key={costingField}>
-              <div className="flex items-center gap-1">
-                <Input
-                  className="h-6 w-full bg-gray-100 text-left text-xs"
-                  value={(draftLine as any)[costingField] || ""}
-                  disabled
-                  readOnly
-                />
-                <FieldLookupButton
-                  hasValue={Boolean((draftLine as any)[costingField])}
-                  className="h-6 w-6"
-                  onSearch={() => openDistModal(costingField, n)}
-                  onClear={() => patchLine({ [costingField]: "" })}
-                  disabled={!isFieldEnabled(costingField)}
-                />
-              </div>
+              <CopyDownField
+                disabled={!isFieldEnabled(costingField)}
+                onCopyDown={() =>
+                  copyFieldToLinesBelow(index, costingField as any, (draftLine as any)[costingField])
+                }
+              >
+                <div className="flex items-center gap-1">
+                  <Input
+                    className="h-6 w-full bg-gray-100 text-left text-xs"
+                    value={(draftLine as any)[costingField] || ""}
+                    disabled
+                    readOnly
+                  />
+                  <FieldLookupButton
+                    hasValue={Boolean((draftLine as any)[costingField])}
+                    className="h-6 w-6"
+                    onSearch={() => openDistModal(costingField, n)}
+                    onClear={() => patchLine({ [costingField]: "" })}
+                    disabled={!isFieldEnabled(costingField)}
+                  />
+                </div>
+              </CopyDownField>
             </td>
           ),
           isFieldVisible(cogsField) && (
             <td className="w-[160px]" key={cogsField}>
-              <div className="flex items-center gap-1">
-                <Input
-                  className="h-6 w-full bg-gray-100 text-left text-xs"
-                  value={(draftLine as any)[cogsField] || ""}
-                  disabled
-                  readOnly
-                />
-                <FieldLookupButton
-                  hasValue={Boolean((draftLine as any)[cogsField])}
-                  className="h-6 w-6"
-                  onSearch={() => openDistModal(cogsField, n)}
-                  onClear={() => patchLine({ [cogsField]: "" })}
-                  disabled={!isFieldEnabled(cogsField)}
-                />
-              </div>
+              <CopyDownField
+                disabled={!isFieldEnabled(cogsField)}
+                onCopyDown={() =>
+                  copyFieldToLinesBelow(index, cogsField as any, (draftLine as any)[cogsField])
+                }
+              >
+                <div className="flex items-center gap-1">
+                  <Input
+                    className="h-6 w-full bg-gray-100 text-left text-xs"
+                    value={(draftLine as any)[cogsField] || ""}
+                    disabled
+                    readOnly
+                  />
+                  <FieldLookupButton
+                    hasValue={Boolean((draftLine as any)[cogsField])}
+                    className="h-6 w-6"
+                    onSearch={() => openDistModal(cogsField, n)}
+                    onClear={() => patchLine({ [cogsField]: "" })}
+                    disabled={!isFieldEnabled(cogsField)}
+                  />
+                </div>
+              </CopyDownField>
             </td>
           ),
         ];

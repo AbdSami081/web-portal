@@ -80,6 +80,7 @@ interface SalesDocumentStore {
   addLine: (line: SalesDocumentLine) => void;
   addLines: (lines: SalesDocumentLine[]) => void;
   updateLine: (itemCode: string, updated: Partial<SalesDocumentLine>) => void;
+  copyFieldToLinesBelow: (fromIndex: number, field: keyof SalesDocumentLine, value: unknown) => void;
   setLineSerials: (
     itemCode: string,
     serials: { InternalSerialNumber: string }[],
@@ -270,6 +271,15 @@ export const useSalesDocument = create<SalesDocumentStore>()(
         false,
         "updateLine",
       );
+      get().calculateTotals();
+    },
+
+    copyFieldToLinesBelow: (fromIndex, field, value) => {
+      set((s) => ({
+        lines: s.lines.map((line, i) =>
+          i > fromIndex && line.IsClosed !== "tYES" ? { ...line, [field]: value } : line
+        ),
+      }));
       get().calculateTotals();
     },
 

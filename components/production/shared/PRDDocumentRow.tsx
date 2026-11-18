@@ -32,10 +32,11 @@ import { useLineFmsAuto } from "@/hooks/useFMS";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { getBusinessPartnerProjects } from "@/api+/sap/BusinessPartner/BPService";
+import { CopyDownField } from "@/components/shared/CopyDownField";
 
 export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
   const { watch } = useFormContext();
-  const { updateLine, removeLine, initialStatus, fieldAccess } = useIFPRDDocument();
+  const { updateLine, removeLine, initialStatus, fieldAccess, copyFieldToLinesBelow } = useIFPRDDocument();
   const { allBranches } = useBranchStore();
   const { multiBranchEnabled } = useApprovalSettings();
   const [draftLine, setDraftLine] = useState<PRDDocumentLine>(line);
@@ -255,17 +256,22 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
       {config.itemColumns.uomCode && fieldAccess.includes("UoMCode") && (
         <td className="py-2 px-4 text-center text-gray-700">
-          <div className="flex items-center justify-center gap-1">
-            <span className="block truncate">{normalizeInventoryUom(line.UoMCode)}</span>
-            {!isManualUom(line.UoMCode) && (
-              <FieldLookupButton
-                hasValue={Boolean(line.UoMCode)}
-                onSearch={() => setUomDialogOpen(true)}
-                onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
-                disabled={initialStatus === "boposClosed"}
-              />
-            )}
-          </div>
+          <CopyDownField
+            disabled={initialStatus === "boposClosed"}
+            onCopyDown={() => copyFieldToLinesBelow(index, "UoMCode", line.UoMCode)}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <span className="block truncate">{normalizeInventoryUom(line.UoMCode)}</span>
+              {!isManualUom(line.UoMCode) && (
+                <FieldLookupButton
+                  hasValue={Boolean(line.UoMCode)}
+                  onSearch={() => setUomDialogOpen(true)}
+                  onClear={() => patchLine({ UoMCode: "", MeasureUnit: "" })}
+                  disabled={initialStatus === "boposClosed"}
+                />
+              )}
+            </div>
+          </CopyDownField>
         </td>
       )}
 
@@ -277,75 +283,92 @@ export function IFPRDDocumentLineRow({ index, line, warehouses }: Props) {
 
       {config.itemColumns.warehouse && fieldAccess.includes("Warehouse") && (
         <td className="py-2 px-4 text-center text-gray-700">
-          <div className="flex w-full items-center gap-1">
-            <Input
-              className="h-7 min-w-0 flex-1 text-xs bg-gray-100 text-gray-500 cursor-not-allowed"
-              value={draftLine.Warehouse || ""}
-              disabled
-              readOnly
-            />
-            {multiBranchEnabled && draftLine.BPLid !== undefined && (
-              <span
-                className="h-7 shrink-0 flex items-center px-1.5 rounded bg-gray-100 text-gray-500 text-[10px]"
-                title="Branch (derived from warehouse)"
-              >
-                {resolveBranchName(draftLine.BPLid, allBranches)}
-              </span>
-            )}
-            <FieldLookupButton
-              hasValue={Boolean(draftLine.Warehouse)}
-              variant="outline"
-              className="h-7 w-7 cursor-pointer"
-              onSearch={() => setWarehouseModalOpen(true)}
-              onClear={() => patchLine({ Warehouse: "", BPLid: undefined })}
-              disabled={initialStatus === "boposClosed"}
-            />
-          </div>
+          <CopyDownField
+            disabled={initialStatus === "boposClosed"}
+            onCopyDown={() => copyFieldToLinesBelow(index, "Warehouse", draftLine.Warehouse)}
+          >
+            <div className="flex w-full items-center gap-1">
+              <Input
+                className="h-7 min-w-0 flex-1 text-xs bg-gray-100 text-gray-500 cursor-not-allowed"
+                value={draftLine.Warehouse || ""}
+                disabled
+                readOnly
+              />
+              {multiBranchEnabled && draftLine.BPLid !== undefined && (
+                <span
+                  className="h-7 shrink-0 flex items-center px-1.5 rounded bg-gray-100 text-gray-500 text-[10px]"
+                  title="Branch (derived from warehouse)"
+                >
+                  {resolveBranchName(draftLine.BPLid, allBranches)}
+                </span>
+              )}
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.Warehouse)}
+                variant="outline"
+                className="h-7 w-7 cursor-pointer"
+                onSearch={() => setWarehouseModalOpen(true)}
+                onClear={() => patchLine({ Warehouse: "", BPLid: undefined })}
+                disabled={initialStatus === "boposClosed"}
+              />
+            </div>
+          </CopyDownField>
         </td>
       )}
 
       {config.itemColumns.issueMethod && fieldAccess.includes("ProductionOrderIssueType") && (
         <td className="py-2 px-4">
-          <Select
-            value={draftLine.ProductionOrderIssueType || "im_Manual"}
-            onValueChange={(val: "im_Manual" | "im_Backflush") => {
-              const updatedLine = { ...draftLine, ProductionOrderIssueType: val };
-              setDraftLine(updatedLine);
-              updateLine(index, updatedLine);
-            }}
+          <CopyDownField
             disabled={initialStatus === "boposClosed"}
+            onCopyDown={() =>
+              copyFieldToLinesBelow(index, "ProductionOrderIssueType", draftLine.ProductionOrderIssueType)
+            }
           >
-            <SelectTrigger className="h-7 w-full text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="im_Manual">Manual</SelectItem>
-              <SelectItem value="im_Backflush">Backflush</SelectItem>
-            </SelectContent>
-          </Select>
+            <Select
+              value={draftLine.ProductionOrderIssueType || "im_Manual"}
+              onValueChange={(val: "im_Manual" | "im_Backflush") => {
+                const updatedLine = { ...draftLine, ProductionOrderIssueType: val };
+                setDraftLine(updatedLine);
+                updateLine(index, updatedLine);
+              }}
+              disabled={initialStatus === "boposClosed"}
+            >
+              <SelectTrigger className="h-7 w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="im_Manual">Manual</SelectItem>
+                <SelectItem value="im_Backflush">Backflush</SelectItem>
+              </SelectContent>
+            </Select>
+          </CopyDownField>
         </td>
       )}
 
       {config.itemColumns.project && isProjectVisible && (
         <td className="py-2 px-4">
-          <div className="flex items-center gap-1">
-            <Input
-              className="h-7 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-xs"
-              value={draftLine.Project || ""}
-              disabled
-              readOnly
-            />
-            <FieldLookupButton
-              hasValue={Boolean(draftLine.Project)}
-              className="h-7 w-7 shrink-0"
-              onSearch={() => {
-                loadProjects();
-                setProjectModalOpen(true);
-              }}
-              onClear={() => patchLine({ Project: "" })}
-              disabled={initialStatus === "boposClosed" || !isProjectEnabled}
-            />
-          </div>
+          <CopyDownField
+            disabled={initialStatus === "boposClosed" || !isProjectEnabled}
+            onCopyDown={() => copyFieldToLinesBelow(index, "Project", draftLine.Project)}
+          >
+            <div className="flex items-center gap-1">
+              <Input
+                className="h-7 w-full bg-gray-100 text-gray-500 cursor-not-allowed text-xs"
+                value={draftLine.Project || ""}
+                disabled
+                readOnly
+              />
+              <FieldLookupButton
+                hasValue={Boolean(draftLine.Project)}
+                className="h-7 w-7 shrink-0"
+                onSearch={() => {
+                  loadProjects();
+                  setProjectModalOpen(true);
+                }}
+                onClear={() => patchLine({ Project: "" })}
+                disabled={initialStatus === "boposClosed" || !isProjectEnabled}
+              />
+            </div>
+          </CopyDownField>
         </td>
       )}
 
