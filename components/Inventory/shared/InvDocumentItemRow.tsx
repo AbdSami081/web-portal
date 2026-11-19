@@ -35,7 +35,7 @@ interface Props {
 
 export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) {
   const { watch } = useFormContext();
-  const updateLine = useInventoryDocument((s) => s.updateLine);
+  const updateLineByIndex = useInventoryDocument((s) => s.updateLineByIndex);
   const removeLine = useInventoryDocument((s) => s.removeLine);
   const copyFieldToLinesBelow = useInventoryDocument((s) => s.copyFieldToLinesBelow);
   const fieldAccess = useInventoryDocument((s) => s.fieldAccess);
@@ -93,7 +93,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
           (w: any) => (w.WarehouseCode || w.warehouseCode || w.WhsCode) === fromWhs
         );
         const onHand = whRecord ? (whRecord.Qty ?? whRecord.qty ?? 0) : 0;
-        updateLine(line.ItemCode, {
+        updateLineByIndex(index, {
           QtyInWhs: qtyInWhs,
           OnHand: onHand,
           ManSerNum: item.ManSerNum,
@@ -101,7 +101,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
         });
       }
     });
-  }, [line.ItemCode, line.FromWhsCode, updateLine]);
+  }, [line.ItemCode, line.FromWhsCode, index, updateLineByIndex]);
 
   useEffect(() => {
     setDraftLine(line);
@@ -118,13 +118,13 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
   ]);
 
   const saveRow = (updatedLine = draftLine) => {
-    updateLine(line.ItemCode, updatedLine);
+    updateLineByIndex(index, updatedLine);
   };
 
   const patchLine = (patch: Record<string, any>) => {
     const updated = { ...draftLine, ...patch };
     setDraftLine(updated as InventoryDocumentLine);
-    updateLine(line.ItemCode, updated);
+    updateLineByIndex(index, updated);
   };
   useLineFmsAuto(draftLine, patchLine, isClosed);
 
@@ -151,16 +151,15 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
     saveRow(updated);
   };
 
-  // Backfill BPLid from warehouse for lines that don't have a branch yet
   useEffect(() => {
     if (!bplBackfilledRef.current && line.ItemCode && line.WhsCode && line.BPLid === undefined && warehouses.length > 0) {
       const branchId = resolveBranchForWarehouse(line.WhsCode, warehouses);
       if (branchId !== undefined) {
         bplBackfilledRef.current = true;
-        updateLine(line.ItemCode, { BPLid: branchId });
+        updateLineByIndex(index, { BPLid: branchId });
       }
     }
-  }, [line.ItemCode, line.WhsCode, line.BPLid, warehouses, updateLine]);
+  }, [line.ItemCode, line.WhsCode, line.BPLid, warehouses, index, updateLineByIndex]);
 
   return (
     <>
@@ -291,7 +290,7 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
               qtyGuard.track(numericVal);
               const updatedLine = { ...draftLine, Quantity: numericVal };
               setDraftLine(updatedLine);
-              updateLine(line.ItemCode, updatedLine);
+              updateLineByIndex(index, updatedLine);
             }
           }}
           onBlur={(e) => {

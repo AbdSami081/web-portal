@@ -110,7 +110,7 @@ export function DocumentLineRow({
   const isCellEditable = (fieldName: string) =>
     isFieldEnabled(fieldName) && !isLineDisabled;
 
-  const { updateLine, removeLine, removeLineByIndex, copyFieldToLinesBelow } = useSalesDocument();
+  const { updateLineByIndex, removeLineByIndex, copyFieldToLinesBelow } = useSalesDocument();
 
   const {
     freightsWithCharges,
@@ -179,8 +179,8 @@ export function DocumentLineRow({
         ...patch,
       }));
 
-      updateLine(
-        line.ItemCode,
+      updateLineByIndex(
+        index,
         patch as any
       );
     },
@@ -197,8 +197,8 @@ export function DocumentLineRow({
 
     setDraftLine(updated);
 
-    updateLine(
-      line.ItemCode,
+    updateLineByIndex(
+      index,
       patch as any
     );
   };
@@ -234,8 +234,8 @@ export function DocumentLineRow({
                 0
               : 0;
 
-            updateLine(
-              line.ItemCode,
+            updateLineByIndex(
+              index,
               {
                 QtyInWhs: qtyInWhs,
                 OnHand: onHand,
@@ -298,8 +298,8 @@ export function DocumentLineRow({
         );
 
       if (branchId !== undefined) {
-        updateLine(
-          line.ItemCode,
+        updateLineByIndex(
+          index,
           {
             BPLid: branchId,
           }
@@ -443,8 +443,8 @@ useEffect(() => {
 
     setDraftLine(updatedLine);
 
-    updateLine(
-      line.ItemCode,
+    updateLineByIndex(
+      index,
       updatedLine
     );
 
@@ -488,8 +488,8 @@ useEffect(() => {
     Freight3TaxLCAmount: f3.taxAmount,
   };
 
-  updateLine(
-    line.ItemCode,
+  updateLineByIndex(
+    index,
     updatedLine
   );
 };
@@ -1168,8 +1168,8 @@ if (isService) {
 
           setDraftLine(updated);
 
-          updateLine(
-            line.ItemCode,
+          updateLineByIndex(
+            index,
             updated
           );
         }}
@@ -1260,9 +1260,7 @@ if (isService) {
           variant="ghost"
           className="h-6 w-6 p-0 hover:bg-red-100/10"
           onClick={() =>
-            removeLine(
-              line.ItemCode
-            )
+            removeLineByIndex(index)
           }
           disabled={isLineDisabled}
           title={
@@ -2203,8 +2201,8 @@ if (isService) {
             updated
           );
 
-          updateLine(
-            line.ItemCode,
+          updateLineByIndex(
+            index,
             updated
           );
         }}
@@ -2251,8 +2249,8 @@ if (isService) {
             updated
           );
 
-          updateLine(
-            line.ItemCode,
+          updateLineByIndex(
+            index,
             updated
           );
         }}

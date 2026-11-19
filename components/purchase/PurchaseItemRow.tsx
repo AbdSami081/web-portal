@@ -45,7 +45,7 @@ const glAccountColumns = [
 
 export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) {
   const { watch } = useFormContext();
-  const { updateLineByIndex, removeLine, removeLineByIndex, fieldAccess, copyFieldToLinesBelow } = usePurchaseDocument();
+  const { updateLineByIndex, removeLineByIndex, fieldAccess, copyFieldToLinesBelow } = usePurchaseDocument();
   const { freightsWithCharges, freightTypes, warehouses } = useMasterDataStore();
   const { allBranches } = useBranchStore();
   const config = usePurchaseDocConfig();
@@ -664,7 +664,7 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
           type="button"
           variant="ghost"
           className="h-6 w-6 p-0 hover:bg-red-100/10"
-          onClick={() => removeLine(line.ItemCode)}
+          onClick={() => removeLineByIndex(index)}
           disabled={isLineDisabled}
           title={isLineUpdateBlocked ? "Lines cannot be removed on financial documents in update mode" : isLineClosed ? "Line is closed" : "Remove line"}
         >
