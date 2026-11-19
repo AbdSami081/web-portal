@@ -876,7 +876,8 @@ export function PurchaseItemRow({ index, line, documentMode = "items" }: Props) 
                 disabled
                 readOnly
               />
-              {!isManualUom(draftLine.UoMCode) && (
+              {/* {!isManualUom(draftLine.UoMCode) && ( */}
+              {!isManualUom(draftLine.UoMCode, draftLine.UgpEntry) && (
                 <FieldLookupButton
                   hasValue={Boolean(draftLine.UoMCode)}
                   onSearch={() => setUomDialogOpen(true)}

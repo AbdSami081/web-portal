@@ -347,7 +347,8 @@ export function InvDocumentLineRow({ index, line, isGoodIssue = false }: Props) 
               disabled
               readOnly
             />
-            {!isManualUom(draftLine.UoMCode) && (
+            {/* {!isManualUom(draftLine.UoMCode) && ( */}
+            {!isManualUom(draftLine.UoMCode, draftLine.UgpEntry) && (
               <FieldLookupButton
                 hasValue={Boolean(draftLine.UoMCode)}
                 onSearch={() => setUomDialogOpen(true)}

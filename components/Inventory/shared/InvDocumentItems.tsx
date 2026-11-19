@@ -133,8 +133,7 @@ export function InvDocumentItems() {
         item.UoMCode,
         item.UoMGroupEntry,
         item.UnitsOfMeasurment
-      );
-
+      )  || item.UoM || "";
       // Resolve warehouse-specific OnHand from item's QtyInWhs array
       const qtyInWhs: any[] = item.QtyInWhs || [];
       const fromWhs = fromWarehouse || defaultWhsLine;
@@ -229,7 +228,7 @@ export function InvDocumentItems() {
         item.UoMCode,
         item.UoMGroupEntry,
         item.UnitsOfMeasurment
-      );
+      ) || item.UoM || "";
       const qtyInWhs: any[] = item.QtyInWhs || [];
       const fromWhs = fromWarehouse || defaultWhsLine;
       const whsCode = isGoodIssue ? (toWarehouse || defaultWhsLine) : (fromWarehouse || defaultWhsLine);

@@ -1668,9 +1668,10 @@ if (isService) {
                 readOnly
               />
 
-              {!isManualUom(
+              {/* {!isManualUom(
                 draftLine.UoMCode
-              ) && (
+              ) && ( */}
+              {!isManualUom(draftLine.UoMCode, draftLine.UgpEntry) && (
                 <FieldLookupButton
                   hasValue={Boolean(draftLine.UoMCode)}
                   onSearch={() => setUomDialogOpen(true)}
