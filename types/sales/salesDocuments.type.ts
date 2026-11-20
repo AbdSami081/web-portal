@@ -36,6 +36,15 @@ export interface BaseSalesDocument {
     VatGroup?: string;
     Remarks?: string;
   }[];
+  DocumentReferences?: Array<{
+    RefDocEntr: number;
+    RefDocNum?: number;
+    RefObjType: string;
+    TransactionType?: string;
+    ExtDocNum?: string;
+    IssueDate?: string;
+    Remark?: string;
+  }>;
 }
 
 export type DocCurrency =

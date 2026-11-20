@@ -50,12 +50,14 @@ import { resolveBranchForWarehouse } from "@/lib/sap/helpers/branchHelper";
 import { useLineUDFs, lineUdfColumns } from "@/components/shared/LineUDFCells";
 import { useApprovalSettings } from "@/hooks/useApprovalSettings";
 import {
+  getBusinessPartnerProjects,
   getBillToOptions,
   getBpChannelContactOptions,
   getBpChannelNameOptions,
   getShipToOptions,
   getShippingTypes,
   getUserLanguageOptions,
+  type BusinessPartnerProject,
   type LogisticsMasterOption,
   type ShippingType,
 } from "@/api+/sap/BusinessPartner/BPService";
@@ -104,6 +106,42 @@ export const SALES_SERVICE_LINE_FIELDS: FieldCatalogEntry[] = [
   { key: "Freight2LCAmount", title: "Freight 2 (LC)" },
   { key: "Freight3Type", title: "Freight 3 Type" },
   { key: "Freight3LCAmount", title: "Freight 3 (LC)" },
+];
+
+export const SALES_TAB_FIELDS: FieldCatalogEntry[] = [
+  { key: "ShipToCode", title: "Ship To" },
+  { key: "ShipToAddress", title: "Ship To Address" },
+  { key: "PayToCode", title: "Bill To" },
+  { key: "BillToAddress", title: "Bill To Address" },
+  { key: "TransportationCode", title: "Shipping Type" },
+  { key: "LanguageCode", title: "Language" },
+  { key: "ProcureNonDropShip", title: "Procure Non Drop-Ship Items" },
+  { key: "ProcureDropShip", title: "Procure Drop-Ship Items" },
+  { key: "Confirmed", title: "Confirmed" },
+  { key: "BPChannelCode", title: "BP Channel Name" },
+  { key: "BPChannelContact", title: "BP Channel Contact" },
+  { key: "JournalMemo", title: "Journal Remark" },
+  { key: "PaymentGroupCode", title: "Payment Terms" },
+  { key: "PaymentMethod", title: "Payment Method" },
+  { key: "ManualDueDate", title: "Manual Due Date" },
+  { key: "ExtraMonth", title: "Due Date Extra Month" },
+  { key: "ExtraDays", title: "Due Date Extra Days" },
+  { key: "PayDuMonth", title: "Due Date Adjustment" },
+  { key: "CashDiscountDateOffset", title: "Cash Discount Date Offset" },
+  { key: "UseShpdGoodsAct", title: "Use Shipped Goods Account" },
+  { key: "Project", title: "Business Partner Project" },
+  { key: "QRCodeFrom", title: "Create QR Code From" },
+  { key: "Indicator", title: "Indicator" },
+  { key: "FederalTaxID", title: "Federal Tax ID" },
+  { key: "NumAtCard", title: "Order Number" },
+  { key: "DocumentReferences", title: "Referenced Document" },
+  { key: "ReferenceTransactionType", title: "Reference Transaction Type" },
+  { key: "ReferenceDocNumber", title: "Reference Document Number" },
+  { key: "ReferenceExternalDocNumber", title: "Reference External Document Number" },
+  { key: "ReferenceDate", title: "Reference Date" },
+  { key: "ReferenceRemarks", title: "Reference Remarks" },
+  { key: "FatherType", title: "Consolidation Type" },
+  { key: "FatherCard", title: "Father Card" },
 ];
 
 const addressComponentFields = [
@@ -161,6 +199,8 @@ export function DocumentItems() {
   const { watch, setValue, register } = useFormContext();
 
   const selectedCardCode = watch("CardCode");
+  const documentReferences = watch("DocumentReferences") ?? [];
+  const documentReferenceCount = Array.isArray(documentReferences) ? documentReferences.length : 0;
   const docStatus = watch("DocStatus");
 
   const {
@@ -197,12 +237,14 @@ const setDocumentMode = useSalesDocument(
 );
   const [serviceLines, setServiceLines] = useState<any[]>([]);
   const [shippingTypes, setShippingTypes] = useState<ShippingType[]>([]);
+  const [businessPartnerProjects, setBusinessPartnerProjects] = useState<BusinessPartnerProject[]>([]);
   const [shipToOptions, setShipToOptions] = useState<LogisticsMasterOption[]>([]);
   const [billToOptions, setBillToOptions] = useState<LogisticsMasterOption[]>([]);
   const [languageOptions, setLanguageOptions] = useState<LogisticsMasterOption[]>([]);
   const [bpChannelNameOptions, setBpChannelNameOptions] = useState<LogisticsMasterOption[]>([]);
   const [bpChannelContactOptions, setBpChannelContactOptions] = useState<LogisticsMasterOption[]>([]);
   const config = useSalesDocConfig();
+  const referenceDocumentSettings = getFieldSettings(config.type, "headerFieds", "DocumentReferences");
 
   const isARInvoice = config.type === DocumentType.ARInvoice;
   const hasLogisticsTab = !isARInvoice;
@@ -244,6 +286,22 @@ const setDocumentMode = useSalesDocument(
         console.error("Failed to load shipping types:", error);
         toast.error("Failed to load Shipping Types");
       });
+  }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+    getBusinessPartnerProjects()
+      .then((projects) => {
+        if (isCurrent) setBusinessPartnerProjects(projects);
+      })
+      .catch((error) => {
+        console.error("Failed to load business partner projects:", error);
+        if (isCurrent) toast.error("Failed to load Business Partner Projects");
+      });
+
+    return () => {
+      isCurrent = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -563,6 +621,16 @@ const setDocumentMode = useSalesDocument(
   
 
   const fieldAccess = useSalesDocument((state) => state.fieldAccess);
+  const getTabFieldSettings = (fieldName: string) =>
+    getFieldSettings(config.type, "headerFieds", fieldName);
+  const isTabFieldVisible = (fieldName: string) =>
+    fieldAccess.includes(fieldName) && getTabFieldSettings(fieldName).visible !== false;
+  const isTabFieldEnabled = (fieldName: string) =>
+    getTabFieldSettings(fieldName).enable !== false && !isTableDisabled;
+  const shipToCodeVisible = isTabFieldVisible("ShipToCode");
+  const shipToAddressVisible = isTabFieldVisible("ShipToAddress");
+  const billToCodeVisible = isTabFieldVisible("PayToCode");
+  const billToAddressVisible = isTabFieldVisible("BillToAddress");
   const { multiBranchEnabled } = useApprovalSettings();
   const columns = [
     {
@@ -1144,10 +1212,19 @@ const setDocumentMode = useSalesDocument(
                 {/* Left Section */}
                 <div className="space-y-3">
                   {/* Ship To */}
-                  <div className="grid grid-cols-[150px_250px_28px] items-end gap-2">
-                    <div className="space-y-1">
+                  {(shipToCodeVisible || shipToAddressVisible) && (
+                  <div className={`grid ${shipToCodeVisible && shipToAddressVisible ? "grid-cols-[150px_250px_28px]" : shipToCodeVisible ? "grid-cols-[150px]" : "grid-cols-[250px_28px]"} items-end gap-2`}>
+                    {shipToCodeVisible && <div className="space-y-1">
                       <label className={labelCls}>Ship To</label>
-                      <Select value={watch("ShipToCode") || ""} onValueChange={(value) => setValue("ShipToCode", value, { shouldDirty: true })}>
+                      <Select
+                        value={watch("ShipToCode") || "default"}
+                        onValueChange={(value) =>
+                          setValue("ShipToCode", value === "default" ? "" : value, {
+                            shouldDirty: true,
+                          })
+                        }
+                        disabled={!isTabFieldEnabled("ShipToCode")}
+                        >
                         <SelectTrigger className="h-7 w-full text-xs">
                           <SelectValue placeholder="Select address" />
                         </SelectTrigger>
@@ -1156,12 +1233,9 @@ const setDocumentMode = useSalesDocument(
                           {shipToOptions.map((option, index) => {
                             const value = getMasterOptionValue(option, [
                               "ShipToCode",
+                              "AddressName",
                               "AddressCode",
                               "Code",
-                              "Address",
-                              "AddressName",
-                              "Name",
-                              "Id",
                             ]);
                             const label = getMasterOptionValue(option, [
                               "AddressName",
@@ -1179,21 +1253,23 @@ const setDocumentMode = useSalesDocument(
                           })}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <Textarea
+                    </div>}
+                    {shipToAddressVisible && <Textarea
                       className="h-[42px] w-full resize-none text-xs"
                       aria-label="Ship To address"
                       value={watch("ShipToAddress") ?? shipToAddress}
+                      disabled={!isTabFieldEnabled("ShipToAddress")}
                       onChange={(event) => {
                         setShipToAddress(event.target.value);
                         setValue("ShipToAddress", event.target.value, { shouldDirty: true });
                       }}
-                    />
-                    <Button
+                    />}
+                    {shipToAddressVisible && <Button
                       type="button"
                       size="icon"
                       aria-label="Open Ship To address details"
                       className="h-7 w-7 bg-neutral-900 px-1 text-white hover:bg-neutral-800"
+                      disabled={!isTabFieldEnabled("ShipToAddress")}
                       onClick={() => {
                         const parts = (watch("ShipToAddress") ?? shipToAddress).split("\n");
                         setShipToAddressDraft(
@@ -1205,14 +1281,16 @@ const setDocumentMode = useSalesDocument(
                       }}
                     >
                       <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    </Button>}
                   </div>
+                  )}
 
                   {/* Bill To */}
-                  <div className="grid grid-cols-[150px_250px_28px] items-end gap-2">
-                    <div className="space-y-1">
+                  {(billToCodeVisible || billToAddressVisible) && (
+                  <div className={`grid ${billToCodeVisible && billToAddressVisible ? "grid-cols-[150px_250px_28px]" : billToCodeVisible ? "grid-cols-[150px]" : "grid-cols-[250px_28px]"} items-end gap-2`}>
+                    {billToCodeVisible && <div className="space-y-1">
                       <label className={labelCls}>Bill To</label>
-                      <Select value={watch("PayToCode") || ""} onValueChange={(value) => setValue("PayToCode", value, { shouldDirty: true })}>
+                      <Select value={watch("PayToCode") || ""} onValueChange={(value) => setValue("PayToCode", value, { shouldDirty: true })} disabled={!isTabFieldEnabled("PayToCode")}>
                         <SelectTrigger className="h-7 w-full text-xs">
                           <SelectValue placeholder="Select address" />
                         </SelectTrigger>
@@ -1244,17 +1322,18 @@ const setDocumentMode = useSalesDocument(
                           })}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <Textarea className="h-[42px] w-full resize-none text-xs" aria-label="Bill To address" value={watch("BillToAddress") ?? billToAddress}
+                    </div>}
+                    {billToAddressVisible && <Textarea className="h-[42px] w-full resize-none text-xs" aria-label="Bill To address" value={watch("BillToAddress") ?? billToAddress} disabled={!isTabFieldEnabled("BillToAddress")}
                      onChange={(event) => {
                        setBillToAddress(event.target.value);
                        setValue("BillToAddress", event.target.value, { shouldDirty: true });
-                     }}/>
-                    <Button
+                     }}/>}
+                    {billToAddressVisible && <Button
                       type="button"
                       size="icon"
                       aria-label="Open Bill To address details"
                       className="h-7 w-7 bg-neutral-900 px-1 text-white hover:bg-neutral-800"
+                      disabled={!isTabFieldEnabled("BillToAddress")}
                       onClick={() => {
                         const parts = (watch("BillToAddress") ?? billToAddress).split("\n");
                         setBillToAddressDraft(
@@ -1266,13 +1345,14 @@ const setDocumentMode = useSalesDocument(
                       }}
                     >
                       <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    </Button>}
                   </div>
+                  )}
 
                   {/* Shipping Type */}
-                  <div className="grid grid-cols-[150px_250px] items-center gap-2">
+                  {isTabFieldVisible("TransportationCode") && <div className="grid grid-cols-[150px_250px] items-center gap-2">
                     <label className={labelCls}>Shipping Type</label>
-                    <Select value={watch("TransportationCode") == null ? "" : String(watch("TransportationCode"))} onValueChange={(value) => setValue("TransportationCode", value, { shouldDirty: true })}>
+                    <Select value={watch("TransportationCode") == null ? "" : String(watch("TransportationCode"))} onValueChange={(value) => setValue("TransportationCode", value, { shouldDirty: true })} disabled={!isTabFieldEnabled("TransportationCode")}>
                       <SelectTrigger className="h-7 w-full text-xs">
                         <SelectValue placeholder="Select shipping type" />
                       </SelectTrigger>
@@ -1284,15 +1364,15 @@ const setDocumentMode = useSalesDocument(
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div>}
                 </div>
 
                 {/* Right Section */}
                 <div className="ml-auto mr-16 w-full space-y-3 md:w-[280px]">
                   {/* Language */}
-                  <div className={logisticsRowCls}>
+                  {isTabFieldVisible("LanguageCode") && <div className={logisticsRowCls}>
                     <label className={labelCls}>Language</label>
-                    <Select value={watch("LanguageCode") == null ? "" : String(watch("LanguageCode"))} onValueChange={(value) => setValue("LanguageCode", value, { shouldDirty: true })}>
+                    <Select value={watch("LanguageCode") == null ? "" : String(watch("LanguageCode"))} onValueChange={(value) => setValue("LanguageCode", value, { shouldDirty: true })} disabled={!isTabFieldEnabled("LanguageCode")}>
                       <SelectTrigger className="h-7 w-60 max-w-none text-xs">
                         <SelectValue placeholder="Select language" />
                       </SelectTrigger>
@@ -1319,28 +1399,28 @@ const setDocumentMode = useSalesDocument(
                         })}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div>}
 
                   {/* Options (aligned with field column) */}
-                  <div className="space-y-0.5 pl-[113px]">
-                    <label className="flex items-center gap-2 text-xs">
-                      <Checkbox className={checkboxCls} checked={Boolean(watch("ProcureNonDropShip"))} onCheckedChange={(checked) => setValue("ProcureNonDropShip", checked === true, { shouldDirty: true })} />
+                  {(isTabFieldVisible("ProcureNonDropShip") || isTabFieldVisible("ProcureDropShip") || isTabFieldVisible("Confirmed")) && <div className="space-y-0.5 pl-[113px]">
+                    {isTabFieldVisible("ProcureNonDropShip") && <label className="flex items-center gap-2 text-xs">
+                      <Checkbox className={checkboxCls} checked={Boolean(watch("ProcureNonDropShip"))} disabled={!isTabFieldEnabled("ProcureNonDropShip")} onCheckedChange={(checked) => setValue("ProcureNonDropShip", checked === true, { shouldDirty: true })} />
                       Procure Non Drop-Ship Items
-                    </label>
-                    <label className="flex items-center gap-2 text-xs">
-                      <Checkbox className={checkboxCls} checked={Boolean(watch("ProcureDropShip"))} onCheckedChange={(checked) => setValue("ProcureDropShip", checked === true, { shouldDirty: true })} />
+                    </label>}
+                    {isTabFieldVisible("ProcureDropShip") && <label className="flex items-center gap-2 text-xs">
+                      <Checkbox className={checkboxCls} checked={Boolean(watch("ProcureDropShip"))} disabled={!isTabFieldEnabled("ProcureDropShip")} onCheckedChange={(checked) => setValue("ProcureDropShip", checked === true, { shouldDirty: true })} />
                       Procure Drop-Ship Items
-                    </label>
-                    <label className="flex items-center gap-2 text-xs">
-                      <Checkbox className={checkboxCls} checked={Boolean(watch("Confirmed"))} onCheckedChange={(checked) => setValue("Confirmed", checked === true, { shouldDirty: true })} />
+                    </label>}
+                    {isTabFieldVisible("Confirmed") && <label className="flex items-center gap-2 text-xs">
+                      <Checkbox className={checkboxCls} checked={Boolean(watch("Confirmed"))} disabled={!isTabFieldEnabled("Confirmed")} onCheckedChange={(checked) => setValue("Confirmed", checked === true, { shouldDirty: true })} />
                       Confirmed
-                    </label>
-                  </div>
+                    </label>}
+                  </div>}
 
                   {/* BP Channel Name */}
-                  <div className={logisticsRowCls}>
+                  {isTabFieldVisible("BPChannelCode") && <div className={logisticsRowCls}>
                     <label className={`${labelCls} whitespace-nowrap`}>BP Channel Name</label>
-                    <Input type="text" aria-label="BP Channel Name" list="bp-channel-name-options" value={watch("BPChannelCode") ?? ""} onChange={(event) => setValue("BPChannelCode", event.target.value, { shouldDirty: true })} className="h-7 w-60 max-w-none text-xs" />
+                    <Input type="text" aria-label="BP Channel Name" list="bp-channel-name-options" value={watch("BPChannelCode") ?? ""} disabled={!isTabFieldEnabled("BPChannelCode")} onChange={(event) => setValue("BPChannelCode", event.target.value, { shouldDirty: true })} className="h-7 w-60 max-w-none text-xs" />
                     <datalist id="bp-channel-name-options">
                       {bpChannelNameOptions.map((option, index) => {
                         const value = getMasterOptionValue(option, [
@@ -1360,12 +1440,12 @@ const setDocumentMode = useSalesDocument(
                         ) : null;
                       })}
                     </datalist>
-                  </div>
+                  </div>}
 
                   {/* BP Channel Contact */}
-                  <div className={logisticsRowCls}>
+                  {isTabFieldVisible("BPChannelContact") && <div className={logisticsRowCls}>
                     <label className={`${labelCls} whitespace-nowrap`}>BP Channel Contact</label>
-                    <Select value={watch("BPChannelContact") == null ? "" : String(watch("BPChannelContact"))} onValueChange={(value) => setValue("BPChannelContact", value, { shouldDirty: true })}>
+                    <Select value={watch("BPChannelContact") == null ? "" : String(watch("BPChannelContact"))} onValueChange={(value) => setValue("BPChannelContact", value, { shouldDirty: true })} disabled={!isTabFieldEnabled("BPChannelContact")}>
                       <SelectTrigger className="h-7 w-60 max-w-none text-xs">
                         <SelectValue placeholder="Select contact" />
                       </SelectTrigger>
@@ -1391,7 +1471,7 @@ const setDocumentMode = useSalesDocument(
                         })}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div>}
                 </div>
               </div>
             </div>
@@ -1418,63 +1498,66 @@ const setDocumentMode = useSalesDocument(
                 <div className="grid grid-cols-1 gap-x-10 gap-y-4 md:grid-cols-2">
                   {/* Left */}
                   <div className="space-y-4">
-                    <div className={rowCls}>
+                    {isTabFieldVisible("JournalMemo") && <div className={rowCls}>
                       <label htmlFor="journal-remark">Journal Remark</label>
-                      <Input id="journal-remark" value={watch("JournalMemo") ?? ""} onChange={(event) => setValue("JournalMemo", event.target.value, { shouldDirty: true })} className={inputCls} />
-                    </div>
+                      <Input id="journal-remark" value={watch("JournalMemo") ?? ""} disabled={!isTabFieldEnabled("JournalMemo")} onChange={(event) => setValue("JournalMemo", event.target.value, { shouldDirty: true })} className={inputCls} />
+                    </div>}
 
-                    <div className={rowCls}>
+                    {isTabFieldVisible("PaymentGroupCode") && <div className={rowCls}>
                       <label htmlFor="payment-terms">Payment Terms</label>
-                      <Select value={watch("PaymentGroupCode") == null ? "" : String(watch("PaymentGroupCode"))} onValueChange={(value) => setValue("PaymentGroupCode", value, { shouldDirty: true })}>
+                      <Select value={watch("PaymentGroupCode") == null ? "" : String(watch("PaymentGroupCode"))} onValueChange={(value) => setValue("PaymentGroupCode", value, { shouldDirty: true })} disabled={!isTabFieldEnabled("PaymentGroupCode")}>
                         <SelectTrigger id="payment-terms" className={selectCls}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent />
                       </Select>
-                    </div>
+                    </div>}
 
-                    <div className={rowCls}>
+                    {isTabFieldVisible("PaymentMethod") && <div className={rowCls}>
                       <label htmlFor="payment-method">Payment Method</label>
-                      <Select value={watch("PaymentMethod") ?? ""} onValueChange={(value) => setValue("PaymentMethod", value, { shouldDirty: true })}>
+                      <Select value={watch("PaymentMethod") ?? ""} onValueChange={(value) => setValue("PaymentMethod", value, { shouldDirty: true })} disabled={!isTabFieldEnabled("PaymentMethod")}>
                         <SelectTrigger id="payment-method" className={selectCls}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent />
                       </Select>
-                    </div>
+                    </div>}
 
                     
-<div className="space-y-2">
+{(isTabFieldVisible("ManualDueDate") || isTabFieldVisible("ExtraMonth") || isTabFieldVisible("ExtraDays") || isTabFieldVisible("PayDuMonth")) && <div className="space-y-2">
   <div>Manually Recalculate Due Date:</div>
 
   <div className="grid grid-cols-[1fr_72px_auto_72px_auto_1fr] items-center gap-2">
-    <Input
+    {isTabFieldVisible("ManualDueDate") && <Input
       type="date"
       aria-label="Selected Date"
       value={watch("ManualDueDate") ?? ""}
+      disabled={!isTabFieldEnabled("ManualDueDate")}
       onChange={(event) => setValue("ManualDueDate", event.target.value, { shouldDirty: true })}
       className="h-8 w-full text-xs"
-    />
+    />}
 
-    <Input
+    {isTabFieldVisible("ExtraMonth") && <Input
       aria-label="Months"
       value={watch("ExtraMonth") ?? 0}
+      disabled={!isTabFieldEnabled("ExtraMonth")}
       onChange={(event) => setValue("ExtraMonth", event.target.value, { shouldDirty: true })}
       className="h-8 text-center text-xs"
-    />
+    />}
 
-    <span>Months +</span>
+    {isTabFieldVisible("ExtraMonth") && <span>Months +</span>}
 
-    <Input
+    {isTabFieldVisible("ExtraDays") && <Input
       aria-label="Days"
       value={watch("ExtraDays") ?? 0}
+      disabled={!isTabFieldEnabled("ExtraDays")}
       onChange={(event) => setValue("ExtraDays", event.target.value, { shouldDirty: true })}
       className="h-8 text-center text-xs"
-    />
+    />}
 
-    <span>Days</span>
+    {isTabFieldVisible("ExtraDays") && <span>Days</span>}
 
-    <Select defaultValue="none">
+    {isTabFieldVisible("PayDuMonth") && <Select defaultValue="none" disabled={!isTabFieldEnabled("PayDuMonth")}>
       <SelectTrigger
         aria-label="Due date adjustment"
         className="h-8 w-full text-xs"
@@ -1485,73 +1568,101 @@ const setDocumentMode = useSalesDocument(
       <SelectContent>
         <SelectItem value="none">None</SelectItem>
       </SelectContent>
-    </Select>
+    </Select>}
   </div>
-</div>
+</div>}
 
 
-                    <div className={rowCls}>
+                    {isTabFieldVisible("CashDiscountDateOffset") && <div className={rowCls}>
                       <label htmlFor="cash-discount-offset">Cash Discount Date Offset:</label>
-                      <Input id="cash-discount-offset" type="number" value={watch("CashDiscountDateOffset") ?? ""} onChange={(event) => setValue("CashDiscountDateOffset", event.target.value, { shouldDirty: true })} className={inputCls} />
-                    </div>
+                      <Input id="cash-discount-offset" type="number" value={watch("CashDiscountDateOffset") ?? ""} disabled={!isTabFieldEnabled("CashDiscountDateOffset")} onChange={(event) => setValue("CashDiscountDateOffset", event.target.value, { shouldDirty: true })} className={inputCls} />
+                    </div>}
 
-                    <label className="flex items-center gap-2 pl-[162px]">
-                      <Checkbox className={checkboxCls} checked={Boolean(watch("UseShpdGoodsAct"))} onCheckedChange={(checked) => setValue("UseShpdGoodsAct", checked === true, { shouldDirty: true })} /> Use Shipped Goods Account
-                    </label>
+                    {isTabFieldVisible("UseShpdGoodsAct") && <label className="flex items-center gap-2 pl-[162px]">
+                      <Checkbox className={checkboxCls} checked={Boolean(watch("UseShpdGoodsAct"))} disabled={!isTabFieldEnabled("UseShpdGoodsAct")} onCheckedChange={(checked) => setValue("UseShpdGoodsAct", checked === true, { shouldDirty: true })} /> Use Shipped Goods Account
+                    </label>}
                   </div>
 
                   {/* Right */}
                   <div className="space-y-4">
-                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
+                    {isTabFieldVisible("Project") && <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="business-partner-project">Business Partner Project</label>
-                      <Input id="business-partner-project" value={watch("Project") ?? ""} onChange={(event) => setValue("Project", event.target.value, { shouldDirty: true })} className={inputCls} />
-                    </div>
+                      <Select
+                        value={watch("Project") || "none"}
+                        disabled={!isTabFieldEnabled("Project")}
+                        onValueChange={(value) =>
+                          setValue("Project", value === "none" ? "" : value, {
+                            shouldDirty: true,
+                          })
+                        }
+                      >
+                        <SelectTrigger id="business-partner-project" className={selectCls}>
+                          <SelectValue placeholder="Select project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {businessPartnerProjects.map((project) => (
+                            <SelectItem key={project.Code} value={String(project.Code)}>
+                              {project.Name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>}
 
-                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
+                    {isTabFieldVisible("QRCodeFrom") && <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="qr-code-from" className="pt-2">Create QR Code From</label>
-                      <Textarea id="qr-code-from" value={watch("QRCodeFrom") ?? ""} onChange={(event) => setValue("QRCodeFrom", event.target.value, { shouldDirty: true })} className={`${textareaCls} h-16`} />
-                    </div>
+                      <Textarea id="qr-code-from" value={watch("QRCodeFrom") ?? ""} disabled={!isTabFieldEnabled("QRCodeFrom")} onChange={(event) => setValue("QRCodeFrom", event.target.value, { shouldDirty: true })} className={`${textareaCls} h-16`} />
+                    </div>}
 
-                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
+                    {isTabFieldVisible("Indicator") && <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="indicator">Indicator</label>
-                      <Select value={watch("Indicator") ?? ""} onValueChange={(value) => setValue("Indicator", value, { shouldDirty: true })}>
+                      <Select value={watch("Indicator") ?? ""} onValueChange={(value) => setValue("Indicator", value, { shouldDirty: true })} disabled={!isTabFieldEnabled("Indicator")}>
                         <SelectTrigger id="indicator" className={selectCls}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent />
                       </Select>
-                    </div>
+                    </div>}
 
-                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
+                    {isTabFieldVisible("FederalTaxID") && <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="federal-tax-id">Federal Tax ID</label>
-                      <Input id="federal-tax-id" value={watch("FederalTaxID") ?? ""} onChange={(event) => setValue("FederalTaxID", event.target.value, { shouldDirty: true })} className={inputCls} />
-                    </div>
+                      <Input id="federal-tax-id" value={watch("FederalTaxID") ?? ""} disabled={!isTabFieldEnabled("FederalTaxID")} onChange={(event) => setValue("FederalTaxID", event.target.value, { shouldDirty: true })} className={inputCls} />
+                    </div>}
 
-                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
+                    {isTabFieldVisible("NumAtCard") && <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
                       <label htmlFor="order-number">Order Number</label>
-                      <Input id="order-number" value={watch("NumAtCard") ?? ""} onChange={(event) => setValue("NumAtCard", event.target.value, { shouldDirty: true })} className={inputCls} />
-                    </div>
+                      <Input id="order-number" value={watch("NumAtCard") ?? ""} disabled={!isTabFieldEnabled("NumAtCard")} onChange={(event) => setValue("NumAtCard", event.target.value, { shouldDirty: true })} className={inputCls} />
+                    </div>}
 
-                    <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
-                      <span>Referenced Document</span>
-                      <div>
-                        <Button
-                          type="button"
-                          size="icon"
-                          className={dotsBtnCls}
-                          aria-label="Open reference information"
-                          onClick={() => setReferenceDialogOpen(true)}
-                        >
-                          ...
-                        </Button>
+                    {isTabFieldVisible("DocumentReferences") && referenceDocumentSettings.visible && (
+                      <div className="grid w-fit grid-cols-[135px_260px] items-center gap-2 lg:ml-auto">
+                        <span>Referenced Document</span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="icon"
+                            className={dotsBtnCls}
+                            aria-label="Open reference information"
+                            disabled={!referenceDocumentSettings.enable || !isTabFieldEnabled("DocumentReferences")}
+                            onClick={() => setReferenceDialogOpen(true)}
+                          >
+                            ...
+                          </Button>
+                          {documentReferenceCount > 0 && (
+                            <span aria-label={`${documentReferenceCount} referenced documents`}>
+                              ({documentReferenceCount})
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
             ) : (
             <div className="w-full space-y-4 border rounded p-4">
-              <div className="flex items-center gap-3">
+              {isTabFieldVisible("FatherType") && <div className="flex items-center gap-3">
                 <AppLabel className="w-40 shrink-0">
                   Consolidation Type
                 </AppLabel>
@@ -1560,7 +1671,7 @@ const setDocumentMode = useSalesDocument(
                   onValueChange={(val) =>
                     setValue("FatherType", val, { shouldDirty: true })
                   }
-                  disabled={isEditMode}
+                  disabled={isEditMode || !isTabFieldEnabled("FatherType")}
                 >
                   <SelectTrigger className="w-64" data-fms-field="FatherType">
                     <SelectValue placeholder="Select consolidation type" />
@@ -1574,9 +1685,9 @@ const setDocumentMode = useSalesDocument(
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </div>}
 
-              <div className="flex items-center gap-3">
+              {isTabFieldVisible("FatherCard") && <div className="flex items-center gap-3">
                 <AppLabel className="w-40 shrink-0">Father Card</AppLabel>
                 <div
                   className="flex items-center gap-1 w-64"
@@ -1593,13 +1704,13 @@ const setDocumentMode = useSalesDocument(
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 shrink-0"
-                    disabled={isEditMode}
+                    disabled={isEditMode || !isTabFieldEnabled("FatherCard")}
                     onClick={() => setFatherCardModalOpen(true)}
                   >
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
-              </div>
+              </div>}
             </div>
             )}
           </TabsContent>
@@ -1620,6 +1731,10 @@ const setDocumentMode = useSalesDocument(
         open={referenceDialogOpen}
         onOpenChange={setReferenceDialogOpen}
         cardCode={selectedCardCode}
+        documentType={config.type}
+        fieldAccess={fieldAccess}
+        documentReferences={documentReferences}
+        onReferencesChange={(references) => setValue("DocumentReferences", references, { shouldDirty: true })}
       />
 
       <Dialog open={shipToDialogOpen} onOpenChange={setShipToDialogOpen}>

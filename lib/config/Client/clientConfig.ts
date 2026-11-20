@@ -1,9 +1,46 @@
 import { DocumentType } from "@/types/master/DocumentType";
 
+const salesTabFieldSettings = [
+  { key: "DocumentReferences", visible: true, enable: true },
+  { key: "ReferenceTransactionType", visible: true, enable: true },
+  { key: "ReferenceDocNumber", visible: true, enable: true },
+  { key: "ReferenceExternalDocNumber", visible: true, enable: true },
+  { key: "ReferenceDate", visible: true, enable: true },
+  { key: "ReferenceRemarks", visible: true, enable: true },
+  { key: "ShipToCode", visible: true, enable: true },
+  { key: "ShipToAddress", visible: true, enable: true },
+  { key: "PayToCode", visible: true, enable: true },
+  { key: "BillToAddress", visible: true, enable: true },
+  { key: "TransportationCode", visible: true, enable: true },
+  { key: "LanguageCode", visible: true, enable: true },
+  { key: "ProcureNonDropShip", visible: true, enable: true },
+  { key: "ProcureDropShip", visible: true, enable: true },
+  { key: "Confirmed", visible: true, enable: true },
+  { key: "BPChannelCode", visible: true, enable: true },
+  { key: "BPChannelContact", visible: true, enable: true },
+  { key: "JournalMemo", visible: true, enable: true },
+  { key: "PaymentGroupCode", visible: true, enable: true },
+  { key: "PaymentMethod", visible: true, enable: true },
+  { key: "ManualDueDate", visible: true, enable: true },
+  { key: "ExtraMonth", visible: true, enable: true },
+  { key: "ExtraDays", visible: true, enable: true },
+  { key: "PayDuMonth", visible: true, enable: true },
+  { key: "CashDiscountDateOffset", visible: true, enable: true },
+  { key: "UseShpdGoodsAct", visible: true, enable: true },
+  { key: "Project", visible: true, enable: true },
+  { key: "QRCodeFrom", visible: true, enable: true },
+  { key: "Indicator", visible: true, enable: true },
+  { key: "FederalTaxID", visible: true, enable: true },
+  { key: "NumAtCard", visible: true, enable: true },
+  { key: "FatherType", visible: true, enable: true },
+  { key: "FatherCard", visible: true, enable: true },
+];
+
 export const formSettings = {
   documents: [
     {
       objtype: DocumentType.Quotation,
+      additional: salesTabFieldSettings,
       headerFieds: {
         CardCode: { visible: true, enable: true },
         CardName: { visible: true, enable: true },
@@ -46,6 +83,7 @@ export const formSettings = {
     },
     {
       objtype: DocumentType.Order,
+      additional: salesTabFieldSettings,
       headerFieds: {
         CardCode: { visible: true, enable: true },
         CardName: { visible: true, enable: true },
@@ -88,6 +126,7 @@ export const formSettings = {
     },
     {
       objtype: DocumentType.Delivery,
+      additional: salesTabFieldSettings,
       headerFieds: {
         CardCode: { visible: true, enable: true },
         CardName: { visible: true, enable: true },
@@ -130,6 +169,7 @@ export const formSettings = {
     },
     {
       objtype: DocumentType.ARInvoice,
+      additional: salesTabFieldSettings,
       headerFieds: {
         CardCode: { visible: true, enable: true },
         CardName: { visible: true, enable: true },
@@ -172,6 +212,7 @@ export const formSettings = {
     },
     {
       objtype: DocumentType.SalesReturn,
+      additional: salesTabFieldSettings,
       headerFieds: {
         CardCode: { visible: true, enable: true },
         CardName: { visible: true, enable: true },
@@ -212,6 +253,17 @@ export const formSettings = {
         Freight3LCAmount: { visible: true, enable: true }
       }
     },
+    ...[
+      DocumentType.ReturnRequest,
+      DocumentType.CreditMemo,
+      DocumentType.DownPaymentRequest,
+      DocumentType.DownPaymentInvoice,
+    ].map((objtype) => ({
+      objtype,
+      additional: salesTabFieldSettings,
+      headerFieds: {},
+      linesFieds: {},
+    })),
     {
       objtype: DocumentType.ProductionOrder,
       headerFieds: {

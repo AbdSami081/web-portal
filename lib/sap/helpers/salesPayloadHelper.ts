@@ -61,6 +61,24 @@ function getSalesDocumentBranchId(data: QuotationFormData): number | undefined {
   );
 }
 
+function mapDocumentReferences(data: QuotationFormData) {
+  return (data.DocumentReferences ?? []).flatMap((reference) => {
+    const docEntry = Number(reference.RefDocEntr);
+    const objectType = String(reference.RefObjType ?? "");
+    if (!Number.isInteger(docEntry) || docEntry <= 0 || !objectType) return [];
+
+    return [{
+      RefDocEntr: docEntry,
+      ...(reference.RefDocNum !== undefined && { RefDocNum: Number(reference.RefDocNum) }),
+      RefObjType: objectType,
+      ...(reference.TransactionType && { TransactionType: reference.TransactionType }),
+      ...(reference.ExtDocNum ? { ExtDocNum: reference.ExtDocNum } : {}),
+      ...(reference.IssueDate ? { IssueDate: reference.IssueDate } : {}),
+      ...(reference.Remark ? { Remark: reference.Remark } : {}),
+    }];
+  });
+}
+
 function mapDocumentHeaderFields(data: QuotationFormData) {
   const payload: Record<string, any> = {};
 
@@ -103,6 +121,15 @@ function mapDocumentHeaderFields(data: QuotationFormData) {
       value === null ||
       value === ""
     ) {
+      return;
+    }
+
+    if (key === "DocumentReferences") {
+      payload[key] = mapDocumentReferences(data);
+      return;
+    }
+
+    if (key === "ShipToCode" && value === "default") {
       return;
     }
 
@@ -201,6 +228,7 @@ export function buildSalesDocumentPayload({
     }),
     ...pickLineUdfs(data),
     ...mapDocumentHeaderFields(data),
+    DocumentReferences: mapDocumentReferences(data),
     CardCode: data.CardCode,
     ...(targetDocType !== DocumentType.ARInvoice && data.CardName && { CardName: data.CardName }),
     DocType: documentMode === "service" ? "dDocument_Service" : "dDocument_Items",

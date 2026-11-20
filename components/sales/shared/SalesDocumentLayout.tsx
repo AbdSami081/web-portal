@@ -145,7 +145,7 @@ export function SalesDocumentLayout<T extends FieldValues>({
     mode: "onSubmit",
   });
 
-  const { handleSubmit, reset, watch, setValue, formState: { isSubmitting, isDirty, errors } } = methods;
+  const { handleSubmit, reset, watch, getValues, setValue, formState: { isSubmitting, isDirty, errors } } = methods;
   const { reset: lineReset, customer, DocEntry, loadFromDocument, isCopying, setIsCopying, udfs: storeUdfs, lines, loadedDraftData } = useSalesDocument();
 
   const authStatus = watch("AuthorizationStatus" as any);
@@ -580,7 +580,14 @@ const documentMode = useSalesDocument(
           onSubmit={handleSubmit(async (data) => {
 
           const state = useSalesDocument.getState();
-          const finalData = { ...data, DocumentLines: state.lines } as unknown as T;
+          const finalData = {
+            ...data,
+            DocumentReferences:
+              getValues("DocumentReferences" as any) ??
+              (data as any).DocumentReferences ??
+              [],
+            DocumentLines: state.lines,
+          } as unknown as T;
 
           const renderedFields = Array.from(
             formRef.current?.querySelectorAll<HTMLElement>(

@@ -45,8 +45,15 @@ export const quotationSchema = z.object({
   FederalTaxID: z.string().nullish(),
   NumAtCard: z.string().nullish(),
 
-  // Referenced document selection
-  ReferencedDocument: z.any().optional(),
+  DocumentReferences: z.array(z.object({
+    RefDocEntr: z.coerce.number(),
+    RefDocNum: z.coerce.number().optional(),
+    RefObjType: z.string(),
+    TransactionType: z.string().optional(),
+    ExtDocNum: z.string().optional(),
+    IssueDate: z.string().optional(),
+    Remark: z.string().optional(),
+  })).optional(),
 
   DocumentLines: z.array(
     z.object({

@@ -12,12 +12,11 @@ import { getFieldSettings } from "@/lib/config/Client/clientSettings";
 import { toast } from "sonner";
 import type { FieldCatalogEntry } from "@/types/fieldCatalog.type";
 
-// Field access catalog for this document's header — kept next to the
-// hasFieldAccess("...") calls below so the two never drift apart.
-// Consumed by lib/config/fieldManifest.ts to auto-sync @WP_FIELDS_CFG.
+
 export const SALES_HEADER_FIELDS: FieldCatalogEntry[] = [
   { key: "CardCode", title: "Customer Code" },
   { key: "CardName", title: "Customer Name" },
+  { key: "DocNum", title: "Document Number" },
   { key: "BPLid", title: "Branch" },
   { key: "DocStatus", title: "Status" },
   { key: "DocDate", title: "Posting Date" },
@@ -67,9 +66,16 @@ export function DocumentHeader() {
   const [businessPartners, setBusinessPartners] = useState<BusinessPartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { customer, setCustomer, loadFromDocument, clearLines, reset, setDocDate, setDocDueDate, setTaxDate, setCurrency, setComments, setBranchRegNo } = useSalesDocument();
+  const fieldAccess = useSalesDocument((state) => state.fieldAccess);
   const watchedStatus = watch("DocStatus") || "bost_Open";
   const docEntry = watch("DocEntry");
   const config = useSalesDocConfig();
+  const getHeaderFieldSettings = (fieldName: string) =>
+    getFieldSettings(config.type, "headerFieds", fieldName);
+  const isHeaderFieldVisible = (fieldName: string) =>
+    fieldAccess.includes(fieldName) && getHeaderFieldSettings(fieldName).visible !== false;
+  const isHeaderFieldEnabled = (fieldName: string) =>
+    getHeaderFieldSettings(fieldName).enable !== false;
   const [searchValue, setSearchValue] = useState("");
   const [docListModalOpen, setDocListModalOpen] = useState(false);
   const [documentsList, setDocumentsList] = useState<any[]>([]);
@@ -267,6 +273,7 @@ export function DocumentHeader() {
   const fetchUdfDefinitions = useUDFStore(state => state.fetchDefinitions);
 
   const fetchDocument = async (
+
   docNum: string,
   opts?: { isDraft?: boolean },
   draftEntry?: number
@@ -378,6 +385,7 @@ export function DocumentHeader() {
       setValue("Address", documentData.Address);
       setValue("DocEntry", documentData.DocEntry);
       setValue("DocNum", documentData.DocNum);
+      setValue("DocumentReferences", documentData.DocumentReferences ?? []);
       setValue("Comments", documentData.Comments);
       setComments(documentData.Comments || "");
       setValue("BPL_IDAssignedToInvoice", documentData.BPL_IDAssignedToInvoice ?? documentData.BPLId);
@@ -438,8 +446,7 @@ export function DocumentHeader() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-4">
-        {/* {getFieldSettings(config.type, "headerFieds", "CardCode").visible !== false && ( */}
-        {(
+        {isHeaderFieldVisible("CardCode") && (
           <div className="flex items-center gap-3">
             <AppLabel className="w-28 shrink-0">Customer</AppLabel>
             <div className="flex items-center">
@@ -459,7 +466,7 @@ export function DocumentHeader() {
                 onClick={() => {
                   setModalOpen(true);
                 }}
-                disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "CardCode").enable}
+                disabled={isHeaderDisabled || !isHeaderFieldEnabled("CardCode")}
               >
                 <Search className="h-5 w-5" />
               </Button>
@@ -467,7 +474,7 @@ export function DocumentHeader() {
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        {isHeaderFieldVisible("DocNum") && <div className="flex items-center gap-2">
           <Input
             ref={searchInputRef}
             type="text"
@@ -475,6 +482,7 @@ export function DocumentHeader() {
             className="h-8 w-38"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
+            disabled={!isHeaderFieldEnabled("DocNum")}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -488,6 +496,7 @@ export function DocumentHeader() {
             size="icon"
             className="h-8 w-8 cursor-pointer"
             onClick={handleManualSearch}
+            disabled={!isHeaderFieldEnabled("DocNum")}
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -505,6 +514,7 @@ export function DocumentHeader() {
               setDocListModalOpen(true);
               fetchDocumentsList(false);
             }}
+            disabled={!isHeaderFieldEnabled("DocNum")}
             title="List documents (Ctrl+F)"
           >
             {isLoadingList ? (
@@ -513,13 +523,12 @@ export function DocumentHeader() {
               <List className="h-5 w-5" />
             )}
           </Button>
-        </div>
+        </div>}
       </div>
 
       <div className="flex flex-col lg:flex-row justify-between gap-4">
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
-          {/* {getFieldSettings(config.type, "headerFieds", "CardName").visible !== false && ( */}
-          {(
+          {isHeaderFieldVisible("CardName") && (
             <div className="flex items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0">Name</AppLabel>
               <Input
@@ -532,14 +541,13 @@ export function DocumentHeader() {
             </div>
           )}
 
-          {/* {getFieldSettings(config.type, "headerFieds", "BPLId").visible !== false && ( */}
-          {(
+          {isHeaderFieldVisible("BPLid") && (
             <div className="flex items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0">Branch</AppLabel>
               <Select
                 value={watchedBranch ? String(watchedBranch) : ""}
                 onValueChange={(val) => setValue("BPL_IDAssignedToInvoice", Number(val))}
-                disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "BPLId").enable}
+                disabled={isHeaderDisabled || !isHeaderFieldEnabled("BPLid")}
               >
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Select branch" />
@@ -566,8 +574,7 @@ export function DocumentHeader() {
         </div>
 
         <div className="flex flex-col gap-2 w-full lg:w-1/2">
-          {/* {getFieldSettings(config.type, "headerFieds", "DocStatus").visible !== false && ( */}
-          {(
+          {isHeaderFieldVisible("DocStatus") && (
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Status</AppLabel>
               <Select
@@ -580,7 +587,7 @@ export function DocumentHeader() {
                     setValue("DocStatus", val);
                   }
                 }}
-                disabled={!canChangeStatus || !getFieldSettings(config.type, "headerFieds", "DocStatus").enable}
+                disabled={!canChangeStatus || !isHeaderFieldEnabled("DocStatus")}
               >
                 <SelectTrigger className="w-48" data-fms-field="DocStatus">
                   <SelectValue placeholder="Select status" />
@@ -600,33 +607,32 @@ export function DocumentHeader() {
             </div>
           )}
 
-          {/* {getFieldSettings(config.type, "headerFieds", "DocDate").visible !== false && ( */}
-          {(
+          {isHeaderFieldVisible("DocDate") && (
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Posting Date</AppLabel>
-              <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "DocDate").enable} onChange={(e) => {
+              <Input type="date" {...register("DocDate")} className="h-8 w-48" disabled={isHeaderDisabled || !isHeaderFieldEnabled("DocDate")} onChange={(e) => {
                 register("DocDate").onChange(e);
                 setDocDate(e.target.value);
               }} />
             </div>
           )}
 
-          {(
+          {isHeaderFieldVisible("DocDueDate") && (
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">
                 {getDateLabel(config.type)}
               </AppLabel>
-              <Input type="date" {...register("DocDueDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "DocDueDate").enable} onChange={(e) => {
+              <Input type="date" {...register("DocDueDate")} className="h-8 w-48" disabled={isHeaderDisabled || !isHeaderFieldEnabled("DocDueDate")} onChange={(e) => {
                 register("DocDueDate").onChange(e);
                 setDocDueDate(e.target.value);
               }} />
             </div>
           )}
 
-          {(
+          {isHeaderFieldVisible("TaxDate") && (
             <div className="flex justify-end items-center w-full gap-3">
               <AppLabel className="w-28 shrink-0 text-right">Document Date</AppLabel>
-              <Input type="date" {...register("TaxDate")} className="h-8 w-48" disabled={isHeaderDisabled || !getFieldSettings(config.type, "headerFieds", "TaxDate").enable} onChange={(e) => {
+              <Input type="date" {...register("TaxDate")} className="h-8 w-48" disabled={isHeaderDisabled || !isHeaderFieldEnabled("TaxDate")} onChange={(e) => {
                 register("TaxDate").onChange(e);
                 setTaxDate(e.target.value);
               }} />
@@ -634,7 +640,7 @@ export function DocumentHeader() {
           )}
 
         {config.type === DocumentType.Quotation &&
-  getFieldSettings(config.type, "headerFieds", "BranchRegNo").visible !== false && (
+  isHeaderFieldVisible("BranchRegNo") && (
     <div className="flex justify-end items-center w-full gap-3">
       <AppLabel className="w-28 shrink-0 text-right">
         Branch Reg. No.
@@ -645,7 +651,7 @@ export function DocumentHeader() {
         className="h-8 w-48"
         disabled={ 
           isHeaderDisabled ||
-          !getFieldSettings(config.type, "headerFieds", "BranchRegNo").enable
+          !isHeaderFieldEnabled("BranchRegNo")
         }
         onChange={(e) => {
           register("BranchRegNo").onChange(e);

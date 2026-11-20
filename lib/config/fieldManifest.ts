@@ -3,7 +3,7 @@ import { DocumentType } from "@/types/master/DocumentType";
 import { PURCHASE_LINE_FIELDS, PURCHASE_SERVICE_LINE_FIELDS } from "@/components/purchase/PurchaseItems";
 import { PURCHASE_HEADER_FIELDS } from "@/components/purchase/PurchaseVendorHeader";
 import { PURCHASE_FOOTER_FIELDS } from "@/components/purchase/PurchaseFooter";
-import { SALES_LINE_FIELDS, SALES_SERVICE_LINE_FIELDS } from "@/components/sales/shared/DocumentItems";
+import { SALES_LINE_FIELDS, SALES_SERVICE_LINE_FIELDS, SALES_TAB_FIELDS } from "@/components/sales/shared/DocumentItems";
 import { SALES_HEADER_FIELDS } from "@/components/sales/shared/DocumentHeader";
 import { SALES_FOOTER_FIELDS } from "@/components/sales/shared/DocumentFooter";
 import {
@@ -33,7 +33,7 @@ const PURCHASE_CATALOG: DocFieldCatalog = {
 };
 
 const SALES_CATALOG: DocFieldCatalog = {
-  header: dedupe([...SALES_HEADER_FIELDS, ...SALES_FOOTER_FIELDS]),
+  header: dedupe([...SALES_HEADER_FIELDS, ...SALES_TAB_FIELDS, ...SALES_FOOTER_FIELDS]),
   line: dedupe([...SALES_LINE_FIELDS, ...SALES_SERVICE_LINE_FIELDS]),
 };
 
