@@ -229,7 +229,19 @@ const setDocumentMode = useSalesDocument(
       : 0;
 
    const uomVal = resolveUoMPreferModuleName(item.SalUnitMsr, uoms, item.UoM, item.UoMCode, item.UoMGroupEntry, item.UnitsOfMeasurment) || item.UoM || "";
-
+console.log("UOM DEBUG", {
+  ItemCode: item.ItemCode,
+  SalUnitMsr: item.SalUnitMsr,
+  UoM: item.UoM,
+  UoMCode: item.UoMCode,
+  SUoMEntry: item.SUoMEntry,
+  UoMGroupEntry: item.UoMGroupEntry,
+  UgpEntry: item.UgpEntry,
+  UnitsOfMeasurment: item.UnitsOfMeasurment,
+  uomsLoaded: uoms.length,
+  uomsSample: uoms.slice(0, 3),
+  RESULT_uomVal: uomVal,
+});
     addLine({
       ItemCode: item.ItemCode,
       ItemName:

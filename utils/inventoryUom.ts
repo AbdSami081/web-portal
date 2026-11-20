@@ -56,7 +56,17 @@ export const normalizeInventoryUom = (...values: unknown[]): string => {
   return "";
 };
 
-export const isManualUom = (uomCode: unknown): boolean => {
+// export const isManualUom = (uomCode: unknown): boolean => {
+//   const normalized = normalizeInventoryUom(uomCode);
+//   return !normalized || normalized.toLowerCase() === "manual";
+// };
+export const isManualUom = (
+  uomCode: unknown,
+  ugpEntry?: number | string | null
+): boolean => {
+  if (ugpEntry !== undefined && ugpEntry !== null && ugpEntry !== "") {
+    return Number(ugpEntry) === -1;
+  }
   const normalized = normalizeInventoryUom(uomCode);
   return !normalized || normalized.toLowerCase() === "manual";
 };
@@ -91,12 +101,27 @@ export const resolveUoMCodeByName = (
   return "";
 };
 
+// export const resolveUoMPreferModuleName = (
+//   moduleUnitName: unknown,
+//   uoms: UoMEntry[],
+//   ...fallbackCandidates: unknown[]
+// ): string => {
+//   const fromModuleName = resolveUoMCodeByName(moduleUnitName, uoms);
+//   if (fromModuleName) return fromModuleName;
+//   return resolveUoMFromCandidates(uoms, ...fallbackCandidates);
+// };
 export const resolveUoMPreferModuleName = (
   moduleUnitName: unknown,
   uoms: UoMEntry[],
   ...fallbackCandidates: unknown[]
 ): string => {
   const fromModuleName = resolveUoMCodeByName(moduleUnitName, uoms);
-  if (fromModuleName) return fromModuleName;
-  return resolveUoMFromCandidates(uoms, ...fallbackCandidates);
+  if (fromModuleName && fromModuleName.trim().toLowerCase() !== "manual") {
+    return fromModuleName;
+  }
+  const fromFallback = resolveUoMFromCandidates(uoms, ...fallbackCandidates);
+  if (fromFallback && fromFallback.trim().toLowerCase() !== "manual") {
+    return fromFallback;
+  }
+  return "";
 };
